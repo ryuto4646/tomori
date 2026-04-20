@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Tomori - 学びモンスター</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Hiragino Kaku Gothic Pro', 'Hiragino Sans', 'Meiryo', sans-serif;
+  background: #1a1a2e;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#app {
+  width: 100%;
+  max-width: 420px;
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ---- Screen Base ---- */
+.screen {
+  display: none;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 24px 20px 32px;
+  animation: fadeIn 0.35s ease;
+}
+.screen.active { display: flex; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- Buttons ---- */
+.btn {
+  display: block;
+  width: 100%;
+  padding: 16px;
+  border: none;
+  border-radius: 16px;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.1s;
+  letter-spacing: 0.05em;
+}
+.btn:active { transform: scale(0.97); }
+
+.btn-primary {
+  background: linear-gradient(135deg, #f7971e, #ffd200);
+  color: #1a1a2e;
+  box-shadow: 0 4px 20px rgba(247,151,30,0.4);
+}
+.btn-secondary {
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  border: 2px solid rgba(255,255,255,0.3);
+}
+.btn-success {
+  background: linear-gradient(135deg, #11998e, #38ef7d);
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(56,239,125,0.35);
+}
+.btn-danger {
+  background: linear-gradient(135deg, #f953c6, #b91d73);
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(249,83,198,0.35);
+}
+
+.btn + .btn { margin-top: 12px; }
+
+/* ---- Screen 1: TOP ---- */
+#screen-top {
+  background: linear-gradient(160deg, #0f0c29, #302b63, #24243e);
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0;
+}
+
+.top-logo {
+  font-size: 72px;
+  margin-bottom: 8px;
+  animation: float 3s ease-in-out infinite;
+}
+@keyframes float {
+  0%,100% { transform: translateY(0); }
+  50%      { transform: translateY(-12px); }
+}
+
+.top-title {
+  font-size: 36px;
+  font-weight: 900;
+  color: #ffd200;
+  text-shadow: 0 0 20px rgba(255,210,0,0.5);
+  letter-spacing: 0.1em;
+  margin-bottom: 8px;
+}
+.top-subtitle {
+  font-size: 14px;
+  color: rgba(255,255,255,0.6);
+  margin-bottom: 48px;
+  line-height: 1.6;
+}
+.top-stars {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.star {
+  position: absolute;
+  width: 3px; height: 3px;
+  background: #fff;
+  border-radius: 50%;
+  animation: twinkle 2s ease-in-out infinite;
+}
+@keyframes twinkle {
+  0%,100% { opacity: 0.2; transform: scale(1); }
+  50%     { opacity: 1; transform: scale(1.5); }
+}
+
+/* ---- Screen 2: UPLOAD ---- */
+#screen-upload {
+  background: linear-gradient(160deg, #1a1a2e, #16213e, #0f3460);
+}
+.screen-header {
+  margin-bottom: 24px;
+}
+.screen-step {
+  font-size: 12px;
+  color: rgba(255,255,255,0.5);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.screen-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.3;
+}
+.screen-title span { color: #ffd200; }
+
+.upload-area {
+  border: 3px dashed rgba(255,255,255,0.3);
+  border-radius: 20px;
+  padding: 32px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  margin-bottom: 20px;
+  background: rgba(255,255,255,0.04);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+}
+.upload-area:hover { border-color: #ffd200; background: rgba(255,210,0,0.05); }
+.upload-area.has-image { border-style: solid; border-color: #38ef7d; padding: 12px; }
+
+.upload-icon { font-size: 48px; margin-bottom: 12px; }
+.upload-text { color: rgba(255,255,255,0.7); font-size: 15px; }
+.upload-hint { color: rgba(255,255,255,0.4); font-size: 12px; margin-top: 6px; }
+
+#photo-preview {
+  width: 100%;
+  max-height: 240px;
+  object-fit: contain;
+  border-radius: 12px;
+  display: none;
+}
+#file-input { display: none; }
+
+.category-section {
+  margin-bottom: 20px;
+  display: none;
+}
+.category-label {
+  font-size: 14px;
+  color: rgba(255,255,255,0.7);
+  margin-bottom: 10px;
+  font-weight: bold;
+}
+.category-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.chip {
+  padding: 8px 14px;
+  border-radius: 24px;
+  border: 2px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.7);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.chip:hover { border-color: #ffd200; color: #ffd200; }
+.chip.selected { border-color: #ffd200; background: rgba(255,210,0,0.15); color: #ffd200; font-weight: bold; }
+
+/* ---- Screen 3: TRAIT ---- */
+#screen-trait {
+  background: linear-gradient(160deg, #1a1a2e, #2d1b69, #11001c);
+}
+.trait-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  margin-bottom: 20px;
+}
+.trait-card {
+  border: 2px solid rgba(255,255,255,0.15);
+  border-radius: 16px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: rgba(255,255,255,0.05);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.trait-card:hover { border-color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.08); }
+.trait-card.selected { border-color: #f7971e; background: rgba(247,151,30,0.12); }
+.trait-emoji { font-size: 28px; flex-shrink: 0; }
+.trait-info { flex: 1; }
+.trait-name { font-size: 16px; font-weight: bold; color: #fff; margin-bottom: 2px; }
+.trait-desc { font-size: 12px; color: rgba(255,255,255,0.55); }
+.trait-check {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.3);
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+.trait-card.selected .trait-check {
+  background: #f7971e;
+  border-color: #f7971e;
+}
+
+/* ---- Screen 4: MONSTER ---- */
+#screen-monster {
+  background: linear-gradient(160deg, #0d0d0d, #1a0030, #000428);
+  align-items: center;
+  text-align: center;
+}
+.monster-photo-wrap {
+  width: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 20px;
+  max-height: 180px;
+  background: rgba(255,255,255,0.05);
+}
+.monster-photo-wrap img {
+  width: 100%;
+  max-height: 180px;
+  object-fit: cover;
+  display: block;
+}
+.monster-appear-text {
+  font-size: 13px;
+  color: rgba(255,255,255,0.5);
+  letter-spacing: 0.2em;
+  margin-bottom: 16px;
+  text-transform: uppercase;
+}
+.monster-card {
+  background: rgba(255,255,255,0.06);
+  border: 2px solid rgba(255,255,255,0.12);
+  border-radius: 24px;
+  padding: 24px 20px;
+  width: 100%;
+  margin-bottom: 24px;
+}
+.monster-emoji {
+  font-size: 80px;
+  display: block;
+  margin-bottom: 12px;
+  animation: monsterBounce 0.6s cubic-bezier(0.36,0.07,0.19,0.97) both;
+}
+@keyframes monsterBounce {
+  0%   { transform: scale(0) rotate(-10deg); opacity: 0; }
+  60%  { transform: scale(1.2) rotate(5deg); opacity: 1; }
+  80%  { transform: scale(0.95) rotate(-3deg); }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+.monster-type {
+  font-size: 11px;
+  color: #ffd200;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.monster-name {
+  font-size: 28px;
+  font-weight: 900;
+  color: #fff;
+  margin-bottom: 8px;
+}
+.monster-message {
+  font-size: 14px;
+  color: rgba(255,255,255,0.7);
+  line-height: 1.6;
+  font-style: italic;
+}
+
+/* ---- Screen 5: MISSIONS ---- */
+#screen-missions {
+  background: linear-gradient(160deg, #0a1628, #0f3460, #1a1a2e);
+}
+.mission-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: 1;
+  margin-bottom: 20px;
+}
+.mission-card {
+  border-radius: 18px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 2px solid transparent;
+  position: relative;
+  overflow: hidden;
+}
+.mission-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  opacity: 0.08;
+}
+.mission-card.lv1 { background: rgba(56,239,125,0.1); border-color: rgba(56,239,125,0.3); }
+.mission-card.lv2 { background: rgba(247,151,30,0.1); border-color: rgba(247,151,30,0.3); }
+.mission-card.lv3 { background: rgba(249,83,198,0.1); border-color: rgba(249,83,198,0.3); }
+.mission-card.selected.lv1 { border-color: #38ef7d; background: rgba(56,239,125,0.18); }
+.mission-card.selected.lv2 { border-color: #f7971e; background: rgba(247,151,30,0.18); }
+.mission-card.selected.lv3 { border-color: #f953c6; background: rgba(249,83,198,0.18); }
+.mission-card:hover { transform: translateY(-2px); }
+
+.mission-level-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: bold;
+  margin-bottom: 8px;
+  letter-spacing: 0.05em;
+}
+.lv1 .mission-level-badge { background: rgba(56,239,125,0.25); color: #38ef7d; }
+.lv2 .mission-level-badge { background: rgba(247,151,30,0.25); color: #f7971e; }
+.lv3 .mission-level-badge { background: rgba(249,83,198,0.25); color: #f953c6; }
+
+.mission-title { font-size: 15px; font-weight: bold; color: #fff; margin-bottom: 4px; }
+.mission-body  { font-size: 13px; color: rgba(255,255,255,0.65); line-height: 1.5; }
+
+.mission-hint {
+  font-size: 12px;
+  color: rgba(255,255,255,0.4);
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+/* ---- Screen 6: ANSWER ---- */
+#screen-answer {
+  background: linear-gradient(160deg, #1a1a2e, #2d0052, #1a1a2e);
+}
+.answer-mission-card {
+  background: rgba(255,255,255,0.06);
+  border-radius: 18px;
+  padding: 18px;
+  margin-bottom: 24px;
+  border-left: 4px solid #f7971e;
+}
+.answer-mission-level {
+  font-size: 11px;
+  color: #f7971e;
+  letter-spacing: 0.15em;
+  margin-bottom: 6px;
+}
+.answer-mission-title { font-size: 18px; font-weight: bold; color: #fff; margin-bottom: 8px; }
+.answer-mission-body  { font-size: 15px; color: rgba(255,255,255,0.8); line-height: 1.6; }
+
+.answer-label {
+  font-size: 14px;
+  color: rgba(255,255,255,0.6);
+  margin-bottom: 12px;
+  font-weight: bold;
+}
+.answer-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  margin-bottom: 20px;
+}
+.choice-btn {
+  padding: 14px 18px;
+  border-radius: 14px;
+  border: 2px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+.choice-btn:hover   { border-color: #f7971e; background: rgba(247,151,30,0.1); }
+.choice-btn.selected { border-color: #f7971e; background: rgba(247,151,30,0.2); font-weight: bold; }
+
+.answer-textarea {
+  width: 100%;
+  background: rgba(255,255,255,0.06);
+  border: 2px solid rgba(255,255,255,0.2);
+  border-radius: 14px;
+  color: #fff;
+  font-size: 15px;
+  padding: 14px;
+  resize: none;
+  font-family: inherit;
+  min-height: 120px;
+  margin-bottom: 20px;
+  transition: border-color 0.2s;
+}
+.answer-textarea:focus { outline: none; border-color: #f7971e; }
+.answer-textarea::placeholder { color: rgba(255,255,255,0.3); }
+
+.audio-ui {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding: 20px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 18px;
+  border: 2px solid rgba(255,255,255,0.1);
+}
+.mic-btn {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f953c6, #b91d73);
+  border: none;
+  font-size: 32px;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(249,83,198,0.4);
+  transition: transform 0.1s;
+}
+.mic-btn:active { transform: scale(0.93); }
+.mic-hint { color: rgba(255,255,255,0.5); font-size: 13px; }
+
+/* ---- Screen 7: RESULT ---- */
+#screen-result {
+  background: linear-gradient(160deg, #0d0d0d, #1a0030, #000428);
+  align-items: center;
+  text-align: center;
+}
+.result-xp {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  background: rgba(255,210,0,0.15);
+  border: 1px solid rgba(255,210,0,0.3);
+  border-radius: 20px;
+  color: #ffd200;
+  font-size: 13px;
+  font-weight: bold;
+  margin-bottom: 20px;
+}
+.result-monster-emoji {
+  font-size: 80px;
+  display: block;
+  margin-bottom: 16px;
+  animation: resultPop 0.5s cubic-bezier(0.36,0.07,0.19,0.97) both;
+}
+@keyframes resultPop {
+  0%  { transform: scale(0.5) rotate(-15deg); opacity: 0; }
+  70% { transform: scale(1.15) rotate(5deg); }
+  100%{ transform: scale(1) rotate(0); opacity: 1; }
+}
+.result-badge {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: rgba(255,255,255,0.5);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.result-reaction {
+  font-size: 26px;
+  font-weight: 900;
+  color: #ffd200;
+  margin-bottom: 12px;
+  line-height: 1.3;
+  text-shadow: 0 0 20px rgba(255,210,0,0.4);
+}
+.result-sub {
+  font-size: 14px;
+  color: rgba(255,255,255,0.6);
+  margin-bottom: 8px;
+  line-height: 1.6;
+}
+.result-effect {
+  font-size: 14px;
+  color: #38ef7d;
+  font-weight: bold;
+  margin-bottom: 32px;
+}
+.confetti-wrap {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.confetti-piece {
+  position: absolute;
+  top: -10px;
+  width: 8px; height: 12px;
+  border-radius: 2px;
+  animation: confettiFall linear forwards;
+}
+@keyframes confettiFall {
+  to { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+.result-buttons { width: 100%; }
+
+/* ---- Misc ---- */
+.spacer { flex: 1; }
+.mt-auto { margin-top: auto; }
+
+/* XP bar (mini) */
+.xp-bar-wrap {
+  height: 6px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+.xp-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #f7971e, #ffd200);
+  border-radius: 3px;
+  transition: width 1s ease;
+}
+
+.back-btn {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.4);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 8px 0;
+  margin-bottom: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.back-btn:hover { color: rgba(255,255,255,0.7); }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ===== SCREEN 1: TOP ===== -->
+  <div class="screen active" id="screen-top">
+    <div class="top-stars" id="stars-container"></div>
+    <div class="top-logo">🌟</div>
+    <div class="top-title">Tomori</div>
+    <div class="top-subtitle">写真から学びが始まる<br>探究ミッションアプリ</div>
+    <button class="btn btn-primary" onclick="goTo('upload')" style="max-width:280px">
+      ✨ はじめる
+    </button>
+  </div>
+
+  <!-- ===== SCREEN 2: UPLOAD ===== -->
+  <div class="screen" id="screen-upload">
+    <button class="back-btn" onclick="goTo('top')">← もどる</button>
+    <div class="screen-header">
+      <div class="screen-step">STEP 1 / 2</div>
+      <div class="screen-title">写真を<span>アップロード</span></div>
+    </div>
+
+    <div class="upload-area" id="upload-area" onclick="document.getElementById('file-input').click()">
+      <div class="upload-icon">📷</div>
+      <div class="upload-text">写真をタップして選ぼう</div>
+      <div class="upload-hint">端末から画像を選択できます</div>
+      <img id="photo-preview" alt="プレビュー">
+    </div>
+    <input type="file" id="file-input" accept="image/*" onchange="handlePhotoUpload(this)">
+
+    <div class="category-section" id="category-section">
+      <div class="category-label">📂 この写真はなに？</div>
+      <div class="category-chips" id="category-chips">
+        <div class="chip" onclick="selectCategory('animal', this)">🐾 どうぶつ</div>
+        <div class="chip" onclick="selectCategory('food', this)">🍜 たべもの</div>
+        <div class="chip" onclick="selectCategory('vehicle', this)">🚗 のりもの</div>
+        <div class="chip" onclick="selectCategory('plant', this)">🌿 しぜん</div>
+        <div class="chip" onclick="selectCategory('mystery', this)">✨ その他</div>
+      </div>
+    </div>
+
+    <div class="mt-auto">
+      <button class="btn btn-primary" id="upload-next-btn" onclick="goTo('trait')" disabled style="opacity:0.4">
+        つぎへ →
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== SCREEN 3: TRAIT ===== -->
+  <div class="screen" id="screen-trait">
+    <button class="back-btn" onclick="goTo('upload')">← もどる</button>
+    <div class="screen-header">
+      <div class="screen-step">STEP 2 / 2</div>
+      <div class="screen-title">あなたの<span>とくせい</span>は？</div>
+    </div>
+
+    <div class="trait-list" id="trait-list">
+      <!-- JS生成 -->
+    </div>
+
+    <button class="btn btn-primary" id="trait-next-btn" onclick="goToMonster()" disabled style="opacity:0.4">
+      けってい →
+    </button>
+  </div>
+
+  <!-- ===== SCREEN 4: MONSTER ===== -->
+  <div class="screen" id="screen-monster">
+    <div class="monster-photo-wrap" id="monster-photo-wrap">
+      <img id="monster-photo" src="" alt="">
+    </div>
+    <div class="monster-appear-text">⚡ モンスター出現！</div>
+    <div class="monster-card">
+      <span class="monster-emoji" id="monster-emoji"></span>
+      <div class="monster-type" id="monster-type"></div>
+      <div class="monster-name" id="monster-name"></div>
+      <div class="monster-message" id="monster-message"></div>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn btn-primary" onclick="buildMissions()">
+      ミッションを見る ⚔️
+    </button>
+  </div>
+
+  <!-- ===== SCREEN 5: MISSIONS ===== -->
+  <div class="screen" id="screen-missions">
+    <div class="screen-header">
+      <div class="screen-step">ミッション選択</div>
+      <div class="screen-title">どれに<span>チャレンジ</span>する？</div>
+    </div>
+
+    <div class="mission-list" id="mission-list">
+      <!-- JS生成 -->
+    </div>
+
+    <div class="mission-hint">1つ選んで「チャレンジ」ボタンを押してね</div>
+    <button class="btn btn-success" id="mission-next-btn" onclick="goToAnswer()" disabled style="opacity:0.4">
+      チャレンジ！ ⚔️
+    </button>
+  </div>
+
+  <!-- ===== SCREEN 6: ANSWER ===== -->
+  <div class="screen" id="screen-answer">
+    <button class="back-btn" onclick="goTo('missions')">← もどる</button>
+    <div class="answer-mission-card" id="answer-mission-card">
+      <!-- JS生成 -->
+    </div>
+    <div class="answer-label">💬 こたえてみよう！</div>
+    <div id="answer-ui">
+      <!-- JS生成 -->
+    </div>
+    <div class="mt-auto">
+      <button class="btn btn-success" id="submit-btn" onclick="submitAnswer()">
+        こたえを送る 🚀
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== SCREEN 7: RESULT ===== -->
+  <div class="screen" id="screen-result">
+    <div class="confetti-wrap" id="confetti-wrap"></div>
+    <div class="xp-bar-wrap" style="width:100%">
+      <div class="xp-bar-fill" id="xp-bar" style="width:0%"></div>
+    </div>
+    <div class="result-xp">⭐ <span id="xp-label">+30 XP ゲット！</span></div>
+    <span class="result-monster-emoji" id="result-monster-emoji"></span>
+    <div class="result-badge">モンスターからのメッセージ</div>
+    <div class="result-reaction" id="result-reaction"></div>
+    <div class="result-sub" id="result-sub"></div>
+    <div class="result-effect" id="result-effect"></div>
+    <div class="result-buttons">
+      <button class="btn btn-primary" onclick="nextMission()">つぎのミッションへ ▶</button>
+      <button class="btn btn-secondary" onclick="goTo('top'); resetApp()">はじめからやり直す</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ============================
+// STATE
+// ============================
+const state = {
+  photoUrl: null,
+  category: null,
+  trait: null,
+  monster: null,
+  missions: [],
+  selectedMissionIdx: null,
+  answeredMissions: new Set(),
+  xp: 0,
+};
+
+// ============================
+// DATA: MONSTERS
+// ============================
+const MONSTERS = {
+  animal:  { emoji: '🐾', name: 'モフルン',  type: 'いきもの系',  message: 'どんな生き物にも、まだ知られていないひみつがいっぱい！' },
+  food:    { emoji: '🍜', name: 'タベロン',  type: 'たべもの系',  message: 'おいしいものには、世界中のひとの知恵がつまってるよ！' },
+  vehicle: { emoji: '⚙️', name: 'キカイダー', type: 'きかい系',   message: 'すごい機械の中に、人間のアイデアがいっぱいかくれてるよ！' },
+  plant:   { emoji: '🌿', name: 'シゼンボー', type: 'しぜん系',   message: '自然のなぞは、毎日少しずつ解き明かされているんだよ！' },
+  mystery: { emoji: '✨', name: 'フシギン',  type: 'ふしぎ系',   message: '「なんで？」って思う気持ちが、学びのはじまりだよ！' },
+};
+
+// ============================
+// DATA: TRAITS
+// ============================
+const TRAITS = [
+  { key: 'short_attention', emoji: '⚡', name: '集中が短い',           desc: 'サクッとできることが得意！' },
+  { key: 'non_reader',      emoji: '👁️', name: '文字より絵・カタチ', desc: '見て感じるのが得意！' },
+  { key: 'audio_preferred', emoji: '🎵', name: '聞くほうが好き',      desc: '声や音で学ぶのが得意！' },
+  { key: 'deep_thinker',    emoji: '🧠', name: 'じっくり考える',      desc: 'とことん考えるのが好き！' },
+  { key: 'survival_like',   emoji: '🗺️', name: '冒険・サバイバル好き', desc: 'ドキドキを楽しもう！' },
+];
+
+// ============================
+// DATA: MISSIONS
+// ============================
+const MISSIONS = {
+  animal: {
+    short_attention: [
+      { level: 1, title: 'まずはタップ！', body: 'この写真の中で、いちばん気になる場所はどこ？', answerType: 'choices', choices: ['目のあたり', '体のかたち', '背景の場所'] },
+      { level: 2, title: '3つ見つけよう！', body: '動物の体の部分を3つ言ってみよう', answerType: 'choices', choices: ['目・耳・足', 'しっぽ・鼻・毛', 'ひげ・つめ・歯'] },
+      { level: 3, title: '気持ちを当てよう！', body: 'この動物はいまどんな気持ちだと思う？', answerType: 'choices', choices: ['うれしい！', 'ねむい〜', 'おなかすいた'] },
+    ],
+    non_reader: [
+      { level: 1, title: 'どこかな？', body: '動物の「かお」はどこにあるかな？', answerType: 'choices', choices: ['👆 上のほう', '👇 下のほう', '➡️ 右のほう'] },
+      { level: 2, title: 'どっち？', body: '動物と人間、どっちが毛がふさふさ？', answerType: 'choices', choices: ['動物！🐾', '人間！', 'おなじくらい！'] },
+      { level: 3, title: '気持ちを選ぼう！', body: 'この動物、うれしい？ねむい？', answerType: 'choices', choices: ['うれしい😊', 'ねむい😴', 'わからない🤔'] },
+    ],
+    deep_thinker: [
+      { level: 1, title: 'じっくり観察', body: 'この動物はどこを見ていると思う？', answerType: 'text' },
+      { level: 2, title: '比べてみよう', body: '動物と人間の違いを2つ考えてみよう', answerType: 'text' },
+      { level: 3, title: '深く考えよう', body: 'どうして動物にはしっぽがあるんだろう？', answerType: 'text' },
+    ],
+    audio_preferred: [
+      { level: 1, title: '声に出してみよう！', body: 'この動物の鳴き声を声に出してみよう。どんな声だった？', answerType: 'text' },
+      { level: 2, title: '音を想像しよう！', body: 'この動物が歩くとどんな音がすると思う？', answerType: 'choices', choices: ['カタカタ🎵', 'ドスドス🎵', 'フワフワ🎵'] },
+      { level: 3, title: '話しかけてみよう！', body: 'この動物に一言声をかけるとしたら？', answerType: 'text' },
+    ],
+    survival_like: [
+      { level: 1, title: '🗺️ ミッション開始！', body: 'この動物と友達になるには何をすればいい？', answerType: 'choices', choices: ['エサをあげる🍖', 'ゆっくり近づく🐾', '大声で呼ぶ📣'] },
+      { level: 2, title: '⚔️ 生存術を学べ！', body: 'この動物から学べるサバイバル技を1つ選べ！', answerType: 'choices', choices: ['すばやく逃げる⚡', 'じっとかくれる🌿', '群れで守る👥'] },
+      { level: 3, title: '🏆 究極の謎に挑め！', body: 'もしこの動物と1日交換できたら、何が一番大変？', answerType: 'text' },
+    ],
+  },
+  food: {
+    short_attention: [
+      { level: 1, title: 'まずはタップ！', body: 'この食べ物の中で、いちばんおいしそうな部分は？', answerType: 'choices', choices: ['色がきれい✨', 'においがよさそう👃', 'ボリュームたっぷり💪'] },
+      { level: 2, title: '材料を探せ！', body: 'この食べ物に入っていそうな材料はどれ？', answerType: 'choices', choices: ['野菜・肉・卵🥚', 'パン・チーズ・ハム🧀', 'ご飯・魚・しょうゆ🍣'] },
+      { level: 3, title: '味を予想しよう！', body: 'この食べ物はどんな味だと思う？', answerType: 'choices', choices: ['あまい🍬', 'からい🌶️', 'しょっぱい🧂'] },
+    ],
+    non_reader: [
+      { level: 1, title: 'どれがおいしい？', body: 'この食べ物の色でいちばん気になるのは？', answerType: 'choices', choices: ['🔴 赤', '🟡 黄', '🟢 緑'] },
+      { level: 2, title: 'おおきさは？', body: 'この食べ物、一口で食べられる？', answerType: 'choices', choices: ['食べられる！', '無理！でかい！', 'ぎりぎり？'] },
+      { level: 3, title: '気持ちを選ぼう！', body: 'この食べ物を見てどんな気持ち？', answerType: 'choices', choices: ['食べたい！😋', 'あんまり…😅', '知りたい！🤔'] },
+    ],
+    deep_thinker: [
+      { level: 1, title: 'じっくり観察', body: 'この食べ物はどこから来たんだろう？', answerType: 'text' },
+      { level: 2, title: '材料を追おう', body: 'この食べ物を作るのに何が必要か考えてみよう', answerType: 'text' },
+      { level: 3, title: '深く考えよう', body: 'なぜこの食べ物はこんな形をしているんだろう？', answerType: 'text' },
+    ],
+    audio_preferred: [
+      { level: 1, title: '音を想像しよう！', body: 'この食べ物を食べるとどんな音がする？', answerType: 'choices', choices: ['サクサク🎵', 'トロトロ🎵', 'モチモチ🎵'] },
+      { level: 2, title: '声に出してみよう！', body: 'この食べ物を説明する言葉を3つ声に出してみて！', answerType: 'text' },
+      { level: 3, title: '料理人になろう！', body: 'この料理の作り方を声で説明するとしたら？', answerType: 'text' },
+    ],
+    survival_like: [
+      { level: 1, title: '🗺️ 食料調達ミッション！', body: 'サバイバルでこの食べ物を見つけたらどうする？', answerType: 'choices', choices: ['すぐ食べる！🍴', 'まず調べる🔍', '仲間に知らせる📣'] },
+      { level: 2, title: '⚔️ 栄養作戦！', body: 'この食べ物で得られる力は？', answerType: 'choices', choices: ['スタミナUP💪', 'スピードUP⚡', '回復力UP❤️'] },
+      { level: 3, title: '🏆 食の謎に挑め！', body: 'この食べ物がなかったら世界はどう変わっていた？', answerType: 'text' },
+    ],
+  },
+  vehicle: {
+    short_attention: [
+      { level: 1, title: 'まずはタップ！', body: 'この乗り物で一番かっこいい部分は？', answerType: 'choices', choices: ['形🔷', '色🎨', '大きさ📏'] },
+      { level: 2, title: 'どこへ行く？', body: 'この乗り物に乗ってどこに行きたい？', answerType: 'choices', choices: ['山の中🏔️', '海の上🌊', '空の上☁️'] },
+      { level: 3, title: '速さを予想！', body: 'この乗り物はどのくらい速い？', answerType: 'choices', choices: ['自転車より遅い🚲', '車と同じくらい🚗', '飛行機より速い！✈️'] },
+    ],
+    non_reader: [
+      { level: 1, title: 'どこかな？', body: 'この乗り物のタイヤはいくつ？', answerType: 'choices', choices: ['2つ', '4つ', 'もっとたくさん'] },
+      { level: 2, title: '動きを選ぼう！', body: 'この乗り物はどうやって動く？', answerType: 'choices', choices: ['エンジン🔥', '電気⚡', '人力💪'] },
+      { level: 3, title: '乗り物クイズ！', body: 'この乗り物に乗ったことある？', answerType: 'choices', choices: ['ある！', 'ない！', '似たやつなら'] },
+    ],
+    deep_thinker: [
+      { level: 1, title: 'じっくり観察', body: 'この乗り物はどうやって動いていると思う？', answerType: 'text' },
+      { level: 2, title: '設計を考えよう', body: 'この乗り物のどこを改良したい？', answerType: 'text' },
+      { level: 3, title: '深く考えよう', body: 'もしこの乗り物がなかったら、人々の生活はどう変わる？', answerType: 'text' },
+    ],
+    audio_preferred: [
+      { level: 1, title: '音を真似よう！', body: 'この乗り物のエンジン音を声で真似してみよう！', answerType: 'text' },
+      { level: 2, title: '声でなりきり！', body: '運転手さんのアナウンスをやってみよう！', answerType: 'text' },
+      { level: 3, title: '乗り物紹介！', body: 'この乗り物を誰かに紹介するセリフを考えよう', answerType: 'text' },
+    ],
+    survival_like: [
+      { level: 1, title: '🗺️ 脱出ミッション！', body: 'サバイバルでこの乗り物があったら何に使う？', answerType: 'choices', choices: ['逃げる！🏃', '荷物を運ぶ📦', '基地にする🏕️'] },
+      { level: 2, title: '⚔️ 改造せよ！', body: 'この乗り物を最強にするために何を付け加える？', answerType: 'choices', choices: ['武器🗡️', 'シールド🛡️', 'ロケットエンジン🚀'] },
+      { level: 3, title: '🏆 未来の乗り物！', body: '100年後の乗り物はどうなっていると思う？', answerType: 'text' },
+    ],
+  },
+  plant: {
+    short_attention: [
+      { level: 1, title: 'まずはタップ！', body: 'この植物で一番気になる部分は？', answerType: 'choices', choices: ['色🎨', '形🌿', '大きさ📏'] },
+      { level: 2, title: '植物探偵！', body: 'この植物に花はある？', answerType: 'choices', choices: ['ある！🌸', 'ない！', 'わからない🤔'] },
+      { level: 3, title: '気持ちを当てよう！', body: 'この植物はいま元気だと思う？', answerType: 'choices', choices: ['元気いっぱい！💪', 'ちょっと疲れてる😓', 'すごく元気！🌟'] },
+    ],
+    non_reader: [
+      { level: 1, title: '色を選ぼう！', body: 'この植物の一番目立つ色は？', answerType: 'choices', choices: ['🟢 緑', '🟡 黄', '🔴 赤'] },
+      { level: 2, title: '大きさは？', body: 'この植物は自分より大きい？', answerType: 'choices', choices: ['大きい！', '小さい！', 'おなじくらい'] },
+      { level: 3, title: 'さわり心地は？', body: 'この植物を触るとどんな感じ？', answerType: 'choices', choices: ['ふわふわ🌸', 'チクチク🌵', 'つるつる🍃'] },
+    ],
+    deep_thinker: [
+      { level: 1, title: 'じっくり観察', body: 'この植物はどこで育っていると思う？', answerType: 'text' },
+      { level: 2, title: '生命の不思議', body: 'この植物はどうやって水を吸い上げているんだろう？', answerType: 'text' },
+      { level: 3, title: '深く考えよう', body: '植物は動けないのに、どうやって生き延びているんだろう？', answerType: 'text' },
+    ],
+    audio_preferred: [
+      { level: 1, title: '音を想像しよう！', body: '風が吹いたらこの植物はどんな音がする？', answerType: 'choices', choices: ['サラサラ🎵', 'ザワザワ🎵', 'パタパタ🎵'] },
+      { level: 2, title: '植物になりきろう！', body: 'もしこの植物が話せたら何と言う？', answerType: 'text' },
+      { level: 3, title: '自然の音！', body: 'この植物がいる場所ではどんな音が聞こえそう？', answerType: 'text' },
+    ],
+    survival_like: [
+      { level: 1, title: '🗺️ 植物調査ミッション！', body: 'サバイバルでこの植物は役に立つ？', answerType: 'choices', choices: ['食べられる！🍴', '薬になる！💊', 'シェルターに使える！🏕️'] },
+      { level: 2, title: '⚔️ 植物の力！', body: 'この植物の最強な特徴は？', answerType: 'choices', choices: ['毒がある💀', 'めちゃ丈夫💪', '実がなる🍎'] },
+      { level: 3, title: '🏆 自然の謎に挑め！', body: 'もし植物のように太陽からエネルギーを得られたら何をする？', answerType: 'text' },
+    ],
+  },
+  mystery: {
+    short_attention: [
+      { level: 1, title: 'まずはタップ！', body: 'この写真の中で、いちばん気になる部分は？', answerType: 'choices', choices: ['形🔷', '色🎨', '雰囲気🌟'] },
+      { level: 2, title: '想像しよう！', body: 'この写真を一言で表すと？', answerType: 'choices', choices: ['ふしぎ！✨', 'かっこいい！💥', 'かわいい！🌸'] },
+      { level: 3, title: 'ひみつを探せ！', body: 'この写真にかくれているものは何だと思う？', answerType: 'choices', choices: ['宝物💎', '秘密のメッセージ📜', '別の世界への入口🚪'] },
+    ],
+    non_reader: [
+      { level: 1, title: 'どれかな？', body: 'この写真の色でいちばん好きなのは？', answerType: 'choices', choices: ['🔵 青', '🟠 オレンジ', '⚪ 白'] },
+      { level: 2, title: '感じを選ぼう！', body: 'この写真を見てどんな気持ち？', answerType: 'choices', choices: ['わくわく！✨', 'ドキドキ！💓', 'ほっこり！☀️'] },
+      { level: 3, title: 'ふしぎクイズ！', body: 'この写真に名前をつけるとしたら？', answerType: 'choices', choices: ['ふしぎのとびら', 'たびのはじまり', 'かがやきのかけら'] },
+    ],
+    deep_thinker: [
+      { level: 1, title: 'じっくり観察', body: 'この写真を見て、最初に何を感じた？', answerType: 'text' },
+      { level: 2, title: '想像を広げよう', body: 'この写真の前後にはどんなストーリーがある？', answerType: 'text' },
+      { level: 3, title: '深く考えよう', body: 'この写真が100年後も残っていたら、どんな意味を持つ？', answerType: 'text' },
+    ],
+    audio_preferred: [
+      { level: 1, title: '音を想像しよう！', body: 'この写真に音をつけるとしたら？', answerType: 'choices', choices: ['静かな音楽🎵', 'にぎやかな声🔊', '自然の音🌿'] },
+      { level: 2, title: 'ナレーターになろう！', body: 'この写真を説明するナレーションを声に出してみよう！', answerType: 'text' },
+      { level: 3, title: '物語を作ろう！', body: 'この写真を使って短い物語を語ってみよう', answerType: 'text' },
+    ],
+    survival_like: [
+      { level: 1, title: '🗺️ 探索開始！', body: 'この写真の場所でサバイバルするなら最初に何をする？', answerType: 'choices', choices: ['水を探す💧', '隠れ家を作る🏕️', '地図を描く🗺️'] },
+      { level: 2, title: '⚔️ 謎を解け！', body: 'この写真にかくれた秘密のアイテムは？', answerType: 'choices', choices: ['古代の地図📜', '魔法の石💎', '秘密の鍵🗝️'] },
+      { level: 3, title: '🏆 伝説の謎に挑め！', body: 'この写真が謎への手がかりだとしたら、その謎とは？', answerType: 'text' },
+    ],
+  },
+};
+
+// ============================
+// DATA: REACTIONS
+// ============================
+const REACTIONS = [
+  { msg: 'いいところに気づいたね！', sub: 'その目の付け所、最高だよ！', effect: '🎉 モンスターと仲良くなった！' },
+  { msg: 'その見方、おもしろい！', sub: 'みんなと違う考え方ができるって、すごいことだよ！', effect: '⭐ 新しいミッションが開放された！' },
+  { msg: 'なるほど！その考えで\nいってみよう！', sub: 'もっと深く考えると、またちがうことが見えてくるよ！', effect: '💥 モンスターを倒した！経験値ゲット！' },
+  { msg: 'すごい！モンスターも\n感動してるよ！', sub: 'その発見、大事にしてね！', effect: '✨ レアスキルを習得した！' },
+  { msg: 'その答え、ぴったり！', sub: '考える力が育ってるの、わかるよ！', effect: '🌟 探究ポイント+100！次のステージへ！' },
+];
+
+const LEVEL_LABELS = { 1: 'LEVEL 1 すぐできる', 2: 'LEVEL 2 少し観察', 3: 'LEVEL 3 少し考える' };
+const LEVEL_CLASS  = { 1: 'lv1', 2: 'lv2', 3: 'lv3' };
+
+// ============================
+// NAVIGATION
+// ============================
+function goTo(screenId) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + screenId).classList.add('active');
+}
+
+function resetApp() {
+  state.photoUrl = null;
+  state.category = null;
+  state.trait = null;
+  state.monster = null;
+  state.missions = [];
+  state.selectedMissionIdx = null;
+  state.answeredMissions = new Set();
+  state.xp = 0;
+  // Reset upload screen
+  const area = document.getElementById('upload-area');
+  area.classList.remove('has-image');
+  document.getElementById('photo-preview').style.display = 'none';
+  area.querySelector('.upload-icon').style.display = '';
+  area.querySelector('.upload-text').style.display = '';
+  area.querySelector('.upload-hint').style.display = '';
+  document.getElementById('category-section').style.display = 'none';
+  const nextBtn = document.getElementById('upload-next-btn');
+  nextBtn.disabled = true;
+  nextBtn.style.opacity = '0.4';
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+  document.getElementById('file-input').value = '';
+}
+
+// ============================
+// SCREEN 2: UPLOAD
+// ============================
+function handlePhotoUpload(input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  const reader = new FileReader();
+  reader.onload = e => {
+    state.photoUrl = e.target.result;
+    const preview = document.getElementById('photo-preview');
+    preview.src = state.photoUrl;
+    preview.style.display = 'block';
+    const area = document.getElementById('upload-area');
+    area.classList.add('has-image');
+    area.querySelector('.upload-icon').style.display = 'none';
+    area.querySelector('.upload-text').style.display = 'none';
+    area.querySelector('.upload-hint').style.display = 'none';
+    document.getElementById('category-section').style.display = 'block';
+    updateUploadNextBtn();
+  };
+  reader.readAsDataURL(file);
+}
+
+function selectCategory(cat, el) {
+  state.category = cat;
+  document.querySelectorAll('#category-chips .chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  updateUploadNextBtn();
+}
+
+function updateUploadNextBtn() {
+  const btn = document.getElementById('upload-next-btn');
+  const ok = state.photoUrl && state.category;
+  btn.disabled = !ok;
+  btn.style.opacity = ok ? '1' : '0.4';
+}
+
+// ============================
+// SCREEN 3: TRAIT
+// ============================
+function buildTraitList() {
+  const list = document.getElementById('trait-list');
+  list.innerHTML = TRAITS.map(t => `
+    <div class="trait-card" id="trait-${t.key}" onclick="selectTrait('${t.key}', this)">
+      <div class="trait-emoji">${t.emoji}</div>
+      <div class="trait-info">
+        <div class="trait-name">${t.name}</div>
+        <div class="trait-desc">${t.desc}</div>
+      </div>
+      <div class="trait-check">✓</div>
+    </div>
+  `).join('');
+}
+
+function selectTrait(key, el) {
+  state.trait = key;
+  document.querySelectorAll('.trait-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  const btn = document.getElementById('trait-next-btn');
+  btn.disabled = false;
+  btn.style.opacity = '1';
+}
+
+// ============================
+// SCREEN 4: MONSTER
+// ============================
+function goToMonster() {
+  if (!state.trait) return;
+  state.monster = MONSTERS[state.category] || MONSTERS.mystery;
+  // Build screen
+  document.getElementById('monster-photo').src = state.photoUrl;
+  document.getElementById('monster-emoji').textContent = state.monster.emoji;
+  document.getElementById('monster-type').textContent = state.monster.type;
+  document.getElementById('monster-name').textContent = state.monster.name;
+  document.getElementById('monster-message').textContent = '「' + state.monster.message + '」';
+  // Reset animation
+  const emojiEl = document.getElementById('monster-emoji');
+  emojiEl.style.animation = 'none';
+  requestAnimationFrame(() => { emojiEl.style.animation = ''; });
+  goTo('monster');
+}
+
+// ============================
+// SCREEN 5: MISSIONS
+// ============================
+function buildMissions() {
+  const cat = state.category || 'mystery';
+  const trait = state.trait || 'short_attention';
+  const data = (MISSIONS[cat] && MISSIONS[cat][trait]) || MISSIONS.mystery.short_attention;
+  state.missions = data;
+  state.selectedMissionIdx = null;
+  const list = document.getElementById('mission-list');
+  list.innerHTML = data.map((m, i) => `
+    <div class="mission-card ${LEVEL_CLASS[m.level]}" id="mission-card-${i}" onclick="selectMission(${i}, this)">
+      <div class="mission-level-badge">${LEVEL_LABELS[m.level]}</div>
+      <div class="mission-title">${m.title}</div>
+      <div class="mission-body">${m.body}</div>
+    </div>
+  `).join('');
+  const btn = document.getElementById('mission-next-btn');
+  btn.disabled = true;
+  btn.style.opacity = '0.4';
+  goTo('missions');
+}
+
+function selectMission(idx, el) {
+  state.selectedMissionIdx = idx;
+  document.querySelectorAll('.mission-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  const btn = document.getElementById('mission-next-btn');
+  btn.disabled = false;
+  btn.style.opacity = '1';
+}
+
+// ============================
+// SCREEN 6: ANSWER
+// ============================
+function goToAnswer() {
+  if (state.selectedMissionIdx === null) return;
+  const m = state.missions[state.selectedMissionIdx];
+  // Mission card
+  const card = document.getElementById('answer-mission-card');
+  card.innerHTML = `
+    <div class="answer-mission-level">${LEVEL_LABELS[m.level]}</div>
+    <div class="answer-mission-title">${m.title}</div>
+    <div class="answer-mission-body">${m.body}</div>
+  `;
+  // Answer UI
+  const ui = document.getElementById('answer-ui');
+  const trait = state.trait;
+  if (m.answerType === 'choices' && m.choices) {
+    ui.innerHTML = '<div class="answer-choices">' +
+      m.choices.map((c, i) => `<button class="choice-btn" onclick="selectChoice(this)">${c}</button>`).join('') +
+      '</div>';
+  } else if (trait === 'audio_preferred' && m.answerType === 'text') {
+    ui.innerHTML = `
+      <div class="audio-ui">
+        <button class="mic-btn" onclick="this.textContent='⏹️'; this.style.background='linear-gradient(135deg,#38ef7d,#11998e)'">🎤</button>
+        <div class="mic-hint">マイクボタンを押して声で答えよう</div>
+        <div style="color:rgba(255,255,255,0.4);font-size:11px">または下に文字で入力</div>
+      </div>
+      <textarea class="answer-textarea" id="answer-text" placeholder="こたえを入力…" oninput="checkAnswerReady()"></textarea>
+    `;
+  } else {
+    ui.innerHTML = `<textarea class="answer-textarea" id="answer-text" placeholder="じゆうにかいてみよう…" oninput="checkAnswerReady()"></textarea>`;
+  }
+  // Submit btn state
+  const submitBtn = document.getElementById('submit-btn');
+  if (m.answerType === 'choices') {
+    submitBtn.disabled = true;
+    submitBtn.style.opacity = '0.4';
+  } else {
+    submitBtn.disabled = false;
+    submitBtn.style.opacity = '1';
+  }
+  goTo('answer');
+}
+
+function selectChoice(el) {
+  document.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  state.answer = el.textContent;
+  const submitBtn = document.getElementById('submit-btn');
+  submitBtn.disabled = false;
+  submitBtn.style.opacity = '1';
+}
+
+function checkAnswerReady() {
+  const ta = document.getElementById('answer-text');
+  const submitBtn = document.getElementById('submit-btn');
+  const ok = ta && ta.value.trim().length > 0;
+  submitBtn.disabled = !ok;
+  submitBtn.style.opacity = ok ? '1' : '0.4';
+}
+
+// ============================
+// SCREEN 7: RESULT
+// ============================
+function submitAnswer() {
+  state.answeredMissions.add(state.selectedMissionIdx);
+  state.xp += [30, 50, 80][state.missions[state.selectedMissionIdx].level - 1];
+  const reaction = REACTIONS[Math.floor(Math.random() * REACTIONS.length)];
+  document.getElementById('result-monster-emoji').textContent = state.monster.emoji;
+  document.getElementById('result-reaction').textContent = reaction.msg;
+  document.getElementById('result-sub').textContent = reaction.sub;
+  document.getElementById('result-effect').textContent = reaction.effect;
+  document.getElementById('xp-label').textContent = `+${[30,50,80][state.missions[state.selectedMissionIdx].level-1]} XP ゲット！（合計 ${state.xp} XP）`;
+  // XP bar (mock: cap at 300 total)
+  const pct = Math.min(state.xp / 300 * 100, 100);
+  setTimeout(() => { document.getElementById('xp-bar').style.width = pct + '%'; }, 100);
+  // Reset monster animation
+  const me = document.getElementById('result-monster-emoji');
+  me.style.animation = 'none';
+  requestAnimationFrame(() => { me.style.animation = ''; });
+  // Confetti
+  spawnConfetti();
+  goTo('result');
+}
+
+function spawnConfetti() {
+  const wrap = document.getElementById('confetti-wrap');
+  wrap.innerHTML = '';
+  const colors = ['#ffd200','#f953c6','#38ef7d','#00b4d8','#ff6b6b','#ffd166'];
+  for (let i = 0; i < 40; i++) {
+    const el = document.createElement('div');
+    el.className = 'confetti-piece';
+    el.style.left = Math.random() * 100 + '%';
+    el.style.background = colors[Math.floor(Math.random() * colors.length)];
+    el.style.animationDuration = (1.5 + Math.random() * 2) + 's';
+    el.style.animationDelay = (Math.random() * 0.8) + 's';
+    el.style.transform = `rotate(${Math.random()*360}deg)`;
+    wrap.appendChild(el);
+  }
+}
+
+function nextMission() {
+  buildMissions();
+}
+
+// ============================
+// INIT
+// ============================
+function init() {
+  // Stars on top screen
+  const container = document.getElementById('stars-container');
+  for (let i = 0; i < 50; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    s.style.left = Math.random() * 100 + '%';
+    s.style.top  = Math.random() * 100 + '%';
+    s.style.animationDelay = (Math.random() * 3) + 's';
+    s.style.animationDuration = (1.5 + Math.random() * 2) + 's';
+    container.appendChild(s);
+  }
+  buildTraitList();
+}
+
+init();
+</script>
+</body>
+</html>

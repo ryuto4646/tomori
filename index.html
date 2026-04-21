@@ -574,6 +574,106 @@ body {
 .back-btn:hover { color: rgba(255,255,255,0.7); }
 
 /* ============================================
+   RETRY OVERLAY
+   ============================================ */
+#retry-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.88);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  animation: fadeInOverlay 0.2s ease;
+  padding: 32px;
+}
+@keyframes fadeInOverlay {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.retry-box {
+  background: #1a1a2e;
+  border: 2px solid rgba(255,255,255,0.12);
+  border-radius: 24px;
+  padding: 32px 24px;
+  text-align: center;
+  max-width: 320px;
+  width: 100%;
+  animation: retryBoxIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes retryBoxIn {
+  from { transform: scale(0.8); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+.retry-monster-emoji {
+  font-size: 64px;
+  display: block;
+  margin-bottom: 16px;
+  animation: retryWiggle 0.5s ease;
+}
+@keyframes retryWiggle {
+  0%,100% { transform: rotate(0); }
+  20%  { transform: rotate(-10deg) scale(1.1); }
+  60%  { transform: rotate(10deg) scale(1.1); }
+}
+.retry-title {
+  font-size: 22px; font-weight: 900; color: #fff; margin-bottom: 8px;
+}
+.retry-msg {
+  font-size: 15px; color: rgba(255,255,255,0.65); margin-bottom: 12px; line-height: 1.5;
+}
+.retry-attempts {
+  font-size: 12px; color: #f7971e; font-weight: bold; margin-bottom: 24px;
+}
+.retry-attempts.danger { color: #f953c6; }
+
+/* ---- Char counter ---- */
+.char-counter {
+  text-align: right; font-size: 12px;
+  margin-top: -8px; margin-bottom: 12px;
+  transition: color 0.3s; font-weight: bold;
+}
+.char-counter.ok   { color: #38ef7d; }
+.char-counter.warn { color: rgba(255,255,255,0.35); }
+.char-counter.bonus { color: #ffd200; }
+
+/* ---- Star rating ---- */
+.star-rating {
+  display: flex; justify-content: center; gap: 6px;
+  margin-bottom: 12px; padding: 20px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 18px; border: 2px solid rgba(255,255,255,0.1);
+}
+.star-btn {
+  font-size: 38px; background: none; border: none; cursor: pointer;
+  transition: transform 0.15s; padding: 2px;
+  filter: grayscale(1) opacity(0.3);
+}
+.star-btn.lit { filter: none; }
+.star-btn.lit:last-child { animation: starPop 0.2s ease; }
+@keyframes starPop {
+  0%  { transform: scale(1); }
+  50% { transform: scale(1.35); }
+  100%{ transform: scale(1); }
+}
+.star-label {
+  text-align: center; font-size: 14px;
+  color: rgba(255,255,255,0.65); margin-bottom: 20px; min-height: 20px;
+  transition: all 0.2s;
+}
+
+/* ---- Choose + Why ---- */
+.why-section { animation: fadeIn 0.3s ease; }
+.why-label {
+  font-size: 13px; color: #f7971e; font-weight: bold;
+  margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+}
+.why-divider {
+  border: none; border-top: 1px solid rgba(255,255,255,0.1);
+  margin: 12px 0 16px;
+}
+
+/* ============================================
    ANIMATION ENHANCEMENTS
    ============================================ */
 
@@ -851,6 +951,17 @@ body {
     </div>
   </div>
 
+  <!-- ===== RETRY OVERLAY ===== -->
+  <div id="retry-overlay" style="display:none">
+    <div class="retry-box">
+      <span class="retry-monster-emoji" id="retry-monster-emoji">🤔</span>
+      <div class="retry-title" id="retry-title">もうちょっとだけ！</div>
+      <div class="retry-msg" id="retry-msg">10文字以上書いてみよう</div>
+      <div class="retry-attempts" id="retry-attempts"></div>
+      <button class="btn btn-primary" onclick="closeRetry()" style="max-width:220px">もういちど書く ✏️</button>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -859,6 +970,10 @@ body {
 // ============================
 const SCREEN_ORDER = ['top','upload','trait','monster','missions','answer','result'];
 let currentScreen = 'top';
+
+const MAX_ATTEMPTS = 3;
+const MIN_TEXT_LEN  = 10;
+const BONUS_TEXT_LEN = 25;
 
 const state = {
   photoUrl: null,
@@ -870,6 +985,9 @@ const state = {
   answeredMissions: new Set(),
   xp: 0,
   prevXp: 0,
+  answer: null,
+  selectedStars: 0,
+  answerAttempts: 0,
 };
 
 // ============================
@@ -1032,6 +1150,48 @@ const MISSIONS = {
       { level: 2, title: '⚔️ 謎を解け！', body: 'この写真にかくれた秘密のアイテムは？', answerType: 'choices', choices: ['古代の地図📜', '魔法の石💎', '秘密の鍵🗝️'] },
       { level: 3, title: '🏆 伝説の謎に挑め！', body: 'この写真が謎への手がかりだとしたら、その謎とは？', answerType: 'text' },
     ],
+  },
+};
+
+// ============================
+// DATA: EXTRA MISSIONS (4問目 - 新回答タイプ)
+// 特性ごとに1問追加。buildMissions で4問から3問ランダム選択
+// ============================
+const EXTRA_MISSIONS = {
+  short_attention: {
+    level: 2,
+    title: 'どのくらい気になる？',
+    body: 'この写真の中のもの、どのくらい気になった？星で教えて！',
+    answerType: 'rating',
+    ratingLabels: ['あんまり🌱','ちょっと🌿','まあまあ🌟','かなり⭐','めちゃ気になる！🌟✨'],
+  },
+  non_reader: {
+    level: 1,
+    title: 'どのくらい好き？',
+    body: 'この写真を見てどのくらいワクワクした？',
+    answerType: 'rating',
+    ratingLabels: ['ドキドキなし😐','少しだけ😊','そこそこ🌟','かなり！⭐','最高にワクワク！🎉'],
+  },
+  deep_thinker: {
+    level: 3,
+    title: 'じっくり考えて答えよう',
+    body: 'この写真について一番「なぜ？」と思ったことを選んで、理由も書いてみよう',
+    answerType: 'choose+why',
+    choices: ['形がふしぎ🔷', '色がふしぎ🎨', '存在がふしぎ✨'],
+  },
+  audio_preferred: {
+    level: 2,
+    title: 'どの音が一番合う？',
+    body: 'この写真に合う音を選んで、なぜそう思ったか書いてみよう',
+    answerType: 'choose+why',
+    choices: ['静かな音楽🎵', '力強いリズム🥁', '自然の音🌿'],
+  },
+  survival_like: {
+    level: 2,
+    title: '⚔️ 戦略を決めろ！',
+    body: 'この写真のものを使うとしたら？選んで作戦の理由を書いてみよう！',
+    answerType: 'choose+why',
+    choices: ['武器🗡️として使う', '食料・燃料にする🔥', '隠れ蓑にする🌿'],
   },
 };
 
@@ -1217,19 +1377,30 @@ function goToMonster() {
 // SCREEN 5: MISSIONS
 // ============================
 function buildMissions() {
-  const cat = state.category || 'mystery';
-  const trait = state.trait || 'short_attention';
-  const data = (MISSIONS[cat] && MISSIONS[cat][trait]) || MISSIONS.mystery.short_attention;
-  state.missions = data;
+  const cat   = state.category || 'mystery';
+  const trait = state.trait    || 'short_attention';
+  const base  = (MISSIONS[cat] && MISSIONS[cat][trait]) || MISSIONS.mystery.short_attention;
+  const extra = EXTRA_MISSIONS[trait];
+
+  // Pool = base 3 + extra 1 → random shuffle → pick 3
+  const pool = [...base, extra];
+  // Fisher-Yates shuffle
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  state.missions = pool.slice(0, 3);
   state.selectedMissionIdx = null;
+
   const list = document.getElementById('mission-list');
-  list.innerHTML = data.map((m, i) => `
+  list.innerHTML = state.missions.map((m, i) => `
     <div class="mission-card ${LEVEL_CLASS[m.level]}" id="mission-card-${i}" onclick="selectMission(${i}, this, event)">
       <div class="mission-level-badge">${LEVEL_LABELS[m.level]}</div>
       <div class="mission-title">${m.title}</div>
       <div class="mission-body">${m.body}</div>
     </div>
   `).join('');
+
   const btn = document.getElementById('mission-next-btn');
   btn.disabled = true;
   btn.style.opacity = '0.4';
@@ -1251,76 +1422,246 @@ function selectMission(idx, el, e) {
 // ============================
 function goToAnswer() {
   if (state.selectedMissionIdx === null) return;
+  // Reset per-answer state
+  state.answerAttempts = 0;
+  state.answer = null;
+  state.selectedStars = 0;
+
   const m = state.missions[state.selectedMissionIdx];
-  // Mission card
-  const card = document.getElementById('answer-mission-card');
-  card.innerHTML = `
+  document.getElementById('answer-mission-card').innerHTML = `
     <div class="answer-mission-level">${LEVEL_LABELS[m.level]}</div>
     <div class="answer-mission-title">${m.title}</div>
     <div class="answer-mission-body">${m.body}</div>
   `;
-  // Answer UI
-  const ui = document.getElementById('answer-ui');
-  const trait = state.trait;
-  if (m.answerType === 'choices' && m.choices) {
-    ui.innerHTML = '<div class="answer-choices">' +
-      m.choices.map((c, i) => `<button class="choice-btn" onclick="selectChoice(this)">${c}</button>`).join('') +
-      '</div>';
-  } else if (trait === 'audio_preferred' && m.answerType === 'text') {
-    ui.innerHTML = `
-      <div class="audio-ui">
-        <button class="mic-btn" onclick="this.textContent='⏹️'; this.style.background='linear-gradient(135deg,#38ef7d,#11998e)'">🎤</button>
-        <div class="mic-hint">マイクボタンを押して声で答えよう</div>
-        <div style="color:rgba(255,255,255,0.4);font-size:11px">または下に文字で入力</div>
-      </div>
-      <textarea class="answer-textarea" id="answer-text" placeholder="こたえを入力…" oninput="checkAnswerReady()"></textarea>
-    `;
-  } else {
-    ui.innerHTML = `<textarea class="answer-textarea" id="answer-text" placeholder="じゆうにかいてみよう…" oninput="checkAnswerReady()"></textarea>`;
-  }
-  // Submit btn state
-  const submitBtn = document.getElementById('submit-btn');
-  if (m.answerType === 'choices') {
-    submitBtn.disabled = true;
-    submitBtn.style.opacity = '0.4';
-  } else {
-    submitBtn.disabled = false;
-    submitBtn.style.opacity = '1';
-  }
+  renderAnswerUI(m);
   goTo('answer');
 }
 
-function selectChoice(el) {
-  document.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('selected'));
-  el.classList.add('selected');
-  state.answer = el.textContent;
-  const submitBtn = document.getElementById('submit-btn');
-  submitBtn.disabled = false;
-  submitBtn.style.opacity = '1';
+function renderAnswerUI(m) {
+  const ui = document.getElementById('answer-ui');
+  const trait = state.trait;
+
+  switch (m.answerType) {
+    case 'rating': {
+      const labels = m.ratingLabels || ['','','','',''];
+      ui.innerHTML = `
+        <div class="star-rating" id="star-rating">
+          ${[1,2,3,4,5].map(n => `<button class="star-btn" onclick="selectStar(${n})">⭐</button>`).join('')}
+        </div>
+        <div class="star-label" id="star-label">⬆ タップして評価しよう</div>
+      `;
+      ui.dataset.ratingLabels = JSON.stringify(labels);
+      setSubmitBtn(false);
+      break;
+    }
+    case 'choose+why':
+      ui.innerHTML = `
+        <div class="answer-choices" id="why-choices">
+          ${m.choices.map(c => `<button class="choice-btn" onclick="selectChoiceForWhy(this, event)">${c}</button>`).join('')}
+        </div>
+        <div class="why-section" id="why-section" style="display:none">
+          <hr class="why-divider">
+          <div class="why-label">💬 なぜそう思った？</div>
+          <textarea class="answer-textarea" id="answer-text"
+            placeholder="10文字以上で理由を書いてみよう…" oninput="checkAnswerReady()"></textarea>
+          <div class="char-counter warn" id="char-counter">0 / 10文字</div>
+        </div>
+      `;
+      setSubmitBtn(false);
+      break;
+    case 'choices':
+      ui.innerHTML = `<div class="answer-choices">
+        ${m.choices.map(c => `<button class="choice-btn" onclick="selectChoice(this, event)">${c}</button>`).join('')}
+      </div>`;
+      setSubmitBtn(false);
+      break;
+    case 'text':
+    default:
+      if (trait === 'audio_preferred') {
+        ui.innerHTML = `
+          <div class="audio-ui">
+            <button class="mic-btn" onclick="this.textContent='⏹️';this.style.background='linear-gradient(135deg,#38ef7d,#11998e)'">🎤</button>
+            <div class="mic-hint">マイクボタンを押して声で答えよう</div>
+            <div style="color:rgba(255,255,255,0.4);font-size:11px">または下に文字で入力</div>
+          </div>
+          <textarea class="answer-textarea" id="answer-text"
+            placeholder="こたえを入力…（10文字以上）" oninput="checkAnswerReady()"></textarea>
+          <div class="char-counter warn" id="char-counter">0 / 10文字</div>
+        `;
+      } else {
+        ui.innerHTML = `
+          <textarea class="answer-textarea" id="answer-text"
+            placeholder="じゆうにかいてみよう…（10文字以上）" oninput="checkAnswerReady()"></textarea>
+          <div class="char-counter warn" id="char-counter">0 / 10文字</div>
+        `;
+      }
+      setSubmitBtn(false);
+  }
 }
 
+function setSubmitBtn(enabled) {
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = !enabled;
+  btn.style.opacity = enabled ? '1' : '0.4';
+}
+
+// ---- choices ----
+function selectChoice(el, e) {
+  document.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  state.answer = el.textContent.trim();
+  addRipple(el, e);
+  setSubmitBtn(true);
+}
+
+// ---- choose+why ----
+function selectChoiceForWhy(el, e) {
+  document.querySelectorAll('#why-choices .choice-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  state.answer = el.textContent.trim();
+  addRipple(el, e);
+  const why = document.getElementById('why-section');
+  if (why) {
+    why.style.display = 'block';
+    setTimeout(() => document.getElementById('answer-text')?.focus(), 150);
+  }
+  checkAnswerReady();
+}
+
+// ---- rating ----
+function selectStar(n) {
+  state.selectedStars = n;
+  document.querySelectorAll('.star-btn').forEach((b, i) => {
+    b.classList.toggle('lit', i < n);
+  });
+  const labelsRaw = document.getElementById('answer-ui').dataset.ratingLabels;
+  const labels = labelsRaw ? JSON.parse(labelsRaw) : [];
+  const lbl = document.getElementById('star-label');
+  if (lbl) lbl.textContent = labels[n - 1] || `${n}つ星！`;
+  setSubmitBtn(true);
+}
+
+// ---- char counter / ready check ----
 function checkAnswerReady() {
   const ta = document.getElementById('answer-text');
-  const submitBtn = document.getElementById('submit-btn');
-  const ok = ta && ta.value.trim().length > 0;
-  submitBtn.disabled = !ok;
-  submitBtn.style.opacity = ok ? '1' : '0.4';
+  if (!ta) return;
+  const len = ta.value.trim().length;
+  const counter = document.getElementById('char-counter');
+  if (counter) {
+    if (len >= BONUS_TEXT_LEN) {
+      counter.textContent = `${len}文字 ✨ ボーナス対象！`;
+      counter.className = 'char-counter bonus';
+    } else if (len >= MIN_TEXT_LEN) {
+      counter.textContent = `${len}文字 ✓`;
+      counter.className = 'char-counter ok';
+    } else {
+      counter.textContent = `${len} / ${MIN_TEXT_LEN}文字`;
+      counter.className = 'char-counter warn';
+    }
+  }
+  const m = state.missions[state.selectedMissionIdx];
+  if (m && m.answerType === 'choose+why') {
+    setSubmitBtn(len >= MIN_TEXT_LEN && !!state.answer);
+  } else {
+    setSubmitBtn(len >= MIN_TEXT_LEN);
+  }
+}
+
+// ---- validate ----
+function validateAnswer() {
+  const m = state.missions[state.selectedMissionIdx];
+  if (!m) return { valid: true, bonus: false };
+
+  if (m.answerType === 'choices') {
+    return { valid: !!state.answer, bonus: false, reason: '選択肢を選んでみよう！' };
+  }
+  if (m.answerType === 'rating') {
+    return { valid: state.selectedStars > 0, bonus: state.selectedStars >= 4, reason: '星をタップして評価しよう！' };
+  }
+
+  const ta = document.getElementById('answer-text');
+  const text = ta ? ta.value.trim() : '';
+
+  if (m.answerType === 'choose+why') {
+    if (!state.answer) return { valid: false, reason: 'まず選択肢を選んでみよう！' };
+    if (text.length < MIN_TEXT_LEN) return { valid: false, reason: `理由を${MIN_TEXT_LEN}文字以上書いてみよう！（今${text.length}文字）` };
+  } else {
+    if (text.length < MIN_TEXT_LEN) return { valid: false, reason: `${MIN_TEXT_LEN}文字以上書いてみよう！（今${text.length}文字）` };
+    const unique = new Set(text.replace(/\s/g,'')).size;
+    if (unique < 3 && text.length >= MIN_TEXT_LEN) return { valid: false, reason: 'ちゃんとした言葉で書いてみよう！' };
+  }
+
+  const bonus = text.length >= BONUS_TEXT_LEN;
+  return { valid: true, bonus };
+}
+
+// ---- retry overlay ----
+function showRetry(reason) {
+  state.answerAttempts++;
+  const remaining = MAX_ATTEMPTS - state.answerAttempts;
+  const titles    = ['もうちょっとだけ！', 'いい感じ！もう少し！', 'あと一歩！'];
+  const idx       = Math.min(state.answerAttempts - 1, titles.length - 1);
+
+  document.getElementById('retry-monster-emoji').textContent = state.monster?.emoji || '🤔';
+  document.getElementById('retry-title').textContent = titles[idx];
+  document.getElementById('retry-msg').textContent   = reason;
+
+  const attEl = document.getElementById('retry-attempts');
+  if (remaining <= 0) {
+    attEl.textContent = '短くてもいいから自分の言葉で書いてみよう！';
+    attEl.className = 'retry-attempts danger';
+  } else {
+    attEl.textContent = `あと${remaining}回チャレンジできるよ`;
+    attEl.className = 'retry-attempts';
+  }
+
+  // Reset wiggle animation
+  const emojiEl = document.getElementById('retry-monster-emoji');
+  emojiEl.style.animation = 'none';
+  void emojiEl.offsetWidth;
+  emojiEl.style.animation = '';
+
+  document.getElementById('retry-overlay').style.display = 'flex';
+}
+
+function closeRetry() {
+  document.getElementById('retry-overlay').style.display = 'none';
+  setTimeout(() => document.getElementById('answer-text')?.focus(), 100);
 }
 
 // ============================
 // SCREEN 7: RESULT
 // ============================
 function submitAnswer() {
+  const v = validateAnswer();
+
+  // リトライ上限未満なら差し戻し
+  if (!v.valid && state.answerAttempts < MAX_ATTEMPTS) {
+    showRetry(v.reason || 'もう少し考えてみよう！');
+    return;
+  }
+
+  const baseXP  = [30, 50, 80][state.missions[state.selectedMissionIdx].level - 1];
+  const bonusXP = v.bonus ? 20 : 0;
+  const gained  = baseXP + bonusXP;
+
   state.answeredMissions.add(state.selectedMissionIdx);
-  const gained = [30, 50, 80][state.missions[state.selectedMissionIdx].level - 1];
   state.prevXp = state.xp;
   state.xp += gained;
   const reaction = REACTIONS[Math.floor(Math.random() * REACTIONS.length)];
 
   document.getElementById('result-monster-emoji').textContent = state.monster.emoji;
-  document.getElementById('result-reaction').textContent = reaction.msg;
-  document.getElementById('result-sub').textContent = reaction.sub;
-  document.getElementById('result-effect').textContent = reaction.effect;
+
+  if (v.bonus) {
+    document.getElementById('result-reaction').textContent = 'くわしく書いてくれてありがとう！';
+    document.getElementById('result-sub').textContent = 'そこまで考えてくれたんだね！特別なボーナスXPをあげるよ！';
+    document.getElementById('result-effect').textContent = `⭐ 詳細ボーナス！+${gained} XP（+20 UP）`;
+  } else {
+    document.getElementById('result-reaction').textContent = reaction.msg;
+    document.getElementById('result-sub').textContent = reaction.sub;
+    document.getElementById('result-effect').textContent = reaction.effect;
+  }
+
   document.getElementById('xp-label').textContent = `+${gained} XP ゲット！`;
 
   // XP bar

@@ -572,6 +572,148 @@ body {
   gap: 4px;
 }
 .back-btn:hover { color: rgba(255,255,255,0.7); }
+
+/* ============================================
+   ANIMATION ENHANCEMENTS
+   ============================================ */
+
+/* Screen slide-in from right (forward) */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateX(36px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+/* Screen slide-in from left (back) */
+@keyframes fadeInBack {
+  from { opacity: 0; transform: translateX(-36px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.screen.back-enter.active { animation: fadeInBack 0.35s cubic-bezier(0.25,0.46,0.45,0.94); }
+
+/* ---- Button shimmer ---- */
+.btn-primary { position: relative; overflow: hidden; }
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -150%;
+  width: 55%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.22), transparent);
+  animation: btnShimmer 2.8s ease-in-out infinite;
+}
+@keyframes btnShimmer {
+  0%   { left: -150%; }
+  45%  { left: 150%; }
+  100% { left: 150%; }
+}
+
+/* ---- Mission card staggered entrance ---- */
+.mission-card { animation: missionIn 0.45s ease both; }
+.mission-card:nth-child(1) { animation-delay: 0.05s; }
+.mission-card:nth-child(2) { animation-delay: 0.17s; }
+.mission-card:nth-child(3) { animation-delay: 0.29s; }
+@keyframes missionIn {
+  from { opacity: 0; transform: translateX(-18px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+/* Card selected pop */
+@keyframes cardPop {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.045); }
+  100% { transform: scale(1); }
+}
+.trait-card.pop { animation: cardPop 0.25s ease; }
+
+/* ---- Ripple ---- */
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.22);
+  transform: scale(0);
+  animation: rippleAnim 0.5s linear forwards;
+  pointer-events: none;
+}
+@keyframes rippleAnim {
+  to { transform: scale(5); opacity: 0; }
+}
+
+/* ---- Shockwave rings (monster screen) ---- */
+.shockwave {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 70px; height: 70px;
+  margin: -35px 0 0 -35px;
+  border-radius: 50%;
+  border: 3px solid #ffd200;
+  animation: shockwaveExpand 0.75s ease-out forwards;
+  pointer-events: none;
+}
+.shockwave.r2 { animation-delay: 0.18s; border-color: #f7971e; }
+.shockwave.r3 { animation-delay: 0.36s; border-color: rgba(249,83,198,0.6); }
+@keyframes shockwaveExpand {
+  from { transform: scale(0); opacity: 1; }
+  to   { transform: scale(6); opacity: 0; }
+}
+
+/* Monster card glow on appear */
+.monster-card { transition: box-shadow 0.6s, border-color 0.6s; }
+.monster-card.glowing {
+  box-shadow: 0 0 36px rgba(255,210,0,0.3), 0 0 70px rgba(255,210,0,0.1);
+  border-color: rgba(255,210,0,0.4);
+}
+
+/* Monster appear text pulse */
+.monster-appear-text { animation: maPulse 1.2s ease-in-out infinite; }
+@keyframes maPulse {
+  0%,100% { opacity: 0.45; letter-spacing: 0.20em; }
+  50%     { opacity: 1;    letter-spacing: 0.32em; }
+}
+
+/* Screen flash on monster reveal */
+#screen-monster { transition: background 0.1s; }
+#screen-monster.flashing { animation: monsterFlash 0.5s ease; }
+@keyframes monsterFlash {
+  0%   { background: linear-gradient(160deg,#0d0d0d,#1a0030,#000428); }
+  15%  { background: linear-gradient(160deg,#200050,#3d0080,#001060); }
+  100% { background: linear-gradient(160deg,#0d0d0d,#1a0030,#000428); }
+}
+
+/* Result: burst particles */
+.burst-piece {
+  position: absolute;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  top: 50%; left: 50%;
+  pointer-events: none;
+  animation: burstFly 0.65s ease-out forwards;
+}
+@keyframes burstFly {
+  from { transform: translate(-50%,-50%) scale(1); opacity: 1; }
+  to   { transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(0); opacity: 0; }
+}
+
+/* XP count-up pop */
+@keyframes xpNumPop {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.5); color: #fff; }
+  100% { transform: scale(1); }
+}
+.xp-pop { display: inline-block; animation: xpNumPop 0.4s ease; }
+
+/* Choice selected checkmark */
+.choice-btn { position: relative; overflow: hidden; }
+.choice-btn.selected { padding-right: 40px; }
+.choice-btn.selected::after {
+  content: '✓';
+  position: absolute;
+  right: 14px; top: 50%;
+  transform: translateY(-50%);
+  color: #ffd200;
+  font-weight: 900;
+  animation: checkPop 0.2s ease;
+}
+@keyframes checkPop {
+  from { transform: translateY(-50%) scale(0) rotate(-45deg); }
+  to   { transform: translateY(-50%) scale(1) rotate(0); }
+}
 </style>
 </head>
 <body>
@@ -715,6 +857,9 @@ body {
 // ============================
 // STATE
 // ============================
+const SCREEN_ORDER = ['top','upload','trait','monster','missions','answer','result'];
+let currentScreen = 'top';
+
 const state = {
   photoUrl: null,
   category: null,
@@ -724,6 +869,7 @@ const state = {
   selectedMissionIdx: null,
   answeredMissions: new Set(),
   xp: 0,
+  prevXp: 0,
 };
 
 // ============================
@@ -907,8 +1053,32 @@ const LEVEL_CLASS  = { 1: 'lv1', 2: 'lv2', 3: 'lv3' };
 // NAVIGATION
 // ============================
 function goTo(screenId) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById('screen-' + screenId).classList.add('active');
+  const fromIdx = SCREEN_ORDER.indexOf(currentScreen);
+  const toIdx   = SCREEN_ORDER.indexOf(screenId);
+  const goBack  = toIdx < fromIdx;
+
+  document.querySelectorAll('.screen').forEach(s => {
+    s.classList.remove('active','back-enter');
+  });
+  const next = document.getElementById('screen-' + screenId);
+  if (goBack) next.classList.add('back-enter');
+  next.classList.add('active');
+  currentScreen = screenId;
+}
+
+// ---- Ripple helper ----
+function addRipple(el, e) {
+  const rect = el.getBoundingClientRect();
+  const x = (e ? e.clientX : rect.left + rect.width/2)  - rect.left;
+  const y = (e ? e.clientY : rect.top  + rect.height/2) - rect.top;
+  const size = Math.max(rect.width, rect.height) * 1.5;
+  const r = document.createElement('span');
+  r.className = 'ripple';
+  r.style.cssText = `width:${size}px;height:${size}px;left:${x - size/2}px;top:${y - size/2}px`;
+  el.style.position = 'relative';
+  el.style.overflow = 'hidden';
+  el.appendChild(r);
+  r.addEventListener('animationend', () => r.remove());
 }
 
 function resetApp() {
@@ -978,7 +1148,7 @@ function updateUploadNextBtn() {
 function buildTraitList() {
   const list = document.getElementById('trait-list');
   list.innerHTML = TRAITS.map(t => `
-    <div class="trait-card" id="trait-${t.key}" onclick="selectTrait('${t.key}', this)">
+    <div class="trait-card" id="trait-${t.key}" onclick="selectTrait('${t.key}', this, event)">
       <div class="trait-emoji">${t.emoji}</div>
       <div class="trait-info">
         <div class="trait-name">${t.name}</div>
@@ -989,10 +1159,13 @@ function buildTraitList() {
   `).join('');
 }
 
-function selectTrait(key, el) {
+function selectTrait(key, el, e) {
   state.trait = key;
-  document.querySelectorAll('.trait-card').forEach(c => c.classList.remove('selected'));
+  document.querySelectorAll('.trait-card').forEach(c => c.classList.remove('selected','pop'));
   el.classList.add('selected');
+  void el.offsetWidth; // reflow to restart animation
+  el.classList.add('pop');
+  addRipple(el, e);
   const btn = document.getElementById('trait-next-btn');
   btn.disabled = false;
   btn.style.opacity = '1';
@@ -1004,17 +1177,40 @@ function selectTrait(key, el) {
 function goToMonster() {
   if (!state.trait) return;
   state.monster = MONSTERS[state.category] || MONSTERS.mystery;
-  // Build screen
   document.getElementById('monster-photo').src = state.photoUrl;
   document.getElementById('monster-emoji').textContent = state.monster.emoji;
   document.getElementById('monster-type').textContent = state.monster.type;
   document.getElementById('monster-name').textContent = state.monster.name;
   document.getElementById('monster-message').textContent = '「' + state.monster.message + '」';
-  // Reset animation
+
+  // Reset emoji animation
   const emojiEl = document.getElementById('monster-emoji');
   emojiEl.style.animation = 'none';
-  requestAnimationFrame(() => { emojiEl.style.animation = ''; });
+  void emojiEl.offsetWidth;
+  emojiEl.style.animation = '';
+
   goTo('monster');
+
+  // Screen flash
+  const screen = document.getElementById('screen-monster');
+  screen.classList.remove('flashing');
+  void screen.offsetWidth;
+  screen.classList.add('flashing');
+
+  // Shockwave rings
+  const card = document.getElementById('monster-card');
+  card.classList.remove('glowing');
+  ['', 'r2', 'r3'].forEach((cls, i) => {
+    setTimeout(() => {
+      const sw = document.createElement('div');
+      sw.className = 'shockwave' + (cls ? ' ' + cls : '');
+      card.appendChild(sw);
+      sw.addEventListener('animationend', () => sw.remove());
+    }, i * 10);
+  });
+
+  // Glow card
+  setTimeout(() => card.classList.add('glowing'), 400);
 }
 
 // ============================
@@ -1028,7 +1224,7 @@ function buildMissions() {
   state.selectedMissionIdx = null;
   const list = document.getElementById('mission-list');
   list.innerHTML = data.map((m, i) => `
-    <div class="mission-card ${LEVEL_CLASS[m.level]}" id="mission-card-${i}" onclick="selectMission(${i}, this)">
+    <div class="mission-card ${LEVEL_CLASS[m.level]}" id="mission-card-${i}" onclick="selectMission(${i}, this, event)">
       <div class="mission-level-badge">${LEVEL_LABELS[m.level]}</div>
       <div class="mission-title">${m.title}</div>
       <div class="mission-body">${m.body}</div>
@@ -1040,10 +1236,11 @@ function buildMissions() {
   goTo('missions');
 }
 
-function selectMission(idx, el) {
+function selectMission(idx, el, e) {
   state.selectedMissionIdx = idx;
   document.querySelectorAll('.mission-card').forEach(c => c.classList.remove('selected'));
   el.classList.add('selected');
+  addRipple(el, e);
   const btn = document.getElementById('mission-next-btn');
   btn.disabled = false;
   btn.style.opacity = '1';
@@ -1115,37 +1312,100 @@ function checkAnswerReady() {
 // ============================
 function submitAnswer() {
   state.answeredMissions.add(state.selectedMissionIdx);
-  state.xp += [30, 50, 80][state.missions[state.selectedMissionIdx].level - 1];
+  const gained = [30, 50, 80][state.missions[state.selectedMissionIdx].level - 1];
+  state.prevXp = state.xp;
+  state.xp += gained;
   const reaction = REACTIONS[Math.floor(Math.random() * REACTIONS.length)];
+
   document.getElementById('result-monster-emoji').textContent = state.monster.emoji;
   document.getElementById('result-reaction').textContent = reaction.msg;
   document.getElementById('result-sub').textContent = reaction.sub;
   document.getElementById('result-effect').textContent = reaction.effect;
-  document.getElementById('xp-label').textContent = `+${[30,50,80][state.missions[state.selectedMissionIdx].level-1]} XP ゲット！（合計 ${state.xp} XP）`;
-  // XP bar (mock: cap at 300 total)
+  document.getElementById('xp-label').textContent = `+${gained} XP ゲット！`;
+
+  // XP bar
   const pct = Math.min(state.xp / 300 * 100, 100);
-  setTimeout(() => { document.getElementById('xp-bar').style.width = pct + '%'; }, 100);
-  // Reset monster animation
+  setTimeout(() => { document.getElementById('xp-bar').style.width = pct + '%'; }, 200);
+
+  // Reset monster emoji animation
   const me = document.getElementById('result-monster-emoji');
   me.style.animation = 'none';
-  requestAnimationFrame(() => { me.style.animation = ''; });
-  // Confetti
-  spawnConfetti();
+  void me.offsetWidth;
+  me.style.animation = '';
+
   goTo('result');
+
+  // XP count-up
+  setTimeout(() => animateXP(state.prevXp, state.xp, 900), 300);
+
+  // Confetti + burst
+  setTimeout(() => {
+    spawnConfetti();
+    spawnBurst();
+  }, 150);
+}
+
+// XP count-up animation
+function animateXP(from, to, duration) {
+  const el = document.getElementById('xp-label');
+  const gained = to - from;
+  const start = performance.now();
+  const tick = (now) => {
+    const t = Math.min((now - start) / duration, 1);
+    const ease = 1 - Math.pow(1 - t, 3);
+    const cur = Math.round(from + (to - from) * ease);
+    el.textContent = `合計 ${cur} XP`;
+    if (t < 1) {
+      requestAnimationFrame(tick);
+    } else {
+      el.innerHTML = `合計 <span class="xp-pop">${to} XP</span>`;
+    }
+  };
+  requestAnimationFrame(tick);
+}
+
+// Burst from center
+function spawnBurst() {
+  const wrap = document.getElementById('confetti-wrap');
+  const colors = ['#ffd200','#f953c6','#38ef7d','#00b4d8','#ff6b6b'];
+  for (let i = 0; i < 20; i++) {
+    const el = document.createElement('div');
+    el.className = 'burst-piece';
+    const angle = (i / 20) * 360;
+    const dist = 80 + Math.random() * 120;
+    const rad = angle * Math.PI / 180;
+    el.style.setProperty('--tx', `${Math.cos(rad) * dist}px`);
+    el.style.setProperty('--ty', `${Math.sin(rad) * dist}px`);
+    el.style.background = colors[i % colors.length];
+    el.style.animationDuration = (0.4 + Math.random() * 0.35) + 's';
+    el.style.width = el.style.height = (6 + Math.random() * 8) + 'px';
+    wrap.appendChild(el);
+    el.addEventListener('animationend', () => el.remove());
+  }
 }
 
 function spawnConfetti() {
   const wrap = document.getElementById('confetti-wrap');
   wrap.innerHTML = '';
-  const colors = ['#ffd200','#f953c6','#38ef7d','#00b4d8','#ff6b6b','#ffd166'];
-  for (let i = 0; i < 40; i++) {
+  const colors = ['#ffd200','#f953c6','#38ef7d','#00b4d8','#ff6b6b','#ffd166','#a78bfa','#fb923c'];
+  const shapes = ['rect','circle','star'];
+  for (let i = 0; i < 55; i++) {
     const el = document.createElement('div');
     el.className = 'confetti-piece';
-    el.style.left = Math.random() * 100 + '%';
-    el.style.background = colors[Math.floor(Math.random() * colors.length)];
-    el.style.animationDuration = (1.5 + Math.random() * 2) + 's';
-    el.style.animationDelay = (Math.random() * 0.8) + 's';
+    const shape = shapes[Math.floor(Math.random() * shapes.length)];
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    const size  = 6 + Math.random() * 8;
+    el.style.left   = Math.random() * 100 + '%';
+    el.style.background = color;
+    el.style.animationDuration = (1.4 + Math.random() * 2.2) + 's';
+    el.style.animationDelay    = (Math.random() * 1.0) + 's';
+    el.style.width  = size + 'px';
+    el.style.height = (shape === 'circle' ? size : size * (0.5 + Math.random())) + 'px';
+    el.style.borderRadius = shape === 'circle' ? '50%' : shape === 'star' ? '2px' : '1px';
     el.style.transform = `rotate(${Math.random()*360}deg)`;
+    if (shape === 'star') {
+      el.style.clipPath = 'polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)';
+    }
     wrap.appendChild(el);
   }
 }

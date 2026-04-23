@@ -2192,7 +2192,6 @@ function buildMissions() {
   state.missions = pool.slice(0, 3);
   state.selectedMissionIdx = null;
 
-  const cat  = state.category || 'mystery';
   const list = document.getElementById('mission-list');
   list.innerHTML = state.missions.map((m, i) => missionCardHTML(m, i, cat)).join('');
 

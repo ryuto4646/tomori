@@ -207,8 +207,76 @@ body {
   cursor: pointer;
   transition: all 0.2s;
 }
-.chip:hover { border-color: #ffd200; color: #ffd200; }
+/* legacy chip （非使用） */
 .chip.selected { border-color: #ffd200; background: rgba(255,210,0,0.15); color: #ffd200; font-weight: bold; }
+
+/* ---- Category visual grid ---- */
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.cat-card {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 14px 6px 10px;
+  border-radius: 18px;
+  border: 2px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.06);
+  cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden;
+}
+.cat-card:hover  { border-color: rgba(255,210,0,0.6); background: rgba(255,210,0,0.08); transform: translateY(-2px); }
+.cat-card.selected { border-color: #ffd200; background: rgba(255,210,0,0.15); }
+.cat-card.error-chip { border-color: #f953c6 !important; background: rgba(249,83,198,0.12) !important; animation: chipShake 0.35s ease; }
+.cat-emoji { font-size: 34px; margin-bottom: 6px; line-height: 1; }
+.cat-label { font-size: 11px; color: rgba(255,255,255,0.85); font-weight: bold; letter-spacing: 0.02em; }
+.cat-card.selected .cat-label { color: #ffd200; }
+
+/* ---- Trait visual grid ---- */
+.trait-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr);
+  gap: 12px; flex: 1; margin-bottom: 20px;
+}
+.trait-grid-card {
+  border-radius: 20px; padding: 22px 12px 16px;
+  border: 2px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.06);
+  cursor: pointer; text-align: center; transition: all 0.2s;
+  position: relative; overflow: hidden;
+}
+.trait-grid-card:hover { border-color: rgba(247,151,30,0.5); background: rgba(247,151,30,0.08); transform: translateY(-2px); }
+.trait-grid-card.selected { border-color: #f7971e; background: rgba(247,151,30,0.15); }
+.trait-grid-card.pop { animation: cardPop 0.25s ease; }
+.tgc-emoji { font-size: 48px; display: block; margin-bottom: 10px; line-height: 1; }
+.tgc-name  { font-size: 13px; font-weight: bold; color: #fff; line-height: 1.3; }
+.tgc-desc  { font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 4px; }
+.trait-grid-card.selected .tgc-name { color: #f7971e; }
+
+/* ---- Visual choice buttons (3-col grid) ---- */
+.visual-choices {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 10px; margin-bottom: 20px;
+}
+.vcb {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 5px;
+  padding: 14px 6px 12px;
+  border-radius: 16px;
+  border: 2px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.06);
+  cursor: pointer; transition: all 0.18s;
+  min-height: 80px; position: relative; overflow: hidden;
+  text-align: center;
+}
+.vcb:hover   { border-color: #f7971e; background: rgba(247,151,30,0.1); transform: translateY(-2px); }
+.vcb.selected { border-color: #f7971e; background: rgba(247,151,30,0.2); }
+.vcb.selected::after { content: '✓'; position: absolute; top: 6px; right: 8px; color: #ffd200; font-size: 12px; font-weight: 900; }
+.vcb-icon  { font-size: 32px; line-height: 1; }
+.vcb-label { font-size: 11px; color: rgba(255,255,255,0.85); font-weight: bold; line-height: 1.3; }
+/* 2-col fallback for choose+why */
+.visual-choices.col2 { grid-template-columns: repeat(2, 1fr); }
+/* No-emoji fallback: just show text */
+.vcb-text-only { font-size: 13px; color: #fff; font-weight: bold; line-height: 1.4; }
+
 .chip.error-chip { border-color: #f953c6 !important; background: rgba(249,83,198,0.12) !important; color: #f953c6 !important; animation: chipShake 0.35s ease; }
 @keyframes chipShake {
   0%,100% { transform: translateX(0); }
@@ -374,20 +442,25 @@ body {
 .mission-card.selected.lv3 { border-color: #f953c6; background: rgba(249,83,198,0.18); }
 .mission-card:hover { transform: translateY(-2px); }
 
+.mission-card-top {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.mission-type-icon { font-size: 22px; }
+
 .mission-level-badge {
   display: inline-block;
   padding: 3px 10px;
   border-radius: 20px;
   font-size: 11px;
   font-weight: bold;
-  margin-bottom: 8px;
   letter-spacing: 0.05em;
 }
 .lv1 .mission-level-badge { background: rgba(56,239,125,0.25); color: #38ef7d; }
 .lv2 .mission-level-badge { background: rgba(247,151,30,0.25); color: #f7971e; }
 .lv3 .mission-level-badge { background: rgba(249,83,198,0.25); color: #f953c6; }
 
-.mission-title { font-size: 15px; font-weight: bold; color: #fff; margin-bottom: 4px; }
+.mission-title { font-size: 16px; font-weight: bold; color: #fff; margin-bottom: 6px; }
 .mission-body  { font-size: 13px; color: rgba(255,255,255,0.65); line-height: 1.5; }
 
 .mission-hint {
@@ -709,8 +782,12 @@ body {
 .lv1 .next-card-level { background: rgba(56,239,125,0.2); color: #38ef7d; }
 .lv2 .next-card-level { background: rgba(247,151,30,0.2); color: #f7971e; }
 .lv3 .next-card-level { background: rgba(249,83,198,0.2); color: #f953c6; }
+.next-card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 8px;
+}
 .next-card-type {
-  font-size: 18px; margin-bottom: 2px;
+  font-size: 20px;
 }
 .next-card-title {
   font-size: 13px; font-weight: bold; color: #fff; line-height: 1.4;
@@ -1004,12 +1081,22 @@ body {
     <div class="category-section" id="category-section">
       <div class="category-label">📂 この写真はなに？</div>
       <div class="category-hint" id="category-hint" style="display:none"></div>
-      <div class="category-chips" id="category-chips">
-        <div class="chip" onclick="selectCategory('animal', this)">🐾 どうぶつ</div>
-        <div class="chip" onclick="selectCategory('food', this)">🍜 たべもの</div>
-        <div class="chip" onclick="selectCategory('vehicle', this)">🚗 のりもの</div>
-        <div class="chip" onclick="selectCategory('plant', this)">🌿 しぜん</div>
-        <div class="chip" onclick="selectCategory('mystery', this)">✨ その他</div>
+      <div class="category-grid" id="category-chips">
+        <div class="cat-card" onclick="selectCategory('animal', this)">
+          <div class="cat-emoji">🦁</div><div class="cat-label">どうぶつ</div>
+        </div>
+        <div class="cat-card" onclick="selectCategory('food', this)">
+          <div class="cat-emoji">🍎</div><div class="cat-label">たべもの</div>
+        </div>
+        <div class="cat-card" onclick="selectCategory('vehicle', this)">
+          <div class="cat-emoji">🚀</div><div class="cat-label">のりもの</div>
+        </div>
+        <div class="cat-card" onclick="selectCategory('plant', this)">
+          <div class="cat-emoji">🌸</div><div class="cat-label">しぜん</div>
+        </div>
+        <div class="cat-card" onclick="selectCategory('mystery', this)">
+          <div class="cat-emoji">🔮</div><div class="cat-label">その他</div>
+        </div>
       </div>
       <div class="category-error" id="category-error" style="display:none"></div>
     </div>
@@ -1457,7 +1544,7 @@ function resetApp() {
   const nextBtn = document.getElementById('upload-next-btn');
   nextBtn.disabled = true;
   nextBtn.style.opacity = '0.4';
-  document.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+  document.querySelectorAll('.cat-card').forEach(c => c.classList.remove('selected','error-chip'));
   document.getElementById('file-input').value = '';
   // Answer screen states reset
   const as = document.getElementById('answer-state');
@@ -1556,7 +1643,7 @@ function handlePhotoUpload(input) {
       }
 
       // チップリセット
-      document.querySelectorAll('#category-chips .chip')
+      document.querySelectorAll('#category-chips .cat-card')
         .forEach(c => c.classList.remove('selected','error-chip'));
       document.getElementById('category-error').style.display = 'none';
       updateUploadNextBtn();
@@ -1573,7 +1660,7 @@ function selectCategory(cat, el) {
   const allowed   = suggested ? CAT_COMPATIBLE[suggested] : null;
 
   // エラーをいったんリセット
-  document.querySelectorAll('#category-chips .chip')
+  document.querySelectorAll('#category-chips .cat-card')
     .forEach(c => c.classList.remove('selected','error-chip'));
   document.getElementById('category-error').style.display = 'none';
 
@@ -1615,21 +1702,19 @@ function updateUploadNextBtn() {
 // ============================
 function buildTraitList() {
   const list = document.getElementById('trait-list');
+  list.className = 'trait-grid';
   list.innerHTML = TRAITS.map(t => `
-    <div class="trait-card" id="trait-${t.key}" onclick="selectTrait('${t.key}', this, event)">
-      <div class="trait-emoji">${t.emoji}</div>
-      <div class="trait-info">
-        <div class="trait-name">${t.name}</div>
-        <div class="trait-desc">${t.desc}</div>
-      </div>
-      <div class="trait-check">✓</div>
+    <div class="trait-grid-card" id="trait-${t.key}" onclick="selectTrait('${t.key}', this, event)">
+      <span class="tgc-emoji">${t.emoji}</span>
+      <div class="tgc-name">${t.name}</div>
+      <div class="tgc-desc">${t.desc}</div>
     </div>
   `).join('');
 }
 
 function selectTrait(key, el, e) {
   state.trait = key;
-  document.querySelectorAll('.trait-card').forEach(c => c.classList.remove('selected','pop'));
+  document.querySelectorAll('.trait-grid-card').forEach(c => c.classList.remove('selected','pop'));
   el.classList.add('selected');
   void el.offsetWidth; // reflow to restart animation
   el.classList.add('pop');
@@ -1703,7 +1788,10 @@ function buildMissions() {
   const list = document.getElementById('mission-list');
   list.innerHTML = state.missions.map((m, i) => `
     <div class="mission-card ${LEVEL_CLASS[m.level]}" id="mission-card-${i}" onclick="selectMission(${i}, this, event)">
-      <div class="mission-level-badge">${LEVEL_LABELS[m.level]}</div>
+      <div class="mission-card-top">
+        <span class="mission-level-badge">${LEVEL_LABELS[m.level]}</span>
+        <span class="mission-type-icon">${ANSWER_TYPE_ICON[m.answerType] || '✏️'}</span>
+      </div>
       <div class="mission-title">${m.title}</div>
       <div class="mission-body">${m.body}</div>
     </div>
@@ -1745,6 +1833,27 @@ function goToAnswer() {
   goTo('answer');
 }
 
+// ---- visual choice helpers ----
+function parseChoiceVisual(text) {
+  const t = text.trim();
+  // Leading emoji (Extended_Pictographic at start, followed by space + text)
+  let m = t.match(/^(\p{Extended_Pictographic}(?:\uFE0F)?(?:\u20E3)?)\s+([\s\S]+)$/u);
+  if (m) return { icon: m[1], label: m[2].trim() };
+  // Trailing emoji
+  m = t.match(/^([\s\S]+?)\s*(\p{Extended_Pictographic}(?:\uFE0F)?)$/u);
+  if (m && m[1].trim()) return { icon: m[2], label: m[1].trim() };
+  return { icon: null, label: t };
+}
+
+function vcbHTML(text, clickFn) {
+  const { icon, label } = parseChoiceVisual(text);
+  const safe = text.replace(/"/g, '&quot;');
+  const inner = icon
+    ? `<span class="vcb-icon">${icon}</span><span class="vcb-label">${label}</span>`
+    : `<span class="vcb-text-only">${label}</span>`;
+  return `<button class="vcb" onclick="${clickFn}(this,event)" data-value="${safe}">${inner}</button>`;
+}
+
 function renderAnswerUI(m) {
   const ui = document.getElementById('answer-ui');
   const trait = state.trait;
@@ -1764,8 +1873,8 @@ function renderAnswerUI(m) {
     }
     case 'choose+why':
       ui.innerHTML = `
-        <div class="answer-choices" id="why-choices">
-          ${m.choices.map(c => `<button class="choice-btn" onclick="selectChoiceForWhy(this, event)">${c}</button>`).join('')}
+        <div class="visual-choices col2" id="why-choices">
+          ${m.choices.map(c => vcbHTML(c, 'selectChoiceForWhy')).join('')}
         </div>
         <div class="why-section" id="why-section" style="display:none">
           <hr class="why-divider">
@@ -1777,12 +1886,14 @@ function renderAnswerUI(m) {
       `;
       setSubmitBtn(false);
       break;
-    case 'choices':
-      ui.innerHTML = `<div class="answer-choices">
-        ${m.choices.map(c => `<button class="choice-btn" onclick="selectChoice(this, event)">${c}</button>`).join('')}
+    case 'choices': {
+      const cols = m.choices.length <= 2 ? ' col2' : '';
+      ui.innerHTML = `<div class="visual-choices${cols}">
+        ${m.choices.map(c => vcbHTML(c, 'selectChoice')).join('')}
       </div>`;
       setSubmitBtn(false);
       break;
+    }
     case 'text':
     default:
       if (trait === 'audio_preferred') {
@@ -1815,18 +1926,18 @@ function setSubmitBtn(enabled) {
 
 // ---- choices ----
 function selectChoice(el, e) {
-  document.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('.visual-choices .vcb, .answer-choices .choice-btn').forEach(b => b.classList.remove('selected'));
   el.classList.add('selected');
-  state.answer = el.textContent.trim();
+  state.answer = el.dataset.value || el.textContent.trim();
   addRipple(el, e);
   setSubmitBtn(true);
 }
 
 // ---- choose+why ----
 function selectChoiceForWhy(el, e) {
-  document.querySelectorAll('#why-choices .choice-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('#why-choices .vcb, #why-choices .choice-btn').forEach(b => b.classList.remove('selected'));
   el.classList.add('selected');
-  state.answer = el.textContent.trim();
+  state.answer = el.dataset.value || el.textContent.trim();
   addRipple(el, e);
   const why = document.getElementById('why-section');
   if (why) {
@@ -2034,10 +2145,10 @@ function buildRelatedMissions() {
   scroll.innerHTML = missions.map((m, i) => `
     <div class="next-card ${LEVEL_CLASS[m.level]}" onclick="selectRelatedMission(${i})"
          id="related-card-${i}">
-      <div>
+      <div class="next-card-header">
         <span class="next-card-level">${LEVEL_LABELS[m.level]}</span>
+        <span class="next-card-type">${ANSWER_TYPE_ICON[m.answerType] || '✏️'}</span>
       </div>
-      <div class="next-card-type">${ANSWER_TYPE_ICON[m.answerType] || '✏️'}</div>
       <div class="next-card-title">${m.title}</div>
       <div class="next-card-body">${m.body}</div>
       <div class="next-card-cta">やってみる →</div>

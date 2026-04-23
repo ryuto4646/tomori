@@ -1797,36 +1797,80 @@ const CAT_LABEL = {
   mystery:'✨ ふしぎ系',
 };
 
-// Canvas で画像の色を分析して推定カテゴリを返す
+// Canvas で画像の色をピクセル分布で分析して推定カテゴリを返す
 function analyzeImageCategory(imgEl) {
   try {
-    const cv = document.createElement('canvas');
-    cv.width = 60; cv.height = 60;
+    const SIZE = 100;
+    const cv  = document.createElement('canvas');
+    cv.width  = SIZE; cv.height = SIZE;
     const ctx = cv.getContext('2d');
-    ctx.drawImage(imgEl, 0, 0, 60, 60);
-    const d = ctx.getImageData(0, 0, 60, 60).data;
-    let r=0, g=0, b=0, n=0;
-    for (let i=0; i<d.length; i+=4) { r+=d[i]; g+=d[i+1]; b+=d[i+2]; n++; }
-    r/=n; g/=n; b/=n;
+    ctx.drawImage(imgEl, 0, 0, SIZE, SIZE);
+    const d     = ctx.getImageData(0, 0, SIZE, SIZE).data;
+    const total = SIZE * SIZE;
 
-    const maxC = Math.max(r,g,b), minC = Math.min(r,g,b);
-    const sat   = maxC > 0 ? (maxC-minC)/maxC : 0;
-    const bright = (r+g+b)/3;
+    // ---- ピクセルごとに種類を集計 ----
+    let sumR=0, sumG=0, sumB=0;
+    let warmPx=0, grayPx=0, greenPx=0, darkPx=0, whitePx=0, bluePx=0;
 
-    // 低彩度・中〜高輝度 → コンクリート・鉄・建物 → vehicle
-    if (sat < 0.18 && bright > 70)  return 'vehicle';
-    // 暗い → mystery
-    if (bright < 55)                 return 'mystery';
-    // 緑が強い → plant
-    if (g > r*1.18 && g > b*1.08)   return 'plant';
-    // 赤・オレンジが強い → food
-    if (r > 150 && r > g*1.2 && r > b*1.3) return 'food';
-    // 青みが強く彩度低め → 空+建物 → vehicle
-    if (b > r && b > g && sat < 0.35) return 'vehicle';
-    // 暖色系ざっくり → animal
+    for (let i = 0; i < d.length; i += 4) {
+      const pr = d[i], pg = d[i+1], pb = d[i+2];
+      sumR += pr; sumG += pg; sumB += pb;
+
+      const lum = (pr + pg + pb) / 3;
+      const mx  = Math.max(pr, pg, pb);
+      const mn  = Math.min(pr, pg, pb);
+      const sat = mx > 10 ? (mx - mn) / mx : 0;
+
+      if (lum < 52)                                             darkPx++;  // 暗い
+      if (lum > 195 && sat < 0.14)                             whitePx++; // 白・ほぼ白（皿など）
+      if (sat < 0.14 && lum > 65)                              grayPx++;  // グレー（コンクリ・金属）
+      if (pg > pr * 1.1 && pg > pb * 1.08 && sat > 0.12)      greenPx++; // 緑
+      if (pb > pr * 1.1 && pb > pg * 1.05 && sat > 0.12)      bluePx++;  // 青（空・海）
+      // 暖色: Rが最大かつG・Bより明確に高い（茶・橙・赤・黄 → パン・肉・果物）
+      if (pr > pg + 14 && pr > pb + 18 && sat > 0.10)          warmPx++;
+    }
+
+    const avgR = sumR / total, avgG = sumG / total, avgB = sumB / total;
+    const avgBright = (avgR + avgG + avgB) / 3;
+    const avgMx  = Math.max(avgR, avgG, avgB);
+    const avgMn  = Math.min(avgR, avgG, avgB);
+    const avgSat = avgMx > 10 ? (avgMx - avgMn) / avgMx : 0;
+
+    const warmRatio  = warmPx  / total;
+    const grayRatio  = grayPx  / total;
+    const greenRatio = greenPx / total;
+    const darkRatio  = darkPx  / total;
+    const whiteRatio = whitePx / total;
+    const blueRatio  = bluePx  / total;
+
+    // ---- 判定ロジック（ピクセル分布ベース） ----
+
+    // 1) 全体が暗すぎる → mystery
+    if (avgBright < 48 || darkRatio > 0.58) return 'mystery';
+
+    // 2) グレーが多くて低彩度 → vehicle（コンクリート・建物・鉄）
+    if (grayRatio > 0.42 && avgSat < 0.20) return 'vehicle';
+
+    // 3) 緑ピクセルが多い → plant
+    if (greenRatio > 0.20) return 'plant';
+    if (avgG > avgR * 1.12 && avgG > avgB * 1.08 && avgSat > 0.10) return 'plant';
+
+    // 4) food 判定（複数シグナルの組合せ）
+    //    ・暖色ピクセル多い（茶・橙・赤 → パン・肉・果物・コーヒー）
+    //    ・OR 白エリア（皿）＋R平均最大（テーブルフォト典型）
+    //    ・OR R平均が明確に優位
+    if (warmRatio > 0.18) return 'food';
+    if (whiteRatio > 0.12 && avgR >= avgG && avgR >= avgB && avgBright > 55) return 'food';
+    if (avgR > avgG * 1.08 && avgR > avgB * 1.14 && avgBright > 55) return 'food';
+
+    // 5) 青が多い → vehicle（空・海・乗り物）
+    if (blueRatio > 0.20 || (avgB > avgR * 1.10 && avgB > avgG)) return 'vehicle';
+
+    // 6) それ以外 → animal
     return 'animal';
+
   } catch(e) {
-    return 'mystery'; // CORS等でキャンバスが読めない場合は判定なし
+    return 'mystery';
   }
 }
 

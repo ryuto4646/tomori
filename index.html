@@ -1188,28 +1188,7 @@ body {
     </div>
     <input type="file" id="file-input" accept="image/*" onchange="handlePhotoUpload(this)">
 
-    <div class="category-section" id="category-section">
-      <div class="category-label">📂 この写真はなに？</div>
-      <div class="category-hint" id="category-hint" style="display:none"></div>
-      <div class="category-grid" id="category-chips">
-        <div class="cat-card" onclick="selectCategory('animal', this)">
-          <div class="cat-emoji">🦁</div><div class="cat-label">どうぶつ</div>
-        </div>
-        <div class="cat-card" onclick="selectCategory('food', this)">
-          <div class="cat-emoji">🍎</div><div class="cat-label">たべもの</div>
-        </div>
-        <div class="cat-card" onclick="selectCategory('vehicle', this)">
-          <div class="cat-emoji">🚀</div><div class="cat-label">のりもの</div>
-        </div>
-        <div class="cat-card" onclick="selectCategory('plant', this)">
-          <div class="cat-emoji">🌸</div><div class="cat-label">しぜん</div>
-        </div>
-        <div class="cat-card" onclick="selectCategory('mystery', this)">
-          <div class="cat-emoji">🔮</div><div class="cat-label">その他</div>
-        </div>
-      </div>
-      <div class="category-error" id="category-error" style="display:none"></div>
-    </div>
+    <div id="category-hint" style="display:none;font-size:13px;color:rgba(255,255,255,0.5);text-align:center;margin-top:10px"></div>
 
     <div class="mt-auto">
       <button class="btn btn-primary" id="upload-next-btn" onclick="goTo('trait')" disabled style="opacity:0.4">
@@ -1893,28 +1872,13 @@ function handlePhotoUpload(input) {
     area.querySelector('.upload-text').style.display = 'none';
     area.querySelector('.upload-hint').style.display = 'none';
 
-    // 画像ロード後に色分析
+    // 画像ロード後に自動カテゴリ判定
     preview.onload = () => {
-      const suggested = analyzeImageCategory(preview);
-      state.suggestedCategory = suggested;
-
-      // 「AIのヒント」表示
-      const hint = document.getElementById('category-hint');
-      if (suggested !== 'mystery') {
-        hint.innerHTML = `🔍 この写真は <strong>${CAT_LABEL[suggested]}</strong> に見えるよ！`;
-        hint.style.display = 'flex';
-      } else {
-        hint.style.display = 'none';
-      }
-
-      // チップリセット
-      document.querySelectorAll('#category-chips .cat-card')
-        .forEach(c => c.classList.remove('selected','error-chip'));
-      document.getElementById('category-error').style.display = 'none';
+      const detected = analyzeImageCategory(preview);
+      state.suggestedCategory = detected;
+      state.category = detected; // 自動確定
       updateUploadNextBtn();
     };
-
-    document.getElementById('category-section').style.display = 'block';
     updateUploadNextBtn();
   };
   reader.readAsDataURL(file);
@@ -1957,7 +1921,7 @@ function selectCategory(cat, el) {
 
 function updateUploadNextBtn() {
   const btn = document.getElementById('upload-next-btn');
-  const ok  = state.photoUrl && state.category;
+  const ok  = !!state.photoUrl;
   btn.disabled  = !ok;
   btn.style.opacity = ok ? '1' : '0.4';
 }

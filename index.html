@@ -466,6 +466,55 @@ body {
 .mission-title { font-size: 16px; font-weight: bold; color: #fff; margin-bottom: 6px; }
 .mission-body  { font-size: 13px; color: rgba(255,255,255,0.65); line-height: 1.5; }
 
+.mission-visual {
+  border-radius: 12px 12px 0 0;
+  height: 88px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: -16px -16px 14px -16px;
+  position: relative;
+  overflow: hidden;
+}
+.mission-visual-emoji {
+  font-size: 50px;
+  filter: drop-shadow(0 2px 10px rgba(0,0,0,0.35));
+  animation: emojiPop 0.45s cubic-bezier(0.175,0.885,0.32,1.275) both;
+}
+@keyframes emojiPop {
+  from { opacity: 0; transform: scale(0.4); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* Answer screen visual header */
+.answer-mission-visual {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.answer-mission-photo {
+  width: 68px;
+  height: 68px;
+  border-radius: 14px;
+  object-fit: cover;
+  border: 2px solid rgba(255,255,255,0.25);
+  flex-shrink: 0;
+}
+.answer-mission-photo-placeholder {
+  width: 68px;
+  height: 68px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.07);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  border: 2px solid rgba(255,255,255,0.15);
+  flex-shrink: 0;
+}
+.answer-mission-info { flex: 1; }
+
 .mission-hint {
   font-size: 12px;
   color: rgba(255,255,255,0.4);
@@ -2053,6 +2102,78 @@ function goToMonster() {
 }
 
 // ============================
+// MISSION VISUAL HELPERS
+// ============================
+const MISSION_VISUAL_KEYWORDS = [
+  ['🔊', ['音', 'きこえ', '声', 'ナレーション', 'アナウンス', '鳴き']],
+  ['🎨', ['色', 'カラー', '絵']],
+  ['💭', ['気持ち', 'キモチ', '感じ', 'うれしい', 'ねむい', 'ドキドキ']],
+  ['🔍', ['観察', 'じっくり', '調査', '探偵', '探せ', '見つ']],
+  ['⚔️', ['サバイバル', 'ミッション', '脱出', '作戦', '戦略', '謎を解']],
+  ['📖', ['想像', 'ストーリー', '物語', 'ナレーター']],
+  ['🧪', ['材料', '作り方', '料理', '成分']],
+  ['💧', ['水', '生命', '育', '光合成']],
+  ['🔮', ['ひみつ', '謎', 'ふしぎ', '不思議', 'かくれ']],
+  ['⭐', ['星', '評価', 'どのくらい', 'どれくらい']],
+  ['📏', ['大きさ', '速さ', '速い', 'サイズ']],
+  ['💬', ['話しかけ', '声に出', 'セリフ', '言葉']],
+  ['🤔', ['比べ', '違い', 'どっち', 'どちら', '差']],
+  ['🌟', ['一番', 'いちばん', '最強', '究極', '最高']],
+];
+const CAT_DEFAULT_EMOJI = {
+  animal: '🐾', food: '🍳', vehicle: '🚗', plant: '🌿', mystery: '✨',
+};
+const LEVEL_VISUAL_BG = {
+  1: 'linear-gradient(135deg,#064e3b 0%,#065f46 55%,#38ef7d 100%)',
+  2: 'linear-gradient(135deg,#7c2d12 0%,#c2410c 55%,#f7971e 100%)',
+  3: 'linear-gradient(135deg,#4c1d95 0%,#7c3aed 55%,#f953c6 100%)',
+};
+
+function getMissionVisual(m, cat) {
+  const text = (m.title || '') + ' ' + (m.body || '');
+  for (const [emoji, keywords] of MISSION_VISUAL_KEYWORDS) {
+    if (keywords.some(kw => text.includes(kw))) return emoji;
+  }
+  return CAT_DEFAULT_EMOJI[cat] || '✨';
+}
+
+function missionCardHTML(m, idx, cat) {
+  const emoji = getMissionVisual(m, cat);
+  const bg    = LEVEL_VISUAL_BG[m.level] || LEVEL_VISUAL_BG[2];
+  const clickAttr = idx !== null ? `id="mission-card-${idx}" onclick="selectMission(${idx}, this, event)"` : '';
+  return `
+    <div class="mission-card ${LEVEL_CLASS[m.level]}" ${clickAttr}>
+      <div class="mission-visual" style="background:${bg}">
+        <span class="mission-visual-emoji">${emoji}</span>
+      </div>
+      <div class="mission-card-top">
+        <span class="mission-level-badge">${LEVEL_LABELS[m.level]}</span>
+        <span class="mission-type-icon">${ANSWER_TYPE_ICON[m.answerType] || '✏️'}</span>
+      </div>
+      <div class="mission-title">${m.title}</div>
+      <div class="mission-body">${m.body}</div>
+    </div>`;
+}
+
+function answerMissionCardHTML(m) {
+  const cat    = state.category || 'mystery';
+  const emoji  = getMissionVisual(m, cat);
+  const photo  = state.photoUrl
+    ? `<img class="answer-mission-photo" src="${state.photoUrl}" alt="写真">`
+    : `<div class="answer-mission-photo-placeholder">${CAT_DEFAULT_EMOJI[cat] || '✨'}</div>`;
+  return `
+    <div class="answer-mission-visual">
+      ${photo}
+      <div class="answer-mission-info">
+        <div class="answer-mission-level">${LEVEL_LABELS[m.level]}</div>
+        <div class="answer-mission-title">${m.title}</div>
+      </div>
+      <span style="font-size:38px;flex-shrink:0;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.3))">${emoji}</span>
+    </div>
+    <div class="answer-mission-body">${m.body}</div>`;
+}
+
+// ============================
 // SCREEN 5: MISSIONS
 // ============================
 function buildMissions() {
@@ -2071,17 +2192,9 @@ function buildMissions() {
   state.missions = pool.slice(0, 3);
   state.selectedMissionIdx = null;
 
+  const cat  = state.category || 'mystery';
   const list = document.getElementById('mission-list');
-  list.innerHTML = state.missions.map((m, i) => `
-    <div class="mission-card ${LEVEL_CLASS[m.level]}" id="mission-card-${i}" onclick="selectMission(${i}, this, event)">
-      <div class="mission-card-top">
-        <span class="mission-level-badge">${LEVEL_LABELS[m.level]}</span>
-        <span class="mission-type-icon">${ANSWER_TYPE_ICON[m.answerType] || '✏️'}</span>
-      </div>
-      <div class="mission-title">${m.title}</div>
-      <div class="mission-body">${m.body}</div>
-    </div>
-  `).join('');
+  list.innerHTML = state.missions.map((m, i) => missionCardHTML(m, i, cat)).join('');
 
   const btn = document.getElementById('mission-next-btn');
   btn.disabled = true;
@@ -2110,11 +2223,7 @@ function goToAnswer() {
   state.selectedStars = 0;
 
   const m = state.missions[state.selectedMissionIdx];
-  document.getElementById('answer-mission-card').innerHTML = `
-    <div class="answer-mission-level">${LEVEL_LABELS[m.level]}</div>
-    <div class="answer-mission-title">${m.title}</div>
-    <div class="answer-mission-body">${m.body}</div>
-  `;
+  document.getElementById('answer-mission-card').innerHTML = answerMissionCardHTML(m);
   renderAnswerUI(m);
   goTo('answer');
 }
@@ -2586,12 +2695,7 @@ function deepDiveTrivia() {
   state.answer = null;
   state.selectedStars = 0;
   const m2 = state.missions[state.selectedMissionIdx];
-  const card = document.getElementById('answer-mission-card');
-  card.innerHTML = `
-    <div class="answer-mission-level">${LEVEL_LABELS[m2.level]}</div>
-    <div class="answer-mission-title">${m2.title}</div>
-    <div class="answer-mission-body">${m2.body}</div>
-  `;
+  document.getElementById('answer-mission-card').innerHTML = answerMissionCardHTML(m2);
   renderAnswerUI(m2);
   setSubmitBtn(false);
   document.getElementById('answer-back-btn').onclick = () => goTo('missions');
@@ -2677,11 +2781,7 @@ function selectRelatedMission(idx) {
     state.selectedMissionIdx = 0;
 
     // UIを更新
-    document.getElementById('answer-mission-card').innerHTML = `
-      <div class="answer-mission-level">${LEVEL_LABELS[m.level]}</div>
-      <div class="answer-mission-title">${m.title}</div>
-      <div class="answer-mission-body">${m.body}</div>
-    `;
+    document.getElementById('answer-mission-card').innerHTML = answerMissionCardHTML(m);
     renderAnswerUI(m);
 
     // StateB→A 切替

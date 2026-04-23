@@ -595,6 +595,140 @@ body {
 .back-btn:hover { color: rgba(255,255,255,0.7); }
 
 /* ============================================
+   INLINE RESULT (State B of Screen 6)
+   ============================================ */
+#inline-result {
+  flex-direction: column;
+  animation: fadeIn 0.35s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.inline-confetti {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none; overflow: hidden;
+}
+
+/* XP bar */
+.inline-xp-bar-wrap {
+  height: 6px; background: rgba(255,255,255,0.1);
+  border-radius: 3px; overflow: hidden; margin-bottom: 16px;
+}
+.inline-xp-bar-fill {
+  height: 100%; width: 0%;
+  background: linear-gradient(90deg,#f7971e,#ffd200);
+  border-radius: 3px; transition: width 1s ease;
+}
+
+/* フィードバック */
+.inline-feedback {
+  text-align: center;
+  padding-bottom: 24px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  margin-bottom: 24px;
+}
+.inline-xp-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 14px;
+  background: rgba(255,210,0,0.15); border: 1px solid rgba(255,210,0,0.3);
+  border-radius: 20px; color: #ffd200; font-size: 13px; font-weight: bold;
+  margin-bottom: 16px;
+}
+.inline-monster-emoji {
+  font-size: 72px; display: block; margin-bottom: 12px;
+  animation: resultPop 0.5s cubic-bezier(0.36,0.07,0.19,0.97) both;
+}
+.inline-badge {
+  font-size: 11px; letter-spacing: 0.2em;
+  color: rgba(255,255,255,0.4); margin-bottom: 6px;
+}
+.inline-reaction {
+  font-size: 22px; font-weight: 900; color: #ffd200;
+  margin-bottom: 8px; line-height: 1.4;
+  text-shadow: 0 0 16px rgba(255,210,0,0.35);
+}
+.inline-sub {
+  font-size: 13px; color: rgba(255,255,255,0.6); line-height: 1.6; margin-bottom: 6px;
+}
+.inline-effect {
+  font-size: 13px; color: #38ef7d; font-weight: bold;
+}
+
+/* 次の探究 ヘッダー */
+.next-header {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.next-header-title {
+  font-size: 16px; font-weight: 800; color: #fff;
+}
+.next-header-hint {
+  font-size: 11px; color: rgba(255,255,255,0.4);
+}
+
+/* 横スクロール */
+.next-scroll-wrap {
+  overflow-x: auto;
+  margin: 0 -20px;
+  padding: 0 20px 12px;
+  scrollbar-width: none;
+}
+.next-scroll-wrap::-webkit-scrollbar { display: none; }
+.next-scroll {
+  display: flex; gap: 12px;
+  padding-right: 20px;
+  width: max-content;
+  scroll-snap-type: x mandatory;
+}
+
+/* 次の探究カード */
+.next-card {
+  width: 190px; flex-shrink: 0;
+  border-radius: 18px; padding: 14px;
+  cursor: pointer;
+  border: 2px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  display: flex; flex-direction: column; gap: 6px;
+  scroll-snap-align: start;
+  transition: transform 0.2s, border-color 0.2s;
+  animation: missionIn 0.4s ease both;
+}
+.next-card:nth-child(1){ animation-delay:0.05s; }
+.next-card:nth-child(2){ animation-delay:0.15s; }
+.next-card:nth-child(3){ animation-delay:0.25s; }
+.next-card:nth-child(4){ animation-delay:0.35s; }
+.next-card:hover { transform: translateY(-3px); border-color: rgba(255,255,255,0.3); }
+.next-card:active { transform: scale(0.97); }
+
+.next-card-level {
+  display: inline-block; padding: 2px 8px;
+  border-radius: 12px; font-size: 10px; font-weight: bold;
+  letter-spacing: 0.05em;
+}
+.lv1 .next-card-level { background: rgba(56,239,125,0.2); color: #38ef7d; }
+.lv2 .next-card-level { background: rgba(247,151,30,0.2); color: #f7971e; }
+.lv3 .next-card-level { background: rgba(249,83,198,0.2); color: #f953c6; }
+.next-card-type {
+  font-size: 18px; margin-bottom: 2px;
+}
+.next-card-title {
+  font-size: 13px; font-weight: bold; color: #fff; line-height: 1.4;
+}
+.next-card-body {
+  font-size: 11px; color: rgba(255,255,255,0.55); line-height: 1.4;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.next-card-cta {
+  margin-top: auto; font-size: 12px; color: #ffd200;
+  font-weight: bold; display: flex; align-items: center; gap: 4px;
+}
+
+/* フッター */
+.inline-footer { margin-top: 20px; }
+
+/* ============================================
    RETRY OVERLAY
    ============================================ */
 #retry-overlay {
@@ -939,21 +1073,57 @@ body {
     </button>
   </div>
 
-  <!-- ===== SCREEN 6: ANSWER ===== -->
+  <!-- ===== SCREEN 6: ANSWER (2ステート) ===== -->
   <div class="screen" id="screen-answer">
-    <button class="back-btn" onclick="goTo('missions')">← もどる</button>
-    <div class="answer-mission-card" id="answer-mission-card">
-      <!-- JS生成 -->
+
+    <!-- ── State A: 回答中 ── -->
+    <div id="answer-state">
+      <button class="back-btn" id="answer-back-btn" onclick="goTo('missions')">← もどる</button>
+      <div class="answer-mission-card" id="answer-mission-card"></div>
+      <div class="answer-label">💬 こたえてみよう！</div>
+      <div id="answer-ui"></div>
+      <div class="mt-auto">
+        <button class="btn btn-success" id="submit-btn" onclick="submitAnswer()">
+          こたえを送る 🚀
+        </button>
+      </div>
     </div>
-    <div class="answer-label">💬 こたえてみよう！</div>
-    <div id="answer-ui">
-      <!-- JS生成 -->
+
+    <!-- ── State B: インラインフィードバック + 次の探究 ── -->
+    <div id="inline-result" style="display:none">
+      <div class="inline-confetti" id="inline-confetti"></div>
+
+      <!-- フィードバック -->
+      <div class="inline-feedback">
+        <div class="inline-xp-bar-wrap">
+          <div class="inline-xp-bar-fill" id="inline-xp-bar"></div>
+        </div>
+        <div class="inline-xp-badge">⭐ <span id="inline-xp-label">+30 XP</span></div>
+        <span class="inline-monster-emoji" id="inline-monster-emoji"></span>
+        <div class="inline-badge">モンスターからのメッセージ</div>
+        <div class="inline-reaction" id="inline-reaction"></div>
+        <div class="inline-sub" id="inline-sub"></div>
+        <div class="inline-effect" id="inline-effect"></div>
+      </div>
+
+      <!-- 次の探究 -->
+      <div class="next-header">
+        <div class="next-header-title">🔍 次の探究を選ぼう</div>
+        <div class="next-header-hint">横にスワイプして選べるよ →</div>
+      </div>
+      <div class="next-scroll-wrap">
+        <div class="next-scroll" id="next-scroll"></div>
+      </div>
+
+      <!-- フッター -->
+      <div class="inline-footer">
+        <button class="btn btn-secondary" style="font-size:14px;padding:12px"
+          onclick="goTo('missions')">← ミッション一覧にもどる</button>
+        <button class="btn btn-secondary" style="font-size:14px;padding:12px;margin-top:8px"
+          onclick="goTo('top');resetApp()">🏠 トップへ</button>
+      </div>
     </div>
-    <div class="mt-auto">
-      <button class="btn btn-success" id="submit-btn" onclick="submitAnswer()">
-        こたえを送る 🚀
-      </button>
-    </div>
+
   </div>
 
   <!-- ===== SCREEN 7: RESULT ===== -->
@@ -1289,6 +1459,13 @@ function resetApp() {
   nextBtn.style.opacity = '0.4';
   document.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
   document.getElementById('file-input').value = '';
+  // Answer screen states reset
+  const as = document.getElementById('answer-state');
+  if (as) { as.style.display = 'flex'; as.style.flexDirection = 'column'; }
+  const ir = document.getElementById('inline-result');
+  if (ir) ir.style.display = 'none';
+  const btn = document.getElementById('answer-back-btn');
+  if (btn) btn.onclick = () => goTo('missions');
 }
 
 // ============================
@@ -1761,91 +1938,181 @@ function closeRetry() {
 }
 
 // ============================
-// SCREEN 7: RESULT
+// SUBMIT → インラインフィードバック
 // ============================
 function submitAnswer() {
   const v = validateAnswer();
-
-  // リトライ上限未満なら差し戻し
   if (!v.valid && state.answerAttempts < MAX_ATTEMPTS) {
     showRetry(v.reason || 'もう少し考えてみよう！');
     return;
   }
 
-  const baseXP  = [30, 50, 80][state.missions[state.selectedMissionIdx].level - 1];
-  const bonusXP = v.bonus ? 20 : 0;
-  const gained  = baseXP + bonusXP;
-
+  const baseXP = [30, 50, 80][state.missions[state.selectedMissionIdx].level - 1];
+  const gained = baseXP + (v.bonus ? 20 : 0);
   state.answeredMissions.add(state.selectedMissionIdx);
   state.prevXp = state.xp;
   state.xp += gained;
+
   const reaction = REACTIONS[Math.floor(Math.random() * REACTIONS.length)];
-
-  document.getElementById('result-monster-emoji').textContent = state.monster.emoji;
-
-  if (v.bonus) {
-    document.getElementById('result-reaction').textContent = 'くわしく書いてくれてありがとう！';
-    document.getElementById('result-sub').textContent = 'そこまで考えてくれたんだね！特別なボーナスXPをあげるよ！';
-    document.getElementById('result-effect').textContent = `⭐ 詳細ボーナス！+${gained} XP（+20 UP）`;
-  } else {
-    document.getElementById('result-reaction').textContent = reaction.msg;
-    document.getElementById('result-sub').textContent = reaction.sub;
-    document.getElementById('result-effect').textContent = reaction.effect;
-  }
-
-  document.getElementById('xp-label').textContent = `+${gained} XP ゲット！`;
-
-  // XP bar
-  const pct = Math.min(state.xp / 300 * 100, 100);
-  setTimeout(() => { document.getElementById('xp-bar').style.width = pct + '%'; }, 200);
-
-  // Reset monster emoji animation
-  const me = document.getElementById('result-monster-emoji');
-  me.style.animation = 'none';
-  void me.offsetWidth;
-  me.style.animation = '';
-
-  goTo('result');
-
-  // XP count-up
-  setTimeout(() => animateXP(state.prevXp, state.xp, 900), 300);
-
-  // Confetti + burst
-  setTimeout(() => {
-    spawnConfetti();
-    spawnBurst();
-  }, 150);
+  showInlineResult(v, gained, reaction);
 }
 
-// XP count-up animation
+function showInlineResult(v, gained, reaction) {
+  // State切替
+  document.getElementById('answer-state').style.display = 'none';
+  const ir = document.getElementById('inline-result');
+  ir.style.display = 'flex';
+  ir.style.flexDirection = 'column';
+
+  // フィードバック内容
+  document.getElementById('inline-xp-label').textContent = `+${gained} XP ゲット！`;
+
+  const me = document.getElementById('inline-monster-emoji');
+  me.textContent = state.monster.emoji;
+  me.style.animation = 'none'; void me.offsetWidth; me.style.animation = '';
+
+  if (v.bonus) {
+    document.getElementById('inline-reaction').textContent = 'くわしく書いてくれてありがとう！';
+    document.getElementById('inline-sub').textContent = 'そこまで考えてくれたんだね！ボーナスXPをあげるよ！';
+    document.getElementById('inline-effect').textContent = `⭐ 詳細ボーナス！+${gained} XP（+20 UP）`;
+  } else {
+    document.getElementById('inline-reaction').textContent = reaction.msg;
+    document.getElementById('inline-sub').textContent = reaction.sub;
+    document.getElementById('inline-effect').textContent = reaction.effect;
+  }
+
+  // XP バー
+  const pct = Math.min(state.xp / 300 * 100, 100);
+  setTimeout(() => { document.getElementById('inline-xp-bar').style.width = pct + '%'; }, 200);
+
+  // XP カウントアップ
+  setTimeout(() => animateXP(state.prevXp, state.xp, 900), 300);
+
+  // 関連ミッション生成
+  buildRelatedMissions();
+
+  // エフェクト
+  setTimeout(() => { spawnConfetti(); spawnBurst(); }, 150);
+
+  // 上にスクロール
+  ir.scrollTop = 0;
+}
+
+// ============================
+// 関連ミッション生成
+// ============================
+const ANSWER_TYPE_ICON = {
+  text: '✏️', choices: '👆', 'choose+why': '💬', rating: '⭐',
+};
+
+function generateRelatedMissions() {
+  const cat   = state.category || 'mystery';
+  const currentTitle = state.missions[state.selectedMissionIdx]?.title;
+  const pool  = [];
+
+  // 全トレイトのミッションを収集
+  Object.keys(MISSIONS[cat] || {}).forEach(t => {
+    (MISSIONS[cat][t] || []).forEach(m => pool.push({...m}));
+  });
+  // EXTRAも追加
+  Object.values(EXTRA_MISSIONS).forEach(m => pool.push({...m}));
+
+  // 現在のミッションを除外
+  const filtered = pool.filter(m => m.title !== currentTitle);
+
+  // シャッフル
+  for (let i = filtered.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [filtered[i], filtered[j]] = [filtered[j], filtered[i]];
+  }
+  return filtered.slice(0, 4);
+}
+
+function buildRelatedMissions() {
+  const missions = generateRelatedMissions();
+  const scroll   = document.getElementById('next-scroll');
+  scroll.innerHTML = missions.map((m, i) => `
+    <div class="next-card ${LEVEL_CLASS[m.level]}" onclick="selectRelatedMission(${i})"
+         id="related-card-${i}">
+      <div>
+        <span class="next-card-level">${LEVEL_LABELS[m.level]}</span>
+      </div>
+      <div class="next-card-type">${ANSWER_TYPE_ICON[m.answerType] || '✏️'}</div>
+      <div class="next-card-title">${m.title}</div>
+      <div class="next-card-body">${m.body}</div>
+      <div class="next-card-cta">やってみる →</div>
+    </div>
+  `).join('');
+  // missionsをstateに保存
+  state.relatedMissions = missions;
+}
+
+function selectRelatedMission(idx) {
+  const m = state.relatedMissions[idx];
+  if (!m) return;
+
+  // リップル
+  addRipple(document.getElementById('related-card-' + idx));
+
+  // State A に戻す
+  setTimeout(() => {
+    state.answerAttempts = 0;
+    state.answer = null;
+    state.selectedStars = 0;
+
+    // missionsに新しいミッションをセット
+    state.missions = [m];
+    state.selectedMissionIdx = 0;
+
+    // UIを更新
+    document.getElementById('answer-mission-card').innerHTML = `
+      <div class="answer-mission-level">${LEVEL_LABELS[m.level]}</div>
+      <div class="answer-mission-title">${m.title}</div>
+      <div class="answer-mission-body">${m.body}</div>
+    `;
+    renderAnswerUI(m);
+
+    // StateB→A 切替
+    document.getElementById('inline-result').style.display = 'none';
+    const as = document.getElementById('answer-state');
+    as.style.display = 'flex';
+    as.style.flexDirection = 'column';
+    // 戻るボタンはインライン結果へ
+    document.getElementById('answer-back-btn').onclick = () => {
+      as.style.display = 'none';
+      document.getElementById('inline-result').style.display = 'flex';
+      document.getElementById('inline-result').style.flexDirection = 'column';
+    };
+  }, 120);
+}
+
+// XP count-up（inline-xp-labelを使う）
 function animateXP(from, to, duration) {
-  const el = document.getElementById('xp-label');
-  const gained = to - from;
+  const el = document.getElementById('inline-xp-label');
+  if (!el) return;
   const start = performance.now();
   const tick = (now) => {
-    const t = Math.min((now - start) / duration, 1);
+    const t   = Math.min((now - start) / duration, 1);
     const ease = 1 - Math.pow(1 - t, 3);
-    const cur = Math.round(from + (to - from) * ease);
+    const cur  = Math.round(from + (to - from) * ease);
     el.textContent = `合計 ${cur} XP`;
-    if (t < 1) {
-      requestAnimationFrame(tick);
-    } else {
-      el.innerHTML = `合計 <span class="xp-pop">${to} XP</span>`;
-    }
+    if (t < 1) requestAnimationFrame(tick);
+    else el.innerHTML = `合計 <span class="xp-pop">${to} XP</span>`;
   };
   requestAnimationFrame(tick);
 }
 
-// Burst from center
+// Burst（inline-confettiコンテナを使う）
 function spawnBurst() {
-  const wrap = document.getElementById('confetti-wrap');
+  const wrap   = document.getElementById('inline-confetti');
+  if (!wrap) return;
   const colors = ['#ffd200','#f953c6','#38ef7d','#00b4d8','#ff6b6b'];
   for (let i = 0; i < 20; i++) {
-    const el = document.createElement('div');
+    const el    = document.createElement('div');
     el.className = 'burst-piece';
     const angle = (i / 20) * 360;
-    const dist = 80 + Math.random() * 120;
-    const rad = angle * Math.PI / 180;
+    const dist  = 80 + Math.random() * 100;
+    const rad   = angle * Math.PI / 180;
     el.style.setProperty('--tx', `${Math.cos(rad) * dist}px`);
     el.style.setProperty('--ty', `${Math.sin(rad) * dist}px`);
     el.style.background = colors[i % colors.length];

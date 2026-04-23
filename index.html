@@ -1163,7 +1163,7 @@ body {
     <div class="top-logo">🌟</div>
     <div class="top-title">Tomori</div>
     <div class="top-subtitle">写真から学びが始まる<br>探究ミッションアプリ</div>
-    <button class="btn btn-primary" onclick="goTo('upload')" style="max-width:280px">
+    <button class="btn btn-primary" onclick="startApp()" style="max-width:280px">
       ✨ はじめる
     </button>
     <button class="btn btn-secondary" id="folder-btn" onclick="goTo('folder');buildFolderScreen()"
@@ -1172,12 +1172,27 @@ body {
     </button>
   </div>
 
-  <!-- ===== SCREEN 2: UPLOAD ===== -->
-  <div class="screen" id="screen-upload">
+  <!-- ===== SCREEN 2: TRAIT（はじめるの直後）===== -->
+  <div class="screen" id="screen-trait">
     <button class="back-btn" onclick="goTo('top')">← もどる</button>
     <div class="screen-header">
-      <div class="screen-step">STEP 1 / 2</div>
-      <div class="screen-title">写真を<span>アップロード</span></div>
+      <div class="screen-title" id="trait-question-title">いまの気分は？</div>
+    </div>
+
+    <div class="trait-list" id="trait-list">
+      <!-- JS生成 -->
+    </div>
+
+    <button class="btn btn-primary" id="trait-next-btn" onclick="goTo('upload')" disabled style="opacity:0.4">
+      これでいく！ →
+    </button>
+  </div>
+
+  <!-- ===== SCREEN 3: UPLOAD ===== -->
+  <div class="screen" id="screen-upload">
+    <button class="back-btn" onclick="goTo('trait')">← もどる</button>
+    <div class="screen-header">
+      <div class="screen-title">写真を<span>えらぼう</span></div>
     </div>
 
     <div class="upload-area" id="upload-area" onclick="document.getElementById('file-input').click()">
@@ -1188,30 +1203,7 @@ body {
     </div>
     <input type="file" id="file-input" accept="image/*" onchange="handlePhotoUpload(this)">
 
-    <div id="category-hint" style="display:none;font-size:13px;color:rgba(255,255,255,0.5);text-align:center;margin-top:10px"></div>
-
-    <div class="mt-auto">
-      <button class="btn btn-primary" id="upload-next-btn" onclick="goTo('trait')" disabled style="opacity:0.4">
-        つぎへ →
-      </button>
-    </div>
-  </div>
-
-  <!-- ===== SCREEN 3: TRAIT ===== -->
-  <div class="screen" id="screen-trait">
-    <button class="back-btn" onclick="goTo('upload')">← もどる</button>
-    <div class="screen-header">
-      <div class="screen-step">STEP 2 / 2</div>
-      <div class="screen-title">あなたの<span>とくせい</span>は？</div>
-    </div>
-
-    <div class="trait-list" id="trait-list">
-      <!-- JS生成 -->
-    </div>
-
-    <button class="btn btn-primary" id="trait-next-btn" onclick="goToMonster()" disabled style="opacity:0.4">
-      けってい →
-    </button>
+    <div id="category-hint" style="display:none"></div>
   </div>
 
   <!-- ===== SCREEN 4: MONSTER ===== -->
@@ -1227,9 +1219,6 @@ body {
       <div class="monster-message" id="monster-message"></div>
     </div>
     <div class="spacer"></div>
-    <button class="btn btn-primary" onclick="buildMissions()">
-      ミッションを見る ⚔️
-    </button>
   </div>
 
   <!-- ===== SCREEN 5: MISSIONS ===== -->
@@ -1366,7 +1355,7 @@ body {
 // ============================
 // STATE
 // ============================
-const SCREEN_ORDER = ['top','upload','trait','monster','missions','answer','result','folder'];
+const SCREEN_ORDER = ['top','trait','upload','monster','missions','answer','result','folder'];
 let currentScreen = 'top';
 
 const MAX_ATTEMPTS = 3;
@@ -1737,14 +1726,11 @@ function resetApp() {
   area.querySelector('.upload-icon').style.display = '';
   area.querySelector('.upload-text').style.display = '';
   area.querySelector('.upload-hint').style.display = '';
-  document.getElementById('category-section').style.display = 'none';
-  document.getElementById('category-hint').style.display = 'none';
-  document.getElementById('category-error').style.display = 'none';
-  const nextBtn = document.getElementById('upload-next-btn');
-  nextBtn.disabled = true;
-  nextBtn.style.opacity = '0.4';
-  document.querySelectorAll('.cat-card').forEach(c => c.classList.remove('selected','error-chip'));
   document.getElementById('file-input').value = '';
+  // Reset trait screen
+  document.querySelectorAll('.trait-grid-card').forEach(c => c.classList.remove('selected','pop'));
+  const traitBtn = document.getElementById('trait-next-btn');
+  if (traitBtn) { traitBtn.disabled = true; traitBtn.style.opacity = '0.4'; }
   // Answer screen states reset
   const as = document.getElementById('answer-state');
   if (as) { as.style.display = 'flex'; as.style.flexDirection = 'column'; }
@@ -1872,14 +1858,15 @@ function handlePhotoUpload(input) {
     area.querySelector('.upload-text').style.display = 'none';
     area.querySelector('.upload-hint').style.display = 'none';
 
-    // 画像ロード後に自動カテゴリ判定
+    // 画像ロード後に自動カテゴリ判定 → 即モンスター生成
     preview.onload = () => {
       const detected = analyzeImageCategory(preview);
       state.suggestedCategory = detected;
-      state.category = detected; // 自動確定
-      updateUploadNextBtn();
+      state.category = detected;
+      // モンスター演出 → 2.4秒後に自動でミッションへ
+      goToMonster();
+      setTimeout(() => buildMissions(), 2400);
     };
-    updateUploadNextBtn();
   };
   reader.readAsDataURL(file);
 }
@@ -1927,8 +1914,29 @@ function updateUploadNextBtn() {
 }
 
 // ============================
-// SCREEN 3: TRAIT
+// SCREEN 2: TRAIT（はじめる直後）
 // ============================
+
+const TRAIT_QUESTIONS = [
+  'いまの気分は？',
+  '今日どんな感じ？',
+  'いまの自分ってどれ？',
+  'きょうの自分っぽいのは？',
+  'いまのキモチに近いのは？',
+  'どんな自分で探究する？',
+  'いまの自分にぴったりなのは？',
+  'きょうはどんな自分？',
+];
+
+function startApp() {
+  // ランダムに質問を選んでtraitスクリーンへ
+  const q = TRAIT_QUESTIONS[Math.floor(Math.random() * TRAIT_QUESTIONS.length)];
+  const titleEl = document.getElementById('trait-question-title');
+  if (titleEl) titleEl.textContent = q;
+  buildTraitList();
+  goTo('trait');
+}
+
 function buildTraitList() {
   const list = document.getElementById('trait-list');
   list.className = 'trait-grid';
@@ -1957,7 +1965,7 @@ function selectTrait(key, el, e) {
 // SCREEN 4: MONSTER
 // ============================
 function goToMonster() {
-  if (!state.trait) return;
+  if (!state.category) return;
   state.monster = MONSTERS[state.category] || MONSTERS.mystery;
   document.getElementById('monster-photo').src = state.photoUrl;
   document.getElementById('monster-emoji').textContent = state.monster.emoji;

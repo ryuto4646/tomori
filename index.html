@@ -1595,6 +1595,53 @@ const REACTIONS = [
 
 const LEVEL_LABELS = { 1: 'LEVEL 1 すぐできる', 2: 'LEVEL 2 少し観察', 3: 'LEVEL 3 少し考える' };
 const LEVEL_CLASS  = { 1: 'lv1', 2: 'lv2', 3: 'lv3' };
+
+// ============================
+// DATA: MONSTER_COMMENTS（回答を引用してモンスターが深掘り）
+// ============================
+// 各エントリは (answerSnippet) => [reaction, sub] の関数
+const MONSTER_COMMENTS = {
+  animal: [
+    a => [`「${a}」ってマジで言った!?`, `モフルンも同じこと思ってたけど言葉にできなかったやつ…！なんでそう思ったか教えて🐾`],
+    a => [`${a}！その発想、野生の本能に近い！`, `じゃあさ、もし全然ちがう動物だったら答えは変わった？🤔`],
+    a => [`ちょっとまって…「${a}」ってことは…！`, `それって、生き物みんなに当てはまると思う？それとも特別？`],
+    a => [`${a}か〜！100人に聞いたらたぶん君だけの答えだよ`, `どこでその考えが浮かんだの？すごい気になる👀`],
+    a => [`「${a}」！モフルン感動して毛が逆立った！🐾`, `その答えの逆を考えるとどうなる？試してみて！`],
+    a => [`${a}って…！正直モフルンも「あっ、そっか！」ってなった`, `もしその答えが間違いだったとしたら？それでも同じこと言える？`],
+  ],
+  food: [
+    a => [`「${a}」！！グルモン的には殿堂入りの答え！🍴`, `その感覚って、食べたことない料理でも同じだと思う？`],
+    a => [`${a}か〜！食の哲学者か！`, `なんでそう感じたの？におい？見た目？それとも記憶？🤔`],
+    a => [`ちょっとまって「${a}」って言ったの本当!?`, `それって誰かに教えてもらった？それとも自分で気づいた？`],
+    a => [`${a}！グルモンのアンテナが全力で反応した！`, `その答え、世界のシェフが聞いたら絶対うなずくと思う。なんで？🌍`],
+    a => [`「${a}」…グルモン10年間この答えを待ってたんだけど！`, `じゃあそれって、どんな気持ちのときに食べたくなる？`],
+    a => [`${a}って気づけるのセンスあるよ！`, `もしその食べ物が世界からなくなったら何が変わると思う？🤯`],
+  ],
+  vehicle: [
+    a => [`「${a}」…解析完了。予想外すぎてフリーズしかけた⚙️`, `その考え、もっと速い乗り物でも同じことが言える？`],
+    a => [`${a}！エンジニアっぽい！メカロン嬉しい！`, `もし自分が設計者だったら、その考えをどう形にする？🔧`],
+    a => [`ちょっとまって「${a}」って…重要なデータだ！`, `その答えを使って何か発明できると思う？どんなもの？⚡`],
+    a => [`${a}！！緊急分析中…ヤバい面白い！`, `その結論に至った手順を教えて。ステップ1から！🤖`],
+    a => [`「${a}」か〜メカロンの想定を超えてきた！`, `それって100年後の未来でも同じことが言えると思う？🚀`],
+    a => [`${a}！計算上ありえない答えなのに合ってる気がする！`, `なんでそう思ったか、逆に教えてほしい。本当に気になる！`],
+  ],
+  plant: [
+    a => [`「${a}」…木も草も、たぶんそれを知ってる🌿`, `その答え、自然の中で探すとしたらどこで見つかりそう？`],
+    a => [`${a}ね…深い。フォレスト100年生きてきてそれは言えなかった`, `季節によってその答えは変わると思う？春と冬で比べてみて🌸`],
+    a => [`ほほう…「${a}」か。種が芽吹く感じの答えだ🌱`, `もしその答えが植物だったら、どんな植物に近いと思う？`],
+    a => [`${a}！フォレストも同じこと何千年も前から感じてた！`, `それって、人間が生まれる前からあったことだと思う？`],
+    a => [`「${a}」…風がそう言ってるみたいな答えだよ`, `その感覚、他の生き物にも伝えられると思う？どうやって？`],
+    a => [`${a}って言えるのはすごい！🌲`, `もしその考えが「根っこ」だとしたら、どんな木が育つと思う？`],
+  ],
+  mystery: [
+    a => [`「${a}」…ミステリオも長年その謎を追っていた…！`, `その答えの先に何があると思う？目を閉じて想像してみて🔮`],
+    a => [`${a}！宇宙の果てで同じ答えが出るかもしれない！`, `なんでそう思ったの？その直感、どこから来てる？✨`],
+    a => [`「${a}」って言える人、地球に何人いると思う？`, `たぶん少ない。その感覚、絶対に忘れないで！🌌`],
+    a => [`${a}！！時空が揺れた気がした…本当に！`, `その答えをもっと突き詰めると、どこに行き着くと思う？`],
+    a => [`ちょっとまって「${a}」って…これは記録しておかないといけない！`, `もしその答えが間違いだったとしたら、どんな答えになる？🔮`],
+    a => [`${a}か〜！ミステリオ的には宇宙レベルの発見だよ！`, `その考え、誰かに話したら何て言われると思う？😏`],
+  ],
+};
 const TRIVIA_CAT_BG = {
   animal:  'linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%)',
   food:    'linear-gradient(135deg, #7c2d12 0%, #9a3412 50%, #c2410c 100%)',
@@ -2307,32 +2354,43 @@ function submitAnswer() {
   state.prevXp = state.xp;
   state.xp += gained;
 
-  const reaction = REACTIONS[Math.floor(Math.random() * REACTIONS.length)];
-  showInlineResult(v, gained, reaction);
+  showInlineResult(v, gained);
 }
 
-function showInlineResult(v, gained, reaction) {
+function showInlineResult(v, gained) {
   // State切替
   document.getElementById('answer-state').style.display = 'none';
   const ir = document.getElementById('inline-result');
   ir.style.display = 'flex';
   ir.style.flexDirection = 'column';
 
-  // フィードバック内容
+  // XP表示
   document.getElementById('inline-xp-label').textContent = `+${gained} XP ゲット！`;
 
   const me = document.getElementById('inline-monster-emoji');
-  me.textContent = state.monster.emoji;
+  me.textContent = state.monster?.emoji || '🌟';
   me.style.animation = 'none'; void me.offsetWidth; me.style.animation = '';
 
+  // ---- 回答スニペットを取得 ----
+  const ta = document.getElementById('answer-text');
+  let answerSnippet = (ta && ta.value.trim()) || state.answer || '…';
+  if (answerSnippet.length > 18) answerSnippet = answerSnippet.slice(0, 18) + '…';
+
+  // ---- モンスターの個性でリアクション ----
+  const cat = state.category || 'mystery';
+  const pool = MONSTER_COMMENTS[cat] || MONSTER_COMMENTS.mystery;
+  const commentFn = pool[Math.floor(Math.random() * pool.length)];
+  const [reaction, sub] = commentFn(answerSnippet);
+
   if (v.bonus) {
-    document.getElementById('inline-reaction').textContent = 'くわしく書いてくれてありがとう！';
-    document.getElementById('inline-sub').textContent = 'そこまで考えてくれたんだね！ボーナスXPをあげるよ！';
-    document.getElementById('inline-effect').textContent = `⭐ 詳細ボーナス！+${gained} XP（+20 UP）`;
+    // ボーナス時：回答に驚きつつボーナスも伝える
+    document.getElementById('inline-reaction').textContent = `「${answerSnippet}」…そこまで書いてくれたの！？`;
+    document.getElementById('inline-sub').textContent = `くわしく考えてくれてありがとう！${sub}`;
+    document.getElementById('inline-effect').textContent = `⭐ くわしいボーナス！+${gained} XP（+20UP）`;
   } else {
-    document.getElementById('inline-reaction').textContent = reaction.msg;
-    document.getElementById('inline-sub').textContent = reaction.sub;
-    document.getElementById('inline-effect').textContent = reaction.effect;
+    document.getElementById('inline-reaction').textContent = reaction;
+    document.getElementById('inline-sub').textContent = sub;
+    document.getElementById('inline-effect').textContent = `+${gained} XP ゲット！`;
   }
 
   // XP バー

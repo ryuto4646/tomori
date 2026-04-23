@@ -1479,11 +1479,11 @@ const EXTRA_MISSIONS = {
 // DATA: REACTIONS
 // ============================
 const REACTIONS = [
-  { msg: 'いいところに気づいたね！', sub: 'その目の付け所、最高だよ！', effect: '🎉 モンスターと仲良くなった！' },
-  { msg: 'その見方、おもしろい！', sub: 'みんなと違う考え方ができるって、すごいことだよ！', effect: '⭐ 新しいミッションが開放された！' },
-  { msg: 'なるほど！その考えで\nいってみよう！', sub: 'もっと深く考えると、またちがうことが見えてくるよ！', effect: '💥 モンスターを倒した！経験値ゲット！' },
-  { msg: 'すごい！モンスターも\n感動してるよ！', sub: 'その発見、大事にしてね！', effect: '✨ レアスキルを習得した！' },
-  { msg: 'その答え、ぴったり！', sub: '考える力が育ってるの、わかるよ！', effect: '🌟 探究ポイント+100！次のステージへ！' },
+  { msg: '面白い見方だね！', sub: 'そういう考え方、すごくいいよ！', effect: '🎉 新しい視点をゲット！' },
+  { msg: 'へぇ、そう思ったんだね！', sub: 'その発想、なかなかないよ！みんなと違う見方ができるってすごい！', effect: '⭐ ユニークな考えで経験値UP！' },
+  { msg: 'なるほど！\nおもしろい見方だ！', sub: 'もっと深く考えると、また違うものが見えてくるよ！', effect: '💡 アイデアをひとつ発見！' },
+  { msg: 'その視点、いいね！', sub: 'そこに気づくってすごいよ！モンスターも感動してる！', effect: '🌟 探究力がアップした！' },
+  { msg: 'そっか！\nそんな考え方もあるんだね！', sub: 'いろんな見方があっておもしろいね！', effect: '🔍 探究の道が広がった！' },
 ];
 
 const LEVEL_LABELS = { 1: 'LEVEL 1 すぐできる', 2: 'LEVEL 2 少し観察', 3: 'LEVEL 3 少し考える' };
@@ -1910,8 +1910,8 @@ function renderAnswerUI(m) {
       } else {
         ui.innerHTML = `
           <textarea class="answer-textarea" id="answer-text"
-            placeholder="じゆうにかいてみよう…（10文字以上）" oninput="checkAnswerReady()"></textarea>
-          <div class="char-counter warn" id="char-counter">0 / 10文字</div>
+            placeholder="なんでもいいから書いてみよう！どんな答えでもOKだよ🙆" oninput="checkAnswerReady()"></textarea>
+          <div class="char-counter warn" id="char-counter">なんでもいいから書いてみよう！</div>
         `;
       }
       setSubmitBtn(false);
@@ -1966,21 +1966,28 @@ function checkAnswerReady() {
   if (!ta) return;
   const len = ta.value.trim().length;
   const counter = document.getElementById('char-counter');
+  const m = state.missions[state.selectedMissionIdx];
+  const isTextOnly = m && m.answerType === 'text';
+
   if (counter) {
     if (len >= BONUS_TEXT_LEN) {
-      counter.textContent = `${len}文字 ✨ ボーナス対象！`;
+      counter.textContent = `${len}文字 ✨ くわしい！`;
       counter.className = 'char-counter bonus';
-    } else if (len >= MIN_TEXT_LEN) {
-      counter.textContent = `${len}文字 ✓`;
+    } else if (len >= 1) {
+      counter.textContent = isTextOnly ? `${len}文字 ✓ 送れるよ！` : `${len}文字 ✓`;
       counter.className = 'char-counter ok';
     } else {
-      counter.textContent = `${len} / ${MIN_TEXT_LEN}文字`;
+      counter.textContent = isTextOnly ? 'なんでもいいから書いてみよう！' : `0 / ${MIN_TEXT_LEN}文字`;
       counter.className = 'char-counter warn';
     }
   }
-  const m = state.missions[state.selectedMissionIdx];
+
   if (m && m.answerType === 'choose+why') {
+    // choose+why は理由テキスト10文字 + 選択済みの両方必要
     setSubmitBtn(len >= MIN_TEXT_LEN && !!state.answer);
+  } else if (isTextOnly) {
+    // 記述式は1文字以上でOK
+    setSubmitBtn(len >= 1);
   } else {
     setSubmitBtn(len >= MIN_TEXT_LEN);
   }
@@ -2005,9 +2012,8 @@ function validateAnswer() {
     if (!state.answer) return { valid: false, reason: 'まず選択肢を選んでみよう！' };
     if (text.length < MIN_TEXT_LEN) return { valid: false, reason: `理由を${MIN_TEXT_LEN}文字以上書いてみよう！（今${text.length}文字）` };
   } else {
-    if (text.length < MIN_TEXT_LEN) return { valid: false, reason: `${MIN_TEXT_LEN}文字以上書いてみよう！（今${text.length}文字）` };
-    const unique = new Set(text.replace(/\s/g,'')).size;
-    if (unique < 3 && text.length >= MIN_TEXT_LEN) return { valid: false, reason: 'ちゃんとした言葉で書いてみよう！' };
+    // 記述式はどんな回答でも正解 — 1文字あれば送れる
+    if (text.length < 1) return { valid: false, reason: 'なにか書いてみよう！' };
   }
 
   const bonus = text.length >= BONUS_TEXT_LEN;
@@ -2131,11 +2137,24 @@ function generateRelatedMissions() {
   // 現在のミッションを除外
   const filtered = pool.filter(m => m.title !== currentTitle);
 
-  // シャッフル
-  for (let i = filtered.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [filtered[i], filtered[j]] = [filtered[j], filtered[i]];
-  }
+  // 回答テキストからキーワード抽出してスコアリング
+  const answerEl = document.getElementById('answer-text');
+  const answerText = (answerEl ? answerEl.value : '') || (state.answer || '');
+  const keywords = answerText
+    .replace(/[、。！？…\s]/g, ' ')
+    .split(' ')
+    .map(w => w.trim())
+    .filter(w => w.length >= 2);
+
+  filtered.forEach(m => {
+    const haystack = m.title + m.body;
+    const matchCount = keywords.filter(kw => haystack.includes(kw)).length;
+    // キーワードマッチ数×10 + ランダム成分（多様性確保）
+    m._sort = matchCount * 10 + Math.random() * 5;
+  });
+
+  // スコア降順でソート
+  filtered.sort((a, b) => b._sort - a._sort);
   return filtered.slice(0, 4);
 }
 

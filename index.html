@@ -1203,7 +1203,11 @@ body {
     </div>
     <input type="file" id="file-input" accept="image/*" onchange="handlePhotoUpload(this)">
 
-    <div id="category-hint" style="display:none"></div>
+    <div class="mt-auto" id="upload-go-wrap" style="display:none">
+      <button class="btn btn-primary" id="upload-go-btn" onclick="launchFromPhoto()">
+        ⚡ すすむ！
+      </button>
+    </div>
   </div>
 
   <!-- ===== SCREEN 4: MONSTER ===== -->
@@ -1774,6 +1778,8 @@ function resetApp() {
   area.querySelector('.upload-text').style.display = '';
   area.querySelector('.upload-hint').style.display = '';
   document.getElementById('file-input').value = '';
+  document.getElementById('upload-go-wrap').style.display = 'none';
+  state._photoReady = false;
   // Reset trait screen
   document.querySelectorAll('.trait-grid-card').forEach(c => c.classList.remove('selected','pop'));
   const traitBtn = document.getElementById('trait-next-btn');
@@ -1894,6 +1900,7 @@ function handlePhotoUpload(input) {
     state.photoUrl = e.target.result;
     state.suggestedCategory = null;
     state.category = null;
+    state._photoReady = false;
 
     const area = document.getElementById('upload-area');
     area.classList.add('has-image');
@@ -1901,20 +1908,39 @@ function handlePhotoUpload(input) {
     area.querySelector('.upload-text').style.display = 'none';
     area.querySelector('.upload-hint').style.display = 'none';
 
-    // onload を src より先に設定（data URL は即時ロードされるため順序が重要）
     const preview = document.getElementById('photo-preview');
+
+    // onload を src より前に設定
     preview.onload = () => {
       const detected = analyzeImageCategory(preview);
       state.suggestedCategory = detected;
       state.category = detected;
-      // モンスター演出 → 2.4秒後に自動でミッションへ
-      goToMonster();
-      setTimeout(() => buildMissions(), 2400);
+      state._photoReady = true;
+      // 自動遷移（モンスター演出 → 2.4秒後にミッションへ）
+      launchFromPhoto();
     };
     preview.src = state.photoUrl;
     preview.style.display = 'block';
+
+    // onload が発火しない環境用フォールバック：ボタンを表示
+    setTimeout(() => {
+      if (!state._photoReady) {
+        document.getElementById('upload-go-wrap').style.display = 'block';
+      }
+    }, 800);
   };
   reader.readAsDataURL(file);
+}
+
+// 写真確定 → モンスター生成 → ミッションへ
+function launchFromPhoto() {
+  document.getElementById('upload-go-wrap').style.display = 'none';
+  if (!state.category) {
+    const preview = document.getElementById('photo-preview');
+    state.category = analyzeImageCategory(preview) || 'mystery';
+  }
+  goToMonster();
+  setTimeout(() => buildMissions(), 2400);
 }
 
 // selectCategory は新フローでは未使用（自動判定のみ）

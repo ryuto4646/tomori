@@ -728,6 +728,41 @@ body {
   font-size: 13px; color: #38ef7d; font-weight: bold;
 }
 
+/* ---- 雑学カード ---- */
+.trivia-card {
+  background: linear-gradient(135deg, rgba(91,33,182,0.25), rgba(139,92,246,0.15));
+  border: 1.5px solid rgba(139,92,246,0.45);
+  border-radius: 20px;
+  padding: 16px 18px 18px;
+  margin: 4px 0 20px;
+  position: relative; overflow: hidden;
+  animation: triviaIn 0.5s ease 0.4s both;
+}
+.trivia-card::before {
+  content: '';
+  position: absolute; top: -20px; right: -20px;
+  width: 80px; height: 80px;
+  background: radial-gradient(circle, rgba(167,139,250,0.2) 0%, transparent 70%);
+  pointer-events: none;
+}
+@keyframes triviaIn {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.trivia-header {
+  font-size: 11px; font-weight: 900; letter-spacing: 0.1em;
+  color: #a78bfa; margin-bottom: 10px;
+  display: flex; align-items: center; gap: 5px;
+}
+.trivia-body {
+  display: flex; align-items: flex-start; gap: 12px;
+}
+.trivia-emoji { font-size: 38px; line-height: 1; flex-shrink: 0; }
+.trivia-text {
+  font-size: 14px; color: rgba(255,255,255,0.92);
+  line-height: 1.7; font-weight: 500;
+}
+
 /* 次の探究 ヘッダー */
 .next-header {
   display: flex; align-items: baseline; justify-content: space-between;
@@ -1193,6 +1228,15 @@ body {
         <div class="inline-effect" id="inline-effect"></div>
       </div>
 
+      <!-- 雑学カード -->
+      <div class="trivia-card" id="trivia-card" style="display:none">
+        <div class="trivia-header">💡 ちょこっと雑学！</div>
+        <div class="trivia-body">
+          <span class="trivia-emoji" id="trivia-emoji"></span>
+          <div class="trivia-text" id="trivia-text"></div>
+        </div>
+      </div>
+
       <!-- 次の探究 -->
       <div class="next-header">
         <div class="next-header-title">🔍 次の探究を選ぼう</div>
@@ -1488,6 +1532,80 @@ const REACTIONS = [
 
 const LEVEL_LABELS = { 1: 'LEVEL 1 すぐできる', 2: 'LEVEL 2 少し観察', 3: 'LEVEL 3 少し考える' };
 const LEVEL_CLASS  = { 1: 'lv1', 2: 'lv2', 3: 'lv3' };
+
+// ============================
+// DATA: TRIVIA（カテゴリ×レベル別雑学）
+// ============================
+const TRIVIA = {
+  animal: [
+    // level 1 — 短い・やさしい言葉
+    { level:1, emoji:'👁️', fact:'ネコの目は暗やみでも人間の6倍よく見えるんだよ！だから夜もへっちゃら🌙' },
+    { level:1, emoji:'🦒', fact:'キリンのくびは長～いけど、骨の数は人間とおなじ7つなんだって！びっくりだよね！' },
+    { level:1, emoji:'🐘', fact:'ゾウは鼻で水をのんだり、シャワーしたり、においをかいだりできるよ。鼻が万能ツールなんだ！' },
+    { level:1, emoji:'🐠', fact:'さかなは水の中でも「音」でおしゃべりしているんだよ。人には聞こえない声でね！' },
+    // level 2 — 少し長い・少し難しい言葉OK
+    { level:2, emoji:'🐙', fact:'タコは心臓を3つもっていて、血の色が青いんだよ。体も柔らかくて骨がないから、どんなせまい穴でも通り抜けられるよ！' },
+    { level:2, emoji:'🐝', fact:'ミツバチはダンスで仲間に「花がどっちに、どのくらい遠くにあるか」を教えられるんだ。言葉なしで情報を伝えるってすごいよね！' },
+    { level:2, emoji:'🦜', fact:'ヨウムというオウムは人の言葉の意味を理解して使えることがわかっているよ。「くやしい」とか「たのしい」という気持ちも表現できるんだって！' },
+    { level:2, emoji:'🦎', fact:'カメレオンの色が変わるのは気温や気分のせいで、まわりの色に合わせているわけじゃないんだって！感情表現なんだね！' },
+    // level 3 — より詳しい・深い内容
+    { level:3, emoji:'🐬', fact:'イルカは自分だけの「名前の鳴き声」を持っていて、仲間同士で名前を呼び合うことが研究でわかってきたよ。文化や言語に近いものを持っているんだ！' },
+    { level:3, emoji:'🦈', fact:'サメは数億年前からほとんど体の形が変わっていない「生きた化石」なんだ。それだけ完璧に進化しているということ。恐竜より前から地球にいるんだよ！' },
+    { level:3, emoji:'🐜', fact:'アリの巣は役割分担がとても細かい。女王・兵隊・働きアリそれぞれが情報をフェロモンという化学信号でやりとりして巨大な社会を作っているんだ！' },
+  ],
+  food: [
+    { level:1, emoji:'🍫', fact:'チョコレートはカカオという実から作られているよ。最初は苦～い飲み物として飲まれていたんだって！' },
+    { level:1, emoji:'🍞', fact:'パンがふくらむのは、「酵母（こうぼ）」という目に見えない小さな生き物がはたらいているからなんだよ！' },
+    { level:1, emoji:'🥦', fact:'ブロッコリーは「花のつぼみ」を食べているんだよ。収穫しないでおくと黄色い花が咲くんだ！' },
+    { level:1, emoji:'🍎', fact:'リンゴの赤い色は太陽をいっぱいあびると出てくるんだよ。日当たりのよい側が真っ赤になるのはそのせい！' },
+    { level:2, emoji:'🧅', fact:'タマネギを切ると目がしみるのは、タマネギが虫に食べられないように出す成分のせいなんだ。植物なりの自己防衛だよ！' },
+    { level:2, emoji:'🍣', fact:'お寿司のシャリに使う酢には食べ物が腐りにくくする力があるよ。昔は「酢飯＋魚を発酵させる」のが本来の寿司の形だったんだって！' },
+    { level:2, emoji:'🌽', fact:'トウモロコシのひげ1本が実1粒とつながっているんだよ。だからひげの数と粒の数はぴったり同じになるんだ！' },
+    { level:2, emoji:'🍯', fact:'ハチミツは何千年たっても腐らないんだよ。エジプトのピラミッドで発見されたハチミツが今でも食べられる状態だったという話があるよ！' },
+    { level:3, emoji:'🌶️', fact:'「辛さ」は本当は「味」じゃなくて「痛み」なんだ。カプサイシンという成分が痛みのセンサーを刺激しているんだよ。だから辛いものを食べると汗が出るのも体が熱を感じているから！' },
+    { level:3, emoji:'🥑', fact:'アボカドはそのまま放置しておくと種が発芽できないようになっているんだ。大きな動物に食べてもらって、遠くで種を落としてもらうことで増える戦略を持っているよ！' },
+    { level:3, emoji:'🍵', fact:'緑茶のカテキンには抗菌作用があるよ。昔から「お茶でうがいするとかぜをひきにくい」と言われていたのは、科学的にも理由があったんだね！' },
+  ],
+  vehicle: [
+    { level:1, emoji:'✈️', fact:'飛行機の翼の形は、上側が丸く下側が平たいんだよ。これで上の空気がすばやく流れて機体が浮かび上がるんだ！鳥の羽に似てるでしょ？' },
+    { level:1, emoji:'🚂', fact:'新幹線の先頭がとがっているのはトンネルに入るときの「ドーン！」という音を小さくするためなんだよ。カワセミのくちばしを参考にしているんだって！' },
+    { level:1, emoji:'🚀', fact:'ロケットは宇宙に行くとき、タンクが空になったら切り離しながら進むんだよ。重さを減らしてどんどん速くなる工夫だよ！' },
+    { level:1, emoji:'🚗', fact:'タイヤに溝があるのは雨の日に水をかき出すためなんだよ。溝がないとすべってしまうから大事なんだ！' },
+    { level:2, emoji:'🚢', fact:'巨大なタンカーは何万トンもあるのに水に浮かぶよ。船の中が空洞になっていて、全体の密度が水より軽くなるからなんだ！これはアルキメデスが発見した原理だよ！' },
+    { level:2, emoji:'🚗', fact:'電気自動車はブレーキをかけるとき、その動く力を電気に変えてバッテリーに戻す「回生ブレーキ」を使っているんだ。止まりながらエネルギーを回収するって賢いよね！' },
+    { level:2, emoji:'🚁', fact:'ヘリコプターは回転羽根（ローター）の角度を変えることで上下左右自由に動くんだよ。後ろの小さなローターがないと機体がぐるぐる回ってしまうんだって！' },
+    { level:2, emoji:'🛸', fact:'国際宇宙ステーション（ISS）は地上400kmを時速27,600kmで飛んでいるよ。90分で地球を一周するスピードなんだ！' },
+    { level:3, emoji:'🏎️', fact:'F1マシンは走行中に「ダウンフォース」という空気の力で車体を地面に押し付けているんだ。その力は車体の重さよりも大きくて、理論上は天地逆にしてもトンネルの天井を走れるくらいなんだよ！' },
+    { level:3, emoji:'🚄', fact:'リニアモーターカーは磁石の力でレールから浮いて走るから車輪とレールの摩擦がゼロ。だから時速500km以上でも静かで滑らかなんだ。超電導という特殊な磁石が使われているよ！' },
+    { level:3, emoji:'🛰️', fact:'人工衛星が地球の周りを飛び続けられるのは「常に落ちているから」なんだ。地球に向かって落ちる力と横に進む力がつりあって、ずっと周回し続けるんだよ！' },
+  ],
+  plant: [
+    { level:1, emoji:'🌻', fact:'ヒマワリは太陽の方向を追いかけて動くんだよ！朝は東、夕方は西を向いているね！でも大きく育ったら動かなくなるんだって。' },
+    { level:1, emoji:'🌸', fact:'桜の花びらが散るのは風のせいじゃなくて、花びらのつけ根が自分でちぎれるようになっているからなんだよ！' },
+    { level:1, emoji:'🌵', fact:'サボテンのとげは「葉っぱ」が変化したものなんだよ。水分が蒸発しないように葉をとげにしたんだって！' },
+    { level:1, emoji:'🍀', fact:'四つ葉のクローバーが生まれるのは、育つときに傷ついたりストレスがかかったりしたからなんだよ。だからめずらしいんだね！' },
+    { level:2, emoji:'🌺', fact:'花の色や香りは虫や鳥を呼ぶためのサインなんだよ。花粉を運んでもらうために植物が長い時間をかけて進化させてきた「おいで！」のメッセージなんだ！' },
+    { level:2, emoji:'🌿', fact:'植物は根から水を吸って葉から蒸発させているよ。大きな木は1日に何百リットルもの水を動かしているんだって。根から葉までポンプなしで水を上げる力ってすごいね！' },
+    { level:2, emoji:'🍄', fact:'キノコは植物じゃなくて「菌類」という別のグループなんだよ。地面の下では糸みたいな体が網の目のように広がっていて、木の根と協力して栄養を交換しているんだって！' },
+    { level:2, emoji:'🌾', fact:'稲（お米）は世界の半分以上の人の主食なんだよ。日本だけでも1年間に約780万トンのお米が作られているんだって！' },
+    { level:3, emoji:'🌲', fact:'木々は根っこの先にいる菌のネットワーク（菌根菌）でつながって、栄養や水を分け合っていることがわかってきたよ。「森のWi-Fi」とも呼ばれていて、親の木が子供の木に栄養を送ることもあるんだ！' },
+    { level:3, emoji:'🌱', fact:'光合成で地球の酸素の約半分を作っているのは、実は陸の木ではなく海の「植物プランクトン」なんだよ。目に見えない小さな生き物が空気を支えているんだね！' },
+    { level:3, emoji:'🪴', fact:'植物は傷つけられると化学信号を出して周りの植物に「危険！」と知らせることができるんだよ。音にも反応することがある。植物にも「感じる」力があるのかもしれない！' },
+  ],
+  mystery: [
+    { level:1, emoji:'🌈', fact:'虹は太陽の反対側に見えるんだよ。雨粒の中で光が赤・橙・黄…と分かれてできるんだ！丸く見えるのは地面に隠れているから。空から見ると完全な円になるんだって！' },
+    { level:1, emoji:'⭐', fact:'夜空の星の光は、何百年も前に出た光が届いているんだよ。見ている星がすでに消えていることもあるかも。タイムマシンみたいだよね！' },
+    { level:1, emoji:'❄️', fact:'雪の結晶は全部六角形をしているけど、世界に全く同じ形のものはないと言われているんだよ！一つひとつがオリジナルなんだね。' },
+    { level:1, emoji:'🌊', fact:'海は地球の表面の70%をおおっているんだよ。でも人間がまだ探検したことのない深い場所がたくさんあって、宇宙より謎が多いとも言われているんだって！' },
+    { level:2, emoji:'🧲', fact:'地球全体がひとつの巨大な磁石になっているんだよ。方位磁石が北を指すのは、地球の内部にある液体の鉄が動いて磁場を作っているからなんだ！' },
+    { level:2, emoji:'🌙', fact:'月は毎年3.8cmずつ地球から遠ざかっているんだよ。ずっと昔は今より大きく見えていたはず。数億年後には月食が見られなくなるかもしれないんだって！' },
+    { level:2, emoji:'⚡', fact:'雷は太陽の表面よりも温度が高いんだよ！雷の温度は約30,000℃で、太陽の表面温度（約6,000℃）の5倍もあるんだって。一瞬だけどすさまじいエネルギーだよね！' },
+    { level:2, emoji:'🌪️', fact:'竜巻の中心は気圧がすごく低くなっているんだ。だから建物に当たると外と内の気圧差で爆発するように壊れることがあるんだよ。自然の力ってすごいね！' },
+    { level:3, emoji:'🕳️', fact:'ブラックホールは光でさえも逃げられないほど強い引力を持つよ。近くに行くと時間の流れ方まで遅くなるんだ。2019年に初めて写真が撮影されたんだよ！' },
+    { level:3, emoji:'🧬', fact:'人間1人のDNAをすべてつなぎ合わせると、太陽まで往復できるほどの長さになるんだよ。それが体の細胞60兆個それぞれに入っているんだって。宇宙より不思議かも！' },
+    { level:3, emoji:'🌌', fact:'宇宙には観測できる星だけで2兆個もの銀河があって、各銀河に数千億の星があると言われているよ。地球の砂浜の砂粒より多い数の星が存在するんだ！' },
+  ],
+};
 
 // ============================
 // NAVIGATION
@@ -2105,6 +2223,9 @@ function showInlineResult(v, gained, reaction) {
   // XP カウントアップ
   setTimeout(() => animateXP(state.prevXp, state.xp, 900), 300);
 
+  // 雑学カード
+  showTrivia();
+
   // 関連ミッション生成
   buildRelatedMissions();
 
@@ -2113,6 +2234,24 @@ function showInlineResult(v, gained, reaction) {
 
   // 上にスクロール
   ir.scrollTop = 0;
+}
+
+// ============================
+// 雑学表示
+// ============================
+function showTrivia() {
+  const cat   = state.category || 'mystery';
+  const level = state.missions[state.selectedMissionIdx]?.level || 1;
+
+  // カテゴリ×レベルで絞り込み、なければカテゴリ全体からランダム
+  const pool = (TRIVIA[cat] || TRIVIA.mystery);
+  const matched = pool.filter(t => t.level === level);
+  const items = matched.length > 0 ? matched : pool;
+  const item  = items[Math.floor(Math.random() * items.length)];
+
+  document.getElementById('trivia-emoji').textContent = item.emoji;
+  document.getElementById('trivia-text').textContent  = item.fact;
+  document.getElementById('trivia-card').style.display = 'block';
 }
 
 // ============================
@@ -2203,6 +2342,7 @@ function selectRelatedMission(idx) {
     renderAnswerUI(m);
 
     // StateB→A 切替
+    document.getElementById('trivia-card').style.display = 'none';
     document.getElementById('inline-result').style.display = 'none';
     const as = document.getElementById('answer-state');
     as.style.display = 'flex';

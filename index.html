@@ -1219,13 +1219,16 @@ body {
       <img id="monster-photo" src="" alt="">
     </div>
     <div class="monster-appear-text">⚡ モンスター出現！</div>
-    <div class="monster-card">
+    <div class="monster-card" id="monster-card">
       <span class="monster-emoji" id="monster-emoji"></span>
       <div class="monster-type" id="monster-type"></div>
       <div class="monster-name" id="monster-name"></div>
       <div class="monster-message" id="monster-message"></div>
     </div>
     <div class="spacer"></div>
+    <button class="btn btn-primary" id="monster-go-btn" onclick="buildMissions()" style="opacity:0">
+      たんけんへ！ ⚔️
+    </button>
   </div>
 
   <!-- ===== SCREEN 5: MISSIONS ===== -->
@@ -1942,8 +1945,14 @@ function launchFromPhoto() {
     const preview = document.getElementById('photo-preview');
     state.category = analyzeImageCategory(preview) || 'mystery';
   }
-  goToMonster();
+  // setTimeout を先に登録（goToMonster がエラーしても進める）
   setTimeout(() => buildMissions(), 2400);
+  // フォールバックボタンを2秒後に表示
+  setTimeout(() => {
+    const btn = document.getElementById('monster-go-btn');
+    if (btn) btn.style.opacity = '1';
+  }, 2000);
+  try { goToMonster(); } catch(e) { console.warn('goToMonster error:', e); }
 }
 
 // selectCategory は新フローでは未使用（自動判定のみ）

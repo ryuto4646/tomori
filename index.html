@@ -1843,27 +1843,27 @@ function analyzeImageCategory(imgEl) {
     const whiteRatio = whitePx / total;
     const blueRatio  = bluePx  / total;
 
-    // ---- 判定ロジック（ピクセル分布ベース） ----
+    // ---- 判定ロジック ----
 
-    // 1) 全体が暗すぎる → mystery
+    // 1) 全体が暗い → mystery
     if (avgBright < 48 || darkRatio > 0.58) return 'mystery';
 
-    // 2) グレーが多くて低彩度 → vehicle（コンクリート・建物・鉄）
-    if (grayRatio > 0.42 && avgSat < 0.20) return 'vehicle';
-
-    // 3) 緑ピクセルが多い → plant
-    if (greenRatio > 0.20) return 'plant';
+    // 2) 緑が多い → plant（vehicle/foodより先に判定）
+    if (greenRatio > 0.18) return 'plant';
     if (avgG > avgR * 1.12 && avgG > avgB * 1.08 && avgSat > 0.10) return 'plant';
 
-    // 4) food 判定（複数シグナルの組合せ）
-    //    ・暖色ピクセル多い（茶・橙・赤 → パン・肉・果物・コーヒー）
-    //    ・OR 白エリア（皿）＋R平均最大（テーブルフォト典型）
-    //    ・OR R平均が明確に優位
-    if (warmRatio > 0.18) return 'food';
-    if (whiteRatio > 0.12 && avgR >= avgG && avgR >= avgB && avgBright > 55) return 'food';
-    if (avgR > avgG * 1.08 && avgR > avgB * 1.14 && avgBright > 55) return 'food';
+    // 3) food 判定 — vehicleより先に！（白皿がgrayとして誤分類されるのを防ぐ）
+    //    ・暖色ピクセルが12%超（茶・橙・赤 → パン/肉/果物/コーヒー）
+    //    ・OR 白エリア（皿）があってRが平均最大
+    //    ・OR 平均でRがG・Bより優位
+    if (warmRatio > 0.12) return 'food';
+    if (whiteRatio > 0.08 && avgR >= avgG - 3 && avgBright > 55) return 'food';
+    if (avgR > avgG * 1.06 && avgR > avgB * 1.10 && avgBright > 58) return 'food';
 
-    // 5) 青が多い → vehicle（空・海・乗り物）
+    // 4) グレー多＋低彩度＋暖色少 → vehicle（コンクリート・建物）
+    if (grayRatio > 0.40 && avgSat < 0.18 && warmRatio < 0.08) return 'vehicle';
+
+    // 5) 青が多い → vehicle（空・海）
     if (blueRatio > 0.20 || (avgB > avgR * 1.10 && avgB > avgG)) return 'vehicle';
 
     // 6) それ以外 → animal

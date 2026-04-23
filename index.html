@@ -1895,17 +1895,14 @@ function handlePhotoUpload(input) {
     state.suggestedCategory = null;
     state.category = null;
 
-    const preview = document.getElementById('photo-preview');
-    preview.src = state.photoUrl;
-    preview.style.display = 'block';
-
     const area = document.getElementById('upload-area');
     area.classList.add('has-image');
     area.querySelector('.upload-icon').style.display = 'none';
     area.querySelector('.upload-text').style.display = 'none';
     area.querySelector('.upload-hint').style.display = 'none';
 
-    // 画像ロード後に自動カテゴリ判定 → 即モンスター生成
+    // onload を src より先に設定（data URL は即時ロードされるため順序が重要）
+    const preview = document.getElementById('photo-preview');
     preview.onload = () => {
       const detected = analyzeImageCategory(preview);
       state.suggestedCategory = detected;
@@ -1914,50 +1911,17 @@ function handlePhotoUpload(input) {
       goToMonster();
       setTimeout(() => buildMissions(), 2400);
     };
+    preview.src = state.photoUrl;
+    preview.style.display = 'block';
   };
   reader.readAsDataURL(file);
 }
 
-function selectCategory(cat, el) {
-  const suggested = state.suggestedCategory;
-  const allowed   = suggested ? CAT_COMPATIBLE[suggested] : null;
-
-  // エラーをいったんリセット
-  document.querySelectorAll('#category-chips .cat-card')
-    .forEach(c => c.classList.remove('selected','error-chip'));
-  document.getElementById('category-error').style.display = 'none';
-
-  // ミスマッチ判定（mystery推定・または選択がmysteryなら無条件OK）
-  if (allowed && !allowed.includes(cat)) {
-    // エラー演出
-    el.classList.add('error-chip');
-    void el.offsetWidth; // アニメーションリセット
-    el.classList.add('error-chip');
-
-    const errEl = document.getElementById('category-error');
-    errEl.innerHTML = `
-      ⚠️ この写真は <strong>${CAT_LABEL[suggested]}</strong> に見えます。<br>
-      「${CAT_LABEL[cat]}」は合わなそう…もう一度選んでみよう！<br>
-      <span style="font-size:11px;opacity:0.7">※ どうしてもそのカテゴリにしたい場合は「✨ その他」を選んでね</span>
-    `;
-    errEl.style.display = 'block';
-
-    state.category = null;
-    updateUploadNextBtn();
-    return; // 選択を確定させない
-  }
-
-  // OK
-  state.category = cat;
-  el.classList.add('selected');
-  updateUploadNextBtn();
-}
+// selectCategory は新フローでは未使用（自動判定のみ）
+function selectCategory(cat, el) {}
 
 function updateUploadNextBtn() {
-  const btn = document.getElementById('upload-next-btn');
-  const ok  = !!state.photoUrl;
-  btn.disabled  = !ok;
-  btn.style.opacity = ok ? '1' : '0.4';
+  // upload-next-btn は新フローでは存在しない（写真選択で即自動遷移）
 }
 
 // ============================

@@ -1294,51 +1294,83 @@ body::before {
   scroll-snap-type: x mandatory;
 }
 
-/* 次の探究カード */
+/* 次の探究カード — ビジュアル主体 */
 .next-card {
-  width: 190px; flex-shrink: 0;
-  border-radius: 18px; padding: 14px;
+  width: 148px; flex-shrink: 0;
+  border-radius: 0;
   cursor: pointer;
-  border: 2px solid rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.06);
-  display: flex; flex-direction: column; gap: 6px;
+  border: 1px solid var(--border);
+  background: rgba(0,12,30,0.8);
+  display: flex; flex-direction: column;
   scroll-snap-align: start;
-  transition: transform 0.2s, border-color 0.2s;
+  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
   animation: missionIn 0.4s ease both;
+  overflow: hidden;
+  clip-path: polygon(10px 0%, 100% 0%, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0% 100%, 0% 10px);
 }
 .next-card:nth-child(1){ animation-delay:0.05s; }
 .next-card:nth-child(2){ animation-delay:0.15s; }
 .next-card:nth-child(3){ animation-delay:0.25s; }
 .next-card:nth-child(4){ animation-delay:0.35s; }
-.next-card:hover { transform: translateY(-3px); border-color: rgba(255,255,255,0.3); }
-.next-card:active { transform: scale(0.97); }
+.next-card:active { transform: scale(0.95); }
+.next-card.lv1 { border-color: rgba(0,255,136,0.2); }
+.next-card.lv2 { border-color: rgba(0,212,255,0.2); }
+.next-card.lv3 { border-color: rgba(155,93,255,0.2); }
+.next-card.lv1:active { border-color: var(--green); box-shadow: 0 0 18px rgba(0,255,136,0.35); }
+.next-card.lv2:active { border-color: var(--cyan);  box-shadow: 0 0 18px rgba(0,212,255,0.35); }
+.next-card.lv3:active { border-color: var(--purple);box-shadow: 0 0 18px rgba(155,93,255,0.35); }
 
+/* ビジュアルエリア */
+.next-card-visual {
+  height: 118px;
+  display: flex; align-items: center; justify-content: center;
+  position: relative; overflow: hidden;
+  flex-shrink: 0;
+}
+/* スキャンライン */
+.next-card-visual::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    0deg, transparent, transparent 3px,
+    rgba(0,0,0,0.13) 3px, rgba(0,0,0,0.13) 4px
+  );
+  pointer-events: none;
+}
+.next-card-emoji {
+  font-size: 54px;
+  filter: drop-shadow(0 2px 10px rgba(0,0,0,0.45));
+  position: relative; z-index: 1;
+  animation: float 3s ease-in-out infinite;
+}
+.next-card:nth-child(2) .next-card-emoji { animation-delay: -1s; }
+.next-card:nth-child(3) .next-card-emoji { animation-delay: -2s; }
+.next-card:nth-child(4) .next-card-emoji { animation-delay: -0.5s; }
+
+/* テキスト情報（最小限） */
+.next-card-info {
+  padding: 9px 11px 11px;
+  border-top: 1px solid var(--border);
+  background: rgba(0,8,22,0.85);
+}
 .next-card-level {
-  display: inline-block; padding: 2px 8px;
-  border-radius: 12px; font-size: 10px; font-weight: bold;
-  letter-spacing: 0.05em;
+  display: inline-block; padding: 1px 7px;
+  border-radius: 0; font-size: 9px; font-weight: bold;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  margin-bottom: 5px;
 }
-.lv1 .next-card-level { background: rgba(56,239,125,0.2); color: #38ef7d; }
-.lv2 .next-card-level { background: rgba(247,151,30,0.2); color: #f7971e; }
-.lv3 .next-card-level { background: rgba(249,83,198,0.2); color: #f953c6; }
-.next-card-header {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 8px;
-}
-.next-card-type {
-  font-size: 20px;
-}
+.lv1 .next-card-level { background: rgba(0,255,136,0.1); color: var(--green); border: 1px solid rgba(0,255,136,0.3); }
+.lv2 .next-card-level { background: rgba(0,212,255,0.1); color: var(--cyan);  border: 1px solid rgba(0,212,255,0.3); }
+.lv3 .next-card-level { background: rgba(155,93,255,0.1); color: var(--purple);border: 1px solid rgba(155,93,255,0.3); }
 .next-card-title {
-  font-size: 13px; font-weight: bold; color: #fff; line-height: 1.4;
+  font-size: 12px; font-weight: bold; color: var(--text); line-height: 1.4;
+  letter-spacing: 0.02em;
 }
-.next-card-body {
-  font-size: 11px; color: rgba(255,255,255,0.55); line-height: 1.4;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-  overflow: hidden;
-}
+/* 旧テキスト要素は非表示 */
+.next-card-header { display: none; }
+.next-card-body   { display: none; }
 .next-card-cta {
-  margin-top: auto; font-size: 12px; color: #ffd200;
-  font-weight: bold; display: flex; align-items: center; gap: 4px;
+  display: none;
 }
 
 /* フッター */
@@ -3303,20 +3335,23 @@ function generateRelatedMissions() {
 
 function buildRelatedMissions() {
   const missions = generateRelatedMissions();
-  const scroll   = document.getElementById('next-scroll');
-  scroll.innerHTML = missions.map((m, i) => `
+  const cat    = state.category || 'mystery';
+  const scroll = document.getElementById('next-scroll');
+  scroll.innerHTML = missions.map((m, i) => {
+    const emoji = getMissionVisual(m, cat);
+    const bg    = LEVEL_VISUAL_BG[m.level] || LEVEL_VISUAL_BG[2];
+    return `
     <div class="next-card ${LEVEL_CLASS[m.level]}" onclick="selectRelatedMission(${i})"
          id="related-card-${i}">
-      <div class="next-card-header">
-        <span class="next-card-level">${LEVEL_LABELS[m.level]}</span>
-        <span class="next-card-type">${ANSWER_TYPE_ICON[m.answerType] || '✏️'}</span>
+      <div class="next-card-visual" style="background:${bg}">
+        <span class="next-card-emoji">${emoji}</span>
       </div>
-      <div class="next-card-title">${m.title}</div>
-      <div class="next-card-body">${m.body}</div>
-      <div class="next-card-cta">やってみる →</div>
-    </div>
-  `).join('');
-  // missionsをstateに保存
+      <div class="next-card-info">
+        <div class="next-card-level">${LEVEL_LABELS[m.level]}</div>
+        <div class="next-card-title">${m.title}</div>
+      </div>
+    </div>`;
+  }).join('');
   state.relatedMissions = missions;
 }
 

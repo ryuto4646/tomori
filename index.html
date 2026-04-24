@@ -84,35 +84,142 @@ body {
 #screen-top {
   background: linear-gradient(160deg, #0f0c29, #302b63, #24243e);
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   text-align: center;
   gap: 0;
+  padding-top: 48px;
+  overflow: hidden;
 }
 
 .top-logo {
-  font-size: 72px;
-  margin-bottom: 8px;
+  font-size: 64px;
+  margin-bottom: 4px;
   animation: float 3s ease-in-out infinite;
 }
 @keyframes float {
   0%,100% { transform: translateY(0); }
-  50%      { transform: translateY(-12px); }
+  50%      { transform: translateY(-10px); }
 }
 
 .top-title {
-  font-size: 36px;
+  font-size: 32px;
   font-weight: 900;
   color: #ffd200;
-  text-shadow: 0 0 20px rgba(255,210,0,0.5);
-  letter-spacing: 0.1em;
-  margin-bottom: 8px;
+  text-shadow: 0 0 24px rgba(255,210,0,0.6);
+  letter-spacing: 0.12em;
+  margin-bottom: 4px;
 }
 .top-subtitle {
-  font-size: 14px;
-  color: rgba(255,255,255,0.6);
-  margin-bottom: 48px;
-  line-height: 1.6;
+  font-size: 13px;
+  color: rgba(255,255,255,0.45);
+  margin-bottom: 28px;
+  line-height: 1.5;
 }
+
+/* ─── Top Deck (swipeable category cards) ─── */
+.top-deck-wrap {
+  width: calc(100% + 40px);
+  margin-left: -20px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  display: flex;
+  padding: 8px 20px 16px;
+  gap: 14px;
+  cursor: grab;
+}
+.top-deck-wrap::-webkit-scrollbar { display: none; }
+.top-deck-card {
+  flex: 0 0 62vw;
+  max-width: 240px;
+  min-height: 220px;
+  border-radius: 28px;
+  scroll-snap-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  border: 3px solid transparent;
+  transition: transform 0.22s, border-color 0.22s, box-shadow 0.22s;
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+}
+.top-deck-card::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.18);
+  border-radius: 26px;
+  transition: opacity 0.2s;
+}
+.top-deck-card.selected::after { opacity: 0; }
+.top-deck-card.selected {
+  border-color: #ffd200;
+  transform: scale(1.04) translateY(-4px);
+  box-shadow: 0 12px 40px rgba(255,210,0,0.35);
+}
+.top-deck-card:not(.selected):active { transform: scale(0.97); }
+
+.tdc-emoji {
+  font-size: 68px;
+  line-height: 1;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.4));
+  position: relative; z-index: 1;
+  animation: float 3.5s ease-in-out infinite;
+}
+.top-deck-card:nth-child(2) .tdc-emoji { animation-delay: -1.2s; }
+.top-deck-card:nth-child(3) .tdc-emoji { animation-delay: -2.4s; }
+
+.tdc-name {
+  font-size: 20px;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: 0.06em;
+  position: relative; z-index: 1;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+}
+.tdc-sub {
+  font-size: 11px;
+  color: rgba(255,255,255,0.7);
+  position: relative; z-index: 1;
+  text-align: center;
+  line-height: 1.4;
+  padding: 0 12px;
+}
+.tdc-check {
+  position: absolute; top: 12px; right: 14px;
+  font-size: 20px;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 2;
+}
+.top-deck-card.selected .tdc-check { opacity: 1; }
+
+.top-start-area {
+  margin-top: auto;
+  padding: 0 0 32px;
+  width: 100%;
+}
+.top-hint {
+  font-size: 12px;
+  color: rgba(255,255,255,0.35);
+  margin-bottom: 16px;
+  letter-spacing: 0.05em;
+}
+.top-folder-btn {
+  font-size: 13px;
+  color: rgba(255,255,255,0.4);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 10px;
+  display: none;
+}
+#top-start-btn:disabled { opacity: 0.38; }
+#top-start-btn { transition: opacity 0.25s; }
 .top-stars {
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -129,6 +236,75 @@ body {
 @keyframes twinkle {
   0%,100% { opacity: 0.2; transform: scale(1); }
   50%     { opacity: 1; transform: scale(1.5); }
+}
+
+/* ---- Camera Hero (Upload) ---- */
+.camera-hero {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 20px 0;
+}
+.camera-ring {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.camera-ring::before, .camera-ring::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid rgba(247,151,30,0.25);
+  animation: ringPulse 2.2s ease-in-out infinite;
+}
+.camera-ring::before { width: 190px; height: 190px; animation-delay: 0s; }
+.camera-ring::after  { width: 230px; height: 230px; animation-delay: 0.6s; }
+@keyframes ringPulse {
+  0%,100% { opacity: 0.25; transform: scale(1); }
+  50%      { opacity: 0.6;  transform: scale(1.04); }
+}
+.camera-btn-circle {
+  width: 148px; height: 148px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #f7971e, #ffd200);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 66px;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 8px 40px rgba(247,151,30,0.55), 0 0 80px rgba(247,151,30,0.2);
+  transition: transform 0.14s, box-shadow 0.14s;
+  position: relative; z-index: 1;
+  user-select: none;
+}
+.camera-btn-circle:active { transform: scale(0.91); box-shadow: 0 4px 20px rgba(247,151,30,0.4); }
+.camera-main-label {
+  font-size: 26px; font-weight: 900;
+  color: #fff; letter-spacing: 0.06em;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.4);
+}
+.camera-sub-label {
+  font-size: 13px; color: rgba(255,255,255,0.4);
+  margin-top: -8px;
+}
+.camera-alt-link {
+  font-size: 13px; color: rgba(255,255,255,0.35);
+  text-decoration: underline; cursor: pointer;
+  padding: 8px 20px;
+  margin-top: 4px;
+}
+
+/* Preview state */
+.upload-preview-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
 }
 
 /* ---- Screen 2: UPLOAD ---- */
@@ -236,49 +412,68 @@ body {
 
 /* ---- Trait visual grid ---- */
 .trait-grid {
-  display: grid; grid-template-columns: repeat(2, 1fr);
-  gap: 12px; flex: 1; margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px; flex: 1; margin-bottom: 20px;
 }
 .trait-grid-card {
-  border-radius: 20px; padding: 22px 12px 16px;
+  border-radius: 22px;
+  padding: 22px 20px;
   border: 2px solid rgba(255,255,255,0.15);
-  background: rgba(255,255,255,0.06);
-  cursor: pointer; text-align: center; transition: all 0.2s;
+  background: rgba(255,255,255,0.05);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  transition: all 0.22s;
   position: relative; overflow: hidden;
 }
-.trait-grid-card:hover { border-color: rgba(247,151,30,0.5); background: rgba(247,151,30,0.08); transform: translateY(-2px); }
-.trait-grid-card.selected { border-color: #f7971e; background: rgba(247,151,30,0.15); }
-.trait-grid-card.pop { animation: cardPop 0.25s ease; }
-.tgc-emoji { font-size: 48px; display: block; margin-bottom: 10px; line-height: 1; }
-.tgc-name  { font-size: 13px; font-weight: bold; color: #fff; line-height: 1.3; }
-.tgc-desc  { font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 4px; }
-.trait-grid-card.selected .tgc-name { color: #f7971e; }
-
-/* ---- Visual choice buttons (3-col grid) ---- */
-.visual-choices {
-  display: grid; grid-template-columns: repeat(3, 1fr);
-  gap: 10px; margin-bottom: 20px;
+.trait-grid-card:active { transform: scale(0.97); }
+.trait-grid-card.selected {
+  border-color: #f7971e;
+  background: rgba(247,151,30,0.14);
+  box-shadow: 0 0 0 1px rgba(247,151,30,0.3);
 }
+.trait-grid-card.pop { animation: cardPop 0.25s ease; }
+.tgc-emoji { font-size: 52px; flex-shrink: 0; line-height: 1; }
+.tgc-text  { flex: 1; text-align: left; }
+.tgc-name  { font-size: 17px; font-weight: 800; color: #fff; line-height: 1.3; }
+.tgc-desc  { font-size: 12px; color: rgba(255,255,255,0.45); margin-top: 5px; }
+.trait-grid-card.selected .tgc-name { color: #f7971e; }
+.tgc-arrow {
+  font-size: 18px;
+  color: rgba(255,255,255,0.2);
+  flex-shrink: 0;
+  transition: color 0.2s, transform 0.2s;
+}
+.trait-grid-card.selected .tgc-arrow { color: #f7971e; transform: translateX(4px); }
+
+/* ---- Visual choice buttons ---- */
+.visual-choices {
+  display: grid; grid-template-columns: repeat(2, 1fr);
+  gap: 12px; margin-bottom: 20px;
+}
+.visual-choices.col3 { grid-template-columns: repeat(3, 1fr); gap: 9px; }
 .vcb {
   display: flex; flex-direction: column; align-items: center;
-  justify-content: center; gap: 5px;
-  padding: 14px 6px 12px;
-  border-radius: 16px;
+  justify-content: center; gap: 8px;
+  padding: 20px 10px 16px;
+  border-radius: 20px;
   border: 2px solid rgba(255,255,255,0.15);
   background: rgba(255,255,255,0.06);
   cursor: pointer; transition: all 0.18s;
-  min-height: 80px; position: relative; overflow: hidden;
+  min-height: 100px; position: relative; overflow: hidden;
   text-align: center;
 }
-.vcb:hover   { border-color: #f7971e; background: rgba(247,151,30,0.1); transform: translateY(-2px); }
+.vcb:active  { transform: scale(0.95); }
 .vcb.selected { border-color: #f7971e; background: rgba(247,151,30,0.2); }
-.vcb.selected::after { content: '✓'; position: absolute; top: 6px; right: 8px; color: #ffd200; font-size: 12px; font-weight: 900; }
-.vcb-icon  { font-size: 32px; line-height: 1; }
-.vcb-label { font-size: 11px; color: rgba(255,255,255,0.85); font-weight: bold; line-height: 1.3; }
+.vcb.selected::after { content: '✓'; position: absolute; top: 8px; right: 10px; color: #ffd200; font-size: 14px; font-weight: 900; }
+.vcb-icon  { font-size: 38px; line-height: 1; }
+.vcb-label { font-size: 12px; color: rgba(255,255,255,0.9); font-weight: bold; line-height: 1.4; }
 /* 2-col fallback for choose+why */
 .visual-choices.col2 { grid-template-columns: repeat(2, 1fr); }
 /* No-emoji fallback: just show text */
-.vcb-text-only { font-size: 13px; color: #fff; font-weight: bold; line-height: 1.4; }
+.vcb-text-only { font-size: 14px; color: #fff; font-weight: bold; line-height: 1.5; }
 
 .chip.error-chip { border-color: #f953c6 !important; background: rgba(249,83,198,0.12) !important; color: #f953c6 !important; animation: chipShake 0.35s ease; }
 @keyframes chipShake {
@@ -414,22 +609,62 @@ body {
 /* ---- Screen 5: MISSIONS ---- */
 #screen-missions {
   background: linear-gradient(160deg, #0a1628, #0f3460, #1a1a2e);
+  padding-left: 0;
+  padding-right: 0;
 }
+#screen-missions .screen-header,
+#screen-missions .mission-scroll-dots,
+#screen-missions .mission-bottom {
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
 .mission-list {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 14px;
   flex: 1;
-  margin-bottom: 20px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 8px 20px 12px;
+  align-items: stretch;
+  cursor: grab;
+}
+.mission-list::-webkit-scrollbar { display: none; }
+.mission-list:active { cursor: grabbing; }
+
+.mission-scroll-dots {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+.mission-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+  transition: all 0.25s;
+}
+.mission-dot.active {
+  background: #38ef7d;
+  width: 20px;
+  border-radius: 4px;
 }
 .mission-card {
-  border-radius: 18px;
+  flex: 0 0 72vw;
+  max-width: 280px;
+  border-radius: 22px;
   padding: 16px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.22s;
   border: 2px solid transparent;
   position: relative;
   overflow: hidden;
+  scroll-snap-align: center;
+  display: flex;
+  flex-direction: column;
 }
 .mission-card::before {
   content: '';
@@ -437,13 +672,13 @@ body {
   top: 0; left: 0; right: 0; bottom: 0;
   opacity: 0.08;
 }
-.mission-card.lv1 { background: rgba(56,239,125,0.1); border-color: rgba(56,239,125,0.3); }
-.mission-card.lv2 { background: rgba(247,151,30,0.1); border-color: rgba(247,151,30,0.3); }
-.mission-card.lv3 { background: rgba(249,83,198,0.1); border-color: rgba(249,83,198,0.3); }
-.mission-card.selected.lv1 { border-color: #38ef7d; background: rgba(56,239,125,0.18); }
-.mission-card.selected.lv2 { border-color: #f7971e; background: rgba(247,151,30,0.18); }
-.mission-card.selected.lv3 { border-color: #f953c6; background: rgba(249,83,198,0.18); }
-.mission-card:hover { transform: translateY(-2px); }
+.mission-card.lv1 { background: rgba(56,239,125,0.08); border-color: rgba(56,239,125,0.25); }
+.mission-card.lv2 { background: rgba(247,151,30,0.08); border-color: rgba(247,151,30,0.25); }
+.mission-card.lv3 { background: rgba(249,83,198,0.08); border-color: rgba(249,83,198,0.25); }
+.mission-card.selected.lv1 { border-color: #38ef7d; background: rgba(56,239,125,0.18); box-shadow: 0 0 30px rgba(56,239,125,0.2); }
+.mission-card.selected.lv2 { border-color: #f7971e; background: rgba(247,151,30,0.18); box-shadow: 0 0 30px rgba(247,151,30,0.2); }
+.mission-card.selected.lv3 { border-color: #f953c6; background: rgba(249,83,198,0.18); box-shadow: 0 0 30px rgba(249,83,198,0.2); }
+.mission-card:active { transform: scale(0.97); }
 
 .mission-card-top {
   display: flex; align-items: center; justify-content: space-between;
@@ -1212,23 +1447,55 @@ body {
   <!-- ===== SCREEN 1: TOP ===== -->
   <div class="screen active" id="screen-top">
     <div class="top-stars" id="stars-container"></div>
+
     <div class="top-logo">🌟</div>
     <div class="top-title">Tomori</div>
-    <div class="top-subtitle">写真から学びが始まる<br>探究ミッションアプリ</div>
-    <button class="btn btn-primary" onclick="startApp()" style="max-width:280px">
-      ✨ はじめる
-    </button>
-    <button class="btn btn-secondary" id="folder-btn" onclick="goTo('folder');buildFolderScreen()"
-      style="max-width:280px;margin-top:12px;font-size:15px;padding:13px;display:none">
-      📁 マイ雑学フォルダ <span id="folder-count-badge"></span>
-    </button>
+    <div class="top-subtitle">写真から始まる探究の冒険</div>
+
+    <!-- Swipeable category deck -->
+    <div class="top-deck-wrap" id="top-deck">
+      <div class="top-deck-card" id="tdc-survival"
+           style="background:linear-gradient(145deg,#3d1a00,#7c2d12,#b45309)"
+           onclick="selectDeckCard('survival',this)">
+        <span class="tdc-emoji">⚔️</span>
+        <div class="tdc-name">Survival</div>
+        <div class="tdc-sub">冒険しながら探究！</div>
+        <span class="tdc-check">✨</span>
+      </div>
+      <div class="top-deck-card" id="tdc-nature"
+           style="background:linear-gradient(145deg,#052e16,#065f46,#047857)"
+           onclick="selectDeckCard('nature',this)">
+        <span class="tdc-emoji">🌿</span>
+        <div class="tdc-name">Nature</div>
+        <div class="tdc-sub">じっくり観察しよう！</div>
+        <span class="tdc-check">✨</span>
+      </div>
+      <div class="top-deck-card" id="tdc-analysis"
+           style="background:linear-gradient(145deg,#0c1445,#1e3a8a,#1d4ed8)"
+           onclick="selectDeckCard('analysis',this)">
+        <span class="tdc-emoji">🔬</span>
+        <div class="tdc-name">Analysis</div>
+        <div class="tdc-sub">深く考えて発見！</div>
+        <span class="tdc-check">✨</span>
+      </div>
+    </div>
+
+    <div class="top-start-area">
+      <div class="top-hint" id="top-hint">← スワイプして選ぼう →</div>
+      <button class="btn btn-primary" id="top-start-btn" onclick="startApp()" style="max-width:280px;margin:0 auto;display:block" disabled>
+        ✨ はじめる
+      </button>
+      <button class="top-folder-btn" id="folder-btn" onclick="goTo('folder');buildFolderScreen()">
+        📁 マイ雑学フォルダ <span id="folder-count-badge"></span>
+      </button>
+    </div>
   </div>
 
   <!-- ===== SCREEN 2: TRAIT（はじめるの直後）===== -->
   <div class="screen" id="screen-trait">
     <button class="back-btn" onclick="goTo('top')">← もどる</button>
     <div class="screen-header">
-      <div class="screen-title" id="trait-question-title">いまの気分は？</div>
+      <div class="screen-title" id="trait-question-title">どんなスタイルで<span>探究</span>する？</div>
     </div>
 
     <div class="trait-list" id="trait-list">
@@ -1243,18 +1510,31 @@ body {
   <!-- ===== SCREEN 3: UPLOAD ===== -->
   <div class="screen" id="screen-upload">
     <button class="back-btn" onclick="goTo('trait')">← もどる</button>
-    <div class="screen-header">
-      <div class="screen-title">写真を<span>えらぼう</span></div>
+
+    <!-- Camera hero (shown before photo) -->
+    <div class="camera-hero" id="camera-hero">
+      <div class="camera-ring">
+        <div class="camera-btn-circle upload-icon" onclick="document.getElementById('file-input').click()">📷</div>
+      </div>
+      <div class="camera-main-label upload-text">写真をとろう</div>
+      <div class="camera-sub-label upload-hint">タップして選択</div>
+      <div class="camera-alt-link" onclick="document.getElementById('file-input').click()">
+        📁 ライブラリから選ぶ
+      </div>
     </div>
 
-    <div class="upload-area" id="upload-area" onclick="document.getElementById('file-input').click()">
-      <div class="upload-icon">📷</div>
-      <div class="upload-text">写真をタップして選ぼう</div>
-      <div class="upload-hint">端末から画像を選択できます</div>
-      <img id="photo-preview" alt="プレビュー">
+    <!-- Photo preview (shown after photo selected) -->
+    <div class="upload-preview-state" id="upload-preview-state" style="display:none">
+      <img id="photo-preview" alt="プレビュー" style="max-height:52vh;max-width:100%;border-radius:20px;object-fit:contain;">
+      <div style="font-size:13px;color:rgba(255,255,255,0.4);">タップして撮り直す</div>
     </div>
+
+    <!-- Hidden file input (shared by both buttons above) -->
     <input type="file" id="file-input" accept="image/*" onchange="handlePhotoUpload(this)">
+    <!-- Legacy upload-area div kept for JS compatibility (invisible) -->
+    <div id="upload-area" style="display:none"></div>
 
+    <div id="category-hint" style="display:none"></div>
     <div class="mt-auto" id="upload-go-wrap" style="display:none">
       <button class="btn btn-primary" id="upload-go-btn" onclick="launchFromPhoto()">
         ⚡ すすむ！
@@ -1284,17 +1564,24 @@ body {
   <div class="screen" id="screen-missions">
     <div class="screen-header">
       <div class="screen-step">ミッション選択</div>
-      <div class="screen-title">どれに<span>チャレンジ</span>する？</div>
+      <div class="screen-title">どれに<span>チャレンジ</span>？</div>
     </div>
 
     <div class="mission-list" id="mission-list">
       <!-- JS生成 -->
     </div>
 
-    <div class="mission-hint">1つ選んで「チャレンジ」ボタンを押してね</div>
-    <button class="btn btn-success" id="mission-next-btn" onclick="goToAnswer()" disabled style="opacity:0.4">
-      チャレンジ！ ⚔️
-    </button>
+    <div class="mission-scroll-dots" id="mission-dots">
+      <div class="mission-dot active" id="dot-0"></div>
+      <div class="mission-dot" id="dot-1"></div>
+      <div class="mission-dot" id="dot-2"></div>
+    </div>
+
+    <div class="mission-bottom">
+      <button class="btn btn-success" id="mission-next-btn" onclick="goToAnswer()" disabled style="opacity:0.4">
+        チャレンジ！ ⚔️
+      </button>
+    </div>
   </div>
 
   <!-- ===== SCREEN 6: ANSWER (2ステート) ===== -->
@@ -1825,13 +2112,13 @@ function resetApp() {
   state.selectedMissionIdx = null;
   state.answeredMissions = new Set();
   state.xp = 0;
-  // Reset upload screen
-  const area = document.getElementById('upload-area');
-  area.classList.remove('has-image');
-  document.getElementById('photo-preview').style.display = 'none';
-  area.querySelector('.upload-icon').style.display = '';
-  area.querySelector('.upload-text').style.display = '';
-  area.querySelector('.upload-hint').style.display = '';
+  // Reset upload screen (new camera UI)
+  const hero = document.getElementById('camera-hero');
+  const previewState = document.getElementById('upload-preview-state');
+  if (hero) hero.style.display = 'flex';
+  if (previewState) previewState.style.display = 'none';
+  const preview = document.getElementById('photo-preview');
+  if (preview) preview.src = '';
   document.getElementById('file-input').value = '';
   document.getElementById('upload-go-wrap').style.display = 'none';
   state._photoReady = false;
@@ -1957,11 +2244,14 @@ function handlePhotoUpload(input) {
     state.category = null;
     state._photoReady = false;
 
-    const area = document.getElementById('upload-area');
-    area.classList.add('has-image');
-    area.querySelector('.upload-icon').style.display = 'none';
-    area.querySelector('.upload-text').style.display = 'none';
-    area.querySelector('.upload-hint').style.display = 'none';
+    // Show preview state, hide camera hero
+    const hero = document.getElementById('camera-hero');
+    const previewState = document.getElementById('upload-preview-state');
+    if (hero) hero.style.display = 'none';
+    if (previewState) {
+      previewState.style.display = 'flex';
+      previewState.onclick = () => document.getElementById('file-input').click();
+    }
 
     const preview = document.getElementById('photo-preview');
 
@@ -2026,37 +2316,83 @@ const TRAIT_QUESTIONS = [
   'きょうはどんな自分？',
 ];
 
+// ─── Top deck category selection ───
+const DECK_TO_TRAIT = {
+  survival: 'survival_like',
+  nature:   'non_reader',
+  analysis: 'deep_thinker',
+};
+
+function selectDeckCard(mode, el) {
+  state.exploreMode = mode;
+  document.querySelectorAll('.top-deck-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  const hint = document.getElementById('top-hint');
+  if (hint) hint.textContent = '準備できたら「はじめる」をタップ！';
+  const btn = document.getElementById('top-start-btn');
+  if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+  // Center scroll to selected card
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+}
+
 function startApp() {
-  // ランダムに質問を選んでtraitスクリーンへ
-  const q = TRAIT_QUESTIONS[Math.floor(Math.random() * TRAIT_QUESTIONS.length)];
-  const titleEl = document.getElementById('trait-question-title');
-  if (titleEl) titleEl.textContent = q;
+  // Set trait from deck choice (or default)
+  if (state.exploreMode && DECK_TO_TRAIT[state.exploreMode]) {
+    state.trait = DECK_TO_TRAIT[state.exploreMode];
+  }
   buildTraitList();
   goTo('trait');
 }
 
+// Simplified 3-card trait list (big touch cards)
+const SIMPLE_TRAITS = [
+  { key: 'short_attention', emoji: '⚡', name: 'サクッとやりたい',   desc: '短い時間でぱぱっと！' },
+  { key: 'deep_thinker',    emoji: '🔍', name: 'じっくり考えたい',   desc: 'とことん深く探究！' },
+  { key: 'survival_like',   emoji: '⚔️', name: 'ぼうけんしたい',     desc: 'ドキドキしながら進もう！' },
+];
+
 function buildTraitList() {
   const list = document.getElementById('trait-list');
   list.className = 'trait-grid';
-  list.innerHTML = TRAITS.map(t => `
-    <div class="trait-grid-card" id="trait-${t.key}" onclick="selectTrait('${t.key}', this, event)">
+
+  // Pre-select based on explore mode
+  const preSelected = state.trait ? state.trait : null;
+
+  list.innerHTML = SIMPLE_TRAITS.map(t => {
+    const isSel = preSelected === t.key ? 'selected' : '';
+    return `
+    <div class="trait-grid-card ${isSel}" id="trait-${t.key}" onclick="selectTrait('${t.key}', this, event)">
       <span class="tgc-emoji">${t.emoji}</span>
-      <div class="tgc-name">${t.name}</div>
-      <div class="tgc-desc">${t.desc}</div>
-    </div>
-  `).join('');
+      <div class="tgc-text">
+        <div class="tgc-name">${t.name}</div>
+        <div class="tgc-desc">${t.desc}</div>
+      </div>
+      <span class="tgc-arrow">›</span>
+    </div>`;
+  }).join('');
+
+  // If already pre-selected from deck, enable next button
+  if (preSelected) {
+    const btn = document.getElementById('trait-next-btn');
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+  }
 }
 
 function selectTrait(key, el, e) {
+  const wasSelected = state.trait === key && el.classList.contains('selected');
   state.trait = key;
   document.querySelectorAll('.trait-grid-card').forEach(c => c.classList.remove('selected','pop'));
   el.classList.add('selected');
-  void el.offsetWidth; // reflow to restart animation
+  void el.offsetWidth;
   el.classList.add('pop');
   addRipple(el, e);
   const btn = document.getElementById('trait-next-btn');
   btn.disabled = false;
   btn.style.opacity = '1';
+  // Second tap → auto-advance to upload
+  if (wasSelected) {
+    setTimeout(() => goTo('upload'), 160);
+  }
 }
 
 // ============================
@@ -2195,6 +2531,23 @@ function buildMissions() {
   const list = document.getElementById('mission-list');
   list.innerHTML = state.missions.map((m, i) => missionCardHTML(m, i, cat)).join('');
 
+  // Reset dots
+  for (let i = 0; i < 3; i++) {
+    const dot = document.getElementById('dot-' + i);
+    if (dot) { dot.className = 'mission-dot' + (i === 0 ? ' active' : ''); }
+  }
+
+  // Scroll dot sync
+  list.onscroll = () => {
+    const cardWidth = list.querySelector('.mission-card')?.offsetWidth || 240;
+    const gap = 14;
+    const idx = Math.round(list.scrollLeft / (cardWidth + gap));
+    for (let i = 0; i < 3; i++) {
+      const dot = document.getElementById('dot-' + i);
+      if (dot) dot.className = 'mission-dot' + (i === idx ? ' active' : '');
+    }
+  };
+
   const btn = document.getElementById('mission-next-btn');
   btn.disabled = true;
   btn.style.opacity = '0.4';
@@ -2202,6 +2555,7 @@ function buildMissions() {
 }
 
 function selectMission(idx, el, e) {
+  const wasSelected = state.selectedMissionIdx === idx;
   state.selectedMissionIdx = idx;
   document.querySelectorAll('.mission-card').forEach(c => c.classList.remove('selected'));
   el.classList.add('selected');
@@ -2209,6 +2563,10 @@ function selectMission(idx, el, e) {
   const btn = document.getElementById('mission-next-btn');
   btn.disabled = false;
   btn.style.opacity = '1';
+  // Double-tap or 2nd click → auto advance
+  if (wasSelected) {
+    setTimeout(() => goToAnswer(), 180);
+  }
 }
 
 // ============================
@@ -2281,7 +2639,7 @@ function renderAnswerUI(m) {
       setSubmitBtn(false);
       break;
     case 'choices': {
-      const cols = m.choices.length <= 2 ? ' col2' : '';
+      const cols = m.choices.length >= 3 ? ' col3' : '';
       ui.innerHTML = `<div class="visual-choices${cols}">
         ${m.choices.map(c => vcbHTML(c, 'selectChoice')).join('')}
       </div>`;
@@ -2596,7 +2954,7 @@ function updateFolderBtn() {
   const badge = document.getElementById('folder-count-badge');
   if (!btn) return;
   if (list.length > 0) {
-    btn.style.display = '';
+    btn.style.display = 'block';
     if (badge) badge.textContent = `(${list.length}件)`;
   } else {
     btn.style.display = 'none';

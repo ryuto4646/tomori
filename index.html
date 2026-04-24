@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Tomori - 学びモンスター v2</title>
+<title>Tomori - 学びモンスター v3</title>
 <style>
 :root {
   --cyan:     #00d4ff;
@@ -1294,52 +1294,68 @@ body::before {
   scroll-snap-type: x mandatory;
 }
 
-/* 次の探究カード — ビジュアル主体 */
+/* ===== 次の探究カード — 低学年向けビジュアル主体 ===== */
+.next-scroll-wrap {
+  overflow-x: auto;
+  margin: 0 -20px;
+  padding: 0 20px 16px;
+  scrollbar-width: none;
+}
+.next-scroll-wrap::-webkit-scrollbar { display: none; }
+.next-scroll {
+  display: flex; gap: 14px;
+  padding-right: 20px;
+  width: max-content;
+}
+
 .next-card {
-  width: 148px; flex-shrink: 0;
-  border-radius: 0;
+  width: 160px;
+  flex-shrink: 0;
   cursor: pointer;
-  border: 1px solid var(--border);
-  background: rgba(0,12,30,0.8);
+  border-radius: 16px;
+  border: 3px solid transparent;
   display: flex; flex-direction: column;
-  scroll-snap-align: start;
-  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
-  animation: missionIn 0.4s ease both;
+  transition: transform 0.18s, border-color 0.18s, box-shadow 0.18s;
+  animation: missionIn 0.45s cubic-bezier(0.22,1,0.36,1) both;
   overflow: hidden;
-  clip-path: polygon(10px 0%, 100% 0%, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0% 100%, 0% 10px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
 }
 .next-card:nth-child(1){ animation-delay:0.05s; }
-.next-card:nth-child(2){ animation-delay:0.15s; }
-.next-card:nth-child(3){ animation-delay:0.25s; }
-.next-card:nth-child(4){ animation-delay:0.35s; }
-.next-card:active { transform: scale(0.95); }
-.next-card.lv1 { border-color: rgba(0,255,136,0.2); }
-.next-card.lv2 { border-color: rgba(0,212,255,0.2); }
-.next-card.lv3 { border-color: rgba(155,93,255,0.2); }
-.next-card.lv1:active { border-color: var(--green); box-shadow: 0 0 18px rgba(0,255,136,0.35); }
-.next-card.lv2:active { border-color: var(--cyan);  box-shadow: 0 0 18px rgba(0,212,255,0.35); }
-.next-card.lv3:active { border-color: var(--purple);box-shadow: 0 0 18px rgba(155,93,255,0.35); }
+.next-card:nth-child(2){ animation-delay:0.18s; }
+.next-card:nth-child(3){ animation-delay:0.31s; }
+.next-card:nth-child(4){ animation-delay:0.44s; }
+.next-card:active { transform: scale(0.91); }
 
-/* ビジュアルエリア */
+/* レベル別ボーダー色 */
+.next-card.lv1 { border-color: rgba(0,255,136,0.5); }
+.next-card.lv2 { border-color: rgba(0,212,255,0.5); }
+.next-card.lv3 { border-color: rgba(155,93,255,0.5); }
+.next-card.lv1:active { box-shadow: 0 0 24px rgba(0,255,136,0.5); }
+.next-card.lv2:active { box-shadow: 0 0 24px rgba(0,212,255,0.5); }
+.next-card.lv3:active { box-shadow: 0 0 24px rgba(155,93,255,0.5); }
+
+/* 大きなビジュアルエリア（カードの約75%） */
 .next-card-visual {
-  height: 118px;
+  height: 145px;
   display: flex; align-items: center; justify-content: center;
   position: relative; overflow: hidden;
   flex-shrink: 0;
 }
-/* スキャンライン */
-.next-card-visual::after {
+.next-card-visual::before {
   content: '';
   position: absolute; inset: 0;
-  background: repeating-linear-gradient(
-    0deg, transparent, transparent 3px,
-    rgba(0,0,0,0.13) 3px, rgba(0,0,0,0.13) 4px
-  );
-  pointer-events: none;
+  background: radial-gradient(circle at 50% 40%, rgba(255,255,255,0.15) 0%, transparent 65%);
 }
+.next-card-visual::after {
+  content: '';
+  position: absolute; bottom: 0; left: 0; right: 0; height: 40%;
+  background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.3));
+}
+
+/* 大きな絵文字 */
 .next-card-emoji {
-  font-size: 54px;
-  filter: drop-shadow(0 2px 10px rgba(0,0,0,0.45));
+  font-size: 72px;
+  filter: drop-shadow(0 4px 14px rgba(0,0,0,0.5));
   position: relative; z-index: 1;
   animation: float 3s ease-in-out infinite;
 }
@@ -1347,31 +1363,35 @@ body::before {
 .next-card:nth-child(3) .next-card-emoji { animation-delay: -2s; }
 .next-card:nth-child(4) .next-card-emoji { animation-delay: -0.5s; }
 
-/* テキスト情報（最小限） */
+/* ラベル（カードの約25%）*/
 .next-card-info {
-  padding: 9px 11px 11px;
-  border-top: 1px solid var(--border);
-  background: rgba(0,8,22,0.85);
+  padding: 10px 12px 12px;
+  background: rgba(0,6,18,0.92);
+  border-top: 2px solid rgba(255,255,255,0.08);
 }
+
+/* レベルドット（テキストなし → 色だけ） */
 .next-card-level {
-  display: inline-block; padding: 1px 7px;
-  border-radius: 0; font-size: 9px; font-weight: bold;
-  letter-spacing: 0.12em; text-transform: uppercase;
-  margin-bottom: 5px;
+  display: none; /* ドット表示に変更 */
 }
-.lv1 .next-card-level { background: rgba(0,255,136,0.1); color: var(--green); border: 1px solid rgba(0,255,136,0.3); }
-.lv2 .next-card-level { background: rgba(0,212,255,0.1); color: var(--cyan);  border: 1px solid rgba(0,212,255,0.3); }
-.lv3 .next-card-level { background: rgba(155,93,255,0.1); color: var(--purple);border: 1px solid rgba(155,93,255,0.3); }
+.next-card-level-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  display: inline-block; margin-bottom: 6px;
+}
+.lv1 .next-card-level-dot { background: var(--green); box-shadow: 0 0 6px rgba(0,255,136,0.8); }
+.lv2 .next-card-level-dot { background: var(--cyan);  box-shadow: 0 0 6px rgba(0,212,255,0.8); }
+.lv3 .next-card-level-dot { background: var(--purple);box-shadow: 0 0 6px rgba(155,93,255,0.8); }
+
 .next-card-title {
-  font-size: 12px; font-weight: bold; color: var(--text); line-height: 1.4;
+  font-size: 13px; font-weight: 800; color: #fff; line-height: 1.35;
   letter-spacing: 0.02em;
 }
+
 /* 旧テキスト要素は非表示 */
-.next-card-header { display: none; }
-.next-card-body   { display: none; }
-.next-card-cta {
-  display: none;
-}
+.next-card-header { display: none !important; }
+.next-card-body   { display: none !important; }
+.next-card-cta    { display: none !important; }
+.next-card-type   { display: none !important; }
 
 /* フッター */
 .inline-footer { margin-top: 20px; }
@@ -3347,7 +3367,7 @@ function buildRelatedMissions() {
         <span class="next-card-emoji">${emoji}</span>
       </div>
       <div class="next-card-info">
-        <div class="next-card-level">${LEVEL_LABELS[m.level]}</div>
+        <span class="next-card-level-dot"></span>
         <div class="next-card-title">${m.title}</div>
       </div>
     </div>`;

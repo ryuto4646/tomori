@@ -3,3675 +3,1269 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
-<title>Tomori - 学びモンスター v3</title>
+<title>Tomori 冒険探究 v4</title>
 <style>
 :root {
-  --cyan:     #00d4ff;
-  --cyan-dim: rgba(0,212,255,0.18);
-  --cyan-glow:rgba(0,212,255,0.5);
-  --purple:   #9b5dff;
-  --purple-dim:rgba(155,93,255,0.18);
-  --green:    #00ff88;
-  --green-dim: rgba(0,255,136,0.18);
-  --orange:   #ff6b2b;
-  --pink:     #ff4fd8;
-  --bg0:      #02060f;
-  --bg1:      #040b18;
-  --bg2:      #071020;
-  --text:     #d0eeff;
-  --text-dim: rgba(208,238,255,0.45);
-  --border:   rgba(0,212,255,0.22);
-  --glow-sm:  0 0 6px rgba(0,212,255,0.5);
-  --glow-md:  0 0 14px rgba(0,212,255,0.45), 0 0 30px rgba(0,212,255,0.18);
-  --glow-lg:  0 0 20px rgba(0,212,255,0.5), 0 0 60px rgba(0,212,255,0.2);
-}
-
-* { box-sizing: border-box; margin: 0; padding: 0; }
-
-body {
-  font-family: 'Hiragino Kaku Gothic Pro', 'Hiragino Sans', 'Meiryo', sans-serif;
-  background: var(--bg0);
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* scanline overlay */
-body::before {
-  content: '';
-  position: fixed; inset: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(0,212,255,0.018) 2px,
-    rgba(0,212,255,0.018) 4px
-  );
-  pointer-events: none;
-  z-index: 9999;
-}
-
-#app {
-  width: 100%;
-  max-width: 420px;
-  min-height: 100vh;
-  position: relative;
-  overflow: hidden;
-  background:
-    radial-gradient(ellipse 100% 60% at 50% 0%, rgba(0,80,160,0.25) 0%, transparent 70%),
-    linear-gradient(180deg, var(--bg1) 0%, var(--bg0) 100%);
-}
-
-/* grid pattern */
-#app::before {
-  content: '';
-  position: fixed; inset: 0;
-  background-image:
-    linear-gradient(rgba(0,212,255,0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,212,255,0.04) 1px, transparent 1px);
-  background-size: 32px 32px;
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* ---- Screen Base ---- */
-.screen {
-  display: none;
-  flex-direction: column;
-  min-height: 100vh;
-  padding: 24px 20px 32px;
-  animation: screenIn 0.3s cubic-bezier(0.22,1,0.36,1);
-  position: relative;
-  z-index: 1;
-}
-.screen.active { display: flex; }
-
-@keyframes screenIn {
-  from { opacity: 0; transform: translateY(20px) scale(0.98); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-
-/* ---- Buttons ---- */
-.btn {
-  display: block;
-  width: 100%;
-  padding: 15px;
-  border: none;
-  border-radius: 4px;
-  font-size: 16px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: transform 0.1s, box-shadow 0.15s, filter 0.15s;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  position: relative;
-  overflow: hidden;
-  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
-}
-.btn::after {
-  content: '';
-  position: absolute; inset: 0;
-  background: linear-gradient(180deg, rgba(255,255,255,0.1) 0%, transparent 60%);
-  pointer-events: none;
-}
-.btn:active { transform: scale(0.97); }
-
-.btn-primary {
-  background: linear-gradient(135deg, #0095cc 0%, #00d4ff 50%, #00aadd 100%);
-  color: #000d1a;
-  box-shadow: 0 0 18px rgba(0,212,255,0.6), 0 0 40px rgba(0,212,255,0.25), inset 0 1px 0 rgba(255,255,255,0.3);
-}
-.btn-primary:not(:disabled):hover { box-shadow: var(--glow-lg); filter: brightness(1.1); }
-
-.btn-secondary {
-  background: rgba(0,212,255,0.06);
-  color: var(--cyan);
-  border: 1px solid var(--border);
-  box-shadow: var(--glow-sm);
-}
-.btn-success {
-  background: linear-gradient(135deg, #006644 0%, #00ff88 50%, #00cc6a 100%);
-  color: #001a0d;
-  box-shadow: 0 0 18px rgba(0,255,136,0.55), 0 0 40px rgba(0,255,136,0.2);
-}
-.btn-danger {
-  background: linear-gradient(135deg, #8b006b 0%, #ff4fd8 50%, #cc3fb0 100%);
-  color: #1a0014;
-  box-shadow: 0 0 18px rgba(255,79,216,0.55), 0 0 40px rgba(255,79,216,0.2);
-}
-
-.btn + .btn { margin-top: 12px; }
-
-/* ---- Screen 1: TOP ---- */
-#screen-top {
-  background: transparent;
-  align-items: center;
-  justify-content: flex-start;
-  text-align: center;
-  gap: 0;
-  padding-top: 48px;
-  overflow: hidden;
-}
-
-/* rotating hex ring behind logo */
-.top-logo-wrap {
-  position: relative;
-  display: flex; align-items: center; justify-content: center;
-  width: 100px; height: 100px;
-  margin-bottom: 8px;
-}
-.top-logo-ring {
-  position: absolute; inset: 0;
-  border: 1.5px solid transparent;
-  border-top-color: var(--cyan);
-  border-right-color: var(--cyan);
-  border-radius: 50%;
-  animation: spin 3s linear infinite;
-  box-shadow: var(--glow-sm);
-}
-.top-logo-ring2 {
-  position: absolute; inset: 8px;
-  border: 1px solid transparent;
-  border-bottom-color: var(--purple);
-  border-left-color: var(--purple);
-  border-radius: 50%;
-  animation: spin 2s linear infinite reverse;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-@keyframes float {
-  0%,100% { transform: translateY(0); }
-  50%      { transform: translateY(-8px); }
-}
-
-.top-logo {
-  font-size: 52px;
-  position: relative; z-index: 1;
-  animation: float 3s ease-in-out infinite;
-  filter: drop-shadow(0 0 12px var(--cyan-glow));
-}
-
-.top-title {
-  font-size: 30px;
-  font-weight: 900;
-  color: var(--cyan);
-  text-shadow: 0 0 20px var(--cyan-glow), 0 0 40px rgba(0,212,255,0.3);
-  letter-spacing: 0.22em;
-  margin-bottom: 4px;
-  font-variant-numeric: tabular-nums;
-}
-.top-subtitle {
-  font-size: 11px;
-  color: var(--text-dim);
-  margin-bottom: 24px;
-  line-height: 1.5;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-/* ─── Top Deck (swipeable category cards) ─── */
-.top-deck-wrap {
-  width: calc(100% + 40px);
-  margin-left: -20px;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  display: flex;
-  padding: 8px 20px 16px;
-  gap: 14px;
-  cursor: grab;
-}
-.top-deck-wrap::-webkit-scrollbar { display: none; }
-
-.top-deck-card {
-  flex: 0 0 62vw;
-  max-width: 240px;
-  min-height: 210px;
-  scroll-snap-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  cursor: pointer;
-  border: 1px solid rgba(0,212,255,0.2);
-  transition: transform 0.22s, border-color 0.22s, box-shadow 0.22s;
-  position: relative;
-  overflow: hidden;
-  user-select: none;
-  clip-path: polygon(16px 0%, 100% 0%, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0% 100%, 0% 16px);
-  background: rgba(0,10,28,0.7);
-}
-/* HUD corner lines */
-.top-deck-card::before {
-  content: '';
-  position: absolute; inset: 0;
-  border-top: 1.5px solid transparent;
-  border-left: 1.5px solid transparent;
-  transition: border-color 0.25s;
-  pointer-events: none;
-}
-.top-deck-card::after {
-  content: '';
-  position: absolute; inset: 0;
-  border-bottom: 1.5px solid transparent;
-  border-right: 1.5px solid transparent;
-  pointer-events: none;
-  transition: border-color 0.25s;
-}
-.top-deck-card.selected {
-  border-color: var(--cyan);
-  box-shadow: var(--glow-md), inset 0 0 30px rgba(0,212,255,0.06);
-  transform: translateY(-6px) scale(1.02);
-}
-.top-deck-card.selected::before { border-top-color: var(--cyan); border-left-color: var(--cyan); }
-.top-deck-card.selected::after  { border-bottom-color: var(--cyan); border-right-color: var(--cyan); }
-.top-deck-card:not(.selected):active { transform: scale(0.96); }
-
-.tdc-emoji {
-  font-size: 64px; line-height: 1;
-  filter: drop-shadow(0 0 14px rgba(0,212,255,0.5));
-  position: relative; z-index: 1;
-  animation: float 3.5s ease-in-out infinite;
-}
-.top-deck-card:nth-child(2) .tdc-emoji { animation-delay: -1.2s; }
-.top-deck-card:nth-child(3) .tdc-emoji { animation-delay: -2.4s; }
-
-.tdc-name {
-  font-size: 19px; font-weight: 900;
-  color: var(--text);
-  letter-spacing: 0.14em;
-  position: relative; z-index: 1;
-  text-transform: uppercase;
-  text-shadow: 0 0 10px rgba(0,212,255,0.4);
-}
-.tdc-sub {
-  font-size: 10px; color: var(--text-dim);
-  position: relative; z-index: 1;
-  text-align: center; line-height: 1.4;
-  padding: 0 12px; letter-spacing: 0.04em;
-}
-.tdc-check {
-  position: absolute; top: 10px; right: 14px;
-  font-size: 14px; color: var(--cyan);
-  opacity: 0; transition: opacity 0.2s; z-index: 2;
-  letter-spacing: 0.1em;
-}
-.top-deck-card.selected .tdc-check { opacity: 1; }
-
-.top-start-area {
-  margin-top: auto;
-  padding: 0 0 32px;
-  width: 100%;
-}
-.top-hint {
-  font-size: 11px;
-  color: var(--text-dim);
-  margin-bottom: 16px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-.top-folder-btn {
-  font-size: 12px;
-  color: var(--text-dim);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 10px;
-  display: none;
-  letter-spacing: 0.08em;
-}
-#top-start-btn:disabled { opacity: 0.3; }
-#top-start-btn { transition: opacity 0.25s; }
-.top-stars {
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  pointer-events: none;
-  overflow: hidden;
-}
-.star {
-  position: absolute;
-  width: 3px; height: 3px;
-  background: #fff;
-  border-radius: 50%;
-  animation: twinkle 2s ease-in-out infinite;
-}
-@keyframes twinkle {
-  0%,100% { opacity: 0.2; transform: scale(1); }
-  50%     { opacity: 1; transform: scale(1.5); }
-}
-
-/* ---- Camera Hero (Upload) ---- */
-.camera-hero {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 18px;
-  padding: 20px 0;
-}
-.camera-ring {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-/* orbital scan rings */
-.camera-ring::before, .camera-ring::after {
-  content: '';
-  position: absolute;
-  border-radius: 50%;
-  border: 1px solid transparent;
-  animation: ringPulse 2.4s ease-in-out infinite;
-}
-.camera-ring::before {
-  width: 196px; height: 196px;
-  border-top-color: var(--cyan);
-  border-right-color: var(--cyan);
-  animation: spin 4s linear infinite;
-  box-shadow: 0 0 8px var(--cyan-glow);
-}
-.camera-ring::after {
-  width: 220px; height: 220px;
-  border-bottom-color: var(--purple);
-  border-left-color: var(--purple);
-  animation: spin 6s linear infinite reverse;
-}
-@keyframes ringPulse {
-  0%,100% { opacity: 0.4; }
-  50%      { opacity: 1; }
-}
-.camera-btn-circle {
-  width: 148px; height: 148px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 40% 35%, rgba(0,180,255,0.35) 0%, rgba(0,50,100,0.9) 70%);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 64px;
-  cursor: pointer;
-  border: 1.5px solid var(--cyan);
-  box-shadow: var(--glow-lg), inset 0 0 30px rgba(0,212,255,0.15);
-  transition: transform 0.14s, box-shadow 0.14s;
-  position: relative; z-index: 1;
-  user-select: none;
-}
-.camera-btn-circle:active {
-  transform: scale(0.91);
-  box-shadow: var(--glow-sm), inset 0 0 20px rgba(0,212,255,0.2);
-}
-.camera-main-label {
-  font-size: 22px; font-weight: 900;
-  color: var(--cyan);
-  letter-spacing: 0.2em; text-transform: uppercase;
-  text-shadow: var(--glow-sm);
-}
-.camera-sub-label {
-  font-size: 11px; color: var(--text-dim);
-  margin-top: -10px; letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-.camera-alt-link {
-  font-size: 12px; color: var(--text-dim);
-  cursor: pointer; padding: 8px 20px;
-  margin-top: 4px; letter-spacing: 0.08em;
-  border: 1px solid rgba(0,212,255,0.15);
-  border-radius: 2px;
-}
-
-/* Preview state */
-.upload-preview-state {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-}
-
-/* ---- Screen 2: UPLOAD ---- */
-#screen-upload {
-  background: transparent;
-}
-.screen-header {
-  margin-bottom: 24px;
-  position: relative;
-  padding-bottom: 12px;
-}
-.screen-header::after {
-  content: '';
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, var(--cyan) 0%, transparent 100%);
-  box-shadow: var(--glow-sm);
-}
-.screen-step {
-  font-size: 10px;
-  color: var(--cyan);
-  letter-spacing: 0.25em;
-  text-transform: uppercase;
-  margin-bottom: 6px;
-  font-weight: 700;
-}
-.screen-title {
-  font-size: 22px;
-  font-weight: 800;
-  color: var(--text);
-  line-height: 1.3;
-  letter-spacing: 0.05em;
-}
-.screen-title span { color: var(--cyan); text-shadow: var(--glow-sm); }
-
-.upload-area {
-  border: 3px dashed rgba(255,255,255,0.3);
-  border-radius: 20px;
-  padding: 32px 20px;
-  text-align: center;
-  cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
-  margin-bottom: 20px;
-  background: rgba(255,255,255,0.04);
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 200px;
-}
-.upload-area:hover { border-color: #ffd200; background: rgba(255,210,0,0.05); }
-.upload-area.has-image { border-style: solid; border-color: #38ef7d; padding: 12px; }
-
-.upload-icon { font-size: 48px; margin-bottom: 12px; }
-.upload-text { color: rgba(255,255,255,0.7); font-size: 15px; }
-.upload-hint { color: rgba(255,255,255,0.4); font-size: 12px; margin-top: 6px; }
-
-#photo-preview {
-  width: 100%;
-  max-height: 240px;
-  object-fit: contain;
-  border-radius: 12px;
-  display: none;
-}
-#file-input { display: none; }
-
-.category-section {
-  margin-bottom: 20px;
-  display: none;
-}
-.category-label {
-  font-size: 14px;
-  color: rgba(255,255,255,0.7);
-  margin-bottom: 10px;
-  font-weight: bold;
-}
-.category-chips {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.chip {
-  padding: 8px 14px;
-  border-radius: 24px;
-  border: 2px solid rgba(255,255,255,0.2);
-  background: rgba(255,255,255,0.08);
-  color: rgba(255,255,255,0.7);
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-/* legacy chip （非使用） */
-.chip.selected { border-color: #ffd200; background: rgba(255,210,0,0.15); color: #ffd200; font-weight: bold; }
-
-/* ---- Category visual grid ---- */
-.category-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-}
-.cat-card {
-  display: flex; flex-direction: column; align-items: center;
-  padding: 14px 6px 10px;
-  border-radius: 18px;
-  border: 2px solid rgba(255,255,255,0.15);
-  background: rgba(255,255,255,0.06);
-  cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden;
-}
-.cat-card:hover  { border-color: rgba(255,210,0,0.6); background: rgba(255,210,0,0.08); transform: translateY(-2px); }
-.cat-card.selected { border-color: #ffd200; background: rgba(255,210,0,0.15); }
-.cat-card.error-chip { border-color: #f953c6 !important; background: rgba(249,83,198,0.12) !important; animation: chipShake 0.35s ease; }
-.cat-emoji { font-size: 34px; margin-bottom: 6px; line-height: 1; }
-.cat-label { font-size: 11px; color: rgba(255,255,255,0.85); font-weight: bold; letter-spacing: 0.02em; }
-.cat-card.selected .cat-label { color: #ffd200; }
-
-/* ---- Trait visual grid ---- */
-.trait-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 12px; flex: 1; margin-bottom: 20px;
-}
-.trait-grid-card {
-  border-radius: 0;
-  padding: 20px 18px;
-  border: 1px solid var(--border);
-  background: rgba(0,15,35,0.6);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  transition: all 0.22s;
-  position: relative; overflow: hidden;
-  clip-path: polygon(8px 0%, 100% 0%, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0% 100%, 0% 8px);
-}
-.trait-grid-card::before {
-  content: '';
-  position: absolute; top: 0; left: 0;
-  width: 3px; height: 0;
-  background: var(--cyan);
-  box-shadow: var(--glow-sm);
-  transition: height 0.3s ease;
-}
-.trait-grid-card:active { transform: scale(0.97); }
-.trait-grid-card.selected {
-  border-color: var(--cyan);
-  background: rgba(0,212,255,0.06);
-  box-shadow: var(--glow-sm), inset 0 0 20px rgba(0,212,255,0.04);
-}
-.trait-grid-card.selected::before { height: 100%; }
-.trait-grid-card.pop { animation: cardPop 0.25s ease; }
-.tgc-emoji { font-size: 46px; flex-shrink: 0; line-height: 1; filter: drop-shadow(0 0 8px rgba(0,212,255,0.3)); }
-.tgc-text  { flex: 1; text-align: left; }
-.tgc-name  { font-size: 16px; font-weight: 800; color: var(--text); line-height: 1.3; letter-spacing: 0.04em; }
-.tgc-desc  { font-size: 11px; color: var(--text-dim); margin-top: 4px; letter-spacing: 0.04em; }
-.trait-grid-card.selected .tgc-name { color: var(--cyan); text-shadow: var(--glow-sm); }
-.tgc-arrow {
-  font-size: 20px;
-  color: rgba(0,212,255,0.2);
-  flex-shrink: 0;
-  transition: color 0.2s, transform 0.2s;
-}
-.trait-grid-card.selected .tgc-arrow { color: var(--cyan); transform: translateX(4px); }
-
-/* ---- Visual choice buttons ---- */
-.visual-choices {
-  display: grid; grid-template-columns: repeat(2, 1fr);
-  gap: 10px; margin-bottom: 20px;
-}
-.visual-choices.col3 { grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.vcb {
-  display: flex; flex-direction: column; align-items: center;
-  justify-content: center; gap: 8px;
-  padding: 18px 8px 14px;
-  border-radius: 0;
-  border: 1px solid var(--border);
-  background: rgba(0,15,40,0.6);
-  cursor: pointer; transition: all 0.18s;
-  min-height: 96px; position: relative; overflow: hidden;
-  text-align: center;
-  clip-path: polygon(8px 0%, 100% 0%, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0% 100%, 0% 8px);
-}
-.vcb:active  { transform: scale(0.95); }
-.vcb.selected {
-  border-color: var(--cyan);
-  background: var(--cyan-dim);
-  box-shadow: var(--glow-sm);
-}
-.vcb.selected::after {
-  content: '▶';
-  position: absolute; top: 6px; right: 8px;
-  color: var(--cyan); font-size: 10px;
-}
-.vcb-icon  { font-size: 36px; line-height: 1; filter: drop-shadow(0 0 6px rgba(0,212,255,0.4)); }
-.vcb-label { font-size: 11px; color: var(--text); font-weight: bold; line-height: 1.4; letter-spacing: 0.04em; }
-/* 2-col fallback for choose+why */
-.visual-choices.col2 { grid-template-columns: repeat(2, 1fr); }
-/* No-emoji fallback: just show text */
-.vcb-text-only { font-size: 13px; color: var(--text); font-weight: bold; line-height: 1.5; }
-
-.chip.error-chip { border-color: #f953c6 !important; background: rgba(249,83,198,0.12) !important; color: #f953c6 !important; animation: chipShake 0.35s ease; }
-@keyframes chipShake {
-  0%,100% { transform: translateX(0); }
-  20%     { transform: translateX(-6px); }
-  60%     { transform: translateX(6px); }
-}
-
-.category-hint {
-  font-size: 12px; color: #38ef7d; margin-bottom: 8px;
-  display: flex; align-items: center; gap: 6px;
-  animation: fadeIn 0.3s ease;
-}
-.category-error {
-  margin-top: 10px; padding: 10px 14px;
-  background: rgba(249,83,198,0.12);
-  border: 1px solid rgba(249,83,198,0.4);
-  border-radius: 12px;
-  font-size: 13px; color: #f953c6;
-  line-height: 1.5;
-  animation: fadeIn 0.3s ease;
-}
-
-/* ---- Screen 3: TRAIT ---- */
-#screen-trait {
-  background: transparent;
-}
-.trait-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  flex: 1;
-  margin-bottom: 20px;
-}
-.trait-card {
-  border: 2px solid rgba(255,255,255,0.15);
-  border-radius: 16px;
-  padding: 16px;
-  cursor: pointer;
-  transition: all 0.2s;
-  background: rgba(255,255,255,0.05);
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-.trait-card:hover { border-color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.08); }
-.trait-card.selected { border-color: #f7971e; background: rgba(247,151,30,0.12); }
-.trait-emoji { font-size: 28px; flex-shrink: 0; }
-.trait-info { flex: 1; }
-.trait-name { font-size: 16px; font-weight: bold; color: #fff; margin-bottom: 2px; }
-.trait-desc { font-size: 12px; color: rgba(255,255,255,0.55); }
-.trait-check {
-  width: 24px; height: 24px;
-  border-radius: 50%;
-  border: 2px solid rgba(255,255,255,0.3);
-  flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 14px;
-  transition: all 0.2s;
-}
-.trait-card.selected .trait-check {
-  background: #f7971e;
-  border-color: #f7971e;
-}
-
-/* ---- Screen 4: MONSTER ---- */
-#screen-monster {
-  background: transparent;
-  align-items: center;
-  text-align: center;
-}
-.monster-photo-wrap {
-  width: 100%;
-  border-radius: 16px;
-  overflow: hidden;
-  margin-bottom: 20px;
-  max-height: 180px;
-  background: rgba(255,255,255,0.05);
-}
-.monster-photo-wrap img {
-  width: 100%;
-  max-height: 180px;
-  object-fit: cover;
-  display: block;
-}
-.monster-appear-text {
-  font-size: 11px;
-  color: var(--cyan);
-  letter-spacing: 0.3em;
-  text-shadow: var(--glow-sm);
-  text-transform: uppercase;
-  margin-bottom: 16px;
-  text-transform: uppercase;
-}
-.monster-card {
-  background: rgba(0,15,40,0.8);
-  border: 1px solid var(--border);
-  border-radius: 0;
-  clip-path: polygon(14px 0%, 100% 0%, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0% 100%, 0% 14px);
-  padding: 24px 20px;
-  width: 100%;
-  margin-bottom: 24px;
-}
-.monster-emoji {
-  width: 120px; height: 120px;
-  display: block;
-  margin: 0 auto 12px;
-  animation: monsterBounce 0.6s cubic-bezier(0.36,0.07,0.19,0.97) both;
-}
-@keyframes monsterBounce {
-  0%   { transform: scale(0) rotate(-10deg); opacity: 0; }
-  60%  { transform: scale(1.2) rotate(5deg); opacity: 1; }
-  80%  { transform: scale(0.95) rotate(-3deg); }
-  100% { transform: scale(1) rotate(0); opacity: 1; }
-}
-.monster-type {
-  font-size: 10px;
-  color: var(--purple);
-  letter-spacing: 0.28em;
-  text-shadow: 0 0 8px rgba(155,93,255,0.5);
-  text-transform: uppercase;
-  margin-bottom: 4px;
-}
-.monster-name {
-  font-size: 26px;
-  font-weight: 900;
-  color: var(--cyan);
-  text-shadow: var(--glow-md);
-  margin-bottom: 8px;
-}
-.monster-message {
-  font-size: 14px;
-  color: rgba(255,255,255,0.7);
-  line-height: 1.6;
-  font-style: italic;
-}
-
-/* ---- Screen 5: MISSIONS ---- */
-#screen-missions {
-  background: transparent;
-  padding-left: 0;
-  padding-right: 0;
-}
-#screen-missions .screen-header,
-#screen-missions .mission-scroll-dots,
-#screen-missions .mission-bottom {
-  padding-left: 20px;
-  padding-right: 20px;
-}
-
-.mission-list {
-  display: flex;
-  flex-direction: row;
-  gap: 14px;
-  flex: 1;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  padding: 8px 20px 12px;
-  align-items: stretch;
-  cursor: grab;
-}
-.mission-list::-webkit-scrollbar { display: none; }
-.mission-list:active { cursor: grabbing; }
-
-.mission-scroll-dots {
-  display: flex;
-  gap: 6px;
-  justify-content: center;
-  margin-bottom: 14px;
-}
-.mission-dot {
-  width: 6px; height: 6px;
-  border-radius: 1px;
-  background: rgba(0,212,255,0.18);
-  transition: all 0.25s;
-}
-.mission-dot.active {
-  background: var(--cyan);
-  width: 22px;
-  box-shadow: var(--glow-sm);
-}
-.mission-card {
-  flex: 0 0 72vw;
-  max-width: 280px;
-  border-radius: 0;
-  padding: 0 0 16px;
-  cursor: pointer;
-  transition: all 0.22s;
-  border: 1px solid var(--border);
-  position: relative;
-  overflow: hidden;
-  scroll-snap-align: center;
-  display: flex;
-  flex-direction: column;
-  background: rgba(0,15,40,0.7);
-  clip-path: polygon(12px 0%, 100% 0%, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0% 100%, 0% 12px);
-}
-.mission-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  opacity: 0.08;
-}
-.mission-card.lv1 { border-color: rgba(0,255,136,0.3); }
-.mission-card.lv2 { border-color: rgba(0,212,255,0.3); }
-.mission-card.lv3 { border-color: rgba(155,93,255,0.3); }
-.mission-card.selected.lv1 { border-color: var(--green); background: rgba(0,255,136,0.07); box-shadow: 0 0 20px rgba(0,255,136,0.3), 0 0 60px rgba(0,255,136,0.1); }
-.mission-card.selected.lv2 { border-color: var(--cyan);  background: rgba(0,212,255,0.07); box-shadow: 0 0 20px rgba(0,212,255,0.3), 0 0 60px rgba(0,212,255,0.1); }
-.mission-card.selected.lv3 { border-color: var(--purple);background: rgba(155,93,255,0.07); box-shadow: 0 0 20px rgba(155,93,255,0.3), 0 0 60px rgba(155,93,255,0.1); }
-.mission-card:active { transform: scale(0.97); }
-
-.mission-card-top {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 10px;
-  padding: 12px 16px 0;
-}
-.mission-type-icon { font-size: 22px; }
-
-.mission-level-badge {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: bold;
-  letter-spacing: 0.05em;
-}
-.lv1 .mission-level-badge { background: rgba(0,255,136,0.12); color: var(--green); border: 1px solid rgba(0,255,136,0.4); box-shadow: 0 0 6px rgba(0,255,136,0.3); }
-.lv2 .mission-level-badge { background: rgba(0,212,255,0.12); color: var(--cyan);  border: 1px solid rgba(0,212,255,0.4); box-shadow: 0 0 6px rgba(0,212,255,0.3); }
-.lv3 .mission-level-badge { background: rgba(155,93,255,0.12); color: var(--purple);border: 1px solid rgba(155,93,255,0.4); box-shadow: 0 0 6px rgba(155,93,255,0.3); }
-
-.mission-title { font-size: 15px; font-weight: bold; color: var(--text); margin-bottom: 6px; letter-spacing: 0.04em; padding: 0 16px; }
-.mission-body  { font-size: 12px; color: var(--text-dim); line-height: 1.6; padding: 0 16px; }
-
-.mission-visual {
-  border-radius: 0;
-  height: 84px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 0 0 0;
-  position: relative;
-  overflow: hidden;
-}
-/* scanline overlay on mission visual */
-.mission-visual::after {
-  content: '';
-  position: absolute; inset: 0;
-  background: repeating-linear-gradient(
-    0deg, transparent, transparent 3px,
-    rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.15) 4px
-  );
-  pointer-events: none;
-}
-.mission-visual-emoji {
-  font-size: 50px;
-  filter: drop-shadow(0 2px 10px rgba(0,0,0,0.35));
-  animation: emojiPop 0.45s cubic-bezier(0.175,0.885,0.32,1.275) both;
-}
-@keyframes emojiPop {
-  from { opacity: 0; transform: scale(0.4); }
-  to   { opacity: 1; transform: scale(1); }
-}
-
-/* Answer screen visual header */
-.answer-mission-visual {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 14px;
-  padding: 14px 16px 0;
-}
-.answer-mission-photo {
-  width: 68px;
-  height: 68px;
-  border-radius: 14px;
-  object-fit: cover;
-  border: 2px solid rgba(255,255,255,0.25);
-  flex-shrink: 0;
-}
-.answer-mission-photo-placeholder {
-  width: 68px;
-  height: 68px;
-  border-radius: 14px;
-  background: rgba(255,255,255,0.07);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 30px;
-  border: 2px solid rgba(255,255,255,0.15);
-  flex-shrink: 0;
-}
-.answer-mission-info { flex: 1; }
-
-.mission-hint {
-  font-size: 12px;
-  color: rgba(255,255,255,0.4);
-  text-align: center;
-  margin-bottom: 12px;
-}
-
-/* ---- Screen 6: ANSWER ---- */
-#screen-answer {
-  background: transparent;
-}
-.answer-mission-card {
-  background: rgba(0,15,40,0.7);
-  border-radius: 0;
-  padding: 0 0 16px;
-  margin-bottom: 20px;
-  border: 1px solid var(--border);
-  clip-path: polygon(10px 0%, 100% 0%, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0% 100%, 0% 10px);
-  overflow: hidden;
-}
-.answer-mission-level {
-  font-size: 10px;
-  color: var(--cyan);
-  letter-spacing: 0.25em;
-  margin-bottom: 4px;
-  text-transform: uppercase;
-  font-weight: 700;
-}
-.answer-mission-title { font-size: 16px; font-weight: bold; color: var(--text); margin-bottom: 6px; letter-spacing: 0.04em; }
-.answer-mission-body  { font-size: 14px; color: var(--text-dim); line-height: 1.6; }
-
-.answer-label {
-  font-size: 11px;
-  color: var(--cyan);
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  margin-bottom: 14px;
-  font-weight: bold;
-}
-.answer-choices {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  flex: 1;
-  margin-bottom: 20px;
-}
-.choice-btn {
-  padding: 14px 18px;
-  border-radius: 0;
-  border: 1px solid var(--border);
-  background: rgba(0,15,40,0.6);
-  color: var(--text);
-  clip-path: polygon(6px 0%, 100% 0%, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0% 100%, 0% 6px);
-  font-size: 15px;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-align: left;
-}
-.choice-btn:active  { border-color: var(--cyan); background: var(--cyan-dim); }
-.choice-btn.selected { border-color: var(--cyan); background: var(--cyan-dim); font-weight: bold; box-shadow: var(--glow-sm); }
-
-.answer-textarea {
-  width: 100%;
-  background: rgba(0,15,40,0.7);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  color: #fff;
-  font-size: 15px;
-  padding: 14px;
-  resize: none;
-  font-family: inherit;
-  min-height: 120px;
-  margin-bottom: 20px;
-  transition: border-color 0.2s;
-}
-.answer-textarea:focus { outline: none; border-color: var(--cyan); box-shadow: var(--glow-sm); }
-.answer-textarea::placeholder { color: var(--text-dim); }
-
-.audio-ui {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 20px;
-  padding: 20px;
-  background: rgba(255,255,255,0.04);
-  border-radius: 18px;
-  border: 2px solid rgba(255,255,255,0.1);
-}
-.mic-btn {
-  width: 72px; height: 72px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #f953c6, #b91d73);
-  border: none;
-  font-size: 32px;
-  cursor: pointer;
-  box-shadow: 0 4px 20px rgba(249,83,198,0.4);
-  transition: transform 0.1s;
-}
-.mic-btn:active { transform: scale(0.93); }
-.mic-hint { color: rgba(255,255,255,0.5); font-size: 13px; }
-
-/* ---- Screen 7: RESULT ---- */
-#screen-result {
-  background: transparent;
-  align-items: center;
-  text-align: center;
-}
-.result-xp {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 16px;
-  background: rgba(255,210,0,0.15);
-  border: 1px solid rgba(255,210,0,0.3);
-  border-radius: 20px;
-  color: #ffd200;
-  font-size: 13px;
-  font-weight: bold;
-  margin-bottom: 20px;
-}
-.result-monster-emoji {
-  width: 120px; height: 120px;
-  display: block;
-  margin: 0 auto 16px;
-  animation: resultPop 0.5s cubic-bezier(0.36,0.07,0.19,0.97) both;
-}
-@keyframes resultPop {
-  0%  { transform: scale(0.5) rotate(-15deg); opacity: 0; }
-  70% { transform: scale(1.15) rotate(5deg); }
-  100%{ transform: scale(1) rotate(0); opacity: 1; }
-}
-.result-badge {
-  font-size: 11px;
-  letter-spacing: 0.2em;
-  color: rgba(255,255,255,0.5);
-  text-transform: uppercase;
-  margin-bottom: 8px;
-}
-.result-reaction {
-  font-size: 26px;
-  font-weight: 900;
-  color: #ffd200;
-  margin-bottom: 12px;
-  line-height: 1.3;
-  text-shadow: 0 0 20px rgba(255,210,0,0.4);
-}
-.result-sub {
-  font-size: 14px;
-  color: rgba(255,255,255,0.6);
-  margin-bottom: 8px;
-  line-height: 1.6;
-}
-.result-effect {
-  font-size: 14px;
-  color: #38ef7d;
-  font-weight: bold;
-  margin-bottom: 32px;
-}
-.confetti-wrap {
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  pointer-events: none;
-  overflow: hidden;
-}
-.confetti-piece {
-  position: absolute;
-  top: -10px;
-  width: 8px; height: 12px;
-  border-radius: 2px;
-  animation: confettiFall linear forwards;
-}
-@keyframes confettiFall {
-  to { transform: translateY(100vh) rotate(720deg); opacity: 0; }
-}
-
-.result-buttons { width: 100%; }
-
-/* ---- Misc ---- */
-.spacer { flex: 1; }
-.mt-auto { margin-top: auto; }
-
-/* XP bar (mini) */
-.xp-bar-wrap {
-  height: 6px;
-  background: rgba(255,255,255,0.1);
-  border-radius: 3px;
-  overflow: hidden;
-  margin-bottom: 20px;
-}
-.xp-bar-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #f7971e, #ffd200);
-  border-radius: 3px;
-  transition: width 1s ease;
-}
-
-.back-btn {
-  background: rgba(0,212,255,0.05);
-  border: 1px solid rgba(0,212,255,0.18);
-  color: var(--cyan);
-  font-size: 10px;
-  cursor: pointer;
-  padding: 6px 14px;
-  margin-bottom: 14px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  border-radius: 2px;
-}
-.back-btn:active { background: var(--cyan-dim); }
-
-/* ============================================
-   INLINE RESULT (State B of Screen 6)
-   ============================================ */
-#inline-result {
-  flex-direction: column;
-  animation: fadeIn 0.35s ease;
-  position: relative;
-  overflow: hidden;
-}
-
-.inline-confetti {
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  pointer-events: none; overflow: hidden;
-}
-
-/* XP bar */
-.inline-xp-bar-wrap {
-  height: 4px; background: rgba(0,212,255,0.1);
-  border-radius: 0; overflow: hidden; margin-bottom: 16px;
-  border: 1px solid rgba(0,212,255,0.15);
-}
-.inline-xp-bar-fill {
-  height: 100%; width: 0%;
-  background: linear-gradient(90deg, var(--cyan), var(--green));
-  box-shadow: 0 0 8px var(--cyan-glow);
-  border-radius: 0; transition: width 1s ease;
-}
-
-/* フィードバック */
-.inline-feedback {
-  text-align: center;
-  padding-bottom: 24px;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 24px;
-}
-.inline-xp-badge {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 4px 14px;
-  background: rgba(255,210,0,0.15); border: 1px solid rgba(255,210,0,0.3);
-  border-radius: 20px; color: #ffd200; font-size: 13px; font-weight: bold;
-  margin-bottom: 16px;
-}
-.inline-monster-emoji {
-  width: 110px; height: 110px; display: block; margin: 0 auto 12px;
-  animation: resultPop 0.5s cubic-bezier(0.36,0.07,0.19,0.97) both;
-}
-.inline-badge {
-  font-size: 11px; letter-spacing: 0.2em;
-  color: rgba(255,255,255,0.4); margin-bottom: 6px;
-}
-.inline-reaction {
-  font-size: 20px; font-weight: 900; color: var(--cyan);
-  margin-bottom: 8px; line-height: 1.4;
-  text-shadow: var(--glow-sm);
-}
-.inline-sub {
-  font-size: 13px; color: rgba(255,255,255,0.6); line-height: 1.6; margin-bottom: 6px;
-}
-.inline-effect {
-  font-size: 13px; color: #38ef7d; font-weight: bold;
-}
-
-/* ---- 雑学カード ---- */
-.trivia-card {
-  border-radius: 0;
-  overflow: hidden;
-  margin: 4px 0 20px;
-  border: 1px solid var(--border);
-  clip-path: polygon(12px 0%, 100% 0%, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0% 100%, 0% 12px);
-  border: 1.5px solid rgba(139,92,246,0.45);
-  animation: triviaIn 0.5s ease 0.4s both;
-  display: none;
-}
-@keyframes triviaIn {
-  from { opacity: 0; transform: translateY(14px) scale(0.97); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-.trivia-visual {
-  height: 130px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 72px;
-  position: relative; overflow: hidden;
-}
-.trivia-visual::after {
-  content: '';
-  position: absolute; inset: 0;
-  background: linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.35));
-}
-.trivia-content {
-  background: rgba(255,255,255,0.06);
-  padding: 14px 16px 16px;
-}
-.trivia-meta {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 10px;
-}
-.trivia-header {
-  font-size: 11px; font-weight: 900; letter-spacing: 0.1em; color: #a78bfa;
-  display: flex; align-items: center; gap: 5px;
-}
-.trivia-save-btn {
-  background: none; border: 1.5px solid rgba(255,210,0,0.4);
-  border-radius: 20px; color: rgba(255,210,0,0.7);
-  font-size: 12px; font-weight: bold; padding: 4px 12px;
-  cursor: pointer; transition: all 0.18s; white-space: nowrap;
-}
-.trivia-save-btn.saved {
-  background: rgba(255,210,0,0.18); border-color: #ffd200; color: #ffd200;
-}
-.trivia-text {
-  font-size: 14px; color: rgba(255,255,255,0.92); line-height: 1.7;
-  font-weight: 500; margin-bottom: 14px;
-}
-.trivia-dive-btn {
-  display: block; width: 100%; padding: 11px;
-  background: linear-gradient(135deg, rgba(139,92,246,0.35), rgba(91,33,182,0.35));
-  border: 1.5px solid rgba(139,92,246,0.5);
-  border-radius: 14px; color: #c4b5fd;
-  font-size: 13px; font-weight: bold;
-  cursor: pointer; transition: all 0.18s; letter-spacing: 0.03em;
-}
-.trivia-dive-btn:hover { background: rgba(139,92,246,0.45); color: #fff; }
-
-/* 次の探究 ヘッダー */
-.next-header {
-  display: flex; align-items: baseline; justify-content: space-between;
-  margin-bottom: 12px;
-}
-.next-header-title {
-  font-size: 16px; font-weight: 800; color: #fff;
-}
-.next-header-hint {
-  font-size: 11px; color: rgba(255,255,255,0.4);
-}
-
-/* 横スクロール */
-.next-scroll-wrap {
-  overflow-x: auto;
-  margin: 0 -20px;
-  padding: 0 20px 12px;
-  scrollbar-width: none;
-}
-.next-scroll-wrap::-webkit-scrollbar { display: none; }
-.next-scroll {
-  display: flex; gap: 12px;
-  padding-right: 20px;
-  width: max-content;
-  scroll-snap-type: x mandatory;
-}
-
-/* ===== 次の探究カード — 低学年向けビジュアル主体 ===== */
-.next-scroll-wrap {
-  overflow-x: auto;
-  margin: 0 -20px;
-  padding: 0 20px 16px;
-  scrollbar-width: none;
-}
-.next-scroll-wrap::-webkit-scrollbar { display: none; }
-.next-scroll {
-  display: flex; gap: 14px;
-  padding-right: 20px;
-  width: max-content;
-}
-
-.next-card {
-  width: 160px;
-  flex-shrink: 0;
-  cursor: pointer;
-  border-radius: 16px;
-  border: 3px solid transparent;
-  display: flex; flex-direction: column;
-  transition: transform 0.18s, border-color 0.18s, box-shadow 0.18s;
-  animation: missionIn 0.45s cubic-bezier(0.22,1,0.36,1) both;
-  overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-}
-.next-card:nth-child(1){ animation-delay:0.05s; }
-.next-card:nth-child(2){ animation-delay:0.18s; }
-.next-card:nth-child(3){ animation-delay:0.31s; }
-.next-card:nth-child(4){ animation-delay:0.44s; }
-.next-card:active { transform: scale(0.91); }
-
-/* レベル別ボーダー色 */
-.next-card.lv1 { border-color: rgba(0,255,136,0.5); }
-.next-card.lv2 { border-color: rgba(0,212,255,0.5); }
-.next-card.lv3 { border-color: rgba(155,93,255,0.5); }
-.next-card.lv1:active { box-shadow: 0 0 24px rgba(0,255,136,0.5); }
-.next-card.lv2:active { box-shadow: 0 0 24px rgba(0,212,255,0.5); }
-.next-card.lv3:active { box-shadow: 0 0 24px rgba(155,93,255,0.5); }
-
-/* 大きなビジュアルエリア（カードの約75%） */
-.next-card-visual {
-  height: 145px;
-  display: flex; align-items: center; justify-content: center;
-  position: relative; overflow: hidden;
-  flex-shrink: 0;
-}
-.next-card-visual::before {
-  content: '';
-  position: absolute; inset: 0;
-  background: radial-gradient(circle at 50% 40%, rgba(255,255,255,0.15) 0%, transparent 65%);
-}
-.next-card-visual::after {
-  content: '';
-  position: absolute; bottom: 0; left: 0; right: 0; height: 40%;
-  background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.3));
-}
-
-/* 大きな絵文字 */
-.next-card-emoji {
-  font-size: 72px;
-  filter: drop-shadow(0 4px 14px rgba(0,0,0,0.5));
-  position: relative; z-index: 1;
-  animation: float 3s ease-in-out infinite;
-}
-.next-card:nth-child(2) .next-card-emoji { animation-delay: -1s; }
-.next-card:nth-child(3) .next-card-emoji { animation-delay: -2s; }
-.next-card:nth-child(4) .next-card-emoji { animation-delay: -0.5s; }
-
-/* ラベル（カードの約25%）*/
-.next-card-info {
-  padding: 10px 12px 12px;
-  background: rgba(0,6,18,0.92);
-  border-top: 2px solid rgba(255,255,255,0.08);
-}
-
-/* レベルドット（テキストなし → 色だけ） */
-.next-card-level {
-  display: none; /* ドット表示に変更 */
-}
-.next-card-level-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  display: inline-block; margin-bottom: 6px;
-}
-.lv1 .next-card-level-dot { background: var(--green); box-shadow: 0 0 6px rgba(0,255,136,0.8); }
-.lv2 .next-card-level-dot { background: var(--cyan);  box-shadow: 0 0 6px rgba(0,212,255,0.8); }
-.lv3 .next-card-level-dot { background: var(--purple);box-shadow: 0 0 6px rgba(155,93,255,0.8); }
-
-.next-card-title {
-  font-size: 13px; font-weight: 800; color: #fff; line-height: 1.35;
-  letter-spacing: 0.02em;
-}
-
-/* 旧テキスト要素は非表示 */
-.next-card-header { display: none !important; }
-.next-card-body   { display: none !important; }
-.next-card-cta    { display: none !important; }
-.next-card-type   { display: none !important; }
-
-/* フッター */
-.inline-footer { margin-top: 20px; }
-
-/* ============================================
-   RETRY OVERLAY
-   ============================================ */
-#retry-overlay {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.88);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 999;
-  animation: fadeInOverlay 0.2s ease;
-  padding: 32px;
-}
-@keyframes fadeInOverlay {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-.retry-box {
-  background: #1a1a2e;
-  border: 2px solid rgba(255,255,255,0.12);
-  border-radius: 24px;
-  padding: 32px 24px;
-  text-align: center;
-  max-width: 320px;
-  width: 100%;
-  animation: retryBoxIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
-}
-@keyframes retryBoxIn {
-  from { transform: scale(0.8); opacity: 0; }
-  to   { transform: scale(1); opacity: 1; }
-}
-.retry-monster-emoji {
-  width: 96px; height: 96px;
-  display: block;
-  margin: 0 auto 16px;
-  animation: retryWiggle 0.5s ease;
-}
-@keyframes retryWiggle {
-  0%,100% { transform: rotate(0); }
-  20%  { transform: rotate(-10deg) scale(1.1); }
-  60%  { transform: rotate(10deg) scale(1.1); }
-}
-.retry-title {
-  font-size: 22px; font-weight: 900; color: #fff; margin-bottom: 8px;
-}
-.retry-msg {
-  font-size: 15px; color: rgba(255,255,255,0.65); margin-bottom: 12px; line-height: 1.5;
-}
-.retry-attempts {
-  font-size: 12px; color: #f7971e; font-weight: bold; margin-bottom: 24px;
-}
-.retry-attempts.danger { color: #f953c6; }
-
-/* ---- Char counter ---- */
-.char-counter {
-  text-align: right; font-size: 12px;
-  margin-top: -8px; margin-bottom: 12px;
-  transition: color 0.3s; font-weight: bold;
-}
-.char-counter.ok   { color: #38ef7d; }
-.char-counter.warn { color: rgba(255,255,255,0.35); }
-.char-counter.bonus { color: #ffd200; }
-
-/* ---- Star rating ---- */
-.star-rating {
-  display: flex; justify-content: center; gap: 6px;
-  margin-bottom: 12px; padding: 16px;
-  background: rgba(0,10,30,0.6);
-  border: 1px solid var(--border);
-  border-radius: 0;
-  clip-path: polygon(6px 0%, 100% 0%, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0% 100%, 0% 6px);
-}
-.star-btn {
-  font-size: 36px; background: none; border: none; cursor: pointer;
-  transition: transform 0.15s, filter 0.15s; padding: 2px;
-  filter: grayscale(1) opacity(0.25);
-}
-.star-btn.lit { filter: drop-shadow(0 0 8px rgba(0,212,255,0.8)) none; }
-.star-btn.lit:last-child { animation: starPop 0.2s ease; }
-@keyframes starPop {
-  0%  { transform: scale(1); }
-  50% { transform: scale(1.35); }
-  100%{ transform: scale(1); }
-}
-.star-label {
-  text-align: center; font-size: 14px;
-  color: rgba(255,255,255,0.65); margin-bottom: 20px; min-height: 20px;
-  transition: all 0.2s;
-}
-
-/* ---- Choose + Why ---- */
-.why-section { animation: fadeIn 0.3s ease; }
-.why-label {
-  font-size: 13px; color: #f7971e; font-weight: bold;
-  margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
-}
-.why-divider {
-  border: none; border-top: 1px solid rgba(255,255,255,0.1);
-  margin: 12px 0 16px;
-}
-
-/* ============================================
-   ANIMATION ENHANCEMENTS
-   ============================================ */
-
-/* Screen slide-in from right (forward) */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateX(36px); }
-  to   { opacity: 1; transform: translateX(0); }
-}
-/* Screen slide-in from left (back) */
-@keyframes fadeInBack {
-  from { opacity: 0; transform: translateX(-36px); }
-  to   { opacity: 1; transform: translateX(0); }
-}
-.screen.back-enter.active { animation: fadeInBack 0.35s cubic-bezier(0.25,0.46,0.45,0.94); }
-
-/* ---- Button shimmer ---- */
-.btn-primary { position: relative; overflow: hidden; }
-.btn-primary::after {
-  content: '';
-  position: absolute;
-  top: 0; left: -150%;
-  width: 55%; height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.22), transparent);
-  animation: btnShimmer 2.8s ease-in-out infinite;
-}
-@keyframes btnShimmer {
-  0%   { left: -150%; }
-  45%  { left: 150%; }
-  100% { left: 150%; }
-}
-
-/* ---- Mission card staggered entrance ---- */
-.mission-card { animation: missionIn 0.45s ease both; }
-.mission-card:nth-child(1) { animation-delay: 0.05s; }
-.mission-card:nth-child(2) { animation-delay: 0.17s; }
-.mission-card:nth-child(3) { animation-delay: 0.29s; }
-@keyframes missionIn {
-  from { opacity: 0; transform: translateX(-18px); }
-  to   { opacity: 1; transform: translateX(0); }
-}
-/* Card selected pop */
-@keyframes cardPop {
-  0%   { transform: scale(1); }
-  35%  { transform: scale(1.045); }
-  100% { transform: scale(1); }
-}
-.trait-card.pop { animation: cardPop 0.25s ease; }
-
-/* ---- Ripple ---- */
-.ripple {
-  position: absolute;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.22);
-  transform: scale(0);
-  animation: rippleAnim 0.5s linear forwards;
-  pointer-events: none;
-}
-@keyframes rippleAnim {
-  to { transform: scale(5); opacity: 0; }
-}
-
-/* ---- Shockwave rings (monster screen) ---- */
-.shockwave {
-  position: absolute;
-  top: 50%; left: 50%;
-  width: 70px; height: 70px;
-  margin: -35px 0 0 -35px;
-  border-radius: 50%;
-  border: 3px solid #ffd200;
-  animation: shockwaveExpand 0.75s ease-out forwards;
-  pointer-events: none;
-}
-.shockwave.r2 { animation-delay: 0.18s; border-color: #f7971e; }
-.shockwave.r3 { animation-delay: 0.36s; border-color: rgba(249,83,198,0.6); }
-@keyframes shockwaveExpand {
-  from { transform: scale(0); opacity: 1; }
-  to   { transform: scale(6); opacity: 0; }
-}
-
-/* Monster card glow on appear */
-.monster-card { transition: box-shadow 0.6s, border-color 0.6s; }
-.monster-card.glowing {
-  box-shadow: var(--glow-lg);
-  border-color: var(--cyan);
-}
-
-/* Monster appear text pulse */
-.monster-appear-text { animation: maPulse 1.4s ease-in-out infinite; }
-@keyframes maPulse {
-  0%,100% { opacity: 0.5; letter-spacing: 0.30em; text-shadow: 0 0 6px var(--cyan-glow); }
-  50%     { opacity: 1;    letter-spacing: 0.32em; }
-}
-
-/* Screen flash on monster reveal */
-#screen-monster { transition: background 0.1s; }
-#screen-monster.flashing { animation: monsterFlash 0.5s ease; }
-@keyframes monsterFlash {
-  0%   { background: transparent; }
-  15%  { background: radial-gradient(ellipse at center, rgba(0,212,255,0.12) 0%, transparent 70%); }
-  100% { background: transparent; }
-}
-
-/* Result: burst particles */
-.burst-piece {
-  position: absolute;
-  width: 10px; height: 10px;
-  border-radius: 50%;
-  top: 50%; left: 50%;
-  pointer-events: none;
-  animation: burstFly 0.65s ease-out forwards;
-}
-@keyframes burstFly {
-  from { transform: translate(-50%,-50%) scale(1); opacity: 1; }
-  to   { transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(0); opacity: 0; }
-}
-
-/* XP count-up pop */
-@keyframes xpNumPop {
-  0%   { transform: scale(1); }
-  50%  { transform: scale(1.5); color: #fff; }
-  100% { transform: scale(1); }
-}
-.xp-pop { display: inline-block; animation: xpNumPop 0.4s ease; }
-
-/* Choice selected checkmark */
-.choice-btn { position: relative; overflow: hidden; }
-.choice-btn.selected { padding-right: 40px; }
-.choice-btn.selected::after {
-  content: '▶';
-  color: var(--cyan);
-  position: absolute;
-  right: 14px; top: 50%;
-  transform: translateY(-50%);
-  color: #ffd200;
-  font-weight: 900;
-  animation: checkPop 0.2s ease;
-}
-@keyframes checkPop {
-  from { transform: translateY(-50%) scale(0) rotate(-45deg); }
-  to   { transform: translateY(-50%) scale(1) rotate(0); }
-}
-/* ---- フォルダ画面 ---- */
-#screen-folder {
-  background: transparent;
-}
-.folder-empty {
-  flex: 1; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 12px;
-  color: rgba(255,255,255,0.4); text-align: center;
-}
-.folder-empty-icon { font-size: 56px; }
-.folder-empty-msg  { font-size: 15px; }
-.folder-empty-hint { font-size: 12px; color: rgba(255,255,255,0.3); }
-.folder-list { display: flex; flex-direction: column; gap: 14px; flex: 1; }
-.folder-item {
-  border-radius: 20px; overflow: hidden;
-  border: 1.5px solid rgba(139,92,246,0.35);
-  animation: missionIn 0.35s ease both;
-}
-.folder-item-visual {
-  height: 90px; display: flex; align-items: center; justify-content: center;
-  font-size: 52px; position: relative;
-}
-.folder-item-visual::after {
-  content: ''; position: absolute; inset: 0;
-  background: linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.4));
-}
-.folder-item-body {
-  background: rgba(255,255,255,0.06); padding: 12px 14px;
-  display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
-}
-.folder-item-text {
-  font-size: 13px; color: rgba(255,255,255,0.9); line-height: 1.6; flex: 1;
-}
-.folder-item-del {
-  background: none; border: none; color: rgba(255,255,255,0.3);
-  font-size: 18px; cursor: pointer; padding: 0 0 0 8px; flex-shrink: 0;
-  transition: color 0.15s;
-}
-.folder-item-del:hover { color: #f953c6; }
-.folder-clear-btn {
-  margin-top: 16px;
-  background: rgba(249,83,198,0.1); border: 1.5px solid rgba(249,83,198,0.3);
-  border-radius: 14px; color: rgba(249,83,198,0.7);
-  font-size: 13px; padding: 10px; cursor: pointer; width: 100%;
-  transition: all 0.18s;
-}
-.folder-clear-btn:hover { background: rgba(249,83,198,0.2); color: #f953c6; }
+  --cyan:#00d4ff; --cyan-dim:rgba(0,212,255,0.15); --cyan-glow:rgba(0,212,255,0.5);
+  --purple:#9b5dff; --purple-dim:rgba(155,93,255,0.15);
+  --green:#00ff88; --gold:#ffd700; --orange:#ff8c00;
+  --bg0:#02060f; --bg1:#040b18; --bg2:#071020;
+  --text:#d0eeff; --text-dim:rgba(208,238,255,0.45);
+  --border:rgba(0,212,255,0.22);
+  --glow-sm:0 0 6px rgba(0,212,255,0.5);
+  --glow-md:0 0 14px rgba(0,212,255,0.45),0 0 30px rgba(0,212,255,0.18);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'Hiragino Kaku Gothic Pro','Hiragino Sans','Meiryo',sans-serif;
+  background:var(--bg0);min-height:100vh;display:flex;align-items:center;justify-content:center}
+body::before{content:'';position:fixed;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,212,255,0.015) 2px,rgba(0,212,255,0.015) 4px);
+  pointer-events:none;z-index:9999}
+#app{width:100%;max-width:420px;min-height:100vh;position:relative;overflow:hidden;
+  background:radial-gradient(ellipse 100% 60% at 50% 0%,rgba(0,80,160,0.2) 0%,transparent 70%),
+  linear-gradient(180deg,var(--bg1) 0%,var(--bg0) 100%)}
+#app::before{content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(0,212,255,0.035) 1px,transparent 1px),
+  linear-gradient(90deg,rgba(0,212,255,0.035) 1px,transparent 1px);
+  background-size:32px 32px;pointer-events:none;z-index:0}
+.screen{display:none;flex-direction:column;min-height:100vh;position:relative;z-index:1;
+  animation:screenIn .28s cubic-bezier(.22,1,.36,1)}
+.screen.active{display:flex}
+@keyframes screenIn{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes twinkle{0%,100%{opacity:.2;transform:scale(1)}50%{opacity:1;transform:scale(1.5)}}
+@keyframes pop{0%{transform:scale(.6);opacity:0}70%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
+@keyframes cardIn{from{opacity:0;transform:scale(.85) translateY(12px)}to{opacity:1;transform:none}}
+@keyframes confettiFall{to{transform:translateY(100vh) rotate(720deg);opacity:0}}
+@keyframes depthFill{from{width:0}to{width:var(--target-w)}}
+
+/* ── BUTTONS ── */
+.btn{display:block;width:100%;padding:15px;border:none;border-radius:4px;
+  font-size:16px;font-weight:900;cursor:pointer;letter-spacing:.1em;
+  position:relative;overflow:hidden;font-family:inherit;
+  clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px));
+  transition:transform .1s,box-shadow .15s}
+.btn:active{transform:scale(.97)}
+.btn:disabled{opacity:.3;cursor:not-allowed}
+.btn-primary{background:linear-gradient(135deg,#0095cc,#00d4ff,#00aadd);color:#000d1a;
+  box-shadow:0 0 18px rgba(0,212,255,.6),0 0 40px rgba(0,212,255,.2)}
+.btn-success{background:linear-gradient(135deg,#006644,#00ff88,#00cc6a);color:#001a0d;
+  box-shadow:0 0 18px rgba(0,255,136,.55)}
+.btn-ghost{background:rgba(0,212,255,.06);color:var(--cyan);border:1px solid var(--border)}
+.btn+.btn{margin-top:12px}
+
+/* ── SCREEN 1: TOP ── */
+#screen-top{align-items:center;justify-content:center;gap:0;
+  padding:48px 24px 40px;text-align:center;overflow:hidden}
+.top-stars{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.star{position:absolute;width:2.5px;height:2.5px;background:#fff;border-radius:50%;
+  animation:twinkle 2s ease-in-out infinite}
+.top-logo-wrap{position:relative;display:flex;align-items:center;justify-content:center;
+  width:110px;height:110px;margin-bottom:12px}
+.top-logo-ring{position:absolute;inset:0;border:1.5px solid transparent;
+  border-top-color:var(--cyan);border-right-color:var(--cyan);border-radius:50%;
+  animation:spin 3s linear infinite;box-shadow:var(--glow-sm)}
+.top-logo-ring2{position:absolute;inset:10px;border:1px solid transparent;
+  border-bottom-color:var(--purple);border-left-color:var(--purple);border-radius:50%;
+  animation:spin 2s linear infinite reverse}
+.top-logo{font-size:56px;position:relative;z-index:1;
+  animation:float 3s ease-in-out infinite;filter:drop-shadow(0 0 14px var(--cyan-glow))}
+.top-title{font-size:32px;font-weight:900;color:var(--cyan);
+  text-shadow:0 0 20px var(--cyan-glow),0 0 40px rgba(0,212,255,.3);
+  letter-spacing:.24em;margin-bottom:6px}
+.top-tagline{font-size:13px;color:var(--text-dim);line-height:1.9;
+  margin-bottom:44px;letter-spacing:.04em}
+.top-tagline b{color:var(--text);font-weight:900}
+.top-cta{width:100%}
+
+/* ── SCREEN 2: SETUP ── */
+#screen-setup{padding:0;overflow-y:auto}
+.setup-header{padding:28px 20px 16px}
+.setup-step{font-size:10px;letter-spacing:.2em;color:var(--cyan);
+  text-transform:uppercase;margin-bottom:8px}
+.setup-title{font-size:22px;font-weight:900;color:var(--text);line-height:1.3}
+.setup-sub{font-size:13px;color:var(--text-dim);margin-top:6px}
+.explorer-list{display:flex;flex-direction:column;gap:10px;padding:0 20px 20px}
+.exp-card{display:flex;align-items:center;gap:16px;padding:16px 18px;
+  border:1px solid var(--border);background:rgba(0,212,255,.04);cursor:pointer;
+  clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px));
+  transition:all .2s;position:relative}
+.exp-card.sel{border-color:var(--cyan);background:rgba(0,212,255,.1);box-shadow:var(--glow-md)}
+.exp-card:active{transform:scale(.98)}
+.exp-icon{font-size:38px;line-height:1;flex-shrink:0}
+.exp-text{flex:1}
+.exp-name{font-size:17px;font-weight:900;color:var(--text);letter-spacing:.04em}
+.exp-desc{font-size:12px;color:var(--text-dim);margin-top:3px}
+.exp-tick{font-size:18px;color:var(--cyan);opacity:0;transition:opacity .2s;margin-left:auto}
+.exp-card.sel .exp-tick{opacity:1}
+
+.mood-section{padding:20px 20px 0;border-top:1px solid var(--border);display:none}
+.mood-section.on{display:block}
+.mood-title{font-size:15px;font-weight:900;color:var(--text);margin-bottom:14px;letter-spacing:.04em}
+.mood-row{display:flex;gap:10px}
+.mood-card{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;
+  padding:18px 6px;border:1px solid var(--border);background:rgba(0,212,255,.03);
+  cursor:pointer;border-radius:8px;transition:all .2s}
+.mood-card.sel{border-color:var(--cyan);background:rgba(0,212,255,.1);box-shadow:var(--glow-sm)}
+.mood-card:active{transform:scale(.96)}
+.mood-em{font-size:32px}
+.mood-lbl{font-size:11px;font-weight:700;color:var(--text-dim);text-align:center;line-height:1.4}
+.mood-card.sel .mood-lbl{color:var(--cyan)}
+.setup-btn-area{padding:20px}
+
+/* ── SCREEN 3: PHOTO ── */
+#screen-photo{padding:24px 20px 32px;align-items:center}
+.photo-hdr{width:100%;text-align:center;margin-bottom:10px}
+.photo-hdr-title{font-size:20px;font-weight:900;color:var(--text)}
+.photo-hdr-sub{font-size:12px;color:var(--text-dim);margin-top:4px;letter-spacing:.06em}
+.camera-hero{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px}
+.cam-ring{position:relative;display:flex;align-items:center;justify-content:center}
+.cam-ring::before{content:'';position:absolute;width:200px;height:200px;border-radius:50%;
+  border:1px solid transparent;border-top-color:var(--cyan);border-right-color:var(--cyan);
+  animation:spin 4s linear infinite;box-shadow:0 0 8px var(--cyan-glow)}
+.cam-ring::after{content:'';position:absolute;width:224px;height:224px;border-radius:50%;
+  border:1px solid transparent;border-bottom-color:var(--purple);border-left-color:var(--purple);
+  animation:spin 6s linear infinite reverse}
+.cam-btn{width:152px;height:152px;border-radius:50%;
+  background:radial-gradient(circle at 40% 35%,rgba(0,180,255,.35),rgba(0,50,100,.9) 70%);
+  display:flex;align-items:center;justify-content:center;font-size:64px;cursor:pointer;
+  box-shadow:0 0 30px rgba(0,212,255,.35),inset 0 0 20px rgba(0,212,255,.15);
+  transition:transform .18s;position:relative;z-index:1}
+.cam-btn:active{transform:scale(.94)}
+.cam-label{font-size:18px;font-weight:900;color:var(--text);letter-spacing:.08em}
+.cam-sub{font-size:12px;color:var(--text-dim);margin-top:-12px}
+.cam-alt{font-size:13px;color:var(--cyan);cursor:pointer;text-decoration:underline}
+.preview-state{display:none;flex-direction:column;align-items:center;gap:16px;width:100%}
+.preview-wrap{width:100%;max-width:320px;aspect-ratio:4/3;border-radius:8px;overflow:hidden;
+  border:1.5px solid var(--cyan);box-shadow:var(--glow-md);cursor:pointer;position:relative}
+.preview-wrap img{width:100%;height:100%;object-fit:cover}
+.preview-change{position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.7);
+  color:var(--cyan);font-size:11px;padding:4px 8px;border-radius:4px;letter-spacing:.06em}
+.photo-btn-area{width:100%;padding-top:24px}
+
+/* ── SCREEN 4: MAP ── */
+#screen-map{padding:0;overflow-y:auto;min-height:100vh}
+.map-hud{display:flex;align-items:center;gap:8px;padding:11px 14px 9px;
+  background:rgba(4,11,24,.9);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
+.hud-depth-label{font-size:9px;letter-spacing:.15em;color:var(--text-dim);
+  text-transform:uppercase;white-space:nowrap}
+.hud-track{flex:1;height:6px;background:rgba(0,212,255,.1);border-radius:3px;overflow:hidden}
+.hud-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--purple));
+  border-radius:3px;transition:width .8s cubic-bezier(.22,1,.36,1);box-shadow:0 0 8px var(--cyan-glow)}
+.hud-xp{font-size:13px;font-weight:900;color:var(--gold);white-space:nowrap;
+  text-shadow:0 0 8px rgba(255,215,0,.6);letter-spacing:.04em}
+.hud-thumb{width:32px;height:32px;border-radius:4px;overflow:hidden;
+  border:1px solid var(--border);cursor:pointer;flex-shrink:0}
+.hud-thumb img{width:100%;height:100%;object-fit:cover}
+
+.map-photo-hero{position:relative;width:100%;max-height:54vw;overflow:hidden}
+.map-photo-hero img{width:100%;height:100%;object-fit:cover;display:block}
+.map-photo-overlay{position:absolute;inset:0;
+  background:linear-gradient(to bottom,transparent 40%,rgba(2,6,15,.85) 100%)}
+.map-photo-cat{position:absolute;top:12px;left:12px;
+  background:rgba(0,0,0,.65);border:1px solid var(--border);
+  color:var(--text-dim);font-size:11px;padding:4px 10px;border-radius:20px;
+  letter-spacing:.08em;backdrop-filter:blur(4px)}
+.map-photo-chg{position:absolute;bottom:12px;right:12px;
+  background:rgba(0,0,0,.7);border:1px solid var(--border);
+  color:var(--cyan);font-size:12px;padding:6px 12px;border-radius:20px;
+  cursor:pointer;letter-spacing:.06em;backdrop-filter:blur(4px);
+  display:flex;align-items:center;gap:5px}
+.map-photo-chg:active{transform:scale(.95)}
+
+.map-sec-head{padding:16px 16px 8px;display:flex;align-items:center;justify-content:space-between}
+.map-sec-title{font-size:13px;font-weight:900;color:var(--text);
+  letter-spacing:.1em;text-transform:uppercase}
+.map-sec-sub{font-size:11px;color:var(--text-dim)}
+
+.mission-feed{display:flex;gap:12px;padding:4px 16px 24px;
+  overflow-x:auto;scroll-snap-type:x mandatory;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none}
+.mission-feed::-webkit-scrollbar{display:none}
+
+/* QUEST CARD */
+.qcard{flex:0 0 158px;height:248px;scroll-snap-align:start;
+  display:flex;flex-direction:column;cursor:pointer;
+  border:1px solid rgba(255,255,255,.1);border-radius:12px;
+  overflow:hidden;transition:transform .2s,box-shadow .2s;
+  position:relative;background:var(--bg2)}
+.qcard:active{transform:scale(.96)}
+.qcard.new{animation:cardIn .35s cubic-bezier(.22,1,.36,1) both}
+.qcard-vis{height:58%;position:relative;display:flex;align-items:center;
+  justify-content:center;overflow:hidden}
+.qcard-vis::after{content:'';position:absolute;bottom:0;left:0;right:0;height:40px;
+  background:linear-gradient(transparent,rgba(0,0,0,.5))}
+.qcard-em{font-size:52px;line-height:1;position:relative;z-index:1;
+  animation:float 3s ease-in-out infinite;
+  filter:drop-shadow(0 4px 12px rgba(0,0,0,.4))}
+.qcard-info{flex:1;padding:10px 12px 8px;display:flex;flex-direction:column;gap:5px;
+  background:rgba(4,11,24,.85)}
+.qcard-badge{font-size:9px;letter-spacing:.18em;text-transform:uppercase;font-weight:900;
+  padding:2px 7px;border-radius:3px;width:fit-content;display:inline-block}
+.qcard-title{font-size:15px;font-weight:900;color:var(--text);line-height:1.3;flex:1}
+.qcard-meta{display:flex;align-items:center;justify-content:space-between}
+.qcard-stars{font-size:11px;color:var(--gold);letter-spacing:-2px}
+.qcard-xp{font-size:11px;font-weight:900;color:var(--green)}
+
+/* Quest type themes */
+.qt-discover .qcard-vis{background:linear-gradient(145deg,#92400e,#d97706,#fde68a)}
+.qt-discover .qcard-badge{background:rgba(217,119,6,.2);color:#fbbf24;border:1px solid rgba(217,119,6,.3)}
+.qt-battle   .qcard-vis{background:linear-gradient(145deg,#7f1d1d,#dc2626,#fca5a5)}
+.qt-battle   .qcard-badge{background:rgba(220,38,38,.2);color:#f87171;border:1px solid rgba(220,38,38,.3)}
+.qt-mystery  .qcard-vis{background:linear-gradient(145deg,#2e1065,#7c3aed,#c4b5fd)}
+.qt-mystery  .qcard-badge{background:rgba(124,58,237,.2);color:#a78bfa;border:1px solid rgba(124,58,237,.3)}
+.qt-craft    .qcard-vis{background:linear-gradient(145deg,#064e3b,#059669,#6ee7b7)}
+.qt-craft    .qcard-badge{background:rgba(5,150,105,.2);color:#34d399;border:1px solid rgba(5,150,105,.3)}
+.qt-explore  .qcard-vis{background:linear-gradient(145deg,#0c4a6e,#0284c7,#7dd3fc)}
+.qt-explore  .qcard-badge{background:rgba(2,132,199,.2);color:#38bdf8;border:1px solid rgba(2,132,199,.3)}
+
+.map-bottom-area{padding:0 16px 36px}
+
+/* ── SCREEN 5: MISSION ── */
+#screen-mission{padding:0;min-height:100vh}
+.mbar{display:flex;align-items:center;gap:10px;padding:13px 16px;
+  background:rgba(4,11,24,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
+.mbar-back{background:none;border:none;color:var(--cyan);font-size:22px;cursor:pointer;
+  padding:2px 6px;line-height:1}
+.mbar-type{font-size:9px;font-weight:900;letter-spacing:.18em;padding:4px 10px;
+  border-radius:10px;text-transform:uppercase}
+.mbar-title{font-size:14px;font-weight:900;color:var(--text);flex:1;line-height:1.2}
+
+.mission-hero{width:100%;height:172px;position:relative;
+  display:flex;align-items:center;justify-content:center;overflow:hidden}
+.mission-hero-em{font-size:80px;position:relative;z-index:1;animation:float 3s ease-in-out infinite}
+.mission-hero-photo{position:absolute;top:8px;right:8px;width:64px;height:48px;
+  border-radius:6px;overflow:hidden;border:1px solid rgba(255,255,255,.3)}
+.mission-hero-photo img{width:100%;height:100%;object-fit:cover}
+
+.companion-strip{display:flex;align-items:flex-start;gap:12px;
+  padding:14px 18px 12px;background:rgba(0,212,255,.04);border-bottom:1px solid var(--border)}
+.companion-avatar{width:56px;height:56px;flex-shrink:0}
+.companion-bubble{flex:1;background:rgba(0,212,255,.08);border:1px solid var(--border);
+  border-radius:0 12px 12px 12px;padding:10px 12px;
+  font-size:13px;color:var(--text);line-height:1.6}
+.companion-bubble b{color:var(--cyan)}
+
+.mission-body{padding:20px;flex:1}
+.mission-prompt{font-size:17px;font-weight:900;color:var(--text);
+  line-height:1.65;margin-bottom:22px;letter-spacing:.02em}
+
+.choices-grid{display:flex;flex-direction:column;gap:10px}
+.choice-btn{padding:14px 16px;border:1px solid var(--border);
+  background:rgba(0,212,255,.04);color:var(--text);font-size:15px;font-weight:700;
+  border-radius:6px;cursor:pointer;transition:all .15s;text-align:left;
+  display:flex;align-items:center;gap:10px;font-family:inherit;width:100%;
+  clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,8px 100%,0 calc(100% - 8px))}
+.choice-btn:active{transform:scale(.97)}
+.choice-btn.chosen{border-color:var(--cyan);background:rgba(0,212,255,.14);box-shadow:var(--glow-sm)}
+
+.answer-textarea{width:100%;background:rgba(0,212,255,.04);
+  border:1px solid var(--border);border-radius:6px;padding:14px;
+  color:var(--text);font-size:15px;line-height:1.6;resize:none;
+  font-family:inherit;min-height:110px;outline:none}
+.answer-textarea:focus{border-color:var(--cyan);box-shadow:var(--glow-sm)}
+.char-hint{font-size:11px;color:var(--text-dim);margin-top:6px;letter-spacing:.06em}
+
+.mission-submit-area{padding:14px 20px 36px}
+
+/* ── SCREEN 6: COMPLETE ── */
+#screen-complete{padding:0;min-height:100vh;overflow-y:auto}
+.complete-hero{padding:26px 20px 18px;text-align:center;position:relative;overflow:hidden}
+.complete-burst{position:absolute;inset:0;pointer-events:none}
+.complete-label{font-size:11px;letter-spacing:.22em;color:var(--cyan);
+  text-transform:uppercase;margin-bottom:6px}
+.complete-title{font-size:28px;font-weight:900;color:var(--text)}
+.complete-subtitle{font-size:13px;color:var(--text-dim);margin-top:4px;letter-spacing:.04em}
+
+.complete-companion{display:flex;flex-direction:column;align-items:center;padding:8px 20px 0;gap:6px}
+.complete-svg{width:110px;height:110px}
+.complete-cname{font-size:12px;color:var(--text-dim);letter-spacing:.1em}
+.complete-msg{font-size:14px;font-weight:700;color:var(--text);
+  background:rgba(0,212,255,.06);border:1px solid var(--border);
+  border-radius:0 12px 12px 12px;padding:12px 16px;margin:8px 20px 0;line-height:1.7}
+
+.gains-row{display:flex;gap:12px;padding:16px 20px}
+.gain-blk{flex:1;background:rgba(0,212,255,.05);border:1px solid var(--border);
+  border-radius:8px;padding:14px 10px;text-align:center}
+.gain-lbl{font-size:9px;letter-spacing:.15em;color:var(--text-dim);
+  text-transform:uppercase;margin-bottom:6px}
+.gain-val{font-size:24px;font-weight:900;color:var(--cyan)}
+.gain-sub{font-size:10px;color:var(--text-dim);margin-top:2px}
+
+.next-head{padding:14px 16px 8px;font-size:13px;font-weight:900;color:var(--text);
+  letter-spacing:.1em;text-transform:uppercase}
+.next-feed{display:flex;gap:12px;padding:4px 16px 20px;
+  overflow-x:auto;scroll-snap-type:x mandatory;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none}
+.next-feed::-webkit-scrollbar{display:none}
+.complete-btns{padding:4px 20px 40px}
+
+/* depth toast */
+.depth-toast{position:fixed;top:76px;left:50%;transform:translateX(-50%) translateY(-20px);
+  background:linear-gradient(135deg,var(--purple),var(--cyan));color:#000;
+  font-size:13px;font-weight:900;padding:10px 22px;border-radius:20px;
+  white-space:nowrap;opacity:0;transition:all .35s cubic-bezier(.22,1,.36,1);
+  z-index:200;pointer-events:none;letter-spacing:.06em}
+.depth-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
 </head>
 <body>
 <div id="app">
 
-  <!-- ===== SCREEN 1: TOP ===== -->
-  <div class="screen active" id="screen-top">
-    <div class="top-stars" id="stars-container"></div>
-
-    <div class="top-logo-wrap">
-      <div class="top-logo-ring"></div>
-      <div class="top-logo-ring2"></div>
-      <div class="top-logo">🌟</div>
-    </div>
-    <div class="top-title">TOMORI</div>
-    <div class="top-subtitle">PHOTO × MISSION × DISCOVERY</div>
-
-    <!-- Swipeable category deck -->
-    <div class="top-deck-wrap" id="top-deck">
-      <div class="top-deck-card" id="tdc-survival"
-           style="background:linear-gradient(145deg,#3d1a00,#7c2d12,#b45309)"
-           onclick="selectDeckCard('survival',this)">
-        <span class="tdc-emoji">⚔️</span>
-        <div class="tdc-name">Survival</div>
-        <div class="tdc-sub">冒険しながら探究！</div>
-        <span class="tdc-check">✨</span>
-      </div>
-      <div class="top-deck-card" id="tdc-nature"
-           style="background:linear-gradient(145deg,#052e16,#065f46,#047857)"
-           onclick="selectDeckCard('nature',this)">
-        <span class="tdc-emoji">🌿</span>
-        <div class="tdc-name">Nature</div>
-        <div class="tdc-sub">じっくり観察しよう！</div>
-        <span class="tdc-check">✨</span>
-      </div>
-      <div class="top-deck-card" id="tdc-analysis"
-           style="background:linear-gradient(145deg,#0c1445,#1e3a8a,#1d4ed8)"
-           onclick="selectDeckCard('analysis',this)">
-        <span class="tdc-emoji">🔬</span>
-        <div class="tdc-name">Analysis</div>
-        <div class="tdc-sub">深く考えて発見！</div>
-        <span class="tdc-check">✨</span>
-      </div>
-    </div>
-
-    <div class="top-start-area">
-      <div class="top-hint" id="top-hint">← スワイプして選ぼう →</div>
-      <button class="btn btn-primary" id="top-start-btn" onclick="startApp()" style="max-width:280px;margin:0 auto;display:block" disabled>
-        ✨ はじめる
-      </button>
-      <button class="top-folder-btn" id="folder-btn" onclick="goTo('folder');buildFolderScreen()">
-        📁 マイ雑学フォルダ <span id="folder-count-badge"></span>
-      </button>
-    </div>
+<!-- ===== SCREEN 1: TOP ===== -->
+<div class="screen active" id="screen-top">
+  <div class="top-stars" id="stars-wrap"></div>
+  <div class="top-logo-wrap">
+    <div class="top-logo-ring"></div>
+    <div class="top-logo-ring2"></div>
+    <div class="top-logo">🧭</div>
   </div>
-
-  <!-- ===== SCREEN 2: TRAIT（はじめるの直後）===== -->
-  <div class="screen" id="screen-trait">
-    <button class="back-btn" onclick="goTo('top')">← もどる</button>
-    <div class="screen-header">
-      <div class="screen-title" id="trait-question-title">どんなスタイルで<span>探究</span>する？</div>
-    </div>
-
-    <div class="trait-list" id="trait-list">
-      <!-- JS生成 -->
-    </div>
-
-    <button class="btn btn-primary" id="trait-next-btn" onclick="goTo('upload')" disabled style="opacity:0.4">
-      これでいく！ →
-    </button>
+  <div class="top-title">TOMORI</div>
+  <div class="top-tagline">
+    <b>写真</b> が冒険の扉。<br>
+    今日は何を<b>探究</b>する？
   </div>
-
-  <!-- ===== SCREEN 3: UPLOAD ===== -->
-  <div class="screen" id="screen-upload">
-    <button class="back-btn" onclick="goTo('trait')">← もどる</button>
-
-    <!-- Camera hero (shown before photo) -->
-    <div class="camera-hero" id="camera-hero">
-      <div class="camera-ring">
-        <div class="camera-btn-circle upload-icon" onclick="document.getElementById('file-input').click()">📷</div>
-      </div>
-      <div class="camera-main-label upload-text">写真をとろう</div>
-      <div class="camera-sub-label upload-hint">タップして選択</div>
-      <div class="camera-alt-link" onclick="document.getElementById('file-input').click()">
-        📁 ライブラリから選ぶ
-      </div>
-    </div>
-
-    <!-- Photo preview (shown after photo selected) -->
-    <div class="upload-preview-state" id="upload-preview-state" style="display:none">
-      <img id="photo-preview" alt="プレビュー" style="max-height:52vh;max-width:100%;border-radius:20px;object-fit:contain;">
-      <div style="font-size:13px;color:rgba(255,255,255,0.4);">タップして撮り直す</div>
-    </div>
-
-    <!-- Hidden file input (shared by both buttons above) -->
-    <input type="file" id="file-input" accept="image/*" onchange="handlePhotoUpload(this)">
-    <!-- Legacy upload-area div kept for JS compatibility (invisible) -->
-    <div id="upload-area" style="display:none"></div>
-
-    <div id="category-hint" style="display:none"></div>
-    <div class="mt-auto" id="upload-go-wrap" style="display:none">
-      <button class="btn btn-primary" id="upload-go-btn" onclick="launchFromPhoto()">
-        ⚡ すすむ！
-      </button>
-    </div>
+  <div class="top-cta">
+    <button class="btn btn-primary" onclick="goTo('setup')">⚔️ 冒険をはじめる</button>
   </div>
-
-  <!-- ===== SCREEN 4: MONSTER ===== -->
-  <div class="screen" id="screen-monster">
-    <div class="monster-photo-wrap" id="monster-photo-wrap">
-      <img id="monster-photo" src="" alt="">
-    </div>
-    <div class="monster-appear-text">⚡ モンスター出現！</div>
-    <div class="monster-card" id="monster-card">
-      <span class="monster-emoji" id="monster-emoji"></span>
-      <div class="monster-type" id="monster-type"></div>
-      <div class="monster-name" id="monster-name"></div>
-      <div class="monster-message" id="monster-message"></div>
-    </div>
-    <div class="spacer"></div>
-    <button class="btn btn-primary" id="monster-go-btn" onclick="buildMissions()" style="opacity:0">
-      たんけんへ！ ⚔️
-    </button>
-  </div>
-
-  <!-- ===== SCREEN 5: MISSIONS ===== -->
-  <div class="screen" id="screen-missions">
-    <div class="screen-header">
-      <div class="screen-step">ミッション選択</div>
-      <div class="screen-title">どれに<span>チャレンジ</span>？</div>
-    </div>
-
-    <div class="mission-list" id="mission-list">
-      <!-- JS生成 -->
-    </div>
-
-    <div class="mission-scroll-dots" id="mission-dots">
-      <div class="mission-dot active" id="dot-0"></div>
-      <div class="mission-dot" id="dot-1"></div>
-      <div class="mission-dot" id="dot-2"></div>
-    </div>
-
-    <div class="mission-bottom">
-      <button class="btn btn-success" id="mission-next-btn" onclick="goToAnswer()" disabled style="opacity:0.4">
-        チャレンジ！ ⚔️
-      </button>
-    </div>
-  </div>
-
-  <!-- ===== SCREEN 6: ANSWER (2ステート) ===== -->
-  <div class="screen" id="screen-answer">
-
-    <!-- ── State A: 回答中 ── -->
-    <div id="answer-state">
-      <button class="back-btn" id="answer-back-btn" onclick="goTo('missions')">← もどる</button>
-      <div class="answer-mission-card" id="answer-mission-card"></div>
-      <div class="answer-label">💬 こたえてみよう！</div>
-      <div id="answer-ui"></div>
-      <div class="mt-auto">
-        <button class="btn btn-success" id="submit-btn" onclick="submitAnswer()">
-          こたえを送る 🚀
-        </button>
-      </div>
-    </div>
-
-    <!-- ── State B: インラインフィードバック + 次の探究 ── -->
-    <div id="inline-result" style="display:none">
-      <div class="inline-confetti" id="inline-confetti"></div>
-
-      <!-- フィードバック -->
-      <div class="inline-feedback">
-        <div class="inline-xp-bar-wrap">
-          <div class="inline-xp-bar-fill" id="inline-xp-bar"></div>
-        </div>
-        <div class="inline-xp-badge">⭐ <span id="inline-xp-label">+30 XP</span></div>
-        <span class="inline-monster-emoji" id="inline-monster-emoji"></span>
-        <div class="inline-badge">モンスターからのメッセージ</div>
-        <div class="inline-reaction" id="inline-reaction"></div>
-        <div class="inline-sub" id="inline-sub"></div>
-        <div class="inline-effect" id="inline-effect"></div>
-      </div>
-
-      <!-- 雑学カード -->
-      <div class="trivia-card" id="trivia-card" style="display:none">
-        <div class="trivia-visual" id="trivia-visual">
-          <span id="trivia-emoji" style="position:relative;z-index:1"></span>
-        </div>
-        <div class="trivia-content">
-          <div class="trivia-meta">
-            <div class="trivia-header">💡 ちょこっと雑学！</div>
-            <button class="trivia-save-btn" id="trivia-save-btn" onclick="toggleSaveTrivia()">⭐ 保存</button>
-          </div>
-          <div class="trivia-text" id="trivia-text"></div>
-          <button class="trivia-dive-btn" id="trivia-dive-btn" onclick="deepDiveTrivia()">🔍 この雑学を深掘りする！</button>
-        </div>
-      </div>
-
-      <!-- 次の探究 -->
-      <div class="next-header">
-        <div class="next-header-title">🔍 次の探究を選ぼう</div>
-        <div class="next-header-hint">横にスワイプして選べるよ →</div>
-      </div>
-      <div class="next-scroll-wrap">
-        <div class="next-scroll" id="next-scroll"></div>
-      </div>
-
-      <!-- フッター -->
-      <div class="inline-footer">
-        <button class="btn btn-secondary" style="font-size:14px;padding:12px"
-          onclick="goTo('missions')">← ミッション一覧にもどる</button>
-        <button class="btn btn-secondary" style="font-size:14px;padding:12px;margin-top:8px"
-          onclick="goTo('top');resetApp()">🏠 トップへ</button>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- ===== FOLDER SCREEN ===== -->
-  <div class="screen" id="screen-folder">
-    <button class="back-btn" onclick="goTo('top')">← もどる</button>
-    <div class="screen-header">
-      <div class="screen-title">📁 マイ雑学フォルダ</div>
-    </div>
-    <div id="folder-content"></div>
-    <div id="folder-empty" class="folder-empty" style="display:none">
-      <div class="folder-empty-icon">📭</div>
-      <div class="folder-empty-msg">まだ保存した雑学はないよ</div>
-      <div class="folder-empty-hint">気になった雑学を ⭐ボタンで保存してね！</div>
-    </div>
-  </div>
-
-  <!-- ===== SCREEN 7: RESULT ===== -->
-  <div class="screen" id="screen-result">
-    <div class="confetti-wrap" id="confetti-wrap"></div>
-    <div class="xp-bar-wrap" style="width:100%">
-      <div class="xp-bar-fill" id="xp-bar" style="width:0%"></div>
-    </div>
-    <div class="result-xp">⭐ <span id="xp-label">+30 XP ゲット！</span></div>
-    <span class="result-monster-emoji" id="result-monster-emoji"></span>
-    <div class="result-badge">モンスターからのメッセージ</div>
-    <div class="result-reaction" id="result-reaction"></div>
-    <div class="result-sub" id="result-sub"></div>
-    <div class="result-effect" id="result-effect"></div>
-    <div class="result-buttons">
-      <button class="btn btn-primary" onclick="nextMission()">つぎのミッションへ ▶</button>
-      <button class="btn btn-secondary" onclick="goTo('top'); resetApp()">はじめからやり直す</button>
-    </div>
-  </div>
-
-  <!-- ===== RETRY OVERLAY ===== -->
-  <div id="retry-overlay" style="display:none">
-    <div class="retry-box">
-      <span class="retry-monster-emoji" id="retry-monster-emoji"></span>
-      <div class="retry-title" id="retry-title">もうちょっとだけ！</div>
-      <div class="retry-msg" id="retry-msg">10文字以上書いてみよう</div>
-      <div class="retry-attempts" id="retry-attempts"></div>
-      <button class="btn btn-primary" onclick="closeRetry()" style="max-width:220px">もういちど書く ✏️</button>
-    </div>
-  </div>
-
 </div>
 
+<!-- ===== SCREEN 2: SETUP ===== -->
+<div class="screen" id="screen-setup">
+  <div class="setup-header">
+    <div class="setup-step">STEP 1 — 探険者タイプを選ぼう</div>
+    <div class="setup-title">きみはどんな<br>冒険者？</div>
+    <div class="setup-sub">1回だけ選ぶよ。あとで変えられるよ！</div>
+  </div>
+  <div class="explorer-list" id="explorer-list"></div>
+
+  <div class="mood-section" id="mood-section">
+    <div class="mood-title">✨ 今日の気分は？</div>
+    <div class="mood-row">
+      <div class="mood-card" onclick="selectMood('hot',this)">
+        <div class="mood-em">🔥</div>
+        <div class="mood-lbl">めちゃ<br>元気！</div>
+      </div>
+      <div class="mood-card" onclick="selectMood('ok',this)">
+        <div class="mood-em">😊</div>
+        <div class="mood-lbl">ふつう</div>
+      </div>
+      <div class="mood-card" onclick="selectMood('tired',this)">
+        <div class="mood-em">😴</div>
+        <div class="mood-lbl">ちょっと<br>つかれた</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="setup-btn-area">
+    <button class="btn btn-primary" id="setup-next-btn" onclick="finishSetup()" disabled>
+      📷 写真を撮りに行く →
+    </button>
+  </div>
+</div>
+
+<!-- ===== SCREEN 3: PHOTO ===== -->
+<div class="screen" id="screen-photo">
+  <div class="photo-hdr">
+    <div class="photo-hdr-title">📸 冒険の起点</div>
+    <div class="photo-hdr-sub">気になるものを撮ろう！何でもOK</div>
+  </div>
+
+  <div class="camera-hero" id="cam-hero">
+    <div class="cam-ring">
+      <div class="cam-btn" onclick="document.getElementById('file-input').click()">📷</div>
+    </div>
+    <div class="cam-label">写真をとろう</div>
+    <div class="cam-sub">タップして撮影・選択</div>
+    <div class="cam-alt" onclick="document.getElementById('file-input').click()">📁 ライブラリから選ぶ</div>
+  </div>
+
+  <div class="preview-state" id="preview-state">
+    <div class="preview-wrap" onclick="document.getElementById('file-input').click()">
+      <img id="photo-preview" src="" alt="">
+      <div class="preview-change">📷 変える</div>
+    </div>
+  </div>
+
+  <div class="photo-btn-area">
+    <button class="btn btn-success" id="photo-next-btn" onclick="startAdventure()" disabled>
+      🗺️ 冒険スタート！
+    </button>
+  </div>
+</div>
+
+<!-- ===== SCREEN 4: MAP ===== -->
+<div class="screen" id="screen-map">
+  <!-- HUD -->
+  <div class="map-hud">
+    <div class="hud-depth-label">深度</div>
+    <div class="hud-track"><div class="hud-fill" id="hud-fill" style="width:0%"></div></div>
+    <div class="hud-xp" id="hud-xp">⭐ 0</div>
+    <div class="hud-thumb" onclick="document.getElementById('file-input').click()">
+      <img id="hud-thumb-img" src="" alt="">
+    </div>
+  </div>
+
+  <!-- Photo hero -->
+  <div class="map-photo-hero">
+    <img id="map-photo-img" src="" alt="">
+    <div class="map-photo-overlay"></div>
+    <div class="map-photo-cat" id="map-cat-badge">📷 探索中</div>
+    <div class="map-photo-chg" onclick="document.getElementById('file-input').click()">
+      📷 写真を変える
+    </div>
+  </div>
+
+  <!-- Quest feed -->
+  <div class="map-sec-head">
+    <div class="map-sec-title">⚔️ クエストを選ぼう</div>
+    <div class="map-sec-sub" id="map-depth-label">深度 0</div>
+  </div>
+  <div class="mission-feed" id="map-quest-feed"></div>
+
+  <div class="map-bottom-area">
+    <button class="btn btn-ghost" onclick="goTo('setup')">🔧 探険者タイプを変える</button>
+  </div>
+</div>
+
+<!-- ===== SCREEN 5: MISSION ===== -->
+<div class="screen" id="screen-mission">
+  <div class="mbar">
+    <button class="mbar-back" onclick="goTo('map')">‹</button>
+    <div class="mbar-type" id="mbar-type-pill"></div>
+    <div class="mbar-title" id="mbar-title"></div>
+  </div>
+
+  <div class="mission-hero" id="mission-hero-vis">
+    <div class="mission-hero-em" id="mission-hero-em"></div>
+    <div class="mission-hero-photo"><img id="mission-photo-thumb" src="" alt=""></div>
+  </div>
+
+  <div class="companion-strip">
+    <div class="companion-avatar" id="companion-svg"></div>
+    <div class="companion-bubble" id="companion-msg"></div>
+  </div>
+
+  <div class="mission-body">
+    <div class="mission-prompt" id="mission-prompt"></div>
+    <div id="answer-area"></div>
+  </div>
+  <div class="mission-submit-area">
+    <button class="btn btn-success" id="mission-submit-btn" onclick="submitAnswer()" disabled>
+      ✅ こたえる
+    </button>
+  </div>
+</div>
+
+<!-- ===== SCREEN 6: COMPLETE ===== -->
+<div class="screen" id="screen-complete">
+  <div class="complete-hero">
+    <div class="complete-burst" id="complete-burst"></div>
+    <div class="complete-label" id="complete-label">クエスト完了！</div>
+    <div class="complete-title" id="complete-title">すごい！</div>
+    <div class="complete-subtitle" id="complete-subtitle"></div>
+  </div>
+
+  <div class="complete-companion">
+    <div class="complete-svg" id="complete-companion-svg"></div>
+    <div class="complete-cname" id="complete-cname"></div>
+  </div>
+  <div class="complete-msg" id="complete-msg"></div>
+
+  <div class="gains-row">
+    <div class="gain-blk">
+      <div class="gain-lbl">探索深度</div>
+      <div class="gain-val" id="gain-depth">0</div>
+      <div class="gain-sub" id="gain-depth-sub">深度アップ！</div>
+    </div>
+    <div class="gain-blk">
+      <div class="gain-lbl">獲得ポイント</div>
+      <div class="gain-val" id="gain-xp">+0</div>
+      <div class="gain-sub">探索ポイント</div>
+    </div>
+  </div>
+
+  <div class="next-head">🗺️ つぎのクエストを選ぼう</div>
+  <div class="next-feed" id="next-quest-feed"></div>
+
+  <div class="complete-btns">
+    <button class="btn btn-ghost" onclick="goTo('map')">← マップに戻る</button>
+  </div>
+</div>
+
+</div><!-- /#app -->
+
+<div class="depth-toast" id="depth-toast"></div>
+<input type="file" id="file-input" accept="image/*" capture="environment"
+       style="display:none" onchange="handlePhoto(this)">
+
 <script>
-// ============================
+// =============================================
 // STATE
-// ============================
-const SCREEN_ORDER = ['top','trait','upload','monster','missions','answer','result','folder'];
-let currentScreen = 'top';
-
-const MAX_ATTEMPTS = 3;
-const MIN_TEXT_LEN  = 10;
-const BONUS_TEXT_LEN = 25;
-
+// =============================================
 const state = {
-  photoUrl: null,
-  category: null,
-  trait: null,
-  monster: null,
-  missions: [],
-  selectedMissionIdx: null,
-  answeredMissions: new Set(),
-  xp: 0,
-  prevXp: 0,
-  answer: null,
-  selectedStars: 0,
-  answerAttempts: 0,
+  trait: null, mood: 'ok',
+  photoUrl: null, category: 'mystery',
+  depth: 0, xp: 0,
+  setupDone: false,
+  currentQuest: null,
+  completedIds: [],
+  answer: null, choiceSelected: null,
 };
 
-// ============================
-// DATA: MONSTER SVG ILLUSTRATIONS
-// ============================
+// =============================================
+// EXPLORER TYPES
+// =============================================
+const EXPLORERS = [
+  { key:'speed',  icon:'⚡', name:'スプリンター',    desc:'サクサク進む！短いクエスト好き' },
+  { key:'vision', icon:'👁️', name:'ビジョナー',      desc:'見て感じる。画像と観察が得意' },
+  { key:'thinker',icon:'🔮', name:'ディープダイバー', desc:'とことん深く考えるのが好き' },
+  { key:'story',  icon:'📖', name:'ストーリーテラー', desc:'物語を楽しみながら探究！' },
+  { key:'brave',  icon:'⚔️', name:'アドベンチャラー', desc:'冒険・バトル・サバイバル最高！' },
+];
+
+// =============================================
+// QUEST DATABASE
+// =============================================
+// type: discover/battle/mystery/craft/explore
+// depth_min: 0-3  answer: choices/text  xp: base XP
+// tw: trait weights {speed,vision,thinker,story,brave}
+const QUESTS = [
+// ─── ANIMAL ───
+{id:'an1',cat:'animal',type:'discover',dm:0,title:'目のひみつ',
+  em:'👁️',fl:'ひみつ発見',
+  prompt:'この生き物の目をよく見よう。どんな形？どの方向を向いてる？',
+  ans:'choices',ch:['まるくて大きい','よこに長い','正面向き','横向き'],
+  xp:20,tw:{speed:1,vision:1.6,thinker:.8,story:1,brave:.8}},
+{id:'an2',cat:'animal',type:'explore',dm:0,title:'すみか探し',
+  em:'🗺️',fl:'たんけん',
+  prompt:'この生き物はどこに住んでいそう？写真を見て想像してみよう！',
+  ans:'choices',ch:['森や木の上','水の近く','草むら','砂や岩の中'],
+  xp:20,tw:{speed:1,vision:1.2,thinker:1,story:1.2,brave:1.5}},
+{id:'an3',cat:'animal',type:'battle',dm:0,title:'VSバトル！',
+  em:'⚔️',fl:'バトル',
+  prompt:'この動物と犬が縄張り争いをしたら、どっちが勝つ？',
+  ans:'choices',ch:['この動物の勝ち！','犬の勝ち！','友達になる','どっちも逃げる'],
+  xp:25,tw:{speed:1.2,vision:1,thinker:.8,story:1,brave:2}},
+{id:'an4',cat:'animal',type:'mystery',dm:0,title:'今の気持ちは？',
+  em:'🔮',fl:'なぞとき',
+  prompt:'この生き物はいまどんな気持ちだと思う？顔や体を見ながら考えよう。',
+  ans:'text',xp:30,tw:{speed:.7,vision:1,thinker:1.3,story:1.6,brave:.9}},
+{id:'an5',cat:'animal',type:'craft',dm:1,title:'なりきりボイス',
+  em:'🎤',fl:'つくる',
+  prompt:'この生き物が話せたら何と言う？なりきって答えよう！',
+  ans:'text',xp:35,tw:{speed:.8,vision:.9,thinker:.9,story:1.9,brave:1}},
+{id:'an6',cat:'animal',type:'discover',dm:1,title:'サバイバル術',
+  em:'🛡️',fl:'ひみつ発見',
+  prompt:'この生き物の体には「生き残るための秘密」がある。どこだと思う？',
+  ans:'text',xp:35,tw:{speed:.7,vision:1.2,thinker:1.8,story:1,brave:1.3}},
+{id:'an7',cat:'animal',type:'explore',dm:1,title:'1日を追え',
+  em:'🧭',fl:'たんけん',
+  prompt:'この生き物の朝〜夜を想像しよう。朝起きたら最初に何をする？',
+  ans:'choices',ch:['えさを探す','縄張りパトロール','水を飲む','もっと寝る'],
+  xp:30,tw:{speed:1,vision:1,thinker:1.2,story:1.5,brave:1.2}},
+{id:'an8',cat:'animal',type:'mystery',dm:2,title:'進化のなぞ',
+  em:'🧬',fl:'なぞとき',
+  prompt:'この生き物がいまの体になったのはなぜ？どんな理由があると思う？',
+  ans:'text',xp:55,tw:{speed:.5,vision:.9,thinker:2,story:1,brave:.8}},
+
+// ─── FOOD ───
+{id:'fo1',cat:'food',type:'discover',dm:0,title:'色のひみつ',
+  em:'🎨',fl:'ひみつ発見',
+  prompt:'この食べ物の色はどこから来ている？その色になった理由を考えよう！',
+  ans:'choices',ch:['野菜や果物から','焼いた色','調味料の色','わからない'],
+  xp:20,tw:{speed:1,vision:1.8,thinker:.9,story:1,brave:.8}},
+{id:'fo2',cat:'food',type:'battle',dm:0,title:'おいしさ対決',
+  em:'🥊',fl:'バトル',
+  prompt:'この食べ物とピザ、おいしさで勝負！どっちが勝つ？',
+  ans:'choices',ch:['この食べ物の圧勝！','ピザの勝ち！','引き分け！','食べてみないと！'],
+  xp:25,tw:{speed:1.3,vision:1,thinker:.8,story:1,brave:1.6}},
+{id:'fo3',cat:'food',type:'mystery',dm:0,title:'どこから来た？',
+  em:'🌍',fl:'なぞとき',
+  prompt:'この食べ物はどの国・地域から来たと思う？',
+  ans:'choices',ch:['日本','ヨーロッパ','アジア（日本以外）','アメリカ'],
+  xp:25,tw:{speed:1,vision:.9,thinker:1.2,story:1.3,brave:1}},
+{id:'fo4',cat:'food',type:'explore',dm:0,title:'材料さがし',
+  em:'🔭',fl:'たんけん',
+  prompt:'この料理を作るには何が必要？思いつく材料を答えよう！',
+  ans:'text',xp:30,tw:{speed:.8,vision:1,thinker:1.3,story:1,brave:1}},
+{id:'fo5',cat:'food',type:'craft',dm:1,title:'レシピ開発',
+  em:'📝',fl:'つくる',
+  prompt:'この食べ物を使った新しい料理を考えよう！名前と作り方は？',
+  ans:'text',xp:40,tw:{speed:.6,vision:.9,thinker:1.2,story:1.6,brave:.9}},
+{id:'fo6',cat:'food',type:'discover',dm:1,title:'体への効果',
+  em:'💪',fl:'ひみつ発見',
+  prompt:'この食べ物を食べると体にどんないいことがある？想像してみよう！',
+  ans:'choices',ch:['力が強くなる','頭が冴える','目がよくなる','速く動ける'],
+  xp:30,tw:{speed:1,vision:1,thinker:1.3,story:1,brave:1.2}},
+{id:'fo7',cat:'food',type:'mystery',dm:2,title:'100年前は？',
+  em:'📜',fl:'なぞとき',
+  prompt:'この食べ物は100年前も食べられてたかな？昔と今で何が変わった？',
+  ans:'text',xp:55,tw:{speed:.5,vision:.8,thinker:1.9,story:1.8,brave:.7}},
+
+// ─── VEHICLE ───
+{id:'ve1',cat:'vehicle',type:'discover',dm:0,title:'重要パーツは？',
+  em:'🔩',fl:'ひみつ発見',
+  prompt:'この乗り物で一番大事なパーツはどこ？なければ動けないのは？',
+  ans:'choices',ch:['エンジン・モーター','タイヤ・車輪','ハンドル・舵','ライト'],
+  xp:20,tw:{speed:1,vision:1.4,thinker:1.2,story:.9,brave:1.2}},
+{id:'ve2',cat:'vehicle',type:'battle',dm:0,title:'速さ対決！',
+  em:'⚡',fl:'バトル',
+  prompt:'この乗り物と新幹線、速さで勝負！どっちが速い？',
+  ans:'choices',ch:['この乗り物が速い！','新幹線の圧勝！','場合による','どっちも乗りたい！'],
+  xp:25,tw:{speed:1.6,vision:1,thinker:.8,story:.9,brave:1.8}},
+{id:'ve3',cat:'vehicle',type:'explore',dm:0,title:'どこへ行く？',
+  em:'🗺️',fl:'たんけん',
+  prompt:'この乗り物で世界中どこへでも行けるとしたら、どこへ行く？',
+  ans:'text',xp:30,tw:{speed:.8,vision:1,thinker:.9,story:1.6,brave:1.5}},
+{id:'ve4',cat:'vehicle',type:'mystery',dm:0,title:'動力の謎',
+  em:'❓',fl:'なぞとき',
+  prompt:'この乗り物はどうやって動いている？エネルギーはどこから来る？',
+  ans:'choices',ch:['ガソリン・燃料','電気・バッテリー','人の力','風や自然の力'],
+  xp:25,tw:{speed:1,vision:.9,thinker:1.6,story:1,brave:1}},
+{id:'ve5',cat:'vehicle',type:'craft',dm:1,title:'秘密改造！',
+  em:'🛠️',fl:'つくる',
+  prompt:'この乗り物に秘密の機能を1つ追加するとしたら？どんな機能？',
+  ans:'text',xp:40,tw:{speed:.7,vision:1,thinker:1.3,story:1.6,brave:1.4}},
+{id:'ve6',cat:'vehicle',type:'discover',dm:1,title:'安全のひみつ',
+  em:'🛡️',fl:'ひみつ発見',
+  prompt:'この乗り物にはどんな安全の仕組みが隠れている？探してみよう！',
+  ans:'text',xp:35,tw:{speed:.7,vision:1.6,thinker:1.3,story:1,brave:1}},
+{id:'ve7',cat:'vehicle',type:'mystery',dm:2,title:'50年後は？',
+  em:'🚀',fl:'なぞとき',
+  prompt:'50年後、この乗り物はどう変わっている？なくなる？進化する？',
+  ans:'text',xp:55,tw:{speed:.6,vision:1,thinker:1.9,story:1.8,brave:1.2}},
+
+// ─── PLANT ───
+{id:'pl1',cat:'plant',type:'discover',dm:0,title:'色の理由',
+  em:'🌈',fl:'ひみつ発見',
+  prompt:'この植物がその色をしているのはなんでだと思う？',
+  ans:'choices',ch:['虫を呼ぶため','日光を集めるため','敵から身を守るため','ただきれい'],
+  xp:20,tw:{speed:1,vision:1.6,thinker:1.2,story:1,brave:.8}},
+{id:'pl2',cat:'plant',type:'explore',dm:0,title:'すみか探し',
+  em:'🧭',fl:'たんけん',
+  prompt:'この植物はどんな場所が好きそう？日当たり？水？土？',
+  ans:'choices',ch:['日なたの乾燥地','湿った日かげ','水の中や近く','どこでも育つ'],
+  xp:20,tw:{speed:1,vision:1.2,thinker:1,story:1.2,brave:1.2}},
+{id:'pl3',cat:'plant',type:'battle',dm:0,title:'生命力バトル',
+  em:'💪',fl:'バトル',
+  prompt:'この植物とサボテン、砂漠で生き残るのはどっち？',
+  ans:'choices',ch:['この植物！工夫がすごい','サボテン圧勝','どちらも生き残る','どちらもやられる'],
+  xp:25,tw:{speed:1.2,vision:1,thinker:1,story:1,brave:1.9}},
+{id:'pl4',cat:'plant',type:'mystery',dm:0,title:'葉の形のなぞ',
+  em:'🍃',fl:'なぞとき',
+  prompt:'この葉っぱの形はなんのため？なぜこの形になったと思う？',
+  ans:'text',xp:30,tw:{speed:.7,vision:1.2,thinker:1.6,story:1,brave:.9}},
+{id:'pl5',cat:'plant',type:'craft',dm:1,title:'植物キャラ化',
+  em:'🎨',fl:'つくる',
+  prompt:'この植物がキャラクターだったら名前と特技は何？どんな性格？',
+  ans:'text',xp:35,tw:{speed:.8,vision:1,thinker:.9,story:1.9,brave:1}},
+{id:'pl6',cat:'plant',type:'discover',dm:1,title:'生き残り術',
+  em:'🌱',fl:'ひみつ発見',
+  prompt:'この植物はどうやって水を集めたり、虫から身を守ったりしてる？',
+  ans:'choices',ch:['毒や刺で守る','虫を食べる','根を深く張る','葉が動く'],
+  xp:30,tw:{speed:1,vision:1.2,thinker:1.5,story:.9,brave:1.2}},
+{id:'pl7',cat:'plant',type:'mystery',dm:2,title:'花が咲く理由',
+  em:'🌸',fl:'なぞとき',
+  prompt:'この植物が花を咲かせるとしたら、なぜ花を咲かせるの？',
+  ans:'text',xp:55,tw:{speed:.5,vision:1.2,thinker:1.9,story:1.5,brave:.7}},
+
+// ─── MYSTERY (all-purpose) ───
+{id:'my1',cat:'mystery',type:'mystery',dm:0,title:'これは何？',
+  em:'❓',fl:'なぞとき',
+  prompt:'写真の中で一番気になるものは何？それはどんな目的があると思う？',
+  ans:'choices',ch:['道具や機械','飾りやアート','自然のもの','まだわからない'],
+  xp:25,tw:{speed:1,vision:1.2,thinker:1.2,story:1,brave:1}},
+{id:'my2',cat:'mystery',type:'discover',dm:0,title:'かくれたもの',
+  em:'🔍',fl:'ひみつ発見',
+  prompt:'最初は気づかなかったものを写真から探そう！何があった？',
+  ans:'text',xp:25,tw:{speed:1,vision:1.9,thinker:1,story:1.2,brave:1.2}},
+{id:'my3',cat:'mystery',type:'explore',dm:0,title:'物語を作れ',
+  em:'📖',fl:'たんけん',
+  prompt:'この写真を見て短い物語を作ろう。「ある日、ここで……」',
+  ans:'text',xp:30,tw:{speed:.6,vision:1,thinker:.9,story:2,brave:1}},
+{id:'my4',cat:'mystery',type:'battle',dm:0,title:'守護者バトル',
+  em:'⚔️',fl:'バトル',
+  prompt:'この場所の宝を守る守護者と冒険者が対決！どっちが勝つ？',
+  ans:'choices',ch:['冒険者の機転で勝利！','守護者の圧勝！','和解して仲間に','逃げて出直す'],
+  xp:25,tw:{speed:1.2,vision:.9,thinker:.9,story:1.6,brave:2}},
+{id:'my5',cat:'mystery',type:'craft',dm:1,title:'発明品を作れ',
+  em:'💡',fl:'つくる',
+  prompt:'この写真にヒントを得て、世界を変える発明品を考えよう！',
+  ans:'text',xp:40,tw:{speed:.7,vision:1.2,thinker:1.5,story:1.3,brave:1.2}},
+{id:'my6',cat:'mystery',type:'mystery',dm:1,title:'100年後は？',
+  em:'🔮',fl:'なぞとき',
+  prompt:'この写真のものは100年後どうなっている？変わる？なくなる？',
+  ans:'text',xp:40,tw:{speed:.6,vision:1,thinker:1.9,story:1.5,brave:.9}},
+{id:'my7',cat:'mystery',type:'explore',dm:2,title:'深読み探偵',
+  em:'🕵️',fl:'たんけん',
+  prompt:'この写真からここがどんな場所・状況か推理しよう。証拠は何？',
+  ans:'text',xp:55,tw:{speed:.5,vision:1.4,thinker:1.9,story:1.5,brave:1.3}},
+];
+
+// =============================================
+// MONSTER SVG ILLUSTRATIONS
+// =============================================
 const MONSTER_SVG = {
-  animal: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="100%" height="100%">
-  <!-- Fox Spirit モフルン -->
-  <ellipse cx="60" cy="108" rx="22" ry="13" fill="#f5a143"/>
-  <ellipse cx="60" cy="111" rx="12" ry="7" fill="#fff5e0"/>
-  <ellipse cx="60" cy="92" rx="22" ry="17" fill="#f5a143"/>
-  <ellipse cx="60" cy="60" rx="30" ry="27" fill="#f5a143"/>
-  <polygon points="33,38 24,8 50,28" fill="#f5a143"/>
-  <polygon points="87,38 96,8 70,28" fill="#f5a143"/>
-  <polygon points="36,35 30,15 48,27" fill="#f7b8b0"/>
-  <polygon points="84,35 90,15 72,27" fill="#f7b8b0"/>
-  <ellipse cx="60" cy="63" rx="21" ry="19" fill="#fef0d0"/>
-  <ellipse cx="48" cy="57" rx="9" ry="10" fill="#1a0d00"/>
-  <ellipse cx="72" cy="57" rx="9" ry="10" fill="#1a0d00"/>
-  <ellipse cx="48" cy="58" rx="6.5" ry="7.5" fill="#c8900a"/>
-  <ellipse cx="72" cy="58" rx="6.5" ry="7.5" fill="#c8900a"/>
-  <ellipse cx="48" cy="59" rx="3.5" ry="5" fill="#0d0600"/>
-  <ellipse cx="72" cy="59" rx="3.5" ry="5" fill="#0d0600"/>
-  <ellipse cx="50.5" cy="55.5" rx="2" ry="2.5" fill="white"/>
-  <ellipse cx="74.5" cy="55.5" rx="2" ry="2.5" fill="white"/>
-  <circle cx="46" cy="62" r="1" fill="white"/>
-  <circle cx="70" cy="62" r="1" fill="white"/>
-  <ellipse cx="37" cy="67" rx="8" ry="5.5" fill="#ff9999" opacity="0.55"/>
-  <ellipse cx="83" cy="67" rx="8" ry="5.5" fill="#ff9999" opacity="0.55"/>
-  <ellipse cx="60" cy="68" rx="3.5" ry="2.5" fill="#e05a30"/>
-  <path d="M50,73 Q54,79 60,75 Q66,79 70,73" stroke="#7c3a00" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-  <text x="89" y="26" font-size="16" fill="#ffd700" font-family="serif">✦</text>
-  <text x="7" y="90" font-size="10" fill="#ffd700" font-family="serif" opacity="0.7">✦</text>
+  animal:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="100%" height="100%">
+<ellipse cx="60" cy="108" rx="22" ry="13" fill="#f5a143"/>
+<ellipse cx="60" cy="111" rx="12" ry="7" fill="#fff5e0"/>
+<ellipse cx="60" cy="92" rx="22" ry="17" fill="#f5a143"/>
+<ellipse cx="60" cy="60" rx="30" ry="27" fill="#f5a143"/>
+<polygon points="33,38 24,8 50,28" fill="#f5a143"/>
+<polygon points="87,38 96,8 70,28" fill="#f5a143"/>
+<polygon points="36,35 30,15 48,27" fill="#f7b8b0"/>
+<polygon points="84,35 90,15 72,27" fill="#f7b8b0"/>
+<ellipse cx="60" cy="63" rx="21" ry="19" fill="#fef0d0"/>
+<ellipse cx="48" cy="57" rx="9" ry="10" fill="#1a0d00"/>
+<ellipse cx="72" cy="57" rx="9" ry="10" fill="#1a0d00"/>
+<ellipse cx="48" cy="58" rx="6.5" ry="7.5" fill="#c8900a"/>
+<ellipse cx="72" cy="58" rx="6.5" ry="7.5" fill="#c8900a"/>
+<ellipse cx="48" cy="59" rx="3.5" ry="5" fill="#0d0600"/>
+<ellipse cx="72" cy="59" rx="3.5" ry="5" fill="#0d0600"/>
+<ellipse cx="50.5" cy="55.5" rx="2" ry="2.5" fill="white"/>
+<ellipse cx="74.5" cy="55.5" rx="2" ry="2.5" fill="white"/>
+<ellipse cx="37" cy="67" rx="8" ry="5.5" fill="#ff9999" opacity=".55"/>
+<ellipse cx="83" cy="67" rx="8" ry="5.5" fill="#ff9999" opacity=".55"/>
+<ellipse cx="60" cy="68" rx="3.5" ry="2.5" fill="#e05a30"/>
+<path d="M50,73 Q54,79 60,75 Q66,79 70,73" stroke="#7c3a00" stroke-width="2.2" fill="none" stroke-linecap="round"/>
 </svg>`,
-
-  food: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="100%" height="100%">
-  <!-- Chef Tanuki タベロン -->
-  <ellipse cx="60" cy="93" rx="26" ry="18" fill="#8B5E3C"/>
-  <ellipse cx="60" cy="90" rx="16" ry="12" fill="#f0e0c8"/>
-  <ellipse cx="60" cy="18" rx="26" ry="19" fill="white"/>
-  <rect x="36" y="32" width="48" height="11" rx="4" fill="#f0f0f0"/>
-  <rect x="34" y="38" width="52" height="8" rx="4" fill="#e0e0e0"/>
-  <path d="M44,14 Q60,7 76,14" stroke="#ccc" stroke-width="1.5" fill="none"/>
-  <ellipse cx="60" cy="67" rx="30" ry="27" fill="#c8905a"/>
-  <ellipse cx="47" cy="63" rx="12" ry="10" fill="#5a3010" opacity="0.3"/>
-  <ellipse cx="73" cy="63" rx="12" ry="10" fill="#5a3010" opacity="0.3"/>
-  <ellipse cx="47" cy="62" rx="9" ry="10" fill="#1a0d00"/>
-  <ellipse cx="73" cy="62" rx="9" ry="10" fill="#1a0d00"/>
-  <ellipse cx="47" cy="63" rx="6.5" ry="7.5" fill="#3aad5a"/>
-  <ellipse cx="73" cy="63" rx="6.5" ry="7.5" fill="#3aad5a"/>
-  <ellipse cx="47" cy="64" rx="3.5" ry="5" fill="#0d0600"/>
-  <ellipse cx="73" cy="64" rx="3.5" ry="5" fill="#0d0600"/>
-  <ellipse cx="49.5" cy="60.5" rx="2" ry="2.5" fill="white"/>
-  <ellipse cx="75.5" cy="60.5" rx="2" ry="2.5" fill="white"/>
-  <circle cx="45" cy="67" r="1" fill="white"/>
-  <circle cx="71" cy="67" r="1" fill="white"/>
-  <ellipse cx="37" cy="72" rx="8" ry="5.5" fill="#ff9999" opacity="0.55"/>
-  <ellipse cx="83" cy="72" rx="8" ry="5.5" fill="#ff9999" opacity="0.55"/>
-  <ellipse cx="60" cy="72" rx="4" ry="3" fill="#8B3A0A"/>
-  <path d="M46,78 Q60,91 74,78" stroke="#5a2000" stroke-width="2.2" fill="#f8d0a0" stroke-linecap="round"/>
-  <rect x="54" y="79" width="5.5" height="5" rx="1.5" fill="white"/>
-  <rect x="60.5" y="79" width="5.5" height="5" rx="1.5" fill="white"/>
+  food:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="100%" height="100%">
+<ellipse cx="60" cy="93" rx="26" ry="18" fill="#8B5E3C"/>
+<ellipse cx="60" cy="90" rx="16" ry="12" fill="#f0e0c8"/>
+<ellipse cx="60" cy="18" rx="26" ry="19" fill="white"/>
+<rect x="36" y="32" width="48" height="11" rx="4" fill="#f0f0f0"/>
+<rect x="34" y="38" width="52" height="8" rx="4" fill="#e0e0e0"/>
+<ellipse cx="60" cy="67" rx="30" ry="27" fill="#c8905a"/>
+<ellipse cx="47" cy="63" rx="12" ry="10" fill="#5a3010" opacity=".3"/>
+<ellipse cx="73" cy="63" rx="12" ry="10" fill="#5a3010" opacity=".3"/>
+<ellipse cx="47" cy="62" rx="9" ry="10" fill="#1a0d00"/>
+<ellipse cx="73" cy="62" rx="9" ry="10" fill="#1a0d00"/>
+<ellipse cx="47" cy="63" rx="6.5" ry="7.5" fill="#3aad5a"/>
+<ellipse cx="73" cy="63" rx="6.5" ry="7.5" fill="#3aad5a"/>
+<ellipse cx="47" cy="64" rx="3.5" ry="5" fill="#0d0600"/>
+<ellipse cx="73" cy="64" rx="3.5" ry="5" fill="#0d0600"/>
+<ellipse cx="49.5" cy="60.5" rx="2" ry="2.5" fill="white"/>
+<ellipse cx="75.5" cy="60.5" rx="2" ry="2.5" fill="white"/>
+<ellipse cx="37" cy="72" rx="8" ry="5.5" fill="#ff9999" opacity=".55"/>
+<ellipse cx="83" cy="72" rx="8" ry="5.5" fill="#ff9999" opacity=".55"/>
+<ellipse cx="60" cy="72" rx="4" ry="3" fill="#8B3A0A"/>
+<path d="M46,78 Q60,91 74,78" stroke="#5a2000" stroke-width="2.2" fill="#f8d0a0" stroke-linecap="round"/>
+<rect x="54" y="79" width="5.5" height="5" rx="1.5" fill="white"/>
+<rect x="60.5" y="79" width="5.5" height="5" rx="1.5" fill="white"/>
 </svg>`,
-
-  vehicle: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="100%" height="100%">
-  <!-- Clockwork Sprite キカイダー -->
-  <ellipse cx="27" cy="77" rx="17" ry="26" fill="#88c8ff" opacity="0.3" transform="rotate(-18,27,77)"/>
-  <ellipse cx="93" cy="77" rx="17" ry="26" fill="#88c8ff" opacity="0.3" transform="rotate(18,93,77)"/>
-  <line x1="27" y1="54" x2="23" y2="96" stroke="#4499dd" stroke-width="1" opacity="0.45"/>
-  <line x1="93" y1="54" x2="97" y2="96" stroke="#4499dd" stroke-width="1" opacity="0.45"/>
-  <ellipse cx="60" cy="93" rx="22" ry="16" fill="#4a6e9a"/>
-  <ellipse cx="60" cy="90" rx="14" ry="10" fill="#7ab0d8"/>
-  <line x1="60" y1="32" x2="60" y2="18" stroke="#4a90d9" stroke-width="2.5"/>
-  <circle cx="60" cy="15" r="5" fill="#4a90d9"/>
-  <circle cx="60" cy="15" r="2.5" fill="#a0d8ff"/>
-  <circle cx="31" cy="62" r="8" fill="none" stroke="#4a90d9" stroke-width="2" stroke-dasharray="4 2"/>
-  <circle cx="89" cy="62" r="8" fill="none" stroke="#4a90d9" stroke-width="2" stroke-dasharray="4 2"/>
-  <circle cx="31" cy="62" r="3" fill="#4a90d9"/>
-  <circle cx="89" cy="62" r="3" fill="#4a90d9"/>
-  <ellipse cx="60" cy="62" rx="28" ry="27" fill="#5a8ab8"/>
-  <rect x="36" y="44" width="48" height="8" rx="4" fill="#3a6a98" opacity="0.55"/>
-  <ellipse cx="47" cy="63" rx="13" ry="12" fill="#1a3a58"/>
-  <ellipse cx="73" cy="63" rx="13" ry="12" fill="#1a3a58"/>
-  <line x1="58" y1="63" x2="62" y2="63" stroke="#1a3a58" stroke-width="4"/>
-  <ellipse cx="47" cy="63" rx="9.5" ry="8.5" fill="#60b8e8"/>
-  <ellipse cx="73" cy="63" rx="9.5" ry="8.5" fill="#60b8e8"/>
-  <ellipse cx="44" cy="59" rx="3.5" ry="2.5" fill="white" opacity="0.7"/>
-  <ellipse cx="70" cy="59" rx="3.5" ry="2.5" fill="white" opacity="0.7"/>
-  <ellipse cx="47" cy="64" rx="4" ry="4.5" fill="#003060"/>
-  <ellipse cx="73" cy="64" rx="4" ry="4.5" fill="#003060"/>
-  <circle cx="49.5" cy="61" r="1.2" fill="white"/>
-  <circle cx="75.5" cy="61" r="1.2" fill="white"/>
-  <ellipse cx="36" cy="74" rx="6" ry="4.5" fill="#aad8ff" opacity="0.45"/>
-  <ellipse cx="84" cy="74" rx="6" ry="4.5" fill="#aad8ff" opacity="0.45"/>
-  <rect x="47" y="75" width="26" height="9" rx="4" fill="#2a5080"/>
-  <line x1="51" y1="75" x2="51" y2="84" stroke="#4a90d9" stroke-width="1.5"/>
-  <line x1="56" y1="75" x2="56" y2="84" stroke="#4a90d9" stroke-width="1.5"/>
-  <line x1="64" y1="75" x2="64" y2="84" stroke="#4a90d9" stroke-width="1.5"/>
-  <line x1="69" y1="75" x2="69" y2="84" stroke="#4a90d9" stroke-width="1.5"/>
-  <text x="92" y="32" font-size="13" fill="#60c8ff" font-family="serif">⚙</text>
-  <text x="6" y="32" font-size="11" fill="#60c8ff" font-family="serif">⚙</text>
+  vehicle:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="100%" height="100%">
+<ellipse cx="27" cy="77" rx="17" ry="26" fill="#88c8ff" opacity=".3" transform="rotate(-18,27,77)"/>
+<ellipse cx="93" cy="77" rx="17" ry="26" fill="#88c8ff" opacity=".3" transform="rotate(18,93,77)"/>
+<ellipse cx="60" cy="93" rx="22" ry="16" fill="#4a6e9a"/>
+<ellipse cx="60" cy="90" rx="14" ry="10" fill="#7ab0d8"/>
+<line x1="60" y1="32" x2="60" y2="18" stroke="#4a90d9" stroke-width="2.5"/>
+<circle cx="60" cy="15" r="5" fill="#4a90d9"/>
+<circle cx="60" cy="15" r="2.5" fill="#a0d8ff"/>
+<circle cx="31" cy="62" r="8" fill="none" stroke="#4a90d9" stroke-width="2" stroke-dasharray="4 2"/>
+<circle cx="89" cy="62" r="8" fill="none" stroke="#4a90d9" stroke-width="2" stroke-dasharray="4 2"/>
+<circle cx="31" cy="62" r="3" fill="#4a90d9"/>
+<circle cx="89" cy="62" r="3" fill="#4a90d9"/>
+<ellipse cx="60" cy="62" rx="28" ry="27" fill="#5a8ab8"/>
+<rect x="36" y="44" width="48" height="8" rx="4" fill="#3a6a98" opacity=".55"/>
+<ellipse cx="47" cy="63" rx="13" ry="12" fill="#1a3a58"/>
+<ellipse cx="73" cy="63" rx="13" ry="12" fill="#1a3a58"/>
+<line x1="58" y1="63" x2="62" y2="63" stroke="#1a3a58" stroke-width="4"/>
+<ellipse cx="47" cy="63" rx="9.5" ry="8.5" fill="#60b8e8"/>
+<ellipse cx="73" cy="63" rx="9.5" ry="8.5" fill="#60b8e8"/>
+<ellipse cx="44" cy="59" rx="3.5" ry="2.5" fill="white" opacity=".7"/>
+<ellipse cx="70" cy="59" rx="3.5" ry="2.5" fill="white" opacity=".7"/>
+<ellipse cx="47" cy="64" rx="4" ry="4.5" fill="#003060"/>
+<ellipse cx="73" cy="64" rx="4" ry="4.5" fill="#003060"/>
+<ellipse cx="36" cy="74" rx="6" ry="4.5" fill="#aad8ff" opacity=".45"/>
+<ellipse cx="84" cy="74" rx="6" ry="4.5" fill="#aad8ff" opacity=".45"/>
+<rect x="47" y="75" width="26" height="9" rx="4" fill="#2a5080"/>
+<line x1="51" y1="75" x2="51" y2="84" stroke="#4a90d9" stroke-width="1.5"/>
+<line x1="56" y1="75" x2="56" y2="84" stroke="#4a90d9" stroke-width="1.5"/>
+<line x1="64" y1="75" x2="64" y2="84" stroke="#4a90d9" stroke-width="1.5"/>
+<line x1="69" y1="75" x2="69" y2="84" stroke="#4a90d9" stroke-width="1.5"/>
 </svg>`,
-
-  plant: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="100%" height="100%">
-  <!-- Leaf Fairy シゼンボー -->
-  <ellipse cx="60" cy="95" rx="22" ry="16" fill="#2e8b4a"/>
-  <ellipse cx="60" cy="92" rx="14" ry="10" fill="#90ee90"/>
-  <ellipse cx="28" cy="52" rx="14" ry="20" fill="#2e8b4a" transform="rotate(-20,28,52)"/>
-  <ellipse cx="28" cy="52" rx="9" ry="14" fill="#66cd80" transform="rotate(-20,28,52)"/>
-  <ellipse cx="92" cy="52" rx="14" ry="20" fill="#2e8b4a" transform="rotate(20,92,52)"/>
-  <ellipse cx="92" cy="52" rx="9" ry="14" fill="#66cd80" transform="rotate(20,92,52)"/>
-  <path d="M40,39 Q48,29 55,33 Q60,26 65,31 Q72,25 80,31" stroke="#1a6a2a" stroke-width="2.5" fill="none"/>
-  <circle cx="65" cy="27" r="7" fill="#ff8fc8"/>
-  <circle cx="65" cy="27" r="4" fill="#ffee55"/>
-  <ellipse cx="59" cy="64" rx="28" ry="26" fill="#a8e070"/>
-  <ellipse cx="47" cy="59" rx="9" ry="10" fill="#1a2a0d"/>
-  <ellipse cx="71" cy="59" rx="9" ry="10" fill="#1a2a0d"/>
-  <ellipse cx="47" cy="60" rx="6.5" ry="7.5" fill="#22dd55"/>
-  <ellipse cx="71" cy="60" rx="6.5" ry="7.5" fill="#22dd55"/>
-  <ellipse cx="47" cy="61" rx="3.5" ry="5" fill="#0d1a06"/>
-  <ellipse cx="71" cy="61" rx="3.5" ry="5" fill="#0d1a06"/>
-  <ellipse cx="49.5" cy="57.5" rx="2" ry="2.5" fill="white"/>
-  <ellipse cx="73.5" cy="57.5" rx="2" ry="2.5" fill="white"/>
-  <circle cx="45" cy="64" r="1.2" fill="white"/>
-  <circle cx="69" cy="64" r="1.2" fill="white"/>
-  <path d="M41,51 Q47,47 55,51" stroke="#1a5a20" stroke-width="2" fill="none" stroke-linecap="round"/>
-  <path d="M63,49 Q69,45 77,49" stroke="#1a5a20" stroke-width="2" fill="none" stroke-linecap="round"/>
-  <ellipse cx="36" cy="68" rx="8" ry="5" fill="#99ee88" opacity="0.6"/>
-  <ellipse cx="82" cy="68" rx="8" ry="5" fill="#99ee88" opacity="0.6"/>
-  <circle cx="59" cy="68" r="2.5" fill="#2a7a3a"/>
-  <path d="M49,74 Q59,84 69,74" stroke="#1a5a20" stroke-width="2" fill="#d0f0d0" stroke-linecap="round"/>
-  <text x="89" y="40" font-size="14" fill="#55dd77" font-family="serif">✦</text>
-  <text x="7" y="82" font-size="10" fill="#55dd77" font-family="serif" opacity="0.7">✦</text>
+  plant:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="100%" height="100%">
+<ellipse cx="60" cy="95" rx="22" ry="16" fill="#2e8b4a"/>
+<ellipse cx="60" cy="92" rx="14" ry="10" fill="#90ee90"/>
+<ellipse cx="28" cy="52" rx="14" ry="20" fill="#2e8b4a" transform="rotate(-20,28,52)"/>
+<ellipse cx="28" cy="52" rx="9" ry="14" fill="#66cd80" transform="rotate(-20,28,52)"/>
+<ellipse cx="92" cy="52" rx="14" ry="20" fill="#2e8b4a" transform="rotate(20,92,52)"/>
+<ellipse cx="92" cy="52" rx="9" ry="14" fill="#66cd80" transform="rotate(20,92,52)"/>
+<path d="M40,39 Q48,29 55,33 Q60,26 65,31 Q72,25 80,31" stroke="#1a6a2a" stroke-width="2.5" fill="none"/>
+<circle cx="65" cy="27" r="7" fill="#ff8fc8"/>
+<circle cx="65" cy="27" r="4" fill="#ffee55"/>
+<ellipse cx="59" cy="64" rx="28" ry="26" fill="#a8e070"/>
+<ellipse cx="47" cy="59" rx="9" ry="10" fill="#1a2a0d"/>
+<ellipse cx="71" cy="59" rx="9" ry="10" fill="#1a2a0d"/>
+<ellipse cx="47" cy="60" rx="6.5" ry="7.5" fill="#22dd55"/>
+<ellipse cx="71" cy="60" rx="6.5" ry="7.5" fill="#22dd55"/>
+<ellipse cx="47" cy="61" rx="3.5" ry="5" fill="#0d1a06"/>
+<ellipse cx="71" cy="61" rx="3.5" ry="5" fill="#0d1a06"/>
+<ellipse cx="49.5" cy="57.5" rx="2" ry="2.5" fill="white"/>
+<ellipse cx="73.5" cy="57.5" rx="2" ry="2.5" fill="white"/>
+<path d="M41,51 Q47,47 55,51" stroke="#1a5a20" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M63,49 Q69,45 77,49" stroke="#1a5a20" stroke-width="2" fill="none" stroke-linecap="round"/>
+<ellipse cx="36" cy="68" rx="8" ry="5" fill="#99ee88" opacity=".6"/>
+<ellipse cx="82" cy="68" rx="8" ry="5" fill="#99ee88" opacity=".6"/>
+<circle cx="59" cy="68" r="2.5" fill="#2a7a3a"/>
+<path d="M49,74 Q59,84 69,74" stroke="#1a5a20" stroke-width="2" fill="#d0f0d0" stroke-linecap="round"/>
 </svg>`,
-
-  mystery: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="100%" height="100%">
-  <!-- Star Witch Cat フシギン -->
-  <path d="M30,106 Q10,86 25,71 Q40,56 30,41" stroke="#9b5dff" stroke-width="6" fill="none" stroke-linecap="round" opacity="0.6"/>
-  <path d="M30,106 Q12,88 27,73 Q42,58 32,43" stroke="#e0aaff" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.5"/>
-  <circle cx="20" cy="79" r="2" fill="#e0aaff"/>
-  <circle cx="28" cy="61" r="1.5" fill="#ffd700"/>
-  <ellipse cx="63" cy="96" rx="22" ry="16" fill="#4a1a8a"/>
-  <ellipse cx="63" cy="93" rx="14" ry="10" fill="#7a40c0"/>
-  <ellipse cx="60" cy="32" rx="36" ry="8" fill="#1a0040"/>
-  <polygon points="60,3 33,32 87,32" fill="#2a0060"/>
-  <rect x="35" y="28" width="50" height="5" rx="2" fill="#9b5dff"/>
-  <text x="49" y="24" font-size="18" fill="#ffd700" font-family="serif">★</text>
-  <ellipse cx="60" cy="66" rx="29" ry="27" fill="#7a40c0"/>
-  <polygon points="41,44 35,29 51,40" fill="#7a40c0"/>
-  <polygon points="79,44 85,29 69,40" fill="#7a40c0"/>
-  <polygon points="43,42 38,31 51,39" fill="#e0aaff" opacity="0.5"/>
-  <polygon points="77,42 82,31 69,39" fill="#e0aaff" opacity="0.5"/>
-  <path d="M53,47 Q60,41 67,47 Q62,45 53,47" fill="#ffd700"/>
-  <ellipse cx="48" cy="63" rx="9" ry="10" fill="#0a0020"/>
-  <ellipse cx="48" cy="64" rx="6.5" ry="7.5" fill="#3355ff"/>
-  <ellipse cx="48" cy="65" rx="3.5" ry="5" fill="#0a0015"/>
-  <ellipse cx="50.5" cy="60.5" rx="2" ry="2.5" fill="white"/>
-  <text x="43.5" y="68" font-size="8" fill="#99bbff" font-family="serif">★</text>
-  <ellipse cx="74" cy="63" rx="9" ry="10" fill="#0a0020"/>
-  <ellipse cx="74" cy="64" rx="6.5" ry="7.5" fill="#c8a000"/>
-  <ellipse cx="74" cy="65" rx="3.5" ry="5" fill="#0a0010"/>
-  <ellipse cx="76.5" cy="60.5" rx="2" ry="2.5" fill="white"/>
-  <ellipse cx="37" cy="72" rx="7" ry="5" fill="#cc88ff" opacity="0.5"/>
-  <ellipse cx="85" cy="72" rx="7" ry="5" fill="#cc88ff" opacity="0.5"/>
-  <line x1="38" y1="70" x2="20" y2="67" stroke="#e0aaff" stroke-width="1.2" opacity="0.8"/>
-  <line x1="38" y1="73" x2="20" y2="73" stroke="#e0aaff" stroke-width="1.2" opacity="0.8"/>
-  <line x1="38" y1="76" x2="20" y2="79" stroke="#e0aaff" stroke-width="1.2" opacity="0.8"/>
-  <line x1="84" y1="70" x2="102" y2="67" stroke="#e0aaff" stroke-width="1.2" opacity="0.8"/>
-  <line x1="84" y1="73" x2="102" y2="73" stroke="#e0aaff" stroke-width="1.2" opacity="0.8"/>
-  <line x1="84" y1="76" x2="102" y2="79" stroke="#e0aaff" stroke-width="1.2" opacity="0.8"/>
-  <polygon points="60,72 57,75 63,75" fill="#9955ee"/>
-  <path d="M55,77 Q60,82 65,77" stroke="#7a30b0" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-  <line x1="60" y1="75" x2="60" y2="77.5" stroke="#7a30b0" stroke-width="1.5"/>
+  mystery:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="100%" height="100%">
+<path d="M30,106 Q10,86 25,71 Q40,56 30,41" stroke="#9b5dff" stroke-width="6" fill="none" stroke-linecap="round" opacity=".6"/>
+<circle cx="20" cy="79" r="2" fill="#e0aaff"/>
+<circle cx="28" cy="61" r="1.5" fill="#ffd700"/>
+<ellipse cx="63" cy="96" rx="22" ry="16" fill="#4a1a8a"/>
+<ellipse cx="63" cy="93" rx="14" ry="10" fill="#7a40c0"/>
+<ellipse cx="60" cy="32" rx="36" ry="8" fill="#1a0040"/>
+<polygon points="60,3 33,32 87,32" fill="#2a0060"/>
+<rect x="35" y="28" width="50" height="5" rx="2" fill="#9b5dff"/>
+<text x="49" y="24" font-size="18" fill="#ffd700" font-family="serif">★</text>
+<ellipse cx="60" cy="66" rx="29" ry="27" fill="#7a40c0"/>
+<polygon points="41,44 35,29 51,40" fill="#7a40c0"/>
+<polygon points="79,44 85,29 69,40" fill="#7a40c0"/>
+<ellipse cx="48" cy="63" rx="9" ry="10" fill="#0a0020"/>
+<ellipse cx="48" cy="64" rx="6.5" ry="7.5" fill="#3355ff"/>
+<ellipse cx="48" cy="65" rx="3.5" ry="5" fill="#0a0015"/>
+<ellipse cx="50.5" cy="60.5" rx="2" ry="2.5" fill="white"/>
+<ellipse cx="74" cy="63" rx="9" ry="10" fill="#0a0020"/>
+<ellipse cx="74" cy="64" rx="6.5" ry="7.5" fill="#c8a000"/>
+<ellipse cx="74" cy="65" rx="3.5" ry="5" fill="#0a0010"/>
+<ellipse cx="76.5" cy="60.5" rx="2" ry="2.5" fill="white"/>
+<ellipse cx="37" cy="72" rx="7" ry="5" fill="#cc88ff" opacity=".5"/>
+<ellipse cx="85" cy="72" rx="7" ry="5" fill="#cc88ff" opacity=".5"/>
+<line x1="38" y1="70" x2="20" y2="67" stroke="#e0aaff" stroke-width="1.2" opacity=".8"/>
+<line x1="38" y1="73" x2="20" y2="73" stroke="#e0aaff" stroke-width="1.2" opacity=".8"/>
+<line x1="38" y1="76" x2="20" y2="79" stroke="#e0aaff" stroke-width="1.2" opacity=".8"/>
+<line x1="84" y1="70" x2="102" y2="67" stroke="#e0aaff" stroke-width="1.2" opacity=".8"/>
+<line x1="84" y1="73" x2="102" y2="73" stroke="#e0aaff" stroke-width="1.2" opacity=".8"/>
+<line x1="84" y1="76" x2="102" y2="79" stroke="#e0aaff" stroke-width="1.2" opacity=".8"/>
+<polygon points="60,72 57,75 63,75" fill="#9955ee"/>
+<path d="M55,77 Q60,82 65,77" stroke="#7a30b0" stroke-width="1.8" fill="none" stroke-linecap="round"/>
 </svg>`
 };
 
-// ============================
-// DATA: MONSTERS
-// ============================
-const MONSTERS = {
-  animal:  { emoji: '🐾', name: 'モフルン',  type: 'いきもの系',  message: 'どんな生き物にも、まだ知られていないひみつがいっぱい！' },
-  food:    { emoji: '🍜', name: 'タベロン',  type: 'たべもの系',  message: 'おいしいものには、世界中のひとの知恵がつまってるよ！' },
-  vehicle: { emoji: '⚙️', name: 'キカイダー', type: 'きかい系',   message: 'すごい機械の中に、人間のアイデアがいっぱいかくれてるよ！' },
-  plant:   { emoji: '🌿', name: 'シゼンボー', type: 'しぜん系',   message: '自然のなぞは、毎日少しずつ解き明かされているんだよ！' },
-  mystery: { emoji: '✨', name: 'フシギン',  type: 'ふしぎ系',   message: '「なんで？」って思う気持ちが、学びのはじまりだよ！' },
+const MONSTER_INFO = {
+  animal:  {name:'モフルン',  type:'いきもの系'},
+  food:    {name:'タベロン',  type:'たべもの系'},
+  vehicle: {name:'キカイダー',type:'きかい系'},
+  plant:   {name:'シゼンボー',type:'しぜん系'},
+  mystery: {name:'フシギン',  type:'ふしぎ系'},
 };
 
-// ============================
-// DATA: TRAITS
-// ============================
-const TRAITS = [
-  { key: 'short_attention', emoji: '⚡', name: '集中が短い',           desc: 'サクッとできることが得意！' },
-  { key: 'non_reader',      emoji: '👁️', name: '文字より絵・カタチ', desc: '見て感じるのが得意！' },
-  { key: 'audio_preferred', emoji: '🎵', name: '聞くほうが好き',      desc: '声や音で学ぶのが得意！' },
-  { key: 'deep_thinker',    emoji: '🧠', name: 'じっくり考える',      desc: 'とことん考えるのが好き！' },
-  { key: 'survival_like',   emoji: '🗺️', name: '冒険・サバイバル好き', desc: 'ドキドキを楽しもう！' },
-];
-
-// ============================
-// DATA: MISSIONS
-// ============================
-const MISSIONS = {
-  animal: {
-    short_attention: [
-      { level: 1, title: 'まずはタップ！', body: 'この写真の中で、いちばん気になる場所はどこ？', answerType: 'choices', choices: ['目のあたり', '体のかたち', '背景の場所'] },
-      { level: 2, title: '3つ見つけよう！', body: '動物の体の部分を3つ言ってみよう', answerType: 'choices', choices: ['目・耳・足', 'しっぽ・鼻・毛', 'ひげ・つめ・歯'] },
-      { level: 3, title: '気持ちを当てよう！', body: 'この動物はいまどんな気持ちだと思う？', answerType: 'choices', choices: ['うれしい！', 'ねむい〜', 'おなかすいた'] },
-    ],
-    non_reader: [
-      { level: 1, title: 'どこかな？', body: '動物の「かお」はどこにあるかな？', answerType: 'choices', choices: ['👆 上のほう', '👇 下のほう', '➡️ 右のほう'] },
-      { level: 2, title: 'どっち？', body: '動物と人間、どっちが毛がふさふさ？', answerType: 'choices', choices: ['動物！🐾', '人間！', 'おなじくらい！'] },
-      { level: 3, title: '気持ちを選ぼう！', body: 'この動物、うれしい？ねむい？', answerType: 'choices', choices: ['うれしい😊', 'ねむい😴', 'わからない🤔'] },
-    ],
-    deep_thinker: [
-      { level: 1, title: 'じっくり観察', body: 'この動物はどこを見ていると思う？', answerType: 'text' },
-      { level: 2, title: '比べてみよう', body: '動物と人間の違いを2つ考えてみよう', answerType: 'text' },
-      { level: 3, title: '深く考えよう', body: 'どうして動物にはしっぽがあるんだろう？', answerType: 'text' },
-    ],
-    audio_preferred: [
-      { level: 1, title: '声に出してみよう！', body: 'この動物の鳴き声を声に出してみよう。どんな声だった？', answerType: 'text' },
-      { level: 2, title: '音を想像しよう！', body: 'この動物が歩くとどんな音がすると思う？', answerType: 'choices', choices: ['カタカタ🎵', 'ドスドス🎵', 'フワフワ🎵'] },
-      { level: 3, title: '話しかけてみよう！', body: 'この動物に一言声をかけるとしたら？', answerType: 'text' },
-    ],
-    survival_like: [
-      { level: 1, title: '🗺️ ミッション開始！', body: 'この動物と友達になるには何をすればいい？', answerType: 'choices', choices: ['エサをあげる🍖', 'ゆっくり近づく🐾', '大声で呼ぶ📣'] },
-      { level: 2, title: '⚔️ 生存術を学べ！', body: 'この動物から学べるサバイバル技を1つ選べ！', answerType: 'choices', choices: ['すばやく逃げる⚡', 'じっとかくれる🌿', '群れで守る👥'] },
-      { level: 3, title: '🏆 究極の謎に挑め！', body: 'もしこの動物と1日交換できたら、何が一番大変？', answerType: 'text' },
-    ],
-  },
-  food: {
-    short_attention: [
-      { level: 1, title: 'まずはタップ！', body: 'この食べ物の中で、いちばんおいしそうな部分は？', answerType: 'choices', choices: ['色がきれい✨', 'においがよさそう👃', 'ボリュームたっぷり💪'] },
-      { level: 2, title: '材料を探せ！', body: 'この食べ物に入っていそうな材料はどれ？', answerType: 'choices', choices: ['野菜・肉・卵🥚', 'パン・チーズ・ハム🧀', 'ご飯・魚・しょうゆ🍣'] },
-      { level: 3, title: '味を予想しよう！', body: 'この食べ物はどんな味だと思う？', answerType: 'choices', choices: ['あまい🍬', 'からい🌶️', 'しょっぱい🧂'] },
-    ],
-    non_reader: [
-      { level: 1, title: 'どれがおいしい？', body: 'この食べ物の色でいちばん気になるのは？', answerType: 'choices', choices: ['🔴 赤', '🟡 黄', '🟢 緑'] },
-      { level: 2, title: 'おおきさは？', body: 'この食べ物、一口で食べられる？', answerType: 'choices', choices: ['食べられる！', '無理！でかい！', 'ぎりぎり？'] },
-      { level: 3, title: '気持ちを選ぼう！', body: 'この食べ物を見てどんな気持ち？', answerType: 'choices', choices: ['食べたい！😋', 'あんまり…😅', '知りたい！🤔'] },
-    ],
-    deep_thinker: [
-      { level: 1, title: 'じっくり観察', body: 'この食べ物はどこから来たんだろう？', answerType: 'text' },
-      { level: 2, title: '材料を追おう', body: 'この食べ物を作るのに何が必要か考えてみよう', answerType: 'text' },
-      { level: 3, title: '深く考えよう', body: 'なぜこの食べ物はこんな形をしているんだろう？', answerType: 'text' },
-    ],
-    audio_preferred: [
-      { level: 1, title: '音を想像しよう！', body: 'この食べ物を食べるとどんな音がする？', answerType: 'choices', choices: ['サクサク🎵', 'トロトロ🎵', 'モチモチ🎵'] },
-      { level: 2, title: '声に出してみよう！', body: 'この食べ物を説明する言葉を3つ声に出してみて！', answerType: 'text' },
-      { level: 3, title: '料理人になろう！', body: 'この料理の作り方を声で説明するとしたら？', answerType: 'text' },
-    ],
-    survival_like: [
-      { level: 1, title: '🗺️ 食料調達ミッション！', body: 'サバイバルでこの食べ物を見つけたらどうする？', answerType: 'choices', choices: ['すぐ食べる！🍴', 'まず調べる🔍', '仲間に知らせる📣'] },
-      { level: 2, title: '⚔️ 栄養作戦！', body: 'この食べ物で得られる力は？', answerType: 'choices', choices: ['スタミナUP💪', 'スピードUP⚡', '回復力UP❤️'] },
-      { level: 3, title: '🏆 食の謎に挑め！', body: 'この食べ物がなかったら世界はどう変わっていた？', answerType: 'text' },
-    ],
-  },
-  vehicle: {
-    short_attention: [
-      { level: 1, title: 'まずはタップ！', body: 'この乗り物で一番かっこいい部分は？', answerType: 'choices', choices: ['形🔷', '色🎨', '大きさ📏'] },
-      { level: 2, title: 'どこへ行く？', body: 'この乗り物に乗ってどこに行きたい？', answerType: 'choices', choices: ['山の中🏔️', '海の上🌊', '空の上☁️'] },
-      { level: 3, title: '速さを予想！', body: 'この乗り物はどのくらい速い？', answerType: 'choices', choices: ['自転車より遅い🚲', '車と同じくらい🚗', '飛行機より速い！✈️'] },
-    ],
-    non_reader: [
-      { level: 1, title: 'どこかな？', body: 'この乗り物のタイヤはいくつ？', answerType: 'choices', choices: ['2つ', '4つ', 'もっとたくさん'] },
-      { level: 2, title: '動きを選ぼう！', body: 'この乗り物はどうやって動く？', answerType: 'choices', choices: ['エンジン🔥', '電気⚡', '人力💪'] },
-      { level: 3, title: '乗り物クイズ！', body: 'この乗り物に乗ったことある？', answerType: 'choices', choices: ['ある！', 'ない！', '似たやつなら'] },
-    ],
-    deep_thinker: [
-      { level: 1, title: 'じっくり観察', body: 'この乗り物はどうやって動いていると思う？', answerType: 'text' },
-      { level: 2, title: '設計を考えよう', body: 'この乗り物のどこを改良したい？', answerType: 'text' },
-      { level: 3, title: '深く考えよう', body: 'もしこの乗り物がなかったら、人々の生活はどう変わる？', answerType: 'text' },
-    ],
-    audio_preferred: [
-      { level: 1, title: '音を真似よう！', body: 'この乗り物のエンジン音を声で真似してみよう！', answerType: 'text' },
-      { level: 2, title: '声でなりきり！', body: '運転手さんのアナウンスをやってみよう！', answerType: 'text' },
-      { level: 3, title: '乗り物紹介！', body: 'この乗り物を誰かに紹介するセリフを考えよう', answerType: 'text' },
-    ],
-    survival_like: [
-      { level: 1, title: '🗺️ 脱出ミッション！', body: 'サバイバルでこの乗り物があったら何に使う？', answerType: 'choices', choices: ['逃げる！🏃', '荷物を運ぶ📦', '基地にする🏕️'] },
-      { level: 2, title: '⚔️ 改造せよ！', body: 'この乗り物を最強にするために何を付け加える？', answerType: 'choices', choices: ['武器🗡️', 'シールド🛡️', 'ロケットエンジン🚀'] },
-      { level: 3, title: '🏆 未来の乗り物！', body: '100年後の乗り物はどうなっていると思う？', answerType: 'text' },
-    ],
-  },
-  plant: {
-    short_attention: [
-      { level: 1, title: 'まずはタップ！', body: 'この植物で一番気になる部分は？', answerType: 'choices', choices: ['色🎨', '形🌿', '大きさ📏'] },
-      { level: 2, title: '植物探偵！', body: 'この植物に花はある？', answerType: 'choices', choices: ['ある！🌸', 'ない！', 'わからない🤔'] },
-      { level: 3, title: '気持ちを当てよう！', body: 'この植物はいま元気だと思う？', answerType: 'choices', choices: ['元気いっぱい！💪', 'ちょっと疲れてる😓', 'すごく元気！🌟'] },
-    ],
-    non_reader: [
-      { level: 1, title: '色を選ぼう！', body: 'この植物の一番目立つ色は？', answerType: 'choices', choices: ['🟢 緑', '🟡 黄', '🔴 赤'] },
-      { level: 2, title: '大きさは？', body: 'この植物は自分より大きい？', answerType: 'choices', choices: ['大きい！', '小さい！', 'おなじくらい'] },
-      { level: 3, title: 'さわり心地は？', body: 'この植物を触るとどんな感じ？', answerType: 'choices', choices: ['ふわふわ🌸', 'チクチク🌵', 'つるつる🍃'] },
-    ],
-    deep_thinker: [
-      { level: 1, title: 'じっくり観察', body: 'この植物はどこで育っていると思う？', answerType: 'text' },
-      { level: 2, title: '生命の不思議', body: 'この植物はどうやって水を吸い上げているんだろう？', answerType: 'text' },
-      { level: 3, title: '深く考えよう', body: '植物は動けないのに、どうやって生き延びているんだろう？', answerType: 'text' },
-    ],
-    audio_preferred: [
-      { level: 1, title: '音を想像しよう！', body: '風が吹いたらこの植物はどんな音がする？', answerType: 'choices', choices: ['サラサラ🎵', 'ザワザワ🎵', 'パタパタ🎵'] },
-      { level: 2, title: '植物になりきろう！', body: 'もしこの植物が話せたら何と言う？', answerType: 'text' },
-      { level: 3, title: '自然の音！', body: 'この植物がいる場所ではどんな音が聞こえそう？', answerType: 'text' },
-    ],
-    survival_like: [
-      { level: 1, title: '🗺️ 植物調査ミッション！', body: 'サバイバルでこの植物は役に立つ？', answerType: 'choices', choices: ['食べられる！🍴', '薬になる！💊', 'シェルターに使える！🏕️'] },
-      { level: 2, title: '⚔️ 植物の力！', body: 'この植物の最強な特徴は？', answerType: 'choices', choices: ['毒がある💀', 'めちゃ丈夫💪', '実がなる🍎'] },
-      { level: 3, title: '🏆 自然の謎に挑め！', body: 'もし植物のように太陽からエネルギーを得られたら何をする？', answerType: 'text' },
-    ],
-  },
-  mystery: {
-    short_attention: [
-      { level: 1, title: 'まずはタップ！', body: 'この写真の中で、いちばん気になる部分は？', answerType: 'choices', choices: ['形🔷', '色🎨', '雰囲気🌟'] },
-      { level: 2, title: '想像しよう！', body: 'この写真を一言で表すと？', answerType: 'choices', choices: ['ふしぎ！✨', 'かっこいい！💥', 'かわいい！🌸'] },
-      { level: 3, title: 'ひみつを探せ！', body: 'この写真にかくれているものは何だと思う？', answerType: 'choices', choices: ['宝物💎', '秘密のメッセージ📜', '別の世界への入口🚪'] },
-    ],
-    non_reader: [
-      { level: 1, title: 'どれかな？', body: 'この写真の色でいちばん好きなのは？', answerType: 'choices', choices: ['🔵 青', '🟠 オレンジ', '⚪ 白'] },
-      { level: 2, title: '感じを選ぼう！', body: 'この写真を見てどんな気持ち？', answerType: 'choices', choices: ['わくわく！✨', 'ドキドキ！💓', 'ほっこり！☀️'] },
-      { level: 3, title: 'ふしぎクイズ！', body: 'この写真に名前をつけるとしたら？', answerType: 'choices', choices: ['ふしぎのとびら', 'たびのはじまり', 'かがやきのかけら'] },
-    ],
-    deep_thinker: [
-      { level: 1, title: 'じっくり観察', body: 'この写真を見て、最初に何を感じた？', answerType: 'text' },
-      { level: 2, title: '想像を広げよう', body: 'この写真の前後にはどんなストーリーがある？', answerType: 'text' },
-      { level: 3, title: '深く考えよう', body: 'この写真が100年後も残っていたら、どんな意味を持つ？', answerType: 'text' },
-    ],
-    audio_preferred: [
-      { level: 1, title: '音を想像しよう！', body: 'この写真に音をつけるとしたら？', answerType: 'choices', choices: ['静かな音楽🎵', 'にぎやかな声🔊', '自然の音🌿'] },
-      { level: 2, title: 'ナレーターになろう！', body: 'この写真を説明するナレーションを声に出してみよう！', answerType: 'text' },
-      { level: 3, title: '物語を作ろう！', body: 'この写真を使って短い物語を語ってみよう', answerType: 'text' },
-    ],
-    survival_like: [
-      { level: 1, title: '🗺️ 探索開始！', body: 'この写真の場所でサバイバルするなら最初に何をする？', answerType: 'choices', choices: ['水を探す💧', '隠れ家を作る🏕️', '地図を描く🗺️'] },
-      { level: 2, title: '⚔️ 謎を解け！', body: 'この写真にかくれた秘密のアイテムは？', answerType: 'choices', choices: ['古代の地図📜', '魔法の石💎', '秘密の鍵🗝️'] },
-      { level: 3, title: '🏆 伝説の謎に挑め！', body: 'この写真が謎への手がかりだとしたら、その謎とは？', answerType: 'text' },
-    ],
-  },
+// Companion messages per trait
+const COMPANION_INTRO = {
+  speed:   q=>`よし！このクエストをサクッとやろう！👊`,
+  vision:  q=>`じっくり写真を見るんだ。目を開いて！👁️`,
+  thinker: q=>`なぜ？どうやって？深く考えてみて！🔮`,
+  story:   q=>`物語のはじまりだ！さあ、想像の翼を広げよう📖`,
+  brave:   q=>`冒険者よ、このクエストを突破せよ！⚔️`,
 };
 
-// ============================
-// DATA: EXTRA MISSIONS (4問目 - 新回答タイプ)
-// 特性ごとに1問追加。buildMissions で4問から3問ランダム選択
-// ============================
-const EXTRA_MISSIONS = {
-  short_attention: {
-    level: 2,
-    title: 'どのくらい気になる？',
-    body: 'この写真の中のもの、どのくらい気になった？星で教えて！',
-    answerType: 'rating',
-    ratingLabels: ['あんまり🌱','ちょっと🌿','まあまあ🌟','かなり⭐','めちゃ気になる！🌟✨'],
-  },
-  non_reader: {
-    level: 1,
-    title: 'どのくらい好き？',
-    body: 'この写真を見てどのくらいワクワクした？',
-    answerType: 'rating',
-    ratingLabels: ['ドキドキなし😐','少しだけ😊','そこそこ🌟','かなり！⭐','最高にワクワク！🎉'],
-  },
-  deep_thinker: {
-    level: 3,
-    title: 'じっくり考えて答えよう',
-    body: 'この写真について一番「なぜ？」と思ったことを選んで、理由も書いてみよう',
-    answerType: 'choose+why',
-    choices: ['形がふしぎ🔷', '色がふしぎ🎨', '存在がふしぎ✨'],
-  },
-  audio_preferred: {
-    level: 2,
-    title: 'どの音が一番合う？',
-    body: 'この写真に合う音を選んで、なぜそう思ったか書いてみよう',
-    answerType: 'choose+why',
-    choices: ['静かな音楽🎵', '力強いリズム🥁', '自然の音🌿'],
-  },
-  survival_like: {
-    level: 2,
-    title: '⚔️ 戦略を決めろ！',
-    body: 'この写真のものを使うとしたら？選んで作戦の理由を書いてみよう！',
-    answerType: 'choose+why',
-    choices: ['武器🗡️として使う', '食料・燃料にする🔥', '隠れ蓑にする🌿'],
-  },
+const COMPLETION_MESSAGES = {
+  discover:['よく見つけたね！そのひみつ、知ってる人は少ないよ！','観察力がすごい！冒険者の目がどんどん鋭くなってる！'],
+  battle:  ['バトル勝利！その判断、正解だと思う！','圧倒的な力！また戦おう！'],
+  mystery: ['なぞとき完了！その答え、深く考えてるね！','ミステリー解決！探偵みたいだったよ！'],
+  craft:   ['クリエイティブすぎる！それ、本当に作ってみたい！','発想がユニーク！世界が広がったよ！'],
+  explore: ['探索完了！新しい地図が見えてきた！','よく旅したね！また新しい場所に行こう！'],
 };
 
-// ============================
-// DATA: REACTIONS
-// ============================
-const REACTIONS = [
-  { msg: '面白い見方だね！', sub: 'そういう考え方、すごくいいよ！', effect: '🎉 新しい視点をゲット！' },
-  { msg: 'へぇ、そう思ったんだね！', sub: 'その発想、なかなかないよ！みんなと違う見方ができるってすごい！', effect: '⭐ ユニークな考えで経験値UP！' },
-  { msg: 'なるほど！\nおもしろい見方だ！', sub: 'もっと深く考えると、また違うものが見えてくるよ！', effect: '💡 アイデアをひとつ発見！' },
-  { msg: 'その視点、いいね！', sub: 'そこに気づくってすごいよ！モンスターも感動してる！', effect: '🌟 探究力がアップした！' },
-  { msg: 'そっか！\nそんな考え方もあるんだね！', sub: 'いろんな見方があっておもしろいね！', effect: '🔍 探究の道が広がった！' },
-];
-
-const LEVEL_LABELS = { 1: 'LEVEL 1 すぐできる', 2: 'LEVEL 2 少し観察', 3: 'LEVEL 3 少し考える' };
-const LEVEL_CLASS  = { 1: 'lv1', 2: 'lv2', 3: 'lv3' };
-
-// ============================
-// DATA: MONSTER_COMMENTS（回答を引用してモンスターが深掘り）
-// ============================
-// 各エントリは (answerSnippet) => [reaction, sub] の関数
-const MONSTER_COMMENTS = {
-  animal: [
-    a => [`「${a}」ってマジで言った!?`, `モフルンも同じこと思ってたけど言葉にできなかったやつ…！なんでそう思ったか教えて🐾`],
-    a => [`${a}！その発想、野生の本能に近い！`, `じゃあさ、もし全然ちがう動物だったら答えは変わった？🤔`],
-    a => [`ちょっとまって…「${a}」ってことは…！`, `それって、生き物みんなに当てはまると思う？それとも特別？`],
-    a => [`${a}か〜！100人に聞いたらたぶん君だけの答えだよ`, `どこでその考えが浮かんだの？すごい気になる👀`],
-    a => [`「${a}」！モフルン感動して毛が逆立った！🐾`, `その答えの逆を考えるとどうなる？試してみて！`],
-    a => [`${a}って…！正直モフルンも「あっ、そっか！」ってなった`, `もしその答えが間違いだったとしたら？それでも同じこと言える？`],
-  ],
-  food: [
-    a => [`「${a}」！！グルモン的には殿堂入りの答え！🍴`, `その感覚って、食べたことない料理でも同じだと思う？`],
-    a => [`${a}か〜！食の哲学者か！`, `なんでそう感じたの？におい？見た目？それとも記憶？🤔`],
-    a => [`ちょっとまって「${a}」って言ったの本当!?`, `それって誰かに教えてもらった？それとも自分で気づいた？`],
-    a => [`${a}！グルモンのアンテナが全力で反応した！`, `その答え、世界のシェフが聞いたら絶対うなずくと思う。なんで？🌍`],
-    a => [`「${a}」…グルモン10年間この答えを待ってたんだけど！`, `じゃあそれって、どんな気持ちのときに食べたくなる？`],
-    a => [`${a}って気づけるのセンスあるよ！`, `もしその食べ物が世界からなくなったら何が変わると思う？🤯`],
-  ],
-  vehicle: [
-    a => [`「${a}」…解析完了。予想外すぎてフリーズしかけた⚙️`, `その考え、もっと速い乗り物でも同じことが言える？`],
-    a => [`${a}！エンジニアっぽい！メカロン嬉しい！`, `もし自分が設計者だったら、その考えをどう形にする？🔧`],
-    a => [`ちょっとまって「${a}」って…重要なデータだ！`, `その答えを使って何か発明できると思う？どんなもの？⚡`],
-    a => [`${a}！！緊急分析中…ヤバい面白い！`, `その結論に至った手順を教えて。ステップ1から！🤖`],
-    a => [`「${a}」か〜メカロンの想定を超えてきた！`, `それって100年後の未来でも同じことが言えると思う？🚀`],
-    a => [`${a}！計算上ありえない答えなのに合ってる気がする！`, `なんでそう思ったか、逆に教えてほしい。本当に気になる！`],
-  ],
-  plant: [
-    a => [`「${a}」…木も草も、たぶんそれを知ってる🌿`, `その答え、自然の中で探すとしたらどこで見つかりそう？`],
-    a => [`${a}ね…深い。フォレスト100年生きてきてそれは言えなかった`, `季節によってその答えは変わると思う？春と冬で比べてみて🌸`],
-    a => [`ほほう…「${a}」か。種が芽吹く感じの答えだ🌱`, `もしその答えが植物だったら、どんな植物に近いと思う？`],
-    a => [`${a}！フォレストも同じこと何千年も前から感じてた！`, `それって、人間が生まれる前からあったことだと思う？`],
-    a => [`「${a}」…風がそう言ってるみたいな答えだよ`, `その感覚、他の生き物にも伝えられると思う？どうやって？`],
-    a => [`${a}って言えるのはすごい！🌲`, `もしその考えが「根っこ」だとしたら、どんな木が育つと思う？`],
-  ],
-  mystery: [
-    a => [`「${a}」…ミステリオも長年その謎を追っていた…！`, `その答えの先に何があると思う？目を閉じて想像してみて🔮`],
-    a => [`${a}！宇宙の果てで同じ答えが出るかもしれない！`, `なんでそう思ったの？その直感、どこから来てる？✨`],
-    a => [`「${a}」って言える人、地球に何人いると思う？`, `たぶん少ない。その感覚、絶対に忘れないで！🌌`],
-    a => [`${a}！！時空が揺れた気がした…本当に！`, `その答えをもっと突き詰めると、どこに行き着くと思う？`],
-    a => [`ちょっとまって「${a}」って…これは記録しておかないといけない！`, `もしその答えが間違いだったとしたら、どんな答えになる？🔮`],
-    a => [`${a}か〜！ミステリオ的には宇宙レベルの発見だよ！`, `その考え、誰かに話したら何て言われると思う？😏`],
-  ],
-};
-const TRIVIA_CAT_BG = {
-  animal:  'linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%)',
-  food:    'linear-gradient(135deg, #7c2d12 0%, #9a3412 50%, #c2410c 100%)',
-  vehicle: 'linear-gradient(135deg, #1e3a5f 0%, #1e40af 50%, #2563eb 100%)',
-  plant:   'linear-gradient(135deg, #14532d 0%, #166534 50%, #15803d 100%)',
-  mystery: 'linear-gradient(135deg, #4c1d95 0%, #5b21b6 50%, #7c3aed 100%)',
-};
-
-// ============================
-// DATA: TRIVIA（カテゴリ×レベル別雑学）
-// ============================
-const TRIVIA = {
-  animal: [
-    // level 1 — 短い・やさしい言葉
-    { level:1, emoji:'👁️', fact:'ネコの目は暗やみでも人間の6倍よく見えるんだよ！だから夜もへっちゃら🌙' },
-    { level:1, emoji:'🦒', fact:'キリンのくびは長～いけど、骨の数は人間とおなじ7つなんだって！びっくりだよね！' },
-    { level:1, emoji:'🐘', fact:'ゾウは鼻で水をのんだり、シャワーしたり、においをかいだりできるよ。鼻が万能ツールなんだ！' },
-    { level:1, emoji:'🐠', fact:'さかなは水の中でも「音」でおしゃべりしているんだよ。人には聞こえない声でね！' },
-    // level 2 — 少し長い・少し難しい言葉OK
-    { level:2, emoji:'🐙', fact:'タコは心臓を3つもっていて、血の色が青いんだよ。体も柔らかくて骨がないから、どんなせまい穴でも通り抜けられるよ！' },
-    { level:2, emoji:'🐝', fact:'ミツバチはダンスで仲間に「花がどっちに、どのくらい遠くにあるか」を教えられるんだ。言葉なしで情報を伝えるってすごいよね！' },
-    { level:2, emoji:'🦜', fact:'ヨウムというオウムは人の言葉の意味を理解して使えることがわかっているよ。「くやしい」とか「たのしい」という気持ちも表現できるんだって！' },
-    { level:2, emoji:'🦎', fact:'カメレオンの色が変わるのは気温や気分のせいで、まわりの色に合わせているわけじゃないんだって！感情表現なんだね！' },
-    // level 3 — より詳しい・深い内容
-    { level:3, emoji:'🐬', fact:'イルカは自分だけの「名前の鳴き声」を持っていて、仲間同士で名前を呼び合うことが研究でわかってきたよ。文化や言語に近いものを持っているんだ！' },
-    { level:3, emoji:'🦈', fact:'サメは数億年前からほとんど体の形が変わっていない「生きた化石」なんだ。それだけ完璧に進化しているということ。恐竜より前から地球にいるんだよ！' },
-    { level:3, emoji:'🐜', fact:'アリの巣は役割分担がとても細かい。女王・兵隊・働きアリそれぞれが情報をフェロモンという化学信号でやりとりして巨大な社会を作っているんだ！' },
-  ],
-  food: [
-    { level:1, emoji:'🍫', fact:'チョコレートはカカオという実から作られているよ。最初は苦～い飲み物として飲まれていたんだって！' },
-    { level:1, emoji:'🍞', fact:'パンがふくらむのは、「酵母（こうぼ）」という目に見えない小さな生き物がはたらいているからなんだよ！' },
-    { level:1, emoji:'🥦', fact:'ブロッコリーは「花のつぼみ」を食べているんだよ。収穫しないでおくと黄色い花が咲くんだ！' },
-    { level:1, emoji:'🍎', fact:'リンゴの赤い色は太陽をいっぱいあびると出てくるんだよ。日当たりのよい側が真っ赤になるのはそのせい！' },
-    { level:2, emoji:'🧅', fact:'タマネギを切ると目がしみるのは、タマネギが虫に食べられないように出す成分のせいなんだ。植物なりの自己防衛だよ！' },
-    { level:2, emoji:'🍣', fact:'お寿司のシャリに使う酢には食べ物が腐りにくくする力があるよ。昔は「酢飯＋魚を発酵させる」のが本来の寿司の形だったんだって！' },
-    { level:2, emoji:'🌽', fact:'トウモロコシのひげ1本が実1粒とつながっているんだよ。だからひげの数と粒の数はぴったり同じになるんだ！' },
-    { level:2, emoji:'🍯', fact:'ハチミツは何千年たっても腐らないんだよ。エジプトのピラミッドで発見されたハチミツが今でも食べられる状態だったという話があるよ！' },
-    { level:3, emoji:'🌶️', fact:'「辛さ」は本当は「味」じゃなくて「痛み」なんだ。カプサイシンという成分が痛みのセンサーを刺激しているんだよ。だから辛いものを食べると汗が出るのも体が熱を感じているから！' },
-    { level:3, emoji:'🥑', fact:'アボカドはそのまま放置しておくと種が発芽できないようになっているんだ。大きな動物に食べてもらって、遠くで種を落としてもらうことで増える戦略を持っているよ！' },
-    { level:3, emoji:'🍵', fact:'緑茶のカテキンには抗菌作用があるよ。昔から「お茶でうがいするとかぜをひきにくい」と言われていたのは、科学的にも理由があったんだね！' },
-  ],
-  vehicle: [
-    { level:1, emoji:'✈️', fact:'飛行機の翼の形は、上側が丸く下側が平たいんだよ。これで上の空気がすばやく流れて機体が浮かび上がるんだ！鳥の羽に似てるでしょ？' },
-    { level:1, emoji:'🚂', fact:'新幹線の先頭がとがっているのはトンネルに入るときの「ドーン！」という音を小さくするためなんだよ。カワセミのくちばしを参考にしているんだって！' },
-    { level:1, emoji:'🚀', fact:'ロケットは宇宙に行くとき、タンクが空になったら切り離しながら進むんだよ。重さを減らしてどんどん速くなる工夫だよ！' },
-    { level:1, emoji:'🚗', fact:'タイヤに溝があるのは雨の日に水をかき出すためなんだよ。溝がないとすべってしまうから大事なんだ！' },
-    { level:2, emoji:'🚢', fact:'巨大なタンカーは何万トンもあるのに水に浮かぶよ。船の中が空洞になっていて、全体の密度が水より軽くなるからなんだ！これはアルキメデスが発見した原理だよ！' },
-    { level:2, emoji:'🚗', fact:'電気自動車はブレーキをかけるとき、その動く力を電気に変えてバッテリーに戻す「回生ブレーキ」を使っているんだ。止まりながらエネルギーを回収するって賢いよね！' },
-    { level:2, emoji:'🚁', fact:'ヘリコプターは回転羽根（ローター）の角度を変えることで上下左右自由に動くんだよ。後ろの小さなローターがないと機体がぐるぐる回ってしまうんだって！' },
-    { level:2, emoji:'🛸', fact:'国際宇宙ステーション（ISS）は地上400kmを時速27,600kmで飛んでいるよ。90分で地球を一周するスピードなんだ！' },
-    { level:3, emoji:'🏎️', fact:'F1マシンは走行中に「ダウンフォース」という空気の力で車体を地面に押し付けているんだ。その力は車体の重さよりも大きくて、理論上は天地逆にしてもトンネルの天井を走れるくらいなんだよ！' },
-    { level:3, emoji:'🚄', fact:'リニアモーターカーは磁石の力でレールから浮いて走るから車輪とレールの摩擦がゼロ。だから時速500km以上でも静かで滑らかなんだ。超電導という特殊な磁石が使われているよ！' },
-    { level:3, emoji:'🛰️', fact:'人工衛星が地球の周りを飛び続けられるのは「常に落ちているから」なんだ。地球に向かって落ちる力と横に進む力がつりあって、ずっと周回し続けるんだよ！' },
-  ],
-  plant: [
-    { level:1, emoji:'🌻', fact:'ヒマワリは太陽の方向を追いかけて動くんだよ！朝は東、夕方は西を向いているね！でも大きく育ったら動かなくなるんだって。' },
-    { level:1, emoji:'🌸', fact:'桜の花びらが散るのは風のせいじゃなくて、花びらのつけ根が自分でちぎれるようになっているからなんだよ！' },
-    { level:1, emoji:'🌵', fact:'サボテンのとげは「葉っぱ」が変化したものなんだよ。水分が蒸発しないように葉をとげにしたんだって！' },
-    { level:1, emoji:'🍀', fact:'四つ葉のクローバーが生まれるのは、育つときに傷ついたりストレスがかかったりしたからなんだよ。だからめずらしいんだね！' },
-    { level:2, emoji:'🌺', fact:'花の色や香りは虫や鳥を呼ぶためのサインなんだよ。花粉を運んでもらうために植物が長い時間をかけて進化させてきた「おいで！」のメッセージなんだ！' },
-    { level:2, emoji:'🌿', fact:'植物は根から水を吸って葉から蒸発させているよ。大きな木は1日に何百リットルもの水を動かしているんだって。根から葉までポンプなしで水を上げる力ってすごいね！' },
-    { level:2, emoji:'🍄', fact:'キノコは植物じゃなくて「菌類」という別のグループなんだよ。地面の下では糸みたいな体が網の目のように広がっていて、木の根と協力して栄養を交換しているんだって！' },
-    { level:2, emoji:'🌾', fact:'稲（お米）は世界の半分以上の人の主食なんだよ。日本だけでも1年間に約780万トンのお米が作られているんだって！' },
-    { level:3, emoji:'🌲', fact:'木々は根っこの先にいる菌のネットワーク（菌根菌）でつながって、栄養や水を分け合っていることがわかってきたよ。「森のWi-Fi」とも呼ばれていて、親の木が子供の木に栄養を送ることもあるんだ！' },
-    { level:3, emoji:'🌱', fact:'光合成で地球の酸素の約半分を作っているのは、実は陸の木ではなく海の「植物プランクトン」なんだよ。目に見えない小さな生き物が空気を支えているんだね！' },
-    { level:3, emoji:'🪴', fact:'植物は傷つけられると化学信号を出して周りの植物に「危険！」と知らせることができるんだよ。音にも反応することがある。植物にも「感じる」力があるのかもしれない！' },
-  ],
-  mystery: [
-    { level:1, emoji:'🌈', fact:'虹は太陽の反対側に見えるんだよ。雨粒の中で光が赤・橙・黄…と分かれてできるんだ！丸く見えるのは地面に隠れているから。空から見ると完全な円になるんだって！' },
-    { level:1, emoji:'⭐', fact:'夜空の星の光は、何百年も前に出た光が届いているんだよ。見ている星がすでに消えていることもあるかも。タイムマシンみたいだよね！' },
-    { level:1, emoji:'❄️', fact:'雪の結晶は全部六角形をしているけど、世界に全く同じ形のものはないと言われているんだよ！一つひとつがオリジナルなんだね。' },
-    { level:1, emoji:'🌊', fact:'海は地球の表面の70%をおおっているんだよ。でも人間がまだ探検したことのない深い場所がたくさんあって、宇宙より謎が多いとも言われているんだって！' },
-    { level:2, emoji:'🧲', fact:'地球全体がひとつの巨大な磁石になっているんだよ。方位磁石が北を指すのは、地球の内部にある液体の鉄が動いて磁場を作っているからなんだ！' },
-    { level:2, emoji:'🌙', fact:'月は毎年3.8cmずつ地球から遠ざかっているんだよ。ずっと昔は今より大きく見えていたはず。数億年後には月食が見られなくなるかもしれないんだって！' },
-    { level:2, emoji:'⚡', fact:'雷は太陽の表面よりも温度が高いんだよ！雷の温度は約30,000℃で、太陽の表面温度（約6,000℃）の5倍もあるんだって。一瞬だけどすさまじいエネルギーだよね！' },
-    { level:2, emoji:'🌪️', fact:'竜巻の中心は気圧がすごく低くなっているんだ。だから建物に当たると外と内の気圧差で爆発するように壊れることがあるんだよ。自然の力ってすごいね！' },
-    { level:3, emoji:'🕳️', fact:'ブラックホールは光でさえも逃げられないほど強い引力を持つよ。近くに行くと時間の流れ方まで遅くなるんだ。2019年に初めて写真が撮影されたんだよ！' },
-    { level:3, emoji:'🧬', fact:'人間1人のDNAをすべてつなぎ合わせると、太陽まで往復できるほどの長さになるんだよ。それが体の細胞60兆個それぞれに入っているんだって。宇宙より不思議かも！' },
-    { level:3, emoji:'🌌', fact:'宇宙には観測できる星だけで2兆個もの銀河があって、各銀河に数千億の星があると言われているよ。地球の砂浜の砂粒より多い数の星が存在するんだ！' },
-  ],
-};
-
-// ============================
-// NAVIGATION
-// ============================
-function goTo(screenId) {
-  const fromIdx = SCREEN_ORDER.indexOf(currentScreen);
-  const toIdx   = SCREEN_ORDER.indexOf(screenId);
-  const goBack  = toIdx < fromIdx;
-
-  document.querySelectorAll('.screen').forEach(s => {
-    s.classList.remove('active','back-enter');
-  });
-  const next = document.getElementById('screen-' + screenId);
-  if (goBack) next.classList.add('back-enter');
-  next.classList.add('active');
-  currentScreen = screenId;
+// =============================================
+// SCREEN NAVIGATION
+// =============================================
+function goTo(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+id).classList.add('active');
+  window.scrollTo(0,0);
 }
 
-// ---- Ripple helper ----
-function addRipple(el, e) {
-  const rect = el.getBoundingClientRect();
-  const x = (e ? e.clientX : rect.left + rect.width/2)  - rect.left;
-  const y = (e ? e.clientY : rect.top  + rect.height/2) - rect.top;
-  const size = Math.max(rect.width, rect.height) * 1.5;
-  const r = document.createElement('span');
-  r.className = 'ripple';
-  r.style.cssText = `width:${size}px;height:${size}px;left:${x - size/2}px;top:${y - size/2}px`;
-  el.style.position = 'relative';
-  el.style.overflow = 'hidden';
-  el.appendChild(r);
-  r.addEventListener('animationend', () => r.remove());
-}
-
-function resetApp() {
-  state.photoUrl = null;
-  state.category = null;
-  state.suggestedCategory = null;
-  state.trait = null;
-  state.monster = null;
-  state.missions = [];
-  state.selectedMissionIdx = null;
-  state.answeredMissions = new Set();
-  state.xp = 0;
-  // Reset upload screen (new camera UI)
-  const hero = document.getElementById('camera-hero');
-  const previewState = document.getElementById('upload-preview-state');
-  if (hero) hero.style.display = 'flex';
-  if (previewState) previewState.style.display = 'none';
-  const preview = document.getElementById('photo-preview');
-  if (preview) preview.src = '';
-  document.getElementById('file-input').value = '';
-  document.getElementById('upload-go-wrap').style.display = 'none';
-  state._photoReady = false;
-  // Reset trait screen
-  document.querySelectorAll('.trait-grid-card').forEach(c => c.classList.remove('selected','pop'));
-  const traitBtn = document.getElementById('trait-next-btn');
-  if (traitBtn) { traitBtn.disabled = true; traitBtn.style.opacity = '0.4'; }
-  // Answer screen states reset
-  const as = document.getElementById('answer-state');
-  if (as) { as.style.display = 'flex'; as.style.flexDirection = 'column'; }
-  const ir = document.getElementById('inline-result');
-  if (ir) ir.style.display = 'none';
-  const btn = document.getElementById('answer-back-btn');
-  if (btn) btn.onclick = () => goTo('missions');
-  updateFolderBtn();
-}
-
-// ============================
-// SCREEN 2: UPLOAD
-// ============================
-
-// カテゴリ同士の「相性」定義（key = 推定カテゴリ、value = 選択を許可するカテゴリ一覧）
-const CAT_COMPATIBLE = {
-  animal:  ['animal', 'mystery'],
-  food:    ['food', 'mystery'],
-  vehicle: ['vehicle', 'mystery'],
-  plant:   ['plant', 'mystery'],
-  mystery: ['animal', 'food', 'vehicle', 'plant', 'mystery'], // 不明なら何でもOK
-};
-
-const CAT_LABEL = {
-  animal: '🐾 どうぶつ系',
-  food:   '🍜 たべもの系',
-  vehicle:'🚗 のりもの・建物系',
-  plant:  '🌿 しぜん・植物系',
-  mystery:'✨ ふしぎ系',
-};
-
-// Canvas で画像の色をピクセル分布で分析して推定カテゴリを返す
-function analyzeImageCategory(imgEl) {
-  try {
-    const SIZE = 100;
-    const cv  = document.createElement('canvas');
-    cv.width  = SIZE; cv.height = SIZE;
-    const ctx = cv.getContext('2d');
-    ctx.drawImage(imgEl, 0, 0, SIZE, SIZE);
-    const d     = ctx.getImageData(0, 0, SIZE, SIZE).data;
-    const total = SIZE * SIZE;
-
-    // ---- ピクセルごとに種類を集計 ----
-    let sumR=0, sumG=0, sumB=0;
-    let warmPx=0, grayPx=0, greenPx=0, darkPx=0, whitePx=0, bluePx=0;
-
-    for (let i = 0; i < d.length; i += 4) {
-      const pr = d[i], pg = d[i+1], pb = d[i+2];
-      sumR += pr; sumG += pg; sumB += pb;
-
-      const lum = (pr + pg + pb) / 3;
-      const mx  = Math.max(pr, pg, pb);
-      const mn  = Math.min(pr, pg, pb);
-      const sat = mx > 10 ? (mx - mn) / mx : 0;
-
-      if (lum < 52)                                             darkPx++;  // 暗い
-      if (lum > 195 && sat < 0.14)                             whitePx++; // 白・ほぼ白（皿など）
-      if (sat < 0.14 && lum > 65)                              grayPx++;  // グレー（コンクリ・金属）
-      if (pg > pr * 1.1 && pg > pb * 1.08 && sat > 0.12)      greenPx++; // 緑
-      if (pb > pr * 1.1 && pb > pg * 1.05 && sat > 0.12)      bluePx++;  // 青（空・海）
-      // 暖色: Rが最大かつG・Bより明確に高い（茶・橙・赤・黄 → パン・肉・果物）
-      if (pr > pg + 14 && pr > pb + 18 && sat > 0.10)          warmPx++;
-    }
-
-    const avgR = sumR / total, avgG = sumG / total, avgB = sumB / total;
-    const avgBright = (avgR + avgG + avgB) / 3;
-    const avgMx  = Math.max(avgR, avgG, avgB);
-    const avgMn  = Math.min(avgR, avgG, avgB);
-    const avgSat = avgMx > 10 ? (avgMx - avgMn) / avgMx : 0;
-
-    const warmRatio  = warmPx  / total;
-    const grayRatio  = grayPx  / total;
-    const greenRatio = greenPx / total;
-    const darkRatio  = darkPx  / total;
-    const whiteRatio = whitePx / total;
-    const blueRatio  = bluePx  / total;
-
-    // ---- 判定ロジック ----
-
-    // 1) 全体が暗い → mystery
-    if (avgBright < 48 || darkRatio > 0.58) return 'mystery';
-
-    // 2) 緑が多い → plant（vehicle/foodより先に判定）
-    if (greenRatio > 0.18) return 'plant';
-    if (avgG > avgR * 1.12 && avgG > avgB * 1.08 && avgSat > 0.10) return 'plant';
-
-    // 3) food 判定 — vehicleより先に！（白皿がgrayとして誤分類されるのを防ぐ）
-    //    ・暖色ピクセルが12%超（茶・橙・赤 → パン/肉/果物/コーヒー）
-    //    ・OR 白エリア（皿）があってRが平均最大
-    //    ・OR 平均でRがG・Bより優位
-    if (warmRatio > 0.12) return 'food';
-    if (whiteRatio > 0.08 && avgR >= avgG - 3 && avgBright > 55) return 'food';
-    if (avgR > avgG * 1.06 && avgR > avgB * 1.10 && avgBright > 58) return 'food';
-
-    // 4) グレー多＋低彩度＋暖色少 → vehicle（コンクリート・建物）
-    if (grayRatio > 0.40 && avgSat < 0.18 && warmRatio < 0.08) return 'vehicle';
-
-    // 5) 青が多い → vehicle（空・海）
-    if (blueRatio > 0.20 || (avgB > avgR * 1.10 && avgB > avgG)) return 'vehicle';
-
-    // 6) それ以外 → animal
-    return 'animal';
-
-  } catch(e) {
-    return 'mystery';
+// =============================================
+// SCREEN 1 → 2: SETUP
+// =============================================
+function buildSetup(){
+  const list = document.getElementById('explorer-list');
+  list.innerHTML = EXPLORERS.map(e=>`
+    <div class="exp-card" id="exp-${e.key}" onclick="selectExplorer('${e.key}',this)">
+      <div class="exp-icon">${e.icon}</div>
+      <div class="exp-text">
+        <div class="exp-name">${e.name}</div>
+        <div class="exp-desc">${e.desc}</div>
+      </div>
+      <div class="exp-tick">✓</div>
+    </div>`).join('');
+  // pre-select if returning
+  if(state.trait){
+    const el=document.getElementById('exp-'+state.trait);
+    if(el){el.classList.add('sel');document.getElementById('mood-section').classList.add('on');}
+    if(state.mood) document.querySelector(`.mood-card[onclick*="${state.mood}"]`)?.classList.add('sel');
+    updateSetupBtn();
   }
 }
 
-function handlePhotoUpload(input) {
-  if (!input.files || !input.files[0]) return;
-  const file = input.files[0];
-  const reader = new FileReader();
-  reader.onload = e => {
-    state.photoUrl = e.target.result;
-    state.suggestedCategory = null;
-    state.category = null;
-    state._photoReady = false;
+function selectExplorer(key,el){
+  state.trait=key;
+  document.querySelectorAll('.exp-card').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+  document.getElementById('mood-section').classList.add('on');
+  updateSetupBtn();
+}
+function selectMood(key,el){
+  state.mood=key;
+  document.querySelectorAll('.mood-card').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+  updateSetupBtn();
+}
+function updateSetupBtn(){
+  const btn=document.getElementById('setup-next-btn');
+  btn.disabled=!(state.trait && state.mood);
+}
+function finishSetup(){
+  state.setupDone=true;
+  if(state.photoUrl) goTo('map'); else goTo('photo');
+}
 
-    // Show preview state, hide camera hero
-    const hero = document.getElementById('camera-hero');
-    const previewState = document.getElementById('upload-preview-state');
-    if (hero) hero.style.display = 'none';
-    if (previewState) {
-      previewState.style.display = 'flex';
-      previewState.onclick = () => document.getElementById('file-input').click();
-    }
-
-    const preview = document.getElementById('photo-preview');
-
-    // onload を src より前に設定
-    preview.onload = () => {
-      const detected = analyzeImageCategory(preview);
-      state.suggestedCategory = detected;
-      state.category = detected;
-      state._photoReady = true;
-      // 自動遷移（モンスター演出 → 2.4秒後にミッションへ）
-      launchFromPhoto();
-    };
-    preview.src = state.photoUrl;
-    preview.style.display = 'block';
-
-    // onload が発火しない環境用フォールバック：ボタンを表示
-    setTimeout(() => {
-      if (!state._photoReady) {
-        document.getElementById('upload-go-wrap').style.display = 'block';
+// =============================================
+// SCREEN 3: PHOTO
+// =============================================
+function handlePhoto(input){
+  if(!input.files||!input.files[0])return;
+  const file=input.files[0];
+  const reader=new FileReader();
+  reader.onload=e=>{
+    state.photoUrl=e.target.result;
+    const prev=document.getElementById('photo-preview');
+    prev.onload=()=>{
+      state.category=analyzeImageCategory(prev)||'mystery';
+      if(document.getElementById('screen-map').classList.contains('active')){
+        refreshMap();
       }
-    }, 800);
+    };
+    prev.src=state.photoUrl;
+
+    // show preview
+    document.getElementById('cam-hero').style.display='none';
+    const ps=document.getElementById('preview-state');
+    ps.style.display='flex';
+    document.getElementById('photo-next-btn').disabled=false;
+
+    // update HUD thumbnail
+    const hi=document.getElementById('hud-thumb-img');
+    if(hi) hi.src=state.photoUrl;
+    const mi=document.getElementById('map-photo-img');
+    if(mi) mi.src=state.photoUrl;
+    const mpt=document.getElementById('mission-photo-thumb');
+    if(mpt) mpt.src=state.photoUrl;
   };
   reader.readAsDataURL(file);
+  input.value='';
 }
 
-// 写真確定 → モンスター生成 → ミッションへ
-function launchFromPhoto() {
-  document.getElementById('upload-go-wrap').style.display = 'none';
-  if (!state.category) {
-    const preview = document.getElementById('photo-preview');
-    state.category = analyzeImageCategory(preview) || 'mystery';
-  }
-  // setTimeout を先に登録（goToMonster がエラーしても進める）
-  setTimeout(() => buildMissions(), 2400);
-  // フォールバックボタンを2秒後に表示
-  setTimeout(() => {
-    const btn = document.getElementById('monster-go-btn');
-    if (btn) btn.style.opacity = '1';
-  }, 2000);
-  try { goToMonster(); } catch(e) { console.warn('goToMonster error:', e); }
+function analyzeImageCategory(img){
+  try{
+    const c=document.createElement('canvas');
+    c.width=50;c.height=50;
+    const ctx=c.getContext('2d');
+    ctx.drawImage(img,0,0,50,50);
+    const d=ctx.getImageData(0,0,50,50).data;
+    let r=0,g=0,b=0,px=0;
+    for(let i=0;i<d.length;i+=4){if(d[i+3]>10){r+=d[i];g+=d[i+1];b+=d[i+2];px++;}}
+    if(px===0)return'mystery';
+    r/=px;g/=px;b/=px;
+    if(g>r&&g>b&&g>70)return'plant';
+    if(r>g&&r>b&&r>90)return'animal';
+    if(r>100&&g>80&&b<80)return'food';
+    if(b>r&&b>g&&b>70)return'vehicle';
+    return'mystery';
+  }catch{return'mystery';}
 }
 
-// selectCategory は新フローでは未使用（自動判定のみ）
-function selectCategory(cat, el) {}
-
-function updateUploadNextBtn() {
-  // upload-next-btn は新フローでは存在しない（写真選択で即自動遷移）
+function startAdventure(){
+  if(!state.photoUrl)return;
+  const mi=document.getElementById('map-photo-img');
+  if(mi)mi.src=state.photoUrl;
+  const hi=document.getElementById('hud-thumb-img');
+  if(hi)hi.src=state.photoUrl;
+  refreshMap();
+  goTo('map');
 }
 
-// ============================
-// SCREEN 2: TRAIT（はじめる直後）
-// ============================
-
-const TRAIT_QUESTIONS = [
-  'いまの気分は？',
-  '今日どんな感じ？',
-  'いまの自分ってどれ？',
-  'きょうの自分っぽいのは？',
-  'いまのキモチに近いのは？',
-  'どんな自分で探究する？',
-  'いまの自分にぴったりなのは？',
-  'きょうはどんな自分？',
-];
-
-// ─── Top deck category selection ───
-const DECK_TO_TRAIT = {
-  survival: 'survival_like',
-  nature:   'non_reader',
-  analysis: 'deep_thinker',
-};
-
-function selectDeckCard(mode, el) {
-  state.exploreMode = mode;
-  document.querySelectorAll('.top-deck-card').forEach(c => c.classList.remove('selected'));
-  el.classList.add('selected');
-  const hint = document.getElementById('top-hint');
-  if (hint) hint.textContent = '準備できたら「はじめる」をタップ！';
-  const btn = document.getElementById('top-start-btn');
-  if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
-  // Center scroll to selected card
-  el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-}
-
-function startApp() {
-  // Set trait from deck choice (or default)
-  if (state.exploreMode && DECK_TO_TRAIT[state.exploreMode]) {
-    state.trait = DECK_TO_TRAIT[state.exploreMode];
-  }
-  buildTraitList();
-  goTo('trait');
-}
-
-// Simplified 3-card trait list (big touch cards)
-const SIMPLE_TRAITS = [
-  { key: 'short_attention', emoji: '⚡', name: 'サクッとやりたい',   desc: '短い時間でぱぱっと！' },
-  { key: 'deep_thinker',    emoji: '🔍', name: 'じっくり考えたい',   desc: 'とことん深く探究！' },
-  { key: 'survival_like',   emoji: '⚔️', name: 'ぼうけんしたい',     desc: 'ドキドキしながら進もう！' },
-];
-
-function buildTraitList() {
-  const list = document.getElementById('trait-list');
-  list.className = 'trait-grid';
-
-  // Pre-select based on explore mode
-  const preSelected = state.trait ? state.trait : null;
-
-  list.innerHTML = SIMPLE_TRAITS.map(t => {
-    const isSel = preSelected === t.key ? 'selected' : '';
-    return `
-    <div class="trait-grid-card ${isSel}" id="trait-${t.key}" onclick="selectTrait('${t.key}', this, event)">
-      <span class="tgc-emoji">${t.emoji}</span>
-      <div class="tgc-text">
-        <div class="tgc-name">${t.name}</div>
-        <div class="tgc-desc">${t.desc}</div>
-      </div>
-      <span class="tgc-arrow">›</span>
-    </div>`;
-  }).join('');
-
-  // If already pre-selected from deck, enable next button
-  if (preSelected) {
-    const btn = document.getElementById('trait-next-btn');
-    if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
-  }
-}
-
-function selectTrait(key, el, e) {
-  const wasSelected = state.trait === key && el.classList.contains('selected');
-  state.trait = key;
-  document.querySelectorAll('.trait-grid-card').forEach(c => c.classList.remove('selected','pop'));
-  el.classList.add('selected');
-  void el.offsetWidth;
-  el.classList.add('pop');
-  addRipple(el, e);
-  const btn = document.getElementById('trait-next-btn');
-  btn.disabled = false;
-  btn.style.opacity = '1';
-  // Second tap → auto-advance to upload
-  if (wasSelected) {
-    setTimeout(() => goTo('upload'), 160);
-  }
-}
-
-// ============================
-// SCREEN 4: MONSTER
-// ============================
-function goToMonster() {
-  if (!state.category) return;
-  state.monster = MONSTERS[state.category] || MONSTERS.mystery;
-  document.getElementById('monster-photo').src = state.photoUrl;
-  document.getElementById('monster-emoji').innerHTML = MONSTER_SVG[state.category] || MONSTER_SVG.mystery;
-  document.getElementById('monster-type').textContent = state.monster.type;
-  document.getElementById('monster-name').textContent = state.monster.name;
-  document.getElementById('monster-message').textContent = '「' + state.monster.message + '」';
-
-  // Reset emoji animation
-  const emojiEl = document.getElementById('monster-emoji');
-  emojiEl.style.animation = 'none';
-  void emojiEl.offsetWidth;
-  emojiEl.style.animation = '';
-
-  goTo('monster');
-
-  // Screen flash
-  const screen = document.getElementById('screen-monster');
-  screen.classList.remove('flashing');
-  void screen.offsetWidth;
-  screen.classList.add('flashing');
-
-  // Shockwave rings
-  const card = document.getElementById('monster-card');
-  card.classList.remove('glowing');
-  ['', 'r2', 'r3'].forEach((cls, i) => {
-    setTimeout(() => {
-      const sw = document.createElement('div');
-      sw.className = 'shockwave' + (cls ? ' ' + cls : '');
-      card.appendChild(sw);
-      sw.addEventListener('animationend', () => sw.remove());
-    }, i * 10);
-  });
-
-  // Glow card
-  setTimeout(() => card.classList.add('glowing'), 400);
-}
-
-// ============================
-// MISSION VISUAL HELPERS
-// ============================
-const MISSION_VISUAL_KEYWORDS = [
-  ['🔊', ['音', 'きこえ', '声', 'ナレーション', 'アナウンス', '鳴き']],
-  ['🎨', ['色', 'カラー', '絵']],
-  ['💭', ['気持ち', 'キモチ', '感じ', 'うれしい', 'ねむい', 'ドキドキ']],
-  ['🔍', ['観察', 'じっくり', '調査', '探偵', '探せ', '見つ']],
-  ['⚔️', ['サバイバル', 'ミッション', '脱出', '作戦', '戦略', '謎を解']],
-  ['📖', ['想像', 'ストーリー', '物語', 'ナレーター']],
-  ['🧪', ['材料', '作り方', '料理', '成分']],
-  ['💧', ['水', '生命', '育', '光合成']],
-  ['🔮', ['ひみつ', '謎', 'ふしぎ', '不思議', 'かくれ']],
-  ['⭐', ['星', '評価', 'どのくらい', 'どれくらい']],
-  ['📏', ['大きさ', '速さ', '速い', 'サイズ']],
-  ['💬', ['話しかけ', '声に出', 'セリフ', '言葉']],
-  ['🤔', ['比べ', '違い', 'どっち', 'どちら', '差']],
-  ['🌟', ['一番', 'いちばん', '最強', '究極', '最高']],
-];
-const CAT_DEFAULT_EMOJI = {
-  animal: '🐾', food: '🍳', vehicle: '🚗', plant: '🌿', mystery: '✨',
-};
-const LEVEL_VISUAL_BG = {
-  1: 'linear-gradient(135deg,#064e3b 0%,#065f46 55%,#38ef7d 100%)',
-  2: 'linear-gradient(135deg,#7c2d12 0%,#c2410c 55%,#f7971e 100%)',
-  3: 'linear-gradient(135deg,#4c1d95 0%,#7c3aed 55%,#f953c6 100%)',
-};
-
-function getMissionVisual(m, cat) {
-  const text = (m.title || '') + ' ' + (m.body || '');
-  for (const [emoji, keywords] of MISSION_VISUAL_KEYWORDS) {
-    if (keywords.some(kw => text.includes(kw))) return emoji;
-  }
-  return CAT_DEFAULT_EMOJI[cat] || '✨';
-}
-
-function missionCardHTML(m, idx, cat) {
-  const emoji = getMissionVisual(m, cat);
-  const bg    = LEVEL_VISUAL_BG[m.level] || LEVEL_VISUAL_BG[2];
-  const clickAttr = idx !== null ? `id="mission-card-${idx}" onclick="selectMission(${idx}, this, event)"` : '';
-  return `
-    <div class="mission-card ${LEVEL_CLASS[m.level]}" ${clickAttr}>
-      <div class="mission-visual" style="background:${bg}">
-        <span class="mission-visual-emoji">${emoji}</span>
-      </div>
-      <div class="mission-card-top">
-        <span class="mission-level-badge">${LEVEL_LABELS[m.level]}</span>
-        <span class="mission-type-icon">${ANSWER_TYPE_ICON[m.answerType] || '✏️'}</span>
-      </div>
-      <div class="mission-title">${m.title}</div>
-      <div class="mission-body">${m.body}</div>
-    </div>`;
-}
-
-function answerMissionCardHTML(m) {
-  const cat    = state.category || 'mystery';
-  const emoji  = getMissionVisual(m, cat);
-  const photo  = state.photoUrl
-    ? `<img class="answer-mission-photo" src="${state.photoUrl}" alt="写真">`
-    : `<div class="answer-mission-photo-placeholder">${CAT_DEFAULT_EMOJI[cat] || '✨'}</div>`;
-  return `
-    <div class="answer-mission-visual">
-      ${photo}
-      <div class="answer-mission-info">
-        <div class="answer-mission-level">${LEVEL_LABELS[m.level]}</div>
-        <div class="answer-mission-title">${m.title}</div>
-      </div>
-      <span style="font-size:38px;flex-shrink:0;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.3))">${emoji}</span>
-    </div>
-    <div class="answer-mission-body">${m.body}</div>`;
-}
-
-// ============================
-// SCREEN 5: MISSIONS
-// ============================
-function buildMissions() {
-  const cat   = state.category || 'mystery';
-  const trait = state.trait    || 'short_attention';
-  const base  = (MISSIONS[cat] && MISSIONS[cat][trait]) || MISSIONS.mystery.short_attention;
-  const extra = EXTRA_MISSIONS[trait];
-
-  // Pool = base 3 + extra 1 → random shuffle → pick 3
-  const pool = [...base, extra];
-  // Fisher-Yates shuffle
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [pool[i], pool[j]] = [pool[j], pool[i]];
-  }
-  state.missions = pool.slice(0, 3);
-  state.selectedMissionIdx = null;
-
-  const list = document.getElementById('mission-list');
-  list.innerHTML = state.missions.map((m, i) => missionCardHTML(m, i, cat)).join('');
-
-  // Reset dots
-  for (let i = 0; i < 3; i++) {
-    const dot = document.getElementById('dot-' + i);
-    if (dot) { dot.className = 'mission-dot' + (i === 0 ? ' active' : ''); }
-  }
-
-  // Scroll dot sync
-  list.onscroll = () => {
-    const cardWidth = list.querySelector('.mission-card')?.offsetWidth || 240;
-    const gap = 14;
-    const idx = Math.round(list.scrollLeft / (cardWidth + gap));
-    for (let i = 0; i < 3; i++) {
-      const dot = document.getElementById('dot-' + i);
-      if (dot) dot.className = 'mission-dot' + (i === idx ? ' active' : '');
-    }
+// =============================================
+// SCREEN 4: MAP
+// =============================================
+function refreshMap(){
+  updateHUD();
+  const catInfo={
+    animal:'🐾 いきもの',food:'🍜 たべもの',
+    vehicle:'⚙️ きかい',plant:'🌿 しぜん',mystery:'✨ ふしぎ'
   };
+  const badge=document.getElementById('map-cat-badge');
+  if(badge)badge.textContent=catInfo[state.category]||'✨ ふしぎ';
+  const dl=document.getElementById('map-depth-label');
+  if(dl)dl.textContent=`深度 ${state.depth}`;
 
-  const btn = document.getElementById('mission-next-btn');
-  btn.disabled = true;
-  btn.style.opacity = '0.4';
-  goTo('missions');
-}
-
-function selectMission(idx, el, e) {
-  const wasSelected = state.selectedMissionIdx === idx;
-  state.selectedMissionIdx = idx;
-  document.querySelectorAll('.mission-card').forEach(c => c.classList.remove('selected'));
-  el.classList.add('selected');
-  addRipple(el, e);
-  const btn = document.getElementById('mission-next-btn');
-  btn.disabled = false;
-  btn.style.opacity = '1';
-  // Double-tap or 2nd click → auto advance
-  if (wasSelected) {
-    setTimeout(() => goToAnswer(), 180);
-  }
-}
-
-// ============================
-// SCREEN 6: ANSWER
-// ============================
-function goToAnswer() {
-  if (state.selectedMissionIdx === null) return;
-  // Reset per-answer state
-  state.answerAttempts = 0;
-  state.answer = null;
-  state.selectedStars = 0;
-
-  const m = state.missions[state.selectedMissionIdx];
-  document.getElementById('answer-mission-card').innerHTML = answerMissionCardHTML(m);
-  renderAnswerUI(m);
-  goTo('answer');
-}
-
-// ---- visual choice helpers ----
-function parseChoiceVisual(text) {
-  const t = text.trim();
-  // Leading emoji (Extended_Pictographic at start, followed by space + text)
-  let m = t.match(/^(\p{Extended_Pictographic}(?:\uFE0F)?(?:\u20E3)?)\s+([\s\S]+)$/u);
-  if (m) return { icon: m[1], label: m[2].trim() };
-  // Trailing emoji
-  m = t.match(/^([\s\S]+?)\s*(\p{Extended_Pictographic}(?:\uFE0F)?)$/u);
-  if (m && m[1].trim()) return { icon: m[2], label: m[1].trim() };
-  return { icon: null, label: t };
-}
-
-function vcbHTML(text, clickFn) {
-  const { icon, label } = parseChoiceVisual(text);
-  const safe = text.replace(/"/g, '&quot;');
-  const inner = icon
-    ? `<span class="vcb-icon">${icon}</span><span class="vcb-label">${label}</span>`
-    : `<span class="vcb-text-only">${label}</span>`;
-  return `<button class="vcb" onclick="${clickFn}(this,event)" data-value="${safe}">${inner}</button>`;
-}
-
-function renderAnswerUI(m) {
-  const ui = document.getElementById('answer-ui');
-  const trait = state.trait;
-
-  switch (m.answerType) {
-    case 'rating': {
-      const labels = m.ratingLabels || ['','','','',''];
-      ui.innerHTML = `
-        <div class="star-rating" id="star-rating">
-          ${[1,2,3,4,5].map(n => `<button class="star-btn" onclick="selectStar(${n})">⭐</button>`).join('')}
-        </div>
-        <div class="star-label" id="star-label">⬆ タップして評価しよう</div>
-      `;
-      ui.dataset.ratingLabels = JSON.stringify(labels);
-      setSubmitBtn(false);
-      break;
-    }
-    case 'choose+why':
-      ui.innerHTML = `
-        <div class="visual-choices col2" id="why-choices">
-          ${m.choices.map(c => vcbHTML(c, 'selectChoiceForWhy')).join('')}
-        </div>
-        <div class="why-section" id="why-section" style="display:none">
-          <hr class="why-divider">
-          <div class="why-label">💬 なぜそう思った？</div>
-          <textarea class="answer-textarea" id="answer-text"
-            placeholder="なぜそう思った？なんでも書いてOKだよ！" oninput="checkAnswerReady()"></textarea>
-          <div class="char-counter warn" id="char-counter">なにか書いてみよう！</div>
-        </div>
-      `;
-      setSubmitBtn(false);
-      break;
-    case 'choices': {
-      const cols = m.choices.length >= 3 ? ' col3' : '';
-      ui.innerHTML = `<div class="visual-choices${cols}">
-        ${m.choices.map(c => vcbHTML(c, 'selectChoice')).join('')}
-      </div>`;
-      setSubmitBtn(false);
-      break;
-    }
-    case 'text':
-    default:
-      if (trait === 'audio_preferred') {
-        ui.innerHTML = `
-          <div class="audio-ui">
-            <button class="mic-btn" onclick="this.textContent='⏹️';this.style.background='linear-gradient(135deg,#38ef7d,#11998e)'">🎤</button>
-            <div class="mic-hint">マイクボタンを押して声で答えよう</div>
-            <div style="color:rgba(255,255,255,0.4);font-size:11px">または下に文字で入力</div>
-          </div>
-          <textarea class="answer-textarea" id="answer-text"
-            placeholder="こたえを入力…（10文字以上）" oninput="checkAnswerReady()"></textarea>
-          <div class="char-counter warn" id="char-counter">0 / 10文字</div>
-        `;
-      } else {
-        ui.innerHTML = `
-          <textarea class="answer-textarea" id="answer-text"
-            placeholder="なんでもいいから書いてみよう！どんな答えでもOKだよ🙆" oninput="checkAnswerReady()"></textarea>
-          <div class="char-counter warn" id="char-counter">なんでもいいから書いてみよう！</div>
-        `;
-      }
-      setSubmitBtn(false);
-  }
-}
-
-function setSubmitBtn(enabled) {
-  const btn = document.getElementById('submit-btn');
-  btn.disabled = !enabled;
-  btn.style.opacity = enabled ? '1' : '0.4';
-}
-
-// ---- choices ----
-function selectChoice(el, e) {
-  document.querySelectorAll('.visual-choices .vcb, .answer-choices .choice-btn').forEach(b => b.classList.remove('selected'));
-  el.classList.add('selected');
-  state.answer = el.dataset.value || el.textContent.trim();
-  addRipple(el, e);
-  setSubmitBtn(true);
-}
-
-// ---- choose+why ----
-function selectChoiceForWhy(el, e) {
-  document.querySelectorAll('#why-choices .vcb, #why-choices .choice-btn').forEach(b => b.classList.remove('selected'));
-  el.classList.add('selected');
-  state.answer = el.dataset.value || el.textContent.trim();
-  addRipple(el, e);
-  const why = document.getElementById('why-section');
-  if (why) {
-    why.style.display = 'block';
-    setTimeout(() => document.getElementById('answer-text')?.focus(), 150);
-  }
-  checkAnswerReady();
-}
-
-// ---- rating ----
-function selectStar(n) {
-  state.selectedStars = n;
-  document.querySelectorAll('.star-btn').forEach((b, i) => {
-    b.classList.toggle('lit', i < n);
+  const feed=document.getElementById('map-quest-feed');
+  const quests=getQuestsForMap();
+  feed.innerHTML=quests.map((q,i)=>questCardHTML(q,i,'map')).join('');
+  // stagger
+  feed.querySelectorAll('.qcard').forEach((c,i)=>{
+    c.style.animationDelay=(i*70)+'ms';
   });
-  const labelsRaw = document.getElementById('answer-ui').dataset.ratingLabels;
-  const labels = labelsRaw ? JSON.parse(labelsRaw) : [];
-  const lbl = document.getElementById('star-label');
-  if (lbl) lbl.textContent = labels[n - 1] || `${n}つ星！`;
-  setSubmitBtn(true);
 }
 
-// ---- char counter / ready check ----
-function checkAnswerReady() {
-  const ta = document.getElementById('answer-text');
-  if (!ta) return;
-  const len = ta.value.trim().length;
-  const counter = document.getElementById('char-counter');
-  const m = state.missions[state.selectedMissionIdx];
-  const isTextOnly = m && m.answerType === 'text';
-
-  if (counter) {
-    if (len >= BONUS_TEXT_LEN) {
-      counter.textContent = `${len}文字 ✨ くわしい！`;
-      counter.className = 'char-counter bonus';
-    } else if (len >= 1) {
-      counter.textContent = isTextOnly ? `${len}文字 ✓ 送れるよ！` : `${len}文字 ✓`;
-      counter.className = 'char-counter ok';
-    } else {
-      counter.textContent = isTextOnly ? 'なんでもいいから書いてみよう！' : 'なにか書いてみよう！';
-      counter.className = 'char-counter warn';
-    }
-  }
-
-  if (m && m.answerType === 'choose+why') {
-    // choose+why は理由テキスト1文字以上 + 選択済みの両方必要
-    setSubmitBtn(len >= 1 && !!state.answer);
-  } else if (isTextOnly) {
-    // 記述式は1文字以上でOK
-    setSubmitBtn(len >= 1);
-  } else {
-    setSubmitBtn(len >= MIN_TEXT_LEN);
-  }
+function updateHUD(){
+  const pct=Math.min(state.depth/12*100,100);
+  const fill=document.getElementById('hud-fill');
+  if(fill)fill.style.width=pct+'%';
+  const xp=document.getElementById('hud-xp');
+  if(xp)xp.textContent=`⭐ ${state.xp}`;
 }
 
-// ---- validate ----
-function validateAnswer() {
-  const m = state.missions[state.selectedMissionIdx];
-  if (!m) return { valid: true, bonus: false };
+function getQuestsForMap(){
+  const trait=state.trait||'speed';
+  const moodBoost={hot:1,ok:0,tired:-1}[state.mood]||0;
+  const effectiveDepth=Math.max(0,state.depth+moodBoost);
 
-  if (m.answerType === 'choices') {
-    return { valid: !!state.answer, bonus: false, reason: '選択肢を選んでみよう！' };
-  }
-  if (m.answerType === 'rating') {
-    return { valid: state.selectedStars > 0, bonus: state.selectedStars >= 4, reason: '星をタップして評価しよう！' };
-  }
-
-  const ta = document.getElementById('answer-text');
-  const text = ta ? ta.value.trim() : '';
-
-  if (m.answerType === 'choose+why') {
-    if (!state.answer) return { valid: false, reason: 'まず選択肢を選んでみよう！' };
-    if (text.length < 1) return { valid: false, reason: 'なぜそう思ったか書いてみよう！' };
-  } else {
-    // 記述式はどんな回答でも正解 — 1文字あれば送れる
-    if (text.length < 1) return { valid: false, reason: 'なにか書いてみよう！' };
-  }
-
-  const bonus = text.length >= BONUS_TEXT_LEN;
-  return { valid: true, bonus };
+  return QUESTS
+    .filter(q=>
+      (q.cat===state.category || q.cat==='mystery') &&
+      q.dm<=effectiveDepth
+    )
+    .map(q=>({q, score:(q.tw[trait]||1)+(Math.random()*.4)}))
+    .sort((a,b)=>b.score-a.score)
+    .slice(0,5)
+    .map(x=>x.q);
 }
 
-// ---- retry overlay ----
-function showRetry(reason) {
-  state.answerAttempts++;
-  const remaining = MAX_ATTEMPTS - state.answerAttempts;
-  const titles    = ['もうちょっとだけ！', 'いい感じ！もう少し！', 'あと一歩！'];
-  const idx       = Math.min(state.answerAttempts - 1, titles.length - 1);
-
-  document.getElementById('retry-monster-emoji').innerHTML = MONSTER_SVG[state.category] || MONSTER_SVG.mystery;
-  document.getElementById('retry-title').textContent = titles[idx];
-  document.getElementById('retry-msg').textContent   = reason;
-
-  const attEl = document.getElementById('retry-attempts');
-  if (remaining <= 0) {
-    attEl.textContent = '短くてもいいから自分の言葉で書いてみよう！';
-    attEl.className = 'retry-attempts danger';
-  } else {
-    attEl.textContent = `あと${remaining}回チャレンジできるよ`;
-    attEl.className = 'retry-attempts';
-  }
-
-  // Reset wiggle animation
-  const emojiEl = document.getElementById('retry-monster-emoji');
-  emojiEl.style.animation = 'none';
-  void emojiEl.offsetWidth;
-  emojiEl.style.animation = '';
-
-  document.getElementById('retry-overlay').style.display = 'flex';
-}
-
-function closeRetry() {
-  document.getElementById('retry-overlay').style.display = 'none';
-  setTimeout(() => document.getElementById('answer-text')?.focus(), 100);
-}
-
-// ============================
-// SUBMIT → インラインフィードバック
-// ============================
-function submitAnswer() {
-  const v = validateAnswer();
-  if (!v.valid && state.answerAttempts < MAX_ATTEMPTS) {
-    showRetry(v.reason || 'もう少し考えてみよう！');
-    return;
-  }
-
-  const baseXP = [30, 50, 80][state.missions[state.selectedMissionIdx].level - 1];
-  const gained = baseXP + (v.bonus ? 20 : 0);
-  state.answeredMissions.add(state.selectedMissionIdx);
-  state.prevXp = state.xp;
-  state.xp += gained;
-
-  showInlineResult(v, gained);
-}
-
-function showInlineResult(v, gained) {
-  // State切替
-  document.getElementById('answer-state').style.display = 'none';
-  const ir = document.getElementById('inline-result');
-  ir.style.display = 'flex';
-  ir.style.flexDirection = 'column';
-
-  // XP表示
-  document.getElementById('inline-xp-label').textContent = `+${gained} XP ゲット！`;
-
-  const me = document.getElementById('inline-monster-emoji');
-  me.innerHTML = MONSTER_SVG[state.category] || MONSTER_SVG.mystery;
-  me.style.animation = 'none'; void me.offsetWidth; me.style.animation = '';
-
-  // ---- 回答スニペットを取得 ----
-  const ta = document.getElementById('answer-text');
-  let answerSnippet = (ta && ta.value.trim()) || state.answer || '…';
-  if (answerSnippet.length > 18) answerSnippet = answerSnippet.slice(0, 18) + '…';
-
-  // ---- モンスターの個性でリアクション ----
-  const cat = state.category || 'mystery';
-  const pool = MONSTER_COMMENTS[cat] || MONSTER_COMMENTS.mystery;
-  const commentFn = pool[Math.floor(Math.random() * pool.length)];
-  const [reaction, sub] = commentFn(answerSnippet);
-
-  if (v.bonus) {
-    // ボーナス時：回答に驚きつつボーナスも伝える
-    document.getElementById('inline-reaction').textContent = `「${answerSnippet}」…そこまで書いてくれたの！？`;
-    document.getElementById('inline-sub').textContent = `くわしく考えてくれてありがとう！${sub}`;
-    document.getElementById('inline-effect').textContent = `⭐ くわしいボーナス！+${gained} XP（+20UP）`;
-  } else {
-    document.getElementById('inline-reaction').textContent = reaction;
-    document.getElementById('inline-sub').textContent = sub;
-    document.getElementById('inline-effect').textContent = `+${gained} XP ゲット！`;
-  }
-
-  // XP バー
-  const pct = Math.min(state.xp / 300 * 100, 100);
-  setTimeout(() => { document.getElementById('inline-xp-bar').style.width = pct + '%'; }, 200);
-
-  // XP カウントアップ
-  setTimeout(() => animateXP(state.prevXp, state.xp, 900), 300);
-
-  // 雑学カード
-  showTrivia();
-
-  // 関連ミッション生成
-  buildRelatedMissions();
-
-  // エフェクト
-  setTimeout(() => { spawnConfetti(); spawnBurst(); }, 150);
-
-  // 上にスクロール
-  ir.scrollTop = 0;
-}
-
-// ============================
-// 雑学表示
-// ============================
-function showTrivia() {
-  const cat   = state.category || 'mystery';
-  const level = state.missions[state.selectedMissionIdx]?.level || 1;
-
-  const pool    = (TRIVIA[cat] || TRIVIA.mystery);
-  const matched = pool.filter(t => t.level === level);
-  const items   = matched.length > 0 ? matched : pool;
-  const item    = items[Math.floor(Math.random() * items.length)];
-  state._currentTrivia = { ...item, category: cat };
-
-  // Visual header background
-  const visual = document.getElementById('trivia-visual');
-  visual.style.background = TRIVIA_CAT_BG[cat] || TRIVIA_CAT_BG.mystery;
-
-  document.getElementById('trivia-emoji').textContent = item.emoji;
-  document.getElementById('trivia-text').textContent  = item.fact;
-
-  // Save button state
-  const saved = isTriviaAlreadySaved(item);
-  const saveBtn = document.getElementById('trivia-save-btn');
-  saveBtn.textContent = saved ? '⭐ 保存済み' : '⭐ 保存';
-  saveBtn.className   = 'trivia-save-btn' + (saved ? ' saved' : '');
-
-  document.getElementById('trivia-card').style.display = 'block';
-}
-
-// ============================
-// 雑学フォルダ（localStorage）
-// ============================
-const STORAGE_KEY = 'tomori_saved_trivia';
-
-function getSavedTrivia() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
-  catch { return []; }
-}
-
-function isTriviaAlreadySaved(item) {
-  return getSavedTrivia().some(s => s.fact === item.fact);
-}
-
-function toggleSaveTrivia() {
-  const item = state._currentTrivia;
-  if (!item) return;
-  const list = getSavedTrivia();
-  const idx  = list.findIndex(s => s.fact === item.fact);
-  const saveBtn = document.getElementById('trivia-save-btn');
-
-  if (idx >= 0) {
-    list.splice(idx, 1);
-    saveBtn.textContent = '⭐ 保存';
-    saveBtn.className   = 'trivia-save-btn';
-  } else {
-    list.unshift({ emoji: item.emoji, fact: item.fact, category: item.category, level: item.level, savedAt: Date.now() });
-    saveBtn.textContent = '⭐ 保存済み';
-    saveBtn.className   = 'trivia-save-btn saved';
-    // プチアニメ
-    saveBtn.style.transform = 'scale(1.15)';
-    setTimeout(() => { saveBtn.style.transform = ''; }, 200);
-  }
-
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-  updateFolderBtn();
-}
-
-function updateFolderBtn() {
-  const list  = getSavedTrivia();
-  const btn   = document.getElementById('folder-btn');
-  const badge = document.getElementById('folder-count-badge');
-  if (!btn) return;
-  if (list.length > 0) {
-    btn.style.display = 'block';
-    if (badge) badge.textContent = `(${list.length}件)`;
-  } else {
-    btn.style.display = 'none';
-  }
-}
-
-function buildFolderScreen() {
-  const list    = getSavedTrivia();
-  const content = document.getElementById('folder-content');
-  const empty   = document.getElementById('folder-empty');
-
-  if (list.length === 0) {
-    content.innerHTML = '';
-    empty.style.display = 'flex';
-    return;
-  }
-  empty.style.display = 'none';
-
-  content.innerHTML = `
-    <div class="folder-list">
-      ${list.map((item, i) => `
-        <div class="folder-item">
-          <div class="folder-item-visual" style="background:${TRIVIA_CAT_BG[item.category] || TRIVIA_CAT_BG.mystery}">
-            <span style="position:relative;z-index:1;font-size:52px">${item.emoji}</span>
-          </div>
-          <div class="folder-item-body">
-            <div class="folder-item-text">${item.fact}</div>
-            <button class="folder-item-del" onclick="removeSavedTrivia(${i})" title="削除">×</button>
-          </div>
-        </div>
-      `).join('')}
+function questCardHTML(q,i,ctx){
+  const stars='★'.repeat(q.dm+1)+'☆'.repeat(Math.max(0,3-q.dm-1));
+  return `<div class="qcard qt-${q.type} new" style="animation-delay:${i*70}ms"
+    onclick="${ctx==='map'?`openQuest('${q.id}')`:`openQuestFromComplete('${q.id}')`}">
+    <div class="qcard-vis"><div class="qcard-em">${q.em}</div></div>
+    <div class="qcard-info">
+      <div class="qcard-badge">${q.fl}</div>
+      <div class="qcard-title">${q.title}</div>
+      <div class="qcard-meta">
+        <div class="qcard-stars">${stars}</div>
+        <div class="qcard-xp">+${q.xp}</div>
+      </div>
     </div>
-    <button class="folder-clear-btn" onclick="clearAllSaved()">🗑️ すべて削除</button>
-  `;
+  </div>`;
 }
 
-function removeSavedTrivia(idx) {
-  const list = getSavedTrivia();
-  list.splice(idx, 1);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-  buildFolderScreen();
-  updateFolderBtn();
+// =============================================
+// SCREEN 5: MISSION
+// =============================================
+function openQuest(id){
+  const q=QUESTS.find(x=>x.id===id);
+  if(!q)return;
+  state.currentQuest=q;
+  state.answer=null;
+  state.choiceSelected=null;
+  renderMission(q);
+  goTo('mission');
 }
+function openQuestFromComplete(id){openQuest(id);}
 
-function clearAllSaved() {
-  if (!confirm('保存した雑学をすべて削除しますか？')) return;
-  localStorage.removeItem(STORAGE_KEY);
-  buildFolderScreen();
-  updateFolderBtn();
-}
-
-function deepDiveTrivia() {
-  const item = state._currentTrivia;
-  if (!item) return;
-
-  // 雑学テキストからキーワード抽出
-  const keywords = item.fact
-    .replace(/[、。！？…\s]/g, ' ')
-    .split(' ')
-    .map(w => w.trim())
-    .filter(w => w.length >= 2);
-
-  // キーワードでミッション検索
-  const cat  = state.category || 'mystery';
-  const pool = [];
-  Object.keys(MISSIONS[cat] || {}).forEach(t => {
-    (MISSIONS[cat][t] || []).forEach(m => pool.push({...m}));
-  });
-  Object.values(EXTRA_MISSIONS).forEach(m => pool.push({...m}));
-
-  // 現在のミッションを除外
-  const currentTitle = state.missions[state.selectedMissionIdx]?.title;
-  const filtered = pool.filter(m => m.title !== currentTitle);
-
-  // スコアリング
-  filtered.forEach(m => {
-    const hay = m.title + m.body;
-    m._score = keywords.filter(k => hay.includes(k)).length;
-    m._sort  = m._score * 10 + Math.random() * 5;
-  });
-  filtered.sort((a, b) => b._sort - a._sort);
-
-  // 上位ミッションを1つ選んで回答画面へ
-  const picked = filtered[0];
-  if (!picked) return;
-
-  // missionsリストに追加してそのまま回答画面へ
-  state.missions.push(picked);
-  state.selectedMissionIdx = state.missions.length - 1;
-  goTo('answer');
-  document.getElementById('answer-state').style.display = 'flex';
-  document.getElementById('answer-state').style.flexDirection = 'column';
-  document.getElementById('inline-result').style.display = 'none';
-  state.answerAttempts = 0;
-  state.answer = null;
-  state.selectedStars = 0;
-  const m2 = state.missions[state.selectedMissionIdx];
-  document.getElementById('answer-mission-card').innerHTML = answerMissionCardHTML(m2);
-  renderAnswerUI(m2);
-  setSubmitBtn(false);
-  document.getElementById('answer-back-btn').onclick = () => goTo('missions');
-}
-
-// ============================
-// 関連ミッション生成
-// ============================
-const ANSWER_TYPE_ICON = {
-  text: '✏️', choices: '👆', 'choose+why': '💬', rating: '⭐',
-};
-
-function generateRelatedMissions() {
-  const cat   = state.category || 'mystery';
-  const currentTitle = state.missions[state.selectedMissionIdx]?.title;
-  const pool  = [];
-
-  // 全トレイトのミッションを収集
-  Object.keys(MISSIONS[cat] || {}).forEach(t => {
-    (MISSIONS[cat][t] || []).forEach(m => pool.push({...m}));
-  });
-  // EXTRAも追加
-  Object.values(EXTRA_MISSIONS).forEach(m => pool.push({...m}));
-
-  // 現在のミッションを除外
-  const filtered = pool.filter(m => m.title !== currentTitle);
-
-  // 回答テキストからキーワード抽出してスコアリング
-  const answerEl = document.getElementById('answer-text');
-  const answerText = (answerEl ? answerEl.value : '') || (state.answer || '');
-  const keywords = answerText
-    .replace(/[、。！？…\s]/g, ' ')
-    .split(' ')
-    .map(w => w.trim())
-    .filter(w => w.length >= 2);
-
-  filtered.forEach(m => {
-    const haystack = m.title + m.body;
-    const matchCount = keywords.filter(kw => haystack.includes(kw)).length;
-    // キーワードマッチ数×10 + ランダム成分（多様性確保）
-    m._sort = matchCount * 10 + Math.random() * 5;
-  });
-
-  // スコア降順でソート
-  filtered.sort((a, b) => b._sort - a._sort);
-  return filtered.slice(0, 4);
-}
-
-function buildRelatedMissions() {
-  const missions = generateRelatedMissions();
-  const cat    = state.category || 'mystery';
-  const scroll = document.getElementById('next-scroll');
-  scroll.innerHTML = missions.map((m, i) => {
-    const emoji = getMissionVisual(m, cat);
-    const bg    = LEVEL_VISUAL_BG[m.level] || LEVEL_VISUAL_BG[2];
-    return `
-    <div class="next-card ${LEVEL_CLASS[m.level]}" onclick="selectRelatedMission(${i})"
-         id="related-card-${i}">
-      <div class="next-card-visual" style="background:${bg}">
-        <span class="next-card-emoji">${emoji}</span>
-      </div>
-      <div class="next-card-info">
-        <span class="next-card-level-dot"></span>
-        <div class="next-card-title">${m.title}</div>
-      </div>
-    </div>`;
-  }).join('');
-  state.relatedMissions = missions;
-}
-
-function selectRelatedMission(idx) {
-  const m = state.relatedMissions[idx];
-  if (!m) return;
-
-  // リップル
-  addRipple(document.getElementById('related-card-' + idx));
-
-  // State A に戻す
-  setTimeout(() => {
-    state.answerAttempts = 0;
-    state.answer = null;
-    state.selectedStars = 0;
-
-    // missionsに新しいミッションをセット
-    state.missions = [m];
-    state.selectedMissionIdx = 0;
-
-    // UIを更新
-    document.getElementById('answer-mission-card').innerHTML = answerMissionCardHTML(m);
-    renderAnswerUI(m);
-
-    // StateB→A 切替
-    document.getElementById('trivia-card').style.display = 'none';
-    document.getElementById('inline-result').style.display = 'none';
-    const as = document.getElementById('answer-state');
-    as.style.display = 'flex';
-    as.style.flexDirection = 'column';
-    // 戻るボタンはインライン結果へ
-    document.getElementById('answer-back-btn').onclick = () => {
-      as.style.display = 'none';
-      document.getElementById('inline-result').style.display = 'flex';
-      document.getElementById('inline-result').style.flexDirection = 'column';
-    };
-  }, 120);
-}
-
-// XP count-up（inline-xp-labelを使う）
-function animateXP(from, to, duration) {
-  const el = document.getElementById('inline-xp-label');
-  if (!el) return;
-  const start = performance.now();
-  const tick = (now) => {
-    const t   = Math.min((now - start) / duration, 1);
-    const ease = 1 - Math.pow(1 - t, 3);
-    const cur  = Math.round(from + (to - from) * ease);
-    el.textContent = `合計 ${cur} XP`;
-    if (t < 1) requestAnimationFrame(tick);
-    else el.innerHTML = `合計 <span class="xp-pop">${to} XP</span>`;
+function renderMission(q){
+  // top bar
+  const pill=document.getElementById('mbar-type-pill');
+  const typeColors={
+    discover:'background:rgba(217,119,6,.2);color:#fbbf24;border:1px solid rgba(217,119,6,.3)',
+    battle:'background:rgba(220,38,38,.2);color:#f87171;border:1px solid rgba(220,38,38,.3)',
+    mystery:'background:rgba(124,58,237,.2);color:#a78bfa;border:1px solid rgba(124,58,237,.3)',
+    craft:'background:rgba(5,150,105,.2);color:#34d399;border:1px solid rgba(5,150,105,.3)',
+    explore:'background:rgba(2,132,199,.2);color:#38bdf8;border:1px solid rgba(2,132,199,.3)',
   };
-  requestAnimationFrame(tick);
-}
+  pill.style.cssText=typeColors[q.type]||'';
+  pill.textContent=q.fl;
+  document.getElementById('mbar-title').textContent=q.title;
 
-// Burst（inline-confettiコンテナを使う）
-function spawnBurst() {
-  const wrap   = document.getElementById('inline-confetti');
-  if (!wrap) return;
-  const colors = ['#ffd200','#f953c6','#38ef7d','#00b4d8','#ff6b6b'];
-  for (let i = 0; i < 20; i++) {
-    const el    = document.createElement('div');
-    el.className = 'burst-piece';
-    const angle = (i / 20) * 360;
-    const dist  = 80 + Math.random() * 100;
-    const rad   = angle * Math.PI / 180;
-    el.style.setProperty('--tx', `${Math.cos(rad) * dist}px`);
-    el.style.setProperty('--ty', `${Math.sin(rad) * dist}px`);
-    el.style.background = colors[i % colors.length];
-    el.style.animationDuration = (0.4 + Math.random() * 0.35) + 's';
-    el.style.width = el.style.height = (6 + Math.random() * 8) + 'px';
-    wrap.appendChild(el);
-    el.addEventListener('animationend', () => el.remove());
+  // hero
+  const hero=document.getElementById('mission-hero-vis');
+  const heroGrads={
+    discover:'linear-gradient(145deg,#92400e,#d97706,#fde68a)',
+    battle:'linear-gradient(145deg,#7f1d1d,#dc2626,#fca5a5)',
+    mystery:'linear-gradient(145deg,#2e1065,#7c3aed,#c4b5fd)',
+    craft:'linear-gradient(145deg,#064e3b,#059669,#6ee7b7)',
+    explore:'linear-gradient(145deg,#0c4a6e,#0284c7,#7dd3fc)',
+  };
+  hero.style.background=heroGrads[q.type]||heroGrads.mystery;
+  document.getElementById('mission-hero-em').textContent=q.em;
+  const mpt=document.getElementById('mission-photo-thumb');
+  if(state.photoUrl&&mpt){mpt.src=state.photoUrl;}
+
+  // companion
+  const cat=state.category||'mystery';
+  const svg=document.getElementById('companion-svg');
+  svg.innerHTML=MONSTER_SVG[cat]||MONSTER_SVG.mystery;
+  const info=MONSTER_INFO[cat]||MONSTER_INFO.mystery;
+  const trait=state.trait||'brave';
+  const introFn=COMPANION_INTRO[trait]||COMPANION_INTRO.brave;
+  document.getElementById('companion-msg').innerHTML=
+    `<b>${info.name}</b>より：${introFn(q)}`;
+
+  // prompt
+  document.getElementById('mission-prompt').textContent=q.prompt;
+
+  // answer area
+  const area=document.getElementById('answer-area');
+  const submitBtn=document.getElementById('mission-submit-btn');
+  submitBtn.disabled=true;
+
+  if(q.ans==='choices'){
+    area.innerHTML=`<div class="choices-grid">`+
+      q.ch.map((c,i)=>`<button class="choice-btn" onclick="selectChoice(${i},this)">${c}</button>`).join('')+
+      `</div>`;
+  } else {
+    area.innerHTML=`<textarea class="answer-textarea" id="ans-ta"
+      placeholder="ここに書いてみよう！" oninput="textChanged(this)"></textarea>
+      <div class="char-hint" id="char-hint">10文字以上書くと完成！</div>`;
   }
 }
 
-function spawnConfetti() {
-  const wrap = document.getElementById('confetti-wrap');
-  wrap.innerHTML = '';
-  const colors = ['#ffd200','#f953c6','#38ef7d','#00b4d8','#ff6b6b','#ffd166','#a78bfa','#fb923c'];
-  const shapes = ['rect','circle','star'];
-  for (let i = 0; i < 55; i++) {
-    const el = document.createElement('div');
-    el.className = 'confetti-piece';
-    const shape = shapes[Math.floor(Math.random() * shapes.length)];
-    const color = colors[Math.floor(Math.random() * colors.length)];
-    const size  = 6 + Math.random() * 8;
-    el.style.left   = Math.random() * 100 + '%';
-    el.style.background = color;
-    el.style.animationDuration = (1.4 + Math.random() * 2.2) + 's';
-    el.style.animationDelay    = (Math.random() * 1.0) + 's';
-    el.style.width  = size + 'px';
-    el.style.height = (shape === 'circle' ? size : size * (0.5 + Math.random())) + 'px';
-    el.style.borderRadius = shape === 'circle' ? '50%' : shape === 'star' ? '2px' : '1px';
-    el.style.transform = `rotate(${Math.random()*360}deg)`;
-    if (shape === 'star') {
-      el.style.clipPath = 'polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)';
-    }
+function selectChoice(i,el){
+  state.choiceSelected=i;
+  state.answer=state.currentQuest.ch[i];
+  document.querySelectorAll('.choice-btn').forEach(b=>b.classList.remove('chosen'));
+  el.classList.add('chosen');
+  document.getElementById('mission-submit-btn').disabled=false;
+}
+
+function textChanged(ta){
+  const len=ta.value.trim().length;
+  const hint=document.getElementById('char-hint');
+  const btn=document.getElementById('mission-submit-btn');
+  if(hint){
+    if(len>=10){hint.textContent='✅ 完璧！';hint.style.color='var(--green)';}
+    else{hint.textContent=`あと${10-len}文字書くと完成！`;hint.style.color='';}
+  }
+  btn.disabled=len<5;
+  if(len>=5)state.answer=ta.value.trim();
+}
+
+// =============================================
+// SCREEN 6: COMPLETE
+// =============================================
+function submitAnswer(){
+  const q=state.currentQuest;
+  if(!q)return;
+
+  // XP & depth
+  const prevDepth=state.depth;
+  state.xp+=q.xp;
+  state.depth+=1;
+  state.completedIds.push(q.id);
+
+  // Milestone check
+  const milestones={3:'新エリア解放！🗺️',5:'ミドルエクスプローラー🔮',8:'ディープゾーン突入🌌',12:'レジェンド冒険者🏆'};
+  const milestone=milestones[state.depth];
+
+  // Build complete screen
+  const label=document.getElementById('complete-label');
+  const title=document.getElementById('complete-title');
+  const sub=document.getElementById('complete-subtitle');
+
+  const labels={discover:'ひみつ発見！',battle:'バトル勝利！',mystery:'なぞ解明！',craft:'作品完成！',explore:'探索完了！'};
+  label.textContent=labels[q.type]||'クエスト完了！';
+
+  const titles=['すごい！','やったね！','天才だ！','完璧！','レジェンド！'];
+  title.textContent=titles[Math.min(Math.floor(state.depth/3),titles.length-1)];
+  sub.textContent=`探索深度 ${prevDepth} → ${state.depth}`;
+
+  // companion
+  const cat=state.category||'mystery';
+  document.getElementById('complete-companion-svg').innerHTML=MONSTER_SVG[cat]||MONSTER_SVG.mystery;
+  document.getElementById('complete-cname').textContent=
+    (MONSTER_INFO[cat]||MONSTER_INFO.mystery).name;
+
+  const pool=COMPLETION_MESSAGES[q.type]||['よくやった！'];
+  document.getElementById('complete-msg').textContent=
+    pool[Math.floor(Math.random()*pool.length)];
+
+  // gains
+  document.getElementById('gain-depth').textContent=state.depth;
+  document.getElementById('gain-depth-sub').textContent=milestone||`深度 ${state.depth}`;
+  document.getElementById('gain-xp').textContent=`+${q.xp}`;
+
+  // next quests (related)
+  const nextQuests=getNextQuests(q);
+  document.getElementById('next-quest-feed').innerHTML=
+    nextQuests.map((nq,i)=>questCardHTML(nq,i,'complete')).join('');
+
+  goTo('complete');
+  spawnBurst();
+  updateHUD();
+
+  if(milestone){
+    setTimeout(()=>showToast(milestone),600);
+  }
+}
+
+function getNextQuests(completedQ){
+  const trait=state.trait||'speed';
+  // prefer same category, different type, +1 depth
+  return QUESTS
+    .filter(q=>
+      q.id!==completedQ.id &&
+      !state.completedIds.includes(q.id) &&
+      (q.cat===completedQ.cat||q.cat==='mystery') &&
+      q.dm<=state.depth
+    )
+    .map(q=>({q, score:(q.tw[trait]||1)+(q.type!==completedQ.type?.3:0)+(Math.random()*.3)}))
+    .sort((a,b)=>b.score-a.score)
+    .slice(0,4)
+    .map(x=>x.q);
+}
+
+// =============================================
+// EFFECTS
+// =============================================
+function spawnBurst(){
+  const wrap=document.getElementById('complete-burst');
+  if(!wrap)return;
+  wrap.innerHTML='';
+  const cols=['#ffd700','#f953c6','#38ef7d','#00b4d8','#ff6b6b','#a78bfa','#fb923c'];
+  for(let i=0;i<50;i++){
+    const el=document.createElement('div');
+    el.className='complete-burst-piece';
+    el.style.cssText=`left:${Math.random()*100}%;
+      background:${cols[i%cols.length]};
+      animation:confettiFall ${1+Math.random()*2}s ${Math.random()*.5}s linear forwards;
+      width:${5+Math.random()*6}px;height:${8+Math.random()*8}px;
+      border-radius:${Math.random()>.5?'50%':'2px'}`;
     wrap.appendChild(el);
   }
 }
 
-function nextMission() {
-  buildMissions();
+function showToast(msg){
+  const t=document.getElementById('depth-toast');
+  t.textContent=msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2800);
 }
 
-// ============================
+// =============================================
+// STARS (top screen decoration)
+// =============================================
+function buildStars(){
+  const wrap=document.getElementById('stars-wrap');
+  if(!wrap)return;
+  for(let i=0;i<50;i++){
+    const s=document.createElement('div');
+    s.className='star';
+    s.style.cssText=`left:${Math.random()*100}%;top:${Math.random()*100}%;
+      animation-delay:${Math.random()*3}s;animation-duration:${1.5+Math.random()*2}s`;
+    wrap.appendChild(s);
+  }
+}
+
+// =============================================
 // INIT
-// ============================
-function init() {
-  // Stars on top screen
-  const container = document.getElementById('stars-container');
-  for (let i = 0; i < 50; i++) {
-    const s = document.createElement('div');
-    s.className = 'star';
-    s.style.left = Math.random() * 100 + '%';
-    s.style.top  = Math.random() * 100 + '%';
-    s.style.animationDelay = (Math.random() * 3) + 's';
-    s.style.animationDuration = (1.5 + Math.random() * 2) + 's';
-    container.appendChild(s);
-  }
-  buildTraitList();
-  updateFolderBtn();
-}
-
-init();
+// =============================================
+buildStars();
+buildSetup();
 </script>
 </body>
 </html>

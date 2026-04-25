@@ -309,6 +309,84 @@ body::before{content:'';position:fixed;inset:0;
   white-space:nowrap;opacity:0;transition:all .35s cubic-bezier(.22,1,.36,1);
   z-index:200;pointer-events:none;letter-spacing:.06em}
 .depth-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── TRIVIA CARD ── */
+.trivia-card{margin:0 20px 4px;border:1px solid var(--border);border-radius:12px;
+  overflow:hidden;animation:cardIn .4s cubic-bezier(.22,1,.36,1) both;animation-delay:.25s}
+.trivia-vis{height:90px;display:flex;align-items:center;justify-content:center;
+  position:relative;overflow:hidden}
+.trivia-vis::after{content:'';position:absolute;bottom:0;left:0;right:0;height:32px;
+  background:linear-gradient(transparent,rgba(4,11,24,.92))}
+.trivia-vis-em{font-size:44px;position:relative;z-index:1;animation:float 3s ease-in-out infinite}
+.trivia-body{padding:14px 16px 12px;background:rgba(4,11,24,.92)}
+.trivia-label{font-size:9px;letter-spacing:.2em;color:var(--gold);
+  text-transform:uppercase;margin-bottom:8px;font-weight:900}
+.trivia-fact{font-size:14px;color:var(--text);line-height:1.75;margin-bottom:14px}
+.trivia-save-btn{display:flex;align-items:center;justify-content:center;gap:7px;
+  width:100%;padding:11px;border:1px solid rgba(255,215,0,.3);border-radius:7px;
+  background:rgba(255,215,0,.05);color:var(--gold);font-size:13px;font-weight:700;
+  cursor:pointer;transition:all .2s;font-family:inherit}
+.trivia-save-btn:active{transform:scale(.97)}
+.trivia-save-btn.saved{background:rgba(255,215,0,.15);border-color:var(--gold);
+  box-shadow:0 0 12px rgba(255,215,0,.25)}
+/* trivia vis colors per category */
+.trivia-animal  .trivia-vis{background:linear-gradient(145deg,#92400e,#d97706,#fde68a)}
+.trivia-food    .trivia-vis{background:linear-gradient(145deg,#064e3b,#059669,#6ee7b7)}
+.trivia-vehicle .trivia-vis{background:linear-gradient(145deg,#0c4a6e,#0284c7,#7dd3fc)}
+.trivia-plant   .trivia-vis{background:linear-gradient(145deg,#14532d,#16a34a,#86efac)}
+.trivia-mystery .trivia-vis{background:linear-gradient(145deg,#2e1065,#7c3aed,#c4b5fd)}
+
+/* ── TOP: folder button ── */
+.top-folder-btn{display:none;align-items:center;justify-content:center;gap:8px;
+  margin-top:12px;padding:13px 20px;border:1px solid rgba(255,215,0,.3);
+  background:rgba(255,215,0,.06);border-radius:8px;cursor:pointer;
+  color:var(--gold);font-size:14px;font-weight:700;letter-spacing:.06em;
+  transition:all .2s;width:100%}
+.top-folder-btn:active{transform:scale(.97)}
+.top-folder-btn.on{display:flex}
+.top-folder-badge{background:var(--gold);color:#000;font-size:11px;font-weight:900;
+  padding:2px 8px;border-radius:10px;min-width:24px;text-align:center}
+
+/* ── SCREEN 7: FOLDER ── */
+#screen-folder{padding:0;overflow-y:auto;min-height:100vh}
+.folder-bar{display:flex;align-items:center;gap:12px;padding:14px 16px;
+  background:rgba(4,11,24,.92);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
+.folder-back-btn{background:none;border:none;color:var(--cyan);
+  font-size:22px;cursor:pointer;padding:2px 6px;line-height:1}
+.folder-bar-title{font-size:17px;font-weight:900;color:var(--text);flex:1}
+.folder-bar-count{font-size:11px;color:var(--text-dim);background:rgba(0,212,255,.1);
+  border:1px solid var(--border);padding:3px 10px;border-radius:12px}
+.folder-list{padding:16px 16px 44px;display:flex;flex-direction:column;gap:14px}
+.folder-item{border:1px solid var(--border);border-radius:12px;overflow:hidden;
+  animation:cardIn .3s cubic-bezier(.22,1,.36,1) both}
+.fi-head{height:68px;display:flex;align-items:center;gap:12px;padding:0 14px;
+  position:relative;overflow:hidden}
+.fi-head::after{content:'';position:absolute;bottom:0;left:0;right:0;height:24px;
+  background:linear-gradient(transparent,rgba(4,11,24,.9))}
+.fi-em{font-size:34px;position:relative;z-index:1;flex-shrink:0}
+.fi-meta{flex:1;position:relative;z-index:1}
+.fi-cat{font-size:9px;letter-spacing:.15em;color:rgba(255,255,255,.7);
+  text-transform:uppercase;margin-bottom:2px;font-weight:900}
+.fi-date{font-size:10px;color:rgba(255,255,255,.5)}
+.fi-del{background:none;border:none;color:rgba(255,255,255,.4);
+  font-size:20px;cursor:pointer;padding:4px;position:relative;z-index:2;
+  transition:color .2s;line-height:1}
+.fi-del:active{color:#f87171}
+.fi-body{padding:12px 14px 15px;background:rgba(4,11,24,.95)}
+.fi-fact{font-size:13px;color:var(--text);line-height:1.75}
+/* folder item head colors */
+.fi-animal  .fi-head{background:linear-gradient(145deg,#92400e,#d97706)}
+.fi-food    .fi-head{background:linear-gradient(145deg,#064e3b,#059669)}
+.fi-vehicle .fi-head{background:linear-gradient(145deg,#0c4a6e,#0284c7)}
+.fi-plant   .fi-head{background:linear-gradient(145deg,#14532d,#16a34a)}
+.fi-mystery .fi-head{background:linear-gradient(145deg,#2e1065,#7c3aed)}
+
+.folder-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:14px;padding:80px 28px;text-align:center}
+.folder-empty-em{font-size:72px;opacity:.35}
+.folder-empty-title{font-size:18px;font-weight:900;color:var(--text-dim)}
+.folder-empty-sub{font-size:13px;color:var(--text-dim);line-height:1.8}
 </style>
 </head>
 <body>
@@ -329,6 +407,10 @@ body::before{content:'';position:fixed;inset:0;
   </div>
   <div class="top-cta">
     <button class="btn btn-primary" onclick="goTo('setup')">⚔️ 冒険をはじめる</button>
+    <div class="top-folder-btn" id="top-folder-btn" onclick="openFolder()">
+      📚 雑学フォルダ
+      <span class="top-folder-badge" id="top-folder-badge">0</span>
+    </div>
   </div>
 </div>
 
@@ -474,6 +556,9 @@ body::before{content:'';position:fixed;inset:0;
   </div>
   <div class="complete-msg" id="complete-msg"></div>
 
+  <!-- 雑学カード -->
+  <div id="trivia-card-wrap"></div>
+
   <div class="gains-row">
     <div class="gain-blk">
       <div class="gain-lbl">探索深度</div>
@@ -493,6 +578,16 @@ body::before{content:'';position:fixed;inset:0;
   <div class="complete-btns">
     <button class="btn btn-ghost" onclick="goTo('map')">← マップに戻る</button>
   </div>
+</div>
+
+<!-- ===== SCREEN 7: FOLDER ===== -->
+<div class="screen" id="screen-folder">
+  <div class="folder-bar">
+    <button class="folder-back-btn" onclick="goTo('top')">‹</button>
+    <div class="folder-bar-title">📚 雑学フォルダ</div>
+    <div class="folder-bar-count" id="folder-bar-count">0件</div>
+  </div>
+  <div id="folder-content"></div>
 </div>
 
 </div><!-- /#app -->
@@ -1194,9 +1289,14 @@ function submitAnswer(){
   document.getElementById('next-quest-feed').innerHTML=
     nextQuests.map((nq,i)=>questCardHTML(nq,i,'complete')).join('');
 
+  // trivia card
+  const trivia=pickTrivia(state.category||'mystery');
+  renderTriviaCard(trivia);
+
   goTo('complete');
   spawnBurst();
   updateHUD();
+  refreshTopFolderBtn();
 
   if(milestone){
     setTimeout(()=>showToast(milestone),600);
@@ -1247,6 +1347,177 @@ function showToast(msg){
 }
 
 // =============================================
+// TRIVIA DATABASE
+// =============================================
+const TRIVIA_DB = {
+  animal:[
+    {id:'ta1',em:'🦎',fact:'カメレオンが色を変えるのは、主に気分や気持ちを仲間に伝えるため。保護色よりも「感情表現」が目的という研究がある！'},
+    {id:'ta2',em:'🐬',fact:'イルカは左右の脳を交互に眠らせる。だから泳ぎながら眠ることができる！'},
+    {id:'ta3',em:'🦈',fact:'サメは5億年以上前から地球に存在し、恐竜よりずっと古い生き物。それほど体のつくりが完璧だった！'},
+    {id:'ta4',em:'🐝',fact:'ミツバチ1匹が一生で集める蜂蜜はティースプーン1杯分だけ。でも群れで力を合わせることで大量に集められる！'},
+    {id:'ta5',em:'🐙',fact:'タコには心臓が3つある。2つがえら専用で、1つが体全体に血を送っている！'},
+    {id:'ta6',em:'🦅',fact:'タカの目は人間の8倍くらいよく見える。1km以上先のネズミも見つけられる！'},
+  ],
+  food:[
+    {id:'tf1',em:'🍕',fact:'ピザの歴史は2000年以上前のイタリアに遡る。最初のピザにはトマトソースがなかった！'},
+    {id:'tf2',em:'🍫',fact:'チョコレートはかつてお金として使われていた。マヤ文明ではカカオ豆が通貨だった！'},
+    {id:'tf3',em:'🍜',fact:'インスタントラーメンは1958年に日本で発明され、「20世紀最大の発明」に選ばれたことがある！'},
+    {id:'tf4',em:'🥕',fact:'最初のニンジンはオレンジ色ではなく紫や白だった。今のオレンジ色は17世紀のオランダで品種改良されたもの！'},
+    {id:'tf5',em:'🍎',fact:'リンゴの重さの約25%は空気。だから水に浮かぶことができる！'},
+    {id:'tf6',em:'🍌',fact:'バナナは草の実で、木の実ではない。バナナの木に見えるものは実は巨大な草！'},
+  ],
+  vehicle:[
+    {id:'tv1',em:'🚗',fact:'世界初の自動車の最高速度は時速16km。当時「馬より遅い危険な機械」と批判されたが、今では時速400kmを超えるクルマも存在する！'},
+    {id:'tv2',em:'✈️',fact:'飛行機が空を飛べるのは「揚力」のおかげ。翼の上下で空気の速さが違い、下から押し上げる力が生まれる！'},
+    {id:'tv3',em:'🚂',fact:'新幹線の先頭部分の形は、カワセミのくちばしをヒントにしている。トンネルで起きる騒音問題を解決するため！'},
+    {id:'tv4',em:'🚀',fact:'宇宙ロケットの燃料の大部分は、打ち上げ後わずか数分で使い切ってしまう！'},
+    {id:'tv5',em:'🚲',fact:'自転車がバランスを保てる仕組みは今でも完全には解明されていない。シンプルなのに奥深い、物理学の謎のひとつ！'},
+  ],
+  plant:[
+    {id:'tp1',em:'🌳',fact:'1本の木は一生で約1トンのCO₂を吸収する。地球の温度を守るために木は欠かせない存在！'},
+    {id:'tp2',em:'🌸',fact:'桜の花びらはもともと葉っぱが変化したもの。花とは「変形した葉」という説が有力！'},
+    {id:'tp3',em:'🍄',fact:'キノコは植物でも動物でもない「菌類」。地下にネットワークを広げて木同士で栄養を分け合っている！'},
+    {id:'tp4',em:'🌵',fact:'サボテンのトゲは葉っぱが変化したもの。水の蒸発を防ぐために葉をトゲに変えた！'},
+    {id:'tp5',em:'🌊',fact:'海の植物プランクトンが地球の酸素の約50%を作っている。森と同じくらい、海も空気を作っている！'},
+    {id:'tp6',em:'🌻',fact:'ひまわりは若いうちは太陽を追いかけて動くが、成長すると東向きのまま固定される！'},
+  ],
+  mystery:[
+    {id:'tm1',em:'🌍',fact:'地球の内部はまだほとんど謎のまま。人類が掘った最深の穴は12kmで、地球の半径の約0.2%しかない！'},
+    {id:'tm2',em:'🧠',fact:'人間の脳には約860億個の神経細胞がある。宇宙の星の数より多い可能性がある！'},
+    {id:'tm3',em:'🌊',fact:'海の約80%はまだ探索されていない。宇宙より地球の海の方が謎が多いかもしれない！'},
+    {id:'tm4',em:'⚡',fact:'雷は1秒間に100回以上、世界中のどこかに落ちている。今この瞬間も落ちている！'},
+    {id:'tm5',em:'🔢',fact:'数字の「0（ゼロ）」が発明されるまで何百年もかかった。「何もない」を数字で表すのは難しかった！'},
+    {id:'tm6',em:'🌌',fact:'宇宙は今この瞬間も広がり続けている。しかもどんどん速くなっている！'},
+  ],
+};
+
+const TRIVIA_STORAGE_KEY='tomori_trivia_v1';
+
+function getSavedTrivia(){
+  try{return JSON.parse(localStorage.getItem(TRIVIA_STORAGE_KEY)||'[]');}
+  catch{return[];}
+}
+function isSaved(id){return getSavedTrivia().some(t=>t.id===id);}
+
+function saveTrivia(trivia){
+  const list=getSavedTrivia();
+  if(!list.find(t=>t.id===trivia.id)){
+    list.unshift({...trivia,savedAt:Date.now()});
+    localStorage.setItem(TRIVIA_STORAGE_KEY,JSON.stringify(list));
+  }
+  refreshTopFolderBtn();
+}
+function unsaveTrivia(id){
+  const list=getSavedTrivia().filter(t=>t.id!==id);
+  localStorage.setItem(TRIVIA_STORAGE_KEY,JSON.stringify(list));
+  refreshTopFolderBtn();
+}
+
+function refreshTopFolderBtn(){
+  const count=getSavedTrivia().length;
+  const btn=document.getElementById('top-folder-btn');
+  const badge=document.getElementById('top-folder-badge');
+  if(btn){btn.classList.toggle('on',count>0);}
+  if(badge){badge.textContent=count;}
+}
+
+// ── Pick trivia for current category ──
+function pickTrivia(cat){
+  const pool=TRIVIA_DB[cat]||TRIVIA_DB.mystery;
+  const saved=getSavedTrivia().map(t=>t.id);
+  const unseen=pool.filter(t=>!saved.includes(t.id));
+  const src=unseen.length>0?unseen:pool;
+  return {...src[Math.floor(Math.random()*src.length)], category:cat};
+}
+
+// ── Render trivia card inside complete screen ──
+function renderTriviaCard(trivia){
+  const wrap=document.getElementById('trivia-card-wrap');
+  if(!wrap)return;
+  const saved=isSaved(trivia.id);
+  const catLabel={animal:'いきもの',food:'たべもの',vehicle:'きかい',plant:'しぜん',mystery:'ふしぎ'};
+  wrap.innerHTML=`
+  <div class="trivia-card trivia-${trivia.category}">
+    <div class="trivia-vis"><div class="trivia-vis-em">${trivia.em}</div></div>
+    <div class="trivia-body">
+      <div class="trivia-label">✨ 今日の雑学 — ${catLabel[trivia.category]||'ふしぎ'}</div>
+      <div class="trivia-fact">${trivia.fact}</div>
+      <button class="trivia-save-btn ${saved?'saved':''}" id="trivia-save-btn"
+        onclick="toggleTriviaSave(${JSON.stringify(trivia).replace(/"/g,'&quot;')})">
+        ${saved?'✅ 保存済み！':'⭐ 雑学フォルダに保存'}
+      </button>
+    </div>
+  </div>`;
+}
+
+function toggleTriviaSave(trivia){
+  const saved=isSaved(trivia.id);
+  if(saved){unsaveTrivia(trivia.id);}
+  else{saveTrivia(trivia);}
+  // update button
+  const btn=document.getElementById('trivia-save-btn');
+  if(btn){
+    btn.textContent=!saved?'✅ 保存済み！':'⭐ 雑学フォルダに保存';
+    btn.className='trivia-save-btn'+(!saved?' saved':'');
+  }
+}
+
+// ── Folder screen ──
+function openFolder(){
+  buildFolderScreen();
+  goTo('folder');
+}
+
+function buildFolderScreen(){
+  const list=getSavedTrivia();
+  const countEl=document.getElementById('folder-bar-count');
+  if(countEl)countEl.textContent=`${list.length}件`;
+
+  const content=document.getElementById('folder-content');
+  if(!content)return;
+
+  if(list.length===0){
+    content.innerHTML=`<div class="folder-empty">
+      <div class="folder-empty-em">📚</div>
+      <div class="folder-empty-title">まだ保存した雑学がないよ</div>
+      <div class="folder-empty-sub">クエストをクリアすると<br>雑学が出てくるよ！<br>気に入ったら⭐で保存しよう</div>
+    </div>`;
+    return;
+  }
+
+  const catLabel={animal:'いきもの',food:'たべもの',vehicle:'きかい',plant:'しぜん',mystery:'ふしぎ'};
+  content.innerHTML=`<div class="folder-list">
+    ${list.map((t,i)=>{
+      const d=new Date(t.savedAt);
+      const dateStr=`${d.getMonth()+1}/${d.getDate()}`;
+      return `<div class="folder-item fi-${t.category||'mystery'}" style="animation-delay:${i*50}ms">
+        <div class="fi-head">
+          <div class="fi-em">${t.em}</div>
+          <div class="fi-meta">
+            <div class="fi-cat">${catLabel[t.category]||'ふしぎ'}</div>
+            <div class="fi-date">${dateStr}に保存</div>
+          </div>
+          <button class="fi-del" onclick="deleteFolderItem('${t.id}',this)" title="削除">×</button>
+        </div>
+        <div class="fi-body"><div class="fi-fact">${t.fact}</div></div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+function deleteFolderItem(id,btnEl){
+  unsaveTrivia(id);
+  // animate out
+  const item=btnEl.closest('.folder-item');
+  if(item){
+    item.style.transition='all .25s';
+    item.style.opacity='0';
+    item.style.transform='translateX(20px)';
+    setTimeout(()=>buildFolderScreen(),260);
+  }
+}
+
+// =============================================
 // STARS (top screen decoration)
 // =============================================
 function buildStars(){
@@ -1266,6 +1537,7 @@ function buildStars(){
 // =============================================
 buildStars();
 buildSetup();
+refreshTopFolderBtn();
 </script>
 </body>
 </html>

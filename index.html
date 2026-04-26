@@ -387,6 +387,117 @@ body::before{content:'';position:fixed;inset:0;
 .folder-empty-em{font-size:72px;opacity:.35}
 .folder-empty-title{font-size:18px;font-weight:900;color:var(--text-dim)}
 .folder-empty-sub{font-size:13px;color:var(--text-dim);line-height:1.8}
+
+/* ── SCREEN: WORLDMAP ── */
+#screen-worldmap{padding:0;overflow-y:auto;min-height:100vh}
+.wmap-hud{display:flex;align-items:center;gap:8px;padding:11px 14px 9px;
+  background:rgba(4,11,24,.92);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
+.wmap-hud-title{font-size:15px;font-weight:900;color:var(--text);flex:1;letter-spacing:.05em}
+.wmap-hud-xp{font-size:13px;font-weight:900;color:var(--gold);
+  text-shadow:0 0 8px rgba(255,215,0,.5)}
+.wmap-hud-depth{font-size:11px;color:var(--text-dim);
+  background:rgba(0,212,255,.1);border:1px solid var(--border);
+  padding:3px 10px;border-radius:12px;white-space:nowrap}
+.wmap-body{padding:20px 0 72px;position:relative}
+.wmap-spine{position:absolute;left:50%;top:0;bottom:0;width:2px;
+  transform:translateX(-50%);pointer-events:none;
+  background:linear-gradient(to bottom,
+    rgba(0,212,255,.05) 0%,rgba(0,212,255,.3) 15%,
+    rgba(0,212,255,.25) 50%,rgba(155,93,255,.25) 80%,
+    rgba(155,93,255,.05) 100%)}
+.zone-node{display:flex;align-items:center;gap:0;
+  padding:8px 16px;position:relative;transition:transform .15s;cursor:pointer}
+.zone-node:active:not(.locked){transform:scale(.98)}
+.zone-node.locked{opacity:.28;pointer-events:none}
+.zone-node.right{flex-direction:row-reverse}
+.zone-orb-wrap{width:72px;height:72px;flex-shrink:0;
+  position:relative;display:flex;align-items:center;justify-content:center}
+.zone-orb{width:64px;height:64px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:28px;
+  border:2px solid rgba(255,255,255,.15);position:relative;z-index:1;transition:all .3s}
+.zone-node.done .zone-orb{border-color:rgba(0,212,255,.4);opacity:.8}
+.zone-node.active .zone-orb{border-color:var(--cyan);
+  box-shadow:0 0 0 4px rgba(0,212,255,.12),
+    0 0 18px rgba(0,212,255,.6),0 0 36px rgba(0,212,255,.2)}
+.zone-node.locked .zone-orb{filter:grayscale(.7)}
+.zone-done-check{position:absolute;top:1px;right:1px;
+  width:20px;height:20px;border-radius:50%;
+  background:var(--cyan);color:#000;font-size:11px;font-weight:900;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 8px var(--cyan-glow);z-index:2}
+.zone-player-mark{position:absolute;top:-6px;right:-6px;
+  width:22px;height:22px;border-radius:50%;background:var(--gold);
+  display:flex;align-items:center;justify-content:center;font-size:11px;z-index:2;
+  box-shadow:0 0 10px rgba(255,215,0,.8),0 0 20px rgba(255,215,0,.3);
+  animation:float 2.2s ease-in-out infinite}
+.zone-info-side{flex:1;padding:0 12px;min-width:0}
+.zone-info-name{font-size:16px;font-weight:900;color:var(--text);
+  letter-spacing:.04em;line-height:1.2}
+.zone-info-sub{font-size:11px;color:var(--text-dim);margin-top:3px;letter-spacing:.04em}
+.zone-info-sub.cur{color:var(--cyan)}
+.zone-dots-row{display:flex;gap:5px;margin-top:7px}
+.zdot{width:10px;height:10px;border-radius:50%;
+  background:rgba(255,255,255,.12);transition:all .3s}
+.zdot.done{background:var(--cyan);box-shadow:0 0 5px var(--cyan-glow)}
+.zone-photo-pill{display:inline-flex;align-items:center;gap:4px;
+  font-size:10px;color:var(--gold);background:rgba(255,215,0,.1);
+  border:1px solid rgba(255,215,0,.3);border-radius:10px;
+  padding:2px 8px;margin-top:5px;letter-spacing:.04em}
+.zone-connector{height:18px;display:flex;justify-content:center}
+.zone-connector-inner{width:2px;height:100%;
+  background:linear-gradient(to bottom,rgba(0,212,255,.2),rgba(155,93,255,.2))}
+.map-hud-back{background:none;border:none;color:var(--cyan);
+  font-size:22px;cursor:pointer;padding:2px 8px 2px 2px;line-height:1}
+
+/* ── SCREEN: ZONE ARRIVAL ── */
+#screen-zone-arrival{align-items:center;justify-content:center;
+  position:relative;overflow:hidden}
+.zarr-bg{position:absolute;inset:0;z-index:0}
+.zarr-bg-glow{position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse 80% 55% at 50% 30%,rgba(255,255,255,.08) 0%,transparent 70%)}
+.zarr-particles{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.zarr-content{position:relative;z-index:1;
+  display:flex;flex-direction:column;align-items:center;
+  text-align:center;padding:40px 28px 44px;gap:10px;
+  width:100%;overflow-y:auto;max-height:100vh}
+.zarr-badge{font-size:10px;letter-spacing:.25em;color:rgba(255,255,255,.55);
+  text-transform:uppercase;font-weight:900}
+.zarr-em{font-size:80px;line-height:1;
+  animation:pop .5s cubic-bezier(.22,1,.36,1) .1s both;
+  filter:drop-shadow(0 0 20px rgba(255,255,255,.35))}
+.zarr-zone-name{font-size:26px;font-weight:900;color:#fff;
+  text-shadow:0 0 24px rgba(255,255,255,.45);letter-spacing:.06em;
+  animation:pop .4s cubic-bezier(.22,1,.36,1) .2s both}
+.zarr-arrived{font-size:13px;color:rgba(255,255,255,.65);line-height:1.6}
+.zarr-decos{font-size:22px;letter-spacing:8px;opacity:.7}
+.zarr-photo-card{width:100%;max-width:320px;margin-top:6px;
+  background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.18);
+  border-radius:14px;padding:16px;backdrop-filter:blur(8px);
+  animation:cardIn .4s cubic-bezier(.22,1,.36,1) .35s both}
+.zarr-photo-prompt{font-size:13px;font-weight:700;color:rgba(255,255,255,.9);
+  line-height:1.65;margin-bottom:12px;white-space:pre-line}
+.zarr-photo-upload{display:flex;flex-direction:column;align-items:center;gap:6px;
+  width:100%;padding:16px;border:1.5px dashed rgba(255,255,255,.35);
+  border-radius:10px;background:rgba(255,255,255,.06);
+  cursor:pointer;transition:all .2s;color:#fff}
+.zarr-photo-upload:active{transform:scale(.97)}
+.zarr-photo-upload-em{font-size:32px}
+.zarr-photo-upload-text{font-size:13px;font-weight:700;letter-spacing:.05em}
+.zarr-photo-upload-sub{font-size:10px;color:rgba(255,255,255,.5)}
+.zarr-photo-preview-img{width:100%;border-radius:8px;margin-bottom:10px;
+  display:none;border:1.5px solid rgba(255,255,255,.25);
+  max-height:130px;object-fit:cover}
+.zarr-btn-row{width:100%;max-width:320px;margin-top:4px;
+  display:flex;flex-direction:column;gap:8px}
+.zarr-continue-btn{width:100%;padding:15px;
+  border:1.5px solid rgba(255,255,255,.4);border-radius:10px;
+  background:rgba(255,255,255,.15);backdrop-filter:blur(6px);
+  color:#fff;font-size:15px;font-weight:900;cursor:pointer;
+  letter-spacing:.08em;font-family:inherit;transition:all .2s}
+.zarr-continue-btn:active{transform:scale(.97)}
+.zarr-skip-link{font-size:12px;color:rgba(255,255,255,.4);cursor:pointer;
+  text-decoration:underline;text-underline-offset:3px;text-align:center}
 </style>
 </head>
 <body>
@@ -482,6 +593,7 @@ body::before{content:'';position:fixed;inset:0;
 <div class="screen" id="screen-map">
   <!-- HUD -->
   <div class="map-hud">
+    <button class="map-hud-back" onclick="goToWorldMap()">‹</button>
     <div class="hud-depth-label">深度</div>
     <div class="hud-track"><div class="hud-fill" id="hud-fill" style="width:0%"></div></div>
     <div class="hud-xp" id="hud-xp">⭐ 0</div>
@@ -576,7 +688,7 @@ body::before{content:'';position:fixed;inset:0;
   <div class="next-feed" id="next-quest-feed"></div>
 
   <div class="complete-btns">
-    <button class="btn btn-ghost" onclick="goTo('map')">← マップに戻る</button>
+    <button class="btn btn-ghost" onclick="goToWorldMap()">← ワールドマップへ</button>
   </div>
 </div>
 
@@ -590,11 +702,56 @@ body::before{content:'';position:fixed;inset:0;
   <div id="folder-content"></div>
 </div>
 
+<!-- ===== SCREEN: WORLDMAP ===== -->
+<div class="screen" id="screen-worldmap">
+  <div class="wmap-hud">
+    <div class="wmap-hud-title">🗺️ ワールドマップ</div>
+    <div class="wmap-hud-depth" id="wmap-depth">深度 0</div>
+    <div class="wmap-hud-xp" id="wmap-xp">⭐ 0</div>
+  </div>
+  <div class="wmap-body" id="wmap-body">
+    <!-- built by buildWorldMap() -->
+  </div>
+</div>
+
+<!-- ===== SCREEN: ZONE ARRIVAL ===== -->
+<div class="screen" id="screen-zone-arrival">
+  <div class="zarr-bg" id="zarr-bg"></div>
+  <div class="zarr-bg-glow"></div>
+  <div class="zarr-particles" id="zarr-particles"></div>
+  <div class="zarr-content">
+    <div class="zarr-badge">🎉 新エリア到着！</div>
+    <div class="zarr-em" id="zarr-em"></div>
+    <div class="zarr-zone-name" id="zarr-zone-name"></div>
+    <div class="zarr-arrived" id="zarr-arrived"></div>
+    <div class="zarr-decos" id="zarr-decos"></div>
+    <div class="zarr-photo-card" id="zarr-photo-card" style="display:none">
+      <div class="zarr-photo-prompt" id="zarr-photo-prompt"></div>
+      <img class="zarr-photo-preview-img" id="zarr-photo-preview-img" src="" alt="">
+      <div class="zarr-photo-upload" onclick="document.getElementById('zone-file-input').click()">
+        <div class="zarr-photo-upload-em">📸</div>
+        <div class="zarr-photo-upload-text">写真を選ぶ</div>
+        <div class="zarr-photo-upload-sub">タップしてカメラ・ライブラリから選択</div>
+      </div>
+    </div>
+    <div class="zarr-btn-row">
+      <button class="zarr-continue-btn" id="zarr-continue-btn" onclick="continueFromZoneArrival()">
+        🚀 冒険を続ける！
+      </button>
+      <div class="zarr-skip-link" id="zarr-skip-link" onclick="continueFromZoneArrival()" style="display:none">
+        写真なしで進む
+      </div>
+    </div>
+  </div>
+</div>
+
 </div><!-- /#app -->
 
 <div class="depth-toast" id="depth-toast"></div>
 <input type="file" id="file-input" accept="image/*" capture="environment"
        style="display:none" onchange="handlePhoto(this)">
+<input type="file" id="zone-file-input" accept="image/*" capture="environment"
+       style="display:none" onchange="handleZonePhoto(this)">
 
 <script>
 // =============================================
@@ -608,6 +765,9 @@ const state = {
   currentQuest: null,
   completedIds: [],
   answer: null, choiceSelected: null,
+  zonePhotos: {},      // {zoneId: dataUrl}
+  zoneCategories: {},  // {zoneId: category string}
+  pendingZoneIdx: null,
 };
 
 // =============================================
@@ -950,6 +1110,42 @@ const MONSTER_INFO = {
   mystery: {name:'フシギン',  type:'ふしぎ系'},
 };
 
+// =============================================
+// ZONES
+// =============================================
+const ZONES=[
+  {id:'village',emoji:'🏡',name:'はじまりの村',
+   grad:'linear-gradient(135deg,#78350f,#b45309)',deco:'🌸🌿🌻🌾',
+   photoPrompt:null},
+  {id:'forest', emoji:'🌲',name:'深い森',
+   grad:'linear-gradient(135deg,#064e3b,#059669)',deco:'🍄🦋🌿🍃',
+   photoPrompt:{text:'🌿 植物や生き物の写真はある？\n森エリアのクエストで使えるよ！',cat:'plant'}},
+  {id:'mountain',emoji:'⛰️',name:'たかい山',
+   grad:'linear-gradient(135deg,#1c1917,#57534e)',deco:'🦅❄️⛰️🌨️',
+   photoPrompt:{text:'⛰️ 高いもの・乗り物の写真はある？\n山エリアのクエストで使えるよ！',cat:'vehicle'}},
+  {id:'sea',     emoji:'🌊',name:'あおい海',
+   grad:'linear-gradient(135deg,#0c4a6e,#0284c7)',deco:'🐋🐠🦈🌊',
+   photoPrompt:{text:'🌊 海・川・魚・水に関係する写真はある？\n海エリアのクエストで使えるよ！',cat:'animal'}},
+  {id:'city',    emoji:'🏙️',name:'輝く都市',
+   grad:'linear-gradient(135deg,#1e1b4b,#4338ca)',deco:'🤖🚀🏙️💡',
+   photoPrompt:{text:'🏙️ 建物・乗り物・道具の写真はある？\n都市エリアのクエストで使えるよ！',cat:'vehicle'}},
+  {id:'stars',   emoji:'✨',name:'星のとびら',
+   grad:'linear-gradient(135deg,#0f0528,#6d28d9)',deco:'⭐🌌🔮🌠',
+   photoPrompt:{text:'✨ 夜空・光・不思議なものの写真はある？\n星エリアのクエストで使えるよ！',cat:'mystery'}},
+];
+
+function getCurrentZoneIdx(){
+  return Math.min(Math.floor(state.depth/3),ZONES.length-1);
+}
+function getActivePhoto(){
+  const z=ZONES[getCurrentZoneIdx()];
+  return state.zonePhotos[z.id]||state.photoUrl;
+}
+function getActiveCategory(){
+  const z=ZONES[getCurrentZoneIdx()];
+  return state.zoneCategories[z.id]||state.category;
+}
+
 // Companion messages per trait
 const COMPANION_INTRO = {
   speed:   q=>`よし！このクエストをサクッとやろう！👊`,
@@ -1018,7 +1214,8 @@ function updateSetupBtn(){
 }
 function finishSetup(){
   state.setupDone=true;
-  if(state.photoUrl) goTo('map'); else goTo('photo');
+  if(state.photoUrl){buildWorldMap();goTo('worldmap');}
+  else goTo('photo');
 }
 
 // =============================================
@@ -1078,12 +1275,9 @@ function analyzeImageCategory(img){
 
 function startAdventure(){
   if(!state.photoUrl)return;
-  const mi=document.getElementById('map-photo-img');
-  if(mi)mi.src=state.photoUrl;
-  const hi=document.getElementById('hud-thumb-img');
-  if(hi)hi.src=state.photoUrl;
   refreshMap();
-  goTo('map');
+  buildWorldMap();
+  goTo('worldmap');
 }
 
 // =============================================
@@ -1091,22 +1285,173 @@ function startAdventure(){
 // =============================================
 function refreshMap(){
   updateHUD();
-  const catInfo={
-    animal:'🐾 いきもの',food:'🍜 たべもの',
-    vehicle:'⚙️ きかい',plant:'🌿 しぜん',mystery:'✨ ふしぎ'
-  };
+  const activeCat=getActiveCategory();
+  const activePhoto=getActivePhoto();
+  const catInfo={animal:'🐾 いきもの',food:'🍜 たべもの',
+    vehicle:'⚙️ きかい',plant:'🌿 しぜん',mystery:'✨ ふしぎ'};
   const badge=document.getElementById('map-cat-badge');
-  if(badge)badge.textContent=catInfo[state.category]||'✨ ふしぎ';
+  if(badge)badge.textContent=catInfo[activeCat]||'✨ ふしぎ';
   const dl=document.getElementById('map-depth-label');
-  if(dl)dl.textContent=`深度 ${state.depth}`;
+  if(dl){
+    const zi=getCurrentZoneIdx();
+    dl.textContent=`${ZONES[zi].emoji} ${ZONES[zi].name}`;
+  }
+  const mi=document.getElementById('map-photo-img');
+  if(mi&&activePhoto)mi.src=activePhoto;
+  const hi=document.getElementById('hud-thumb-img');
+  if(hi&&activePhoto)hi.src=activePhoto;
 
   const feed=document.getElementById('map-quest-feed');
   const quests=getQuestsForMap();
   feed.innerHTML=quests.map((q,i)=>questCardHTML(q,i,'map')).join('');
-  // stagger
   feed.querySelectorAll('.qcard').forEach((c,i)=>{
     c.style.animationDelay=(i*70)+'ms';
   });
+}
+
+// =============================================
+// WORLD MAP
+// =============================================
+function buildWorldMap(){
+  const zi=getCurrentZoneIdx();
+  const dm=state.depth%3;
+  document.getElementById('wmap-depth').textContent=`深度 ${state.depth}`;
+  document.getElementById('wmap-xp').textContent=`⭐ ${state.xp}`;
+  const body=document.getElementById('wmap-body');
+  let html='';
+  ZONES.forEach((zone,i)=>{
+    const isDone=i<zi,isCur=i===zi,isLock=i>zi;
+    const isRight=i%2===1;
+    let nc='zone-node';
+    if(isDone)nc+=' done';
+    if(isCur)nc+=' active';
+    if(isLock)nc+=' locked';
+    if(isRight)nc+=' right';
+    let dots='';
+    for(let d=0;d<3;d++){
+      let dc='zdot';
+      if(isDone)dc+=' done';
+      else if(isCur&&d<dm)dc+=' done';
+      dots+=`<div class="${dc}"></div>`;
+    }
+    const hasZP=!!(state.zonePhotos[zone.id]);
+    const pill=hasZP?`<div class="zone-photo-pill">📸 ゾーン写真あり</div>`:'';
+    let sub='',subClass='zone-info-sub';
+    if(isDone){sub='✓ クリア済み';}
+    else if(isCur){sub='現在地 · タップして冒険！';subClass+=' cur';}
+    else{sub='🔒 まだ解放されていない';}
+    html+=`
+<div class="${nc}" onclick="${isCur?'enterCurrentZone()':''}">
+  <div class="zone-orb-wrap">
+    <div class="zone-orb" style="background:${zone.grad}">${zone.emoji}</div>
+    ${isDone?`<div class="zone-done-check">✓</div>`:''}
+    ${isCur?`<div class="zone-player-mark">🧭</div>`:''}
+  </div>
+  <div class="zone-info-side">
+    <div class="zone-info-name">${zone.name}</div>
+    <div class="zone-dots-row">${dots}</div>
+    <div class="${subClass}">${sub}</div>
+    ${pill}
+  </div>
+</div>`;
+    if(i<ZONES.length-1){
+      html+=`<div class="zone-connector"><div class="zone-connector-inner"></div></div>`;
+    }
+  });
+  body.innerHTML=`<div class="wmap-spine"></div>${html}`;
+  // scroll current zone into view
+  setTimeout(()=>{
+    const node=body.querySelector('.zone-node.active');
+    if(node)node.scrollIntoView({behavior:'smooth',block:'center'});
+  },200);
+}
+
+function goToWorldMap(){
+  buildWorldMap();
+  goTo('worldmap');
+}
+
+function enterCurrentZone(){
+  refreshMap();
+  goTo('map');
+}
+
+// =============================================
+// ZONE ARRIVAL
+// =============================================
+function showZoneArrival(zi){
+  const zone=ZONES[zi];
+  state.pendingZoneIdx=zi;
+  document.getElementById('zarr-bg').style.background=zone.grad;
+  document.getElementById('zarr-em').textContent=zone.emoji;
+  document.getElementById('zarr-zone-name').textContent=zone.name;
+  document.getElementById('zarr-arrived').textContent=
+    `新しいエリア「${zone.name}」が解放されたよ！`;
+  document.getElementById('zarr-decos').textContent=zone.deco;
+  spawnZarrParticles();
+  const pc=document.getElementById('zarr-photo-card');
+  const sk=document.getElementById('zarr-skip-link');
+  if(zone.photoPrompt){
+    document.getElementById('zarr-photo-prompt').textContent=zone.photoPrompt.text;
+    document.getElementById('zarr-photo-preview-img').style.display='none';
+    document.getElementById('zarr-photo-preview-img').src='';
+    document.getElementById('zarr-continue-btn').textContent='🚀 冒険を続ける！';
+    pc.style.display='block';
+    sk.style.display='block';
+  } else {
+    pc.style.display='none';
+    sk.style.display='none';
+  }
+  goTo('zone-arrival');
+}
+
+function spawnZarrParticles(){
+  const wrap=document.getElementById('zarr-particles');
+  if(!wrap)return;
+  wrap.innerHTML='';
+  const cols=['#ffd700','#f953c6','#38ef7d','#00b4d8','#ff6b6b','#a78bfa','#fff'];
+  for(let i=0;i<28;i++){
+    const el=document.createElement('div');
+    el.className='complete-burst-piece';
+    el.style.cssText=`left:${Math.random()*100}%;top:0;position:absolute;
+      background:${cols[i%cols.length]};
+      animation:confettiFall ${2+Math.random()*3}s ${Math.random()*.8}s linear forwards;
+      width:${4+Math.random()*5}px;height:${6+Math.random()*9}px;
+      border-radius:${Math.random()>.5?'50%':'2px'}`;
+    wrap.appendChild(el);
+  }
+}
+
+function continueFromZoneArrival(){
+  state.pendingZoneIdx=null;
+  buildWorldMap();
+  goTo('worldmap');
+}
+
+function handleZonePhoto(input){
+  if(!input.files||!input.files[0])return;
+  const zi=state.pendingZoneIdx;
+  if(zi===null||zi===undefined)return;
+  const zone=ZONES[zi];
+  const file=input.files[0];
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const url=e.target.result;
+    state.zonePhotos[zone.id]=url;
+    const img=new Image();
+    img.onload=()=>{
+      const cat=analyzeImageCategory(img)||(zone.photoPrompt&&zone.photoPrompt.cat)||'mystery';
+      state.zoneCategories[zone.id]=cat;
+    };
+    img.src=url;
+    const prev=document.getElementById('zarr-photo-preview-img');
+    prev.src=url; prev.style.display='block';
+    const btn=document.getElementById('zarr-continue-btn');
+    btn.textContent='✅ この写真で冒険！';
+    document.getElementById('zarr-skip-link').style.display='none';
+  };
+  reader.readAsDataURL(file);
+  input.value='';
 }
 
 function updateHUD(){
@@ -1121,12 +1466,9 @@ function getQuestsForMap(){
   const trait=state.trait||'speed';
   const moodBoost={hot:1,ok:0,tired:-1}[state.mood]||0;
   const effectiveDepth=Math.max(0,state.depth+moodBoost);
-
+  const activeCat=getActiveCategory();
   return QUESTS
-    .filter(q=>
-      (q.cat===state.category || q.cat==='mystery') &&
-      q.dm<=effectiveDepth
-    )
+    .filter(q=>(q.cat===activeCat||q.cat==='mystery')&&q.dm<=effectiveDepth)
     .map(q=>({q, score:(q.tw[trait]||1)+(Math.random()*.4)}))
     .sort((a,b)=>b.score-a.score)
     .slice(0,5)
@@ -1189,7 +1531,8 @@ function renderMission(q){
   hero.style.background=heroGrads[q.type]||heroGrads.mystery;
   document.getElementById('mission-hero-em').textContent=q.em;
   const mpt=document.getElementById('mission-photo-thumb');
-  if(state.photoUrl&&mpt){mpt.src=state.photoUrl;}
+  const activePhoto=getActivePhoto();
+  if(activePhoto&&mpt){mpt.src=activePhoto;}
 
   // companion
   const cat=state.category||'mystery';
@@ -1249,9 +1592,11 @@ function submitAnswer(){
 
   // XP & depth
   const prevDepth=state.depth;
+  const prevZoneI=Math.floor(prevDepth/3);
   state.xp+=q.xp;
   state.depth+=1;
   state.completedIds.push(q.id);
+  const newZoneI=Math.min(Math.floor(state.depth/3),ZONES.length-1);
 
   // Milestone check
   const milestones={3:'新エリア解放！🗺️',5:'ミドルエクスプローラー🔮',8:'ディープゾーン突入🌌',12:'レジェンド冒険者🏆'};
@@ -1300,6 +1645,10 @@ function submitAnswer(){
 
   if(milestone){
     setTimeout(()=>showToast(milestone),600);
+  }
+  // Zone transition
+  if(newZoneI>prevZoneI&&newZoneI<ZONES.length){
+    setTimeout(()=>showZoneArrival(newZoneI),2400);
   }
 }
 

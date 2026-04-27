@@ -21,25 +21,55 @@ body{font-family:'Hiragino Kaku Gothic Pro','Hiragino Sans','Meiryo',sans-serif;
   background:var(--bg0);min-height:100vh;display:flex;align-items:center;justify-content:center}
 #app{width:100%;max-width:420px;min-height:100vh;position:relative;overflow:hidden;
   background:
-    radial-gradient(ellipse 70% 45% at 15% 20%,rgba(0,200,150,0.07) 0%,transparent 65%),
-    radial-gradient(ellipse 60% 50% at 85% 40%,rgba(120,40,255,0.09) 0%,transparent 65%),
-    radial-gradient(ellipse 55% 40% at 50% 85%,rgba(0,100,200,0.07) 0%,transparent 65%),
-    radial-gradient(ellipse 80% 35% at 50% 0%,rgba(0,180,200,0.1) 0%,transparent 60%),
-    linear-gradient(180deg,#020d1a 0%,#01080f 100%)}
-/* subtle vignette only — no grid lines */
+    /* vertical light shafts — forest canopy */
+    radial-gradient(ellipse 16% 60% at 20% 0%,rgba(0,255,200,0.10) 0%,transparent 80%),
+    radial-gradient(ellipse 12% 50% at 55% 0%,rgba(80,240,255,0.07) 0%,transparent 75%),
+    radial-gradient(ellipse 10% 45% at 82% 0%,rgba(0,210,180,0.07) 0%,transparent 70%),
+    /* bioluminescent floor pools */
+    radial-gradient(ellipse 80% 28% at 0% 100%,rgba(130,40,220,0.13) 0%,transparent 70%),
+    radial-gradient(ellipse 55% 22% at 100% 90%,rgba(0,200,160,0.11) 0%,transparent 65%),
+    radial-gradient(ellipse 40% 20% at 50% 100%,rgba(0,180,220,0.08) 0%,transparent 60%),
+    /* mid-depth atmospheric haze */
+    radial-gradient(ellipse 100% 18% at 50% 52%,rgba(0,90,110,0.09) 0%,transparent 100%),
+    radial-gradient(ellipse 65% 40% at 85% 35%,rgba(100,30,200,0.09) 0%,transparent 65%),
+    radial-gradient(ellipse 60% 45% at 10% 40%,rgba(0,180,140,0.07) 0%,transparent 65%),
+    /* deep base — dark forest/ruins */
+    linear-gradient(180deg,#020e12 0%,#010a0e 45%,#010812 100%)}
+/* atmospheric haze layer */
+#app::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(ellipse 50% 25% at 50% 30%,rgba(0,60,80,0.18) 0%,transparent 100%),
+    radial-gradient(ellipse 30% 15% at 25% 65%,rgba(0,180,140,0.06) 0%,transparent 100%),
+    radial-gradient(ellipse 25% 12% at 75% 70%,rgba(100,0,180,0.06) 0%,transparent 100%)}
+/* edge vignette */
 #app::after{content:'';position:fixed;inset:0;
-  background:radial-gradient(ellipse 100% 100% at 50% 50%,transparent 60%,rgba(0,0,0,0.35) 100%);
+  background:radial-gradient(ellipse 90% 90% at 50% 50%,transparent 50%,rgba(0,0,0,0.55) 100%);
   pointer-events:none;z-index:0}
 
-/* floating bio-luminescent orbs */
+/* zone atmosphere layer */
+#zone-atm{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;
+  transition:background 1.8s cubic-bezier(.22,1,.36,1),opacity 1.8s}
+
+/* floating bio-luminescent orbs + fireflies */
 #bg-orbs{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
 .bg-orb{position:absolute;border-radius:50%;filter:blur(28px)}
+.bg-spark{position:absolute;border-radius:50%;filter:blur(2px)}
 @keyframes orbDrift{
   0%{transform:translate(0,0) scale(1);opacity:.18}
   25%{transform:translate(12px,-18px) scale(1.08);opacity:.28}
   50%{transform:translate(-8px,-10px) scale(.94);opacity:.2}
   75%{transform:translate(15px,-5px) scale(1.04);opacity:.25}
   100%{transform:translate(0,0) scale(1);opacity:.18}
+}
+@keyframes sparkFloat{
+  0%{transform:translate(0,0);opacity:0}
+  10%{opacity:1}
+  80%{opacity:.7}
+  100%{transform:translate(var(--sx),var(--sy));opacity:0}
+}
+@keyframes sparkTwinkle{
+  0%,100%{opacity:.2;transform:scale(1)}
+  50%{opacity:1;transform:scale(1.6)}
 }
 .screen{display:none;flex-direction:column;min-height:100vh;position:relative;z-index:1;
   animation:screenIn .28s cubic-bezier(.22,1,.36,1)}
@@ -98,17 +128,18 @@ body{font-family:'Hiragino Kaku Gothic Pro','Hiragino Sans','Meiryo',sans-serif;
 .top-cta{width:100%}
 
 /* ── SCREEN 2: SETUP ── */
-#screen-setup{padding:0;overflow-y:auto}
-.setup-header{padding:28px 20px 16px}
+#screen-setup{padding:0;overflow-y:auto;background:transparent}
+.setup-header{padding:28px 20px 16px;background:transparent}
 .setup-step{font-size:10px;letter-spacing:.2em;color:var(--cyan);
   text-transform:uppercase;margin-bottom:8px}
 .setup-title{font-size:22px;font-weight:900;color:var(--text);line-height:1.3}
 .setup-sub{font-size:13px;color:var(--text-dim);margin-top:6px}
 .explorer-list{display:flex;flex-direction:column;gap:10px;padding:0 20px 20px}
 .exp-card{display:flex;align-items:center;gap:16px;padding:16px 18px;
-  border:1px solid var(--border);background:rgba(0,212,255,.04);cursor:pointer;
+  border:1px solid var(--border);background:rgba(0,20,32,.65);cursor:pointer;
   clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px));
-  transition:all .2s;position:relative}
+  transition:all .2s;position:relative;
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
 .exp-card.sel{border-color:var(--cyan);background:rgba(0,212,255,.1);box-shadow:var(--glow-md)}
 .exp-card:active{transform:scale(.98)}
 .exp-icon{font-size:38px;line-height:1;flex-shrink:0}
@@ -123,8 +154,9 @@ body{font-family:'Hiragino Kaku Gothic Pro','Hiragino Sans','Meiryo',sans-serif;
 .mood-title{font-size:15px;font-weight:900;color:var(--text);margin-bottom:14px;letter-spacing:.04em}
 .mood-row{display:flex;gap:10px}
 .mood-card{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;
-  padding:18px 6px;border:1px solid var(--border);background:rgba(0,212,255,.03);
-  cursor:pointer;border-radius:8px;transition:all .2s}
+  padding:18px 6px;border:1px solid var(--border);background:rgba(0,18,28,.65);
+  cursor:pointer;border-radius:8px;transition:all .2s;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 .mood-card.sel{border-color:var(--cyan);background:rgba(0,212,255,.1);box-shadow:var(--glow-sm)}
 .mood-card:active{transform:scale(.96)}
 .mood-em{font-size:32px}
@@ -165,8 +197,9 @@ body{font-family:'Hiragino Kaku Gothic Pro','Hiragino Sans','Meiryo',sans-serif;
 /* ── SCREEN 4: MAP ── */
 #screen-map{padding:0;overflow-y:auto;min-height:100vh}
 .map-hud{display:flex;align-items:center;gap:8px;padding:11px 14px 9px;
-  background:rgba(4,11,24,.9);backdrop-filter:blur(10px);
-  border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
+  background:rgba(1,10,18,.82);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  border-bottom:1px solid rgba(0,212,255,0.15);position:sticky;top:0;z-index:10;
+  box-shadow:0 4px 24px rgba(0,0,0,.5)}
 .hud-depth-label{font-size:9px;letter-spacing:.15em;color:var(--text-dim);
   text-transform:uppercase;white-space:nowrap}
 .hud-track{flex:1;height:6px;background:rgba(0,212,255,.1);border-radius:3px;overflow:hidden}
@@ -204,7 +237,8 @@ body{font-family:'Hiragino Kaku Gothic Pro','Hiragino Sans','Meiryo',sans-serif;
 /* QUEST CARD — landscape RPG style */
 .qcard{width:100%;height:92px;display:flex;flex-direction:row;cursor:pointer;
   border-radius:14px;overflow:hidden;transition:transform .18s,box-shadow .18s;
-  position:relative;background:rgba(4,14,28,.88)}
+  position:relative;background:rgba(2,12,22,.78);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
 .qcard:active{transform:scale(.97)}
 .qcard.new{animation:cardIn .35s cubic-bezier(.22,1,.36,1) both}
 
@@ -232,43 +266,49 @@ body{font-family:'Hiragino Kaku Gothic Pro','Hiragino Sans','Meiryo',sans-serif;
 .qcard-arrow{width:34px;flex-shrink:0;display:flex;align-items:center;
   justify-content:center;font-size:20px;padding-right:6px}
 
-/* type themes — vis bg + left accent border */
-.qt-discover .qcard-vis{background:linear-gradient(135deg,#78350f,#b45309,#d97706)}
-.qt-discover{border:1px solid rgba(217,119,6,.35);border-left:3px solid #d97706;
+/* quest type themes — shift/scale/role/world/feel */
+/* shift: 意味をズラす — amber */
+.qt-shift .qcard-vis{background:linear-gradient(135deg,#78350f,#b45309,#d97706)}
+.qt-shift{border:1px solid rgba(217,119,6,.35);border-left:3px solid #d97706;
   box-shadow:0 0 0 1px rgba(217,119,6,.1),inset 1px 0 14px rgba(217,119,6,.12)}
-.qt-discover .qcard-badge{background:rgba(217,119,6,.2);color:#fbbf24;border:1px solid rgba(217,119,6,.3)}
-.qt-discover .qcard-arrow{color:#fbbf24}
+.qt-shift .qcard-badge{background:rgba(217,119,6,.2);color:#fbbf24;border:1px solid rgba(217,119,6,.3)}
+.qt-shift .qcard-arrow{color:#fbbf24}
 
-.qt-battle   .qcard-vis{background:linear-gradient(135deg,#7f1d1d,#b91c1c,#dc2626)}
-.qt-battle  {border:1px solid rgba(220,38,38,.35);border-left:3px solid #ef4444;
-  box-shadow:0 0 0 1px rgba(220,38,38,.1),inset 1px 0 14px rgba(220,38,38,.12)}
-.qt-battle   .qcard-badge{background:rgba(220,38,38,.2);color:#f87171;border:1px solid rgba(220,38,38,.3)}
-.qt-battle   .qcard-arrow{color:#f87171}
-
-.qt-mystery  .qcard-vis{background:linear-gradient(135deg,#2e1065,#5b21b6,#7c3aed)}
-.qt-mystery {border:1px solid rgba(124,58,237,.35);border-left:3px solid #8b5cf6;
-  box-shadow:0 0 0 1px rgba(124,58,237,.1),inset 1px 0 14px rgba(124,58,237,.12)}
-.qt-mystery  .qcard-badge{background:rgba(124,58,237,.2);color:#a78bfa;border:1px solid rgba(124,58,237,.3)}
-.qt-mystery  .qcard-arrow{color:#a78bfa}
-
-.qt-craft    .qcard-vis{background:linear-gradient(135deg,#052e16,#065f46,#059669)}
-.qt-craft   {border:1px solid rgba(5,150,105,.35);border-left:3px solid #10b981;
-  box-shadow:0 0 0 1px rgba(5,150,105,.1),inset 1px 0 14px rgba(5,150,105,.12)}
-.qt-craft    .qcard-badge{background:rgba(5,150,105,.2);color:#34d399;border:1px solid rgba(5,150,105,.3)}
-.qt-craft    .qcard-arrow{color:#34d399}
-
-.qt-explore  .qcard-vis{background:linear-gradient(135deg,#0c2a4a,#0e4f7e,#0284c7)}
-.qt-explore {border:1px solid rgba(2,132,199,.35);border-left:3px solid #38bdf8;
+/* scale: スケールを変える — cyan/blue */
+.qt-scale .qcard-vis{background:linear-gradient(135deg,#0c2a4a,#0e4f7e,#0284c7)}
+.qt-scale{border:1px solid rgba(2,132,199,.35);border-left:3px solid #38bdf8;
   box-shadow:0 0 0 1px rgba(2,132,199,.1),inset 1px 0 14px rgba(2,132,199,.12)}
-.qt-explore  .qcard-badge{background:rgba(2,132,199,.2);color:#38bdf8;border:1px solid rgba(2,132,199,.3)}
-.qt-explore  .qcard-arrow{color:#38bdf8}
+.qt-scale .qcard-badge{background:rgba(2,132,199,.2);color:#38bdf8;border:1px solid rgba(2,132,199,.3)}
+.qt-scale .qcard-arrow{color:#38bdf8}
+
+/* role: 役割を変える — red/orange */
+.qt-role .qcard-vis{background:linear-gradient(135deg,#7f1d1d,#b91c1c,#dc2626)}
+.qt-role{border:1px solid rgba(220,38,38,.35);border-left:3px solid #ef4444;
+  box-shadow:0 0 0 1px rgba(220,38,38,.1),inset 1px 0 14px rgba(220,38,38,.12)}
+.qt-role .qcard-badge{background:rgba(220,38,38,.2);color:#f87171;border:1px solid rgba(220,38,38,.3)}
+.qt-role .qcard-arrow{color:#f87171}
+
+/* world: 世界を変える — purple */
+.qt-world .qcard-vis{background:linear-gradient(135deg,#2e1065,#5b21b6,#7c3aed)}
+.qt-world{border:1px solid rgba(124,58,237,.35);border-left:3px solid #8b5cf6;
+  box-shadow:0 0 0 1px rgba(124,58,237,.1),inset 1px 0 14px rgba(124,58,237,.12)}
+.qt-world .qcard-badge{background:rgba(124,58,237,.2);color:#a78bfa;border:1px solid rgba(124,58,237,.3)}
+.qt-world .qcard-arrow{color:#a78bfa}
+
+/* feel: 感情を与える — teal/green */
+.qt-feel .qcard-vis{background:linear-gradient(135deg,#052e16,#065f46,#059669)}
+.qt-feel{border:1px solid rgba(5,150,105,.35);border-left:3px solid #10b981;
+  box-shadow:0 0 0 1px rgba(5,150,105,.1),inset 1px 0 14px rgba(5,150,105,.12)}
+.qt-feel .qcard-badge{background:rgba(5,150,105,.2);color:#34d399;border:1px solid rgba(5,150,105,.3)}
+.qt-feel .qcard-arrow{color:#34d399}
 
 .map-bottom-area{padding:0 16px 36px}
 
 /* ── SCREEN 5: MISSION ── */
-#screen-mission{padding:0;min-height:100vh}
+#screen-mission{padding:0;min-height:100vh;background:transparent}
 .mbar{display:flex;align-items:center;gap:10px;padding:13px 16px;
-  background:rgba(4,11,24,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
+  background:rgba(1,10,18,.82);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  border-bottom:1px solid rgba(0,212,255,0.15);box-shadow:0 4px 24px rgba(0,0,0,.45)}
 .mbar-back{background:none;border:none;color:var(--cyan);font-size:22px;cursor:pointer;
   padding:2px 6px;line-height:1}
 .mbar-type{font-size:9px;font-weight:900;letter-spacing:.18em;padding:4px 10px;
@@ -283,11 +323,14 @@ body{font-family:'Hiragino Kaku Gothic Pro','Hiragino Sans','Meiryo',sans-serif;
 .mission-hero-photo img{width:100%;height:100%;object-fit:cover}
 
 .companion-strip{display:flex;align-items:flex-start;gap:12px;
-  padding:14px 18px 12px;background:rgba(0,212,255,.04);border-bottom:1px solid var(--border)}
+  padding:14px 18px 12px;
+  background:rgba(0,15,25,.72);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border-bottom:1px solid rgba(0,212,255,0.12)}
 .companion-avatar{width:56px;height:56px;flex-shrink:0}
-.companion-bubble{flex:1;background:rgba(0,212,255,.08);border:1px solid var(--border);
+.companion-bubble{flex:1;background:rgba(0,212,255,.07);border:1px solid var(--border);
   border-radius:0 12px 12px 12px;padding:10px 12px;
-  font-size:13px;color:var(--text);line-height:1.6}
+  font-size:13px;color:var(--text);line-height:1.6;
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
 .companion-bubble b{color:var(--cyan)}
 
 .mission-body{padding:20px;flex:1}
@@ -296,24 +339,26 @@ body{font-family:'Hiragino Kaku Gothic Pro','Hiragino Sans','Meiryo',sans-serif;
 
 .choices-grid{display:flex;flex-direction:column;gap:10px}
 .choice-btn{padding:14px 16px;border:1px solid var(--border);
-  background:rgba(0,212,255,.04);color:var(--text);font-size:15px;font-weight:700;
+  background:rgba(0,20,35,.72);color:var(--text);font-size:15px;font-weight:700;
   border-radius:6px;cursor:pointer;transition:all .15s;text-align:left;
   display:flex;align-items:center;gap:10px;font-family:inherit;width:100%;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
   clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,8px 100%,0 calc(100% - 8px))}
 .choice-btn:active{transform:scale(.97)}
 .choice-btn.chosen{border-color:var(--cyan);background:rgba(0,212,255,.14);box-shadow:var(--glow-sm)}
 
-.answer-textarea{width:100%;background:rgba(0,212,255,.04);
+.answer-textarea{width:100%;background:rgba(0,20,35,.72);
   border:1px solid var(--border);border-radius:6px;padding:14px;
   color:var(--text);font-size:15px;line-height:1.6;resize:none;
-  font-family:inherit;min-height:110px;outline:none}
+  font-family:inherit;min-height:110px;outline:none;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 .answer-textarea:focus{border-color:var(--cyan);box-shadow:var(--glow-sm)}
 .char-hint{font-size:11px;color:var(--text-dim);margin-top:6px;letter-spacing:.06em}
 
 .mission-submit-area{padding:14px 20px 36px}
 
 /* ── SCREEN 6: COMPLETE ── */
-#screen-complete{padding:0;min-height:100vh;overflow-y:auto}
+#screen-complete{padding:0;min-height:100vh;overflow-y:auto;background:transparent}
 .complete-hero{padding:26px 20px 18px;text-align:center;position:relative;overflow:hidden}
 .complete-burst{position:absolute;inset:0;pointer-events:none}
 .complete-label{font-size:11px;letter-spacing:.22em;color:var(--cyan);
@@ -325,12 +370,14 @@ body{font-family:'Hiragino Kaku Gothic Pro','Hiragino Sans','Meiryo',sans-serif;
 .complete-svg{width:110px;height:110px}
 .complete-cname{font-size:12px;color:var(--text-dim);letter-spacing:.1em}
 .complete-msg{font-size:14px;font-weight:700;color:var(--text);
-  background:rgba(0,212,255,.06);border:1px solid var(--border);
-  border-radius:0 12px 12px 12px;padding:12px 16px;margin:8px 20px 0;line-height:1.7}
+  background:rgba(0,18,30,.72);border:1px solid var(--border);
+  border-radius:0 12px 12px 12px;padding:12px 16px;margin:8px 20px 0;line-height:1.7;
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
 
 .gains-row{display:flex;gap:12px;padding:16px 20px}
-.gain-blk{flex:1;background:rgba(0,212,255,.05);border:1px solid var(--border);
-  border-radius:8px;padding:14px 10px;text-align:center}
+.gain-blk{flex:1;background:rgba(0,18,30,.72);border:1px solid var(--border);
+  border-radius:8px;padding:14px 10px;text-align:center;
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
 .gain-lbl{font-size:9px;letter-spacing:.15em;color:var(--text-dim);
   text-transform:uppercase;margin-bottom:6px}
 .gain-val{font-size:24px;font-weight:900;color:var(--cyan)}
@@ -357,7 +404,8 @@ body{font-family:'Hiragino Kaku Gothic Pro','Hiragino Sans','Meiryo',sans-serif;
 .trivia-vis::after{content:'';position:absolute;bottom:0;left:0;right:0;height:32px;
   background:linear-gradient(transparent,rgba(4,11,24,.92))}
 .trivia-vis-em{font-size:44px;position:relative;z-index:1;animation:float 3s ease-in-out infinite}
-.trivia-body{padding:14px 16px 12px;background:rgba(4,11,24,.92)}
+.trivia-body{padding:14px 16px 12px;background:rgba(1,12,22,.82);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
 .trivia-label{font-size:9px;letter-spacing:.2em;color:var(--gold);
   text-transform:uppercase;margin-bottom:8px;font-weight:900}
 .trivia-fact{font-size:14px;color:var(--text);line-height:1.75;margin-bottom:14px}
@@ -428,10 +476,11 @@ body{font-family:'Hiragino Kaku Gothic Pro','Hiragino Sans','Meiryo',sans-serif;
 .folder-empty-sub{font-size:13px;color:var(--text-dim);line-height:1.8}
 
 /* ── SCREEN: WORLDMAP ── */
-#screen-worldmap{padding:0;overflow-y:auto;min-height:100vh}
+#screen-worldmap{padding:0;overflow-y:auto;min-height:100vh;background:transparent}
 .wmap-hud{display:flex;align-items:center;gap:8px;padding:11px 14px 9px;
-  background:rgba(4,11,24,.92);backdrop-filter:blur(10px);
-  border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
+  background:rgba(1,10,18,.82);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  border-bottom:1px solid rgba(0,212,255,0.15);position:sticky;top:0;z-index:10;
+  box-shadow:0 4px 24px rgba(0,0,0,.5)}
 .wmap-hud-title{font-size:15px;font-weight:900;color:var(--text);flex:1;letter-spacing:.05em}
 .wmap-hud-xp{font-size:13px;font-weight:900;color:var(--gold);
   text-shadow:0 0 8px rgba(255,215,0,.5)}
@@ -571,6 +620,7 @@ body{font-family:'Hiragino Kaku Gothic Pro','Hiragino Sans','Meiryo',sans-serif;
 <body>
 <div id="app">
 <div id="bg-orbs"></div>
+<div id="zone-atm"></div>
 
 <!-- ===== SCREEN 1: TOP ===== -->
 <div class="screen active" id="screen-top">
@@ -843,190 +893,176 @@ const state = {
 // EXPLORER TYPES
 // =============================================
 const EXPLORERS = [
-  { key:'speed',  icon:'⚡', name:'スプリンター',    desc:'サクサク進む！短いクエスト好き' },
-  { key:'vision', icon:'👁️', name:'ビジョナー',      desc:'見て感じる。画像と観察が得意' },
-  { key:'thinker',icon:'🔮', name:'ディープダイバー', desc:'とことん深く考えるのが好き' },
-  { key:'story',  icon:'📖', name:'ストーリーテラー', desc:'物語を楽しみながら探究！' },
-  { key:'brave',  icon:'⚔️', name:'アドベンチャラー', desc:'冒険・バトル・サバイバル最高！' },
+  { key:'short',    icon:'⚡', name:'スプリンター',    desc:'サクッと終わる！タップ中心で進めたい' },
+  { key:'visual',   icon:'👁️', name:'ビジョナー',      desc:'文字より感覚・選択で探究したい' },
+  { key:'deep',     icon:'🔮', name:'ディープダイバー', desc:'理由・仮説・とことん深く考えたい' },
+  { key:'story',    icon:'📖', name:'ストーリーテラー', desc:'物語の中で想像を広げたい！' },
+  { key:'survival', icon:'⚔️', name:'サバイバラー',    desc:'ミッション・探索・生き残り最高！' },
 ];
 
 // =============================================
 // QUEST DATABASE
 // =============================================
-// type: discover/battle/mystery/craft/explore
-// depth_min: 0-3  answer: choices/text  xp: base XP
-// tw: trait weights {speed,vision,thinker,story,brave}
+// type: shift/scale/role/world/feel
+// dm: depth_min 0-2  ans: choices/text  xp: base XP
+// tw: trait weights {short,visual,deep,story,survival}
 const QUESTS = [
-// ─── ANIMAL ───
-{id:'an1',cat:'animal',type:'discover',dm:0,title:'目のひみつ',
-  em:'👁️',fl:'ひみつ発見',
-  prompt:'この生き物の目をよく見よう。どんな形？どの方向を向いてる？',
-  ans:'choices',ch:['まるくて大きい','よこに長い','正面向き','横向き'],
-  xp:20,tw:{speed:1,vision:1.6,thinker:.8,story:1,brave:.8}},
-{id:'an2',cat:'animal',type:'explore',dm:0,title:'すみか探し',
-  em:'🗺️',fl:'たんけん',
-  prompt:'この生き物はどこに住んでいそう？写真を見て想像してみよう！',
-  ans:'choices',ch:['森や木の上','水の近く','草むら','砂や岩の中'],
-  xp:20,tw:{speed:1,vision:1.2,thinker:1,story:1.2,brave:1.5}},
-{id:'an3',cat:'animal',type:'battle',dm:0,title:'VSバトル！',
-  em:'⚔️',fl:'バトル',
-  prompt:'この動物と犬が縄張り争いをしたら、どっちが勝つ？',
-  ans:'choices',ch:['この動物の勝ち！','犬の勝ち！','友達になる','どっちも逃げる'],
-  xp:25,tw:{speed:1.2,vision:1,thinker:.8,story:1,brave:2}},
-{id:'an4',cat:'animal',type:'mystery',dm:0,title:'今の気持ちは？',
-  em:'🔮',fl:'なぞとき',
-  prompt:'この生き物はいまどんな気持ちだと思う？顔や体を見ながら考えよう。',
-  ans:'text',xp:30,tw:{speed:.7,vision:1,thinker:1.3,story:1.6,brave:.9}},
-{id:'an5',cat:'animal',type:'craft',dm:1,title:'なりきりボイス',
-  em:'🎤',fl:'つくる',
-  prompt:'この生き物が話せたら何と言う？なりきって答えよう！',
-  ans:'text',xp:35,tw:{speed:.8,vision:.9,thinker:.9,story:1.9,brave:1}},
-{id:'an6',cat:'animal',type:'discover',dm:1,title:'サバイバル術',
-  em:'🛡️',fl:'ひみつ発見',
-  prompt:'この生き物の体には「生き残るための秘密」がある。どこだと思う？',
-  ans:'text',xp:35,tw:{speed:.7,vision:1.2,thinker:1.8,story:1,brave:1.3}},
-{id:'an7',cat:'animal',type:'explore',dm:1,title:'1日を追え',
-  em:'🧭',fl:'たんけん',
-  prompt:'この生き物の朝〜夜を想像しよう。朝起きたら最初に何をする？',
-  ans:'choices',ch:['えさを探す','縄張りパトロール','水を飲む','もっと寝る'],
-  xp:30,tw:{speed:1,vision:1,thinker:1.2,story:1.5,brave:1.2}},
-{id:'an8',cat:'animal',type:'mystery',dm:2,title:'進化のなぞ',
-  em:'🧬',fl:'なぞとき',
-  prompt:'この生き物がいまの体になったのはなぜ？どんな理由があると思う？',
-  ans:'text',xp:55,tw:{speed:.5,vision:.9,thinker:2,story:1,brave:.8}},
+// ─── SHIFT: 意味をズラす ───
+{id:'sh1',type:'shift',dm:0,title:'生きものだったら？',
+  em:'🐾',fl:'意味をズラす',
+  prompt:'写真の中のものが生き物だったら、どんな名前をつける？どこに住んでいる？',
+  ans:'text',xp:25,tw:{short:0.8,visual:1.2,deep:1,story:1.6,survival:0.9}},
+{id:'sh2',type:'shift',dm:0,title:'しゃべれたら？',
+  em:'💬',fl:'意味をズラす',
+  prompt:'これが突然しゃべれるようになった！最初に何を言う？',
+  ans:'text',xp:25,tw:{short:1,visual:0.9,deep:1,story:1.8,survival:0.8}},
+{id:'sh3',type:'shift',dm:0,title:'感情があるなら',
+  em:'💭',fl:'意味をズラす',
+  prompt:'これに感情があるとしたら、今どんな気持ちでいると思う？',
+  ans:'choices',ch:['うれしい！','さみしい…','ワクワクしてる','何も感じない'],
+  xp:20,tw:{short:1.3,visual:0.8,deep:0.9,story:1.5,survival:0.7}},
+{id:'sh4',type:'shift',dm:1,title:'夢を見るなら',
+  em:'🌙',fl:'意味をズラす',
+  prompt:'もしこれが夢を見るとしたら、どんな夢を見ていると思う？',
+  ans:'text',xp:35,tw:{short:0.7,visual:0.8,deep:1.2,story:2,survival:0.7}},
+{id:'sh5',type:'shift',dm:1,title:'宇宙人が見たら',
+  em:'👽',fl:'意味をズラす',
+  prompt:'別の星から来た宇宙人には、これがどう見える？何だと思う？',
+  ans:'text',xp:35,tw:{short:0.8,visual:1.3,deep:1.3,story:1.4,survival:1}},
+{id:'sh6',type:'shift',dm:1,title:'前世は何だった？',
+  em:'🔄',fl:'意味をズラす',
+  prompt:'これの前の姿（前世）を想像しよう。もともとは何だったと思う？',
+  ans:'text',xp:30,tw:{short:0.8,visual:0.9,deep:1.4,story:1.6,survival:0.9}},
+{id:'sh7',type:'shift',dm:2,title:'反対の世界',
+  em:'🔀',fl:'意味をズラす',
+  prompt:'これの「正反対」を想像しよう。全部逆にするとどんな姿になる？',
+  ans:'text',xp:50,tw:{short:0.6,visual:1,deep:1.7,story:1.3,survival:0.9}},
 
-// ─── FOOD ───
-{id:'fo1',cat:'food',type:'discover',dm:0,title:'色のひみつ',
-  em:'🎨',fl:'ひみつ発見',
-  prompt:'この食べ物の色はどこから来ている？その色になった理由を考えよう！',
-  ans:'choices',ch:['野菜や果物から','焼いた色','調味料の色','わからない'],
-  xp:20,tw:{speed:1,vision:1.8,thinker:.9,story:1,brave:.8}},
-{id:'fo2',cat:'food',type:'battle',dm:0,title:'おいしさ対決',
-  em:'🥊',fl:'バトル',
-  prompt:'この食べ物とピザ、おいしさで勝負！どっちが勝つ？',
-  ans:'choices',ch:['この食べ物の圧勝！','ピザの勝ち！','引き分け！','食べてみないと！'],
-  xp:25,tw:{speed:1.3,vision:1,thinker:.8,story:1,brave:1.6}},
-{id:'fo3',cat:'food',type:'mystery',dm:0,title:'どこから来た？',
-  em:'🌍',fl:'なぞとき',
-  prompt:'この食べ物はどの国・地域から来たと思う？',
-  ans:'choices',ch:['日本','ヨーロッパ','アジア（日本以外）','アメリカ'],
-  xp:25,tw:{speed:1,vision:.9,thinker:1.2,story:1.3,brave:1}},
-{id:'fo4',cat:'food',type:'explore',dm:0,title:'材料さがし',
-  em:'🔭',fl:'たんけん',
-  prompt:'この料理を作るには何が必要？思いつく材料を答えよう！',
-  ans:'text',xp:30,tw:{speed:.8,vision:1,thinker:1.3,story:1,brave:1}},
-{id:'fo5',cat:'food',type:'craft',dm:1,title:'レシピ開発',
-  em:'📝',fl:'つくる',
-  prompt:'この食べ物を使った新しい料理を考えよう！名前と作り方は？',
-  ans:'text',xp:40,tw:{speed:.6,vision:.9,thinker:1.2,story:1.6,brave:.9}},
-{id:'fo6',cat:'food',type:'discover',dm:1,title:'体への効果',
-  em:'💪',fl:'ひみつ発見',
-  prompt:'この食べ物を食べると体にどんないいことがある？想像してみよう！',
-  ans:'choices',ch:['力が強くなる','頭が冴える','目がよくなる','速く動ける'],
-  xp:30,tw:{speed:1,vision:1,thinker:1.3,story:1,brave:1.2}},
-{id:'fo7',cat:'food',type:'mystery',dm:2,title:'100年前は？',
-  em:'📜',fl:'なぞとき',
-  prompt:'この食べ物は100年前も食べられてたかな？昔と今で何が変わった？',
-  ans:'text',xp:55,tw:{speed:.5,vision:.8,thinker:1.9,story:1.8,brave:.7}},
+// ─── SCALE: スケールを変える ───
+{id:'sc1',type:'scale',dm:0,title:'10倍大きかったら',
+  em:'🔭',fl:'スケールを変える',
+  prompt:'これが10倍大きくなったら世界はどう変わる？困ることと便利になることは？',
+  ans:'text',xp:25,tw:{short:0.9,visual:1.3,deep:1.2,story:1.1,survival:1.3}},
+{id:'sc2',type:'scale',dm:0,title:'アリのサイズだったら',
+  em:'🐜',fl:'スケールを変える',
+  prompt:'これがアリのサイズに縮んだら、何ができる？何が難しくなる？',
+  ans:'choices',ch:['色々な場所に入れる！','運べない…','スピードが遅すぎ','虫に食べられる'],
+  xp:20,tw:{short:1.4,visual:1.2,deep:0.9,story:1.1,survival:1.4}},
+{id:'sc3',type:'scale',dm:0,title:'国より大きかったら',
+  em:'🌍',fl:'スケールを変える',
+  prompt:'これが日本と同じ大きさだったら、どんなことが起きる？',
+  ans:'text',xp:30,tw:{short:0.8,visual:1.1,deep:1.4,story:1.2,survival:1.1}},
+{id:'sc4',type:'scale',dm:1,title:'時間のスケール',
+  em:'⏳',fl:'スケールを変える',
+  prompt:'これが生きているとしたら、寿命は何年くらいだと思う？理由は？',
+  ans:'text',xp:35,tw:{short:0.8,visual:0.8,deep:1.6,story:1.3,survival:1}},
+{id:'sc5',type:'scale',dm:1,title:'ミクロ探検',
+  em:'🔬',fl:'スケールを変える',
+  prompt:'これの中をミクロサイズで旅するとしたら、何が見える？どんな世界が広がる？',
+  ans:'text',xp:35,tw:{short:0.7,visual:1.4,deep:1.4,story:1.2,survival:1}},
+{id:'sc6',type:'scale',dm:1,title:'スピードを変えたら',
+  em:'⚡',fl:'スケールを変える',
+  prompt:'これの時間を100倍速くしたら？または100分の1にしたら、何が変わる？',
+  ans:'choices',ch:['100倍速い世界！','100分の1スロー','どちらも見てみたい','変わらない'],
+  xp:30,tw:{short:1.3,visual:1.1,deep:1.2,story:0.9,survival:1.3}},
+{id:'sc7',type:'scale',dm:2,title:'宇宙スケール',
+  em:'🌌',fl:'スケールを変える',
+  prompt:'宇宙全体と比べると、これはどれくらいの存在だと思う？意味があると思う？',
+  ans:'text',xp:55,tw:{short:0.5,visual:1,deep:1.9,story:1.3,survival:0.8}},
 
-// ─── VEHICLE ───
-{id:'ve1',cat:'vehicle',type:'discover',dm:0,title:'重要パーツは？',
-  em:'🔩',fl:'ひみつ発見',
-  prompt:'この乗り物で一番大事なパーツはどこ？なければ動けないのは？',
-  ans:'choices',ch:['エンジン・モーター','タイヤ・車輪','ハンドル・舵','ライト'],
-  xp:20,tw:{speed:1,vision:1.4,thinker:1.2,story:.9,brave:1.2}},
-{id:'ve2',cat:'vehicle',type:'battle',dm:0,title:'速さ対決！',
-  em:'⚡',fl:'バトル',
-  prompt:'この乗り物と新幹線、速さで勝負！どっちが速い？',
-  ans:'choices',ch:['この乗り物が速い！','新幹線の圧勝！','場合による','どっちも乗りたい！'],
-  xp:25,tw:{speed:1.6,vision:1,thinker:.8,story:.9,brave:1.8}},
-{id:'ve3',cat:'vehicle',type:'explore',dm:0,title:'どこへ行く？',
-  em:'🗺️',fl:'たんけん',
-  prompt:'この乗り物で世界中どこへでも行けるとしたら、どこへ行く？',
-  ans:'text',xp:30,tw:{speed:.8,vision:1,thinker:.9,story:1.6,brave:1.5}},
-{id:'ve4',cat:'vehicle',type:'mystery',dm:0,title:'動力の謎',
-  em:'❓',fl:'なぞとき',
-  prompt:'この乗り物はどうやって動いている？エネルギーはどこから来る？',
-  ans:'choices',ch:['ガソリン・燃料','電気・バッテリー','人の力','風や自然の力'],
-  xp:25,tw:{speed:1,vision:.9,thinker:1.6,story:1,brave:1}},
-{id:'ve5',cat:'vehicle',type:'craft',dm:1,title:'秘密改造！',
-  em:'🛠️',fl:'つくる',
-  prompt:'この乗り物に秘密の機能を1つ追加するとしたら？どんな機能？',
-  ans:'text',xp:40,tw:{speed:.7,vision:1,thinker:1.3,story:1.6,brave:1.4}},
-{id:'ve6',cat:'vehicle',type:'discover',dm:1,title:'安全のひみつ',
-  em:'🛡️',fl:'ひみつ発見',
-  prompt:'この乗り物にはどんな安全の仕組みが隠れている？探してみよう！',
-  ans:'text',xp:35,tw:{speed:.7,vision:1.6,thinker:1.3,story:1,brave:1}},
-{id:'ve7',cat:'vehicle',type:'mystery',dm:2,title:'50年後は？',
-  em:'🚀',fl:'なぞとき',
-  prompt:'50年後、この乗り物はどう変わっている？なくなる？進化する？',
-  ans:'text',xp:55,tw:{speed:.6,vision:1,thinker:1.9,story:1.8,brave:1.2}},
+// ─── ROLE: 役割を変える ───
+{id:'ro1',type:'role',dm:0,title:'武器にするなら',
+  em:'⚔️',fl:'役割を変える',
+  prompt:'これを武器にするとしたら、どんな武器になる？どんな必殺技がある？',
+  ans:'text',xp:25,tw:{short:1.1,visual:1.1,deep:0.9,story:1.3,survival:1.8}},
+{id:'ro2',type:'role',dm:0,title:'楽器にしたら',
+  em:'🎵',fl:'役割を変える',
+  prompt:'これを楽器にしたらどんな音が出る？どんな曲が演奏できる？',
+  ans:'choices',ch:['打楽器！ドンドン','弦楽器！キーン','管楽器！ふわぁ','何も音が出ない'],
+  xp:20,tw:{short:1.4,visual:1,deep:0.8,story:1.4,survival:1.1}},
+{id:'ro3',type:'role',dm:0,title:'食べ物なら何の味？',
+  em:'🍽️',fl:'役割を変える',
+  prompt:'これが食べ物だったら何の味がする？名前をつけるとしたら？',
+  ans:'text',xp:25,tw:{short:1,visual:1.3,deep:0.8,story:1.3,survival:1.1}},
+{id:'ro4',type:'role',dm:1,title:'乗り物に改造',
+  em:'🚀',fl:'役割を変える',
+  prompt:'これを乗り物に改造するとしたら、どこへ行ける？どんな仕組み？',
+  ans:'text',xp:35,tw:{short:0.9,visual:1.1,deep:1.1,story:1.2,survival:1.6}},
+{id:'ro5',type:'role',dm:1,title:'お守りの力',
+  em:'🔮',fl:'役割を変える',
+  prompt:'これをお守りにしたらどんな力がある？あなたを何から守ってくれる？',
+  ans:'text',xp:30,tw:{short:0.9,visual:0.9,deep:1.1,story:1.7,survival:1.2}},
+{id:'ro6',type:'role',dm:1,title:'本のタイトルなら',
+  em:'📖',fl:'役割を変える',
+  prompt:'これがある本のタイトルだとしたら、どんなストーリー？主人公は誰？',
+  ans:'text',xp:35,tw:{short:0.7,visual:0.8,deep:1.1,story:2,survival:0.9}},
+{id:'ro7',type:'role',dm:2,title:'チームのシンボル',
+  em:'🏆',fl:'役割を変える',
+  prompt:'これをスポーツチームのシンボルにしたら？チーム名と必勝技を考えよう！',
+  ans:'text',xp:50,tw:{short:0.8,visual:1,deep:0.9,story:1.5,survival:1.7}},
 
-// ─── PLANT ───
-{id:'pl1',cat:'plant',type:'discover',dm:0,title:'色の理由',
-  em:'🌈',fl:'ひみつ発見',
-  prompt:'この植物がその色をしているのはなんでだと思う？',
-  ans:'choices',ch:['虫を呼ぶため','日光を集めるため','敵から身を守るため','ただきれい'],
-  xp:20,tw:{speed:1,vision:1.6,thinker:1.2,story:1,brave:.8}},
-{id:'pl2',cat:'plant',type:'explore',dm:0,title:'すみか探し',
-  em:'🧭',fl:'たんけん',
-  prompt:'この植物はどんな場所が好きそう？日当たり？水？土？',
-  ans:'choices',ch:['日なたの乾燥地','湿った日かげ','水の中や近く','どこでも育つ'],
-  xp:20,tw:{speed:1,vision:1.2,thinker:1,story:1.2,brave:1.2}},
-{id:'pl3',cat:'plant',type:'battle',dm:0,title:'生命力バトル',
-  em:'💪',fl:'バトル',
-  prompt:'この植物とサボテン、砂漠で生き残るのはどっち？',
-  ans:'choices',ch:['この植物！工夫がすごい','サボテン圧勝','どちらも生き残る','どちらもやられる'],
-  xp:25,tw:{speed:1.2,vision:1,thinker:1,story:1,brave:1.9}},
-{id:'pl4',cat:'plant',type:'mystery',dm:0,title:'葉の形のなぞ',
-  em:'🍃',fl:'なぞとき',
-  prompt:'この葉っぱの形はなんのため？なぜこの形になったと思う？',
-  ans:'text',xp:30,tw:{speed:.7,vision:1.2,thinker:1.6,story:1,brave:.9}},
-{id:'pl5',cat:'plant',type:'craft',dm:1,title:'植物キャラ化',
-  em:'🎨',fl:'つくる',
-  prompt:'この植物がキャラクターだったら名前と特技は何？どんな性格？',
-  ans:'text',xp:35,tw:{speed:.8,vision:1,thinker:.9,story:1.9,brave:1}},
-{id:'pl6',cat:'plant',type:'discover',dm:1,title:'生き残り術',
-  em:'🌱',fl:'ひみつ発見',
-  prompt:'この植物はどうやって水を集めたり、虫から身を守ったりしてる？',
-  ans:'choices',ch:['毒や刺で守る','虫を食べる','根を深く張る','葉が動く'],
-  xp:30,tw:{speed:1,vision:1.2,thinker:1.5,story:.9,brave:1.2}},
-{id:'pl7',cat:'plant',type:'mystery',dm:2,title:'花が咲く理由',
-  em:'🌸',fl:'なぞとき',
-  prompt:'この植物が花を咲かせるとしたら、なぜ花を咲かせるの？',
-  ans:'text',xp:55,tw:{speed:.5,vision:1.2,thinker:1.9,story:1.5,brave:.7}},
+// ─── WORLD: 世界を変える ───
+{id:'wo1',type:'world',dm:0,title:'宇宙で使うなら',
+  em:'🛸',fl:'世界を変える',
+  prompt:'これを宇宙で使うとしたら、どう改造する？どんな役に立つ？',
+  ans:'text',xp:25,tw:{short:0.9,visual:1.2,deep:1.2,story:1.2,survival:1.5}},
+{id:'wo2',type:'world',dm:0,title:'重力ゼロの世界',
+  em:'🌀',fl:'世界を変える',
+  prompt:'重力がゼロの世界に置いたら、これはどうなる？何ができる？',
+  ans:'choices',ch:['ふわふわ浮く！','形が変わる','バラバラになる','変わらない'],
+  xp:20,tw:{short:1.4,visual:1.3,deep:0.9,story:1,survival:1.4}},
+{id:'wo3',type:'world',dm:0,title:'海の底の世界',
+  em:'🌊',fl:'世界を変える',
+  prompt:'これを海の底に持っていったらどう変化する？海の生き物はどう思う？',
+  ans:'text',xp:25,tw:{short:0.9,visual:1.3,deep:1.1,story:1.3,survival:1.3}},
+{id:'wo4',type:'world',dm:1,title:'100年後の世界',
+  em:'🔭',fl:'世界を変える',
+  prompt:'100年後の未来では、これはどう進化している？それとも消えている？',
+  ans:'text',xp:35,tw:{short:0.7,visual:0.9,deep:1.7,story:1.4,survival:1.1}},
+{id:'wo5',type:'world',dm:1,title:'魔法の世界へ',
+  em:'✨',fl:'世界を変える',
+  prompt:'魔法が使える世界なら、これはどんな魔法を持てる？どう使う？',
+  ans:'text',xp:35,tw:{short:0.8,visual:1,deep:1,story:1.8,survival:1.4}},
+{id:'wo6',type:'world',dm:1,title:'逆さまの世界',
+  em:'🙃',fl:'世界を変える',
+  prompt:'全てが逆さまの世界（上下・白黒・善悪が逆）でこれはどんな役割になる？',
+  ans:'text',xp:40,tw:{short:0.7,visual:1.1,deep:1.5,story:1.4,survival:1}},
+{id:'wo7',type:'world',dm:2,title:'恐竜時代に持参',
+  em:'🦕',fl:'世界を変える',
+  prompt:'これを恐竜時代に持っていったら何が起きる？どう使う？生き残れる？',
+  ans:'text',xp:55,tw:{short:0.6,visual:1,deep:1.3,story:1.5,survival:1.9}},
 
-// ─── MYSTERY (all-purpose) ───
-{id:'my1',cat:'mystery',type:'mystery',dm:0,title:'これは何？',
-  em:'❓',fl:'なぞとき',
-  prompt:'写真の中で一番気になるものは何？それはどんな目的があると思う？',
-  ans:'choices',ch:['道具や機械','飾りやアート','自然のもの','まだわからない'],
-  xp:25,tw:{speed:1,vision:1.2,thinker:1.2,story:1,brave:1}},
-{id:'my2',cat:'mystery',type:'discover',dm:0,title:'かくれたもの',
-  em:'🔍',fl:'ひみつ発見',
-  prompt:'最初は気づかなかったものを写真から探そう！何があった？',
-  ans:'text',xp:25,tw:{speed:1,vision:1.9,thinker:1,story:1.2,brave:1.2}},
-{id:'my3',cat:'mystery',type:'explore',dm:0,title:'物語を作れ',
-  em:'📖',fl:'たんけん',
-  prompt:'この写真を見て短い物語を作ろう。「ある日、ここで……」',
-  ans:'text',xp:30,tw:{speed:.6,vision:1,thinker:.9,story:2,brave:1}},
-{id:'my4',cat:'mystery',type:'battle',dm:0,title:'守護者バトル',
-  em:'⚔️',fl:'バトル',
-  prompt:'この場所の宝を守る守護者と冒険者が対決！どっちが勝つ？',
-  ans:'choices',ch:['冒険者の機転で勝利！','守護者の圧勝！','和解して仲間に','逃げて出直す'],
-  xp:25,tw:{speed:1.2,vision:.9,thinker:.9,story:1.6,brave:2}},
-{id:'my5',cat:'mystery',type:'craft',dm:1,title:'発明品を作れ',
-  em:'💡',fl:'つくる',
-  prompt:'この写真にヒントを得て、世界を変える発明品を考えよう！',
-  ans:'text',xp:40,tw:{speed:.7,vision:1.2,thinker:1.5,story:1.3,brave:1.2}},
-{id:'my6',cat:'mystery',type:'mystery',dm:1,title:'100年後は？',
-  em:'🔮',fl:'なぞとき',
-  prompt:'この写真のものは100年後どうなっている？変わる？なくなる？',
-  ans:'text',xp:40,tw:{speed:.6,vision:1,thinker:1.9,story:1.5,brave:.9}},
-{id:'my7',cat:'mystery',type:'explore',dm:2,title:'深読み探偵',
-  em:'🕵️',fl:'たんけん',
-  prompt:'この写真からここがどんな場所・状況か推理しよう。証拠は何？',
-  ans:'text',xp:55,tw:{speed:.5,vision:1.4,thinker:1.9,story:1.5,brave:1.3}},
+// ─── FEEL: 感情を与える ───
+{id:'fe1',type:'feel',dm:0,title:'機嫌はどう？',
+  em:'😊',fl:'感情を探索',
+  prompt:'これの今の機嫌はどう？何が嬉しくて、何が嫌い？',
+  ans:'choices',ch:['最高にごきげん！','ちょっとゆううつ…','ドキドキしてる','何も感じない'],
+  xp:20,tw:{short:1.4,visual:0.8,deep:0.8,story:1.6,survival:0.7}},
+{id:'fe2',type:'feel',dm:0,title:'好きな音楽は？',
+  em:'🎶',fl:'感情を探索',
+  prompt:'これに好きな音楽があるとしたら何の曲？なぜその曲が好きなんだと思う？',
+  ans:'text',xp:25,tw:{short:0.8,visual:0.7,deep:1,story:1.8,survival:0.8}},
+{id:'fe3',type:'feel',dm:0,title:'1番の自慢',
+  em:'⭐',fl:'感情を探索',
+  prompt:'これに自慢があるとしたら何？どんな言葉で自分を紹介する？',
+  ans:'text',xp:25,tw:{short:0.9,visual:1,deep:0.9,story:1.7,survival:1.1}},
+{id:'fe4',type:'feel',dm:1,title:'悩みがあるなら',
+  em:'💭',fl:'感情を探索',
+  prompt:'これが悩みを抱えているとしたら、どんな悩み？あなたはどうアドバイスする？',
+  ans:'text',xp:35,tw:{short:0.7,visual:0.7,deep:1.4,story:1.7,survival:0.8}},
+{id:'fe5',type:'feel',dm:1,title:'怖いものは？',
+  em:'😱',fl:'感情を探索',
+  prompt:'これが怖いと感じるものがあるとしたら何？なぜ怖いんだと思う？',
+  ans:'choices',ch:['暗さ・孤独','急な変化','壊れること','何も怖くない！'],
+  xp:30,tw:{short:1.2,visual:0.8,deep:1.1,story:1.5,survival:1.1}},
+{id:'fe6',type:'feel',dm:1,title:'手紙が届いた',
+  em:'✉️',fl:'感情を探索',
+  prompt:'これからあなたへ手紙が届いた。どんな内容が書いてあると思う？',
+  ans:'text',xp:35,tw:{short:0.6,visual:0.7,deep:1.1,story:2,survival:0.8}},
+{id:'fe7',type:'feel',dm:2,title:'ヒーローなら',
+  em:'🦸',fl:'感情を探索',
+  prompt:'これがヒーローだとしたら、どんな人を守る？どんな使命を持っている？',
+  ans:'text',xp:50,tw:{short:0.7,visual:0.9,deep:1.2,story:1.8,survival:1.5}},
 ];
 
 // =============================================
@@ -1217,19 +1253,19 @@ function getActiveCategory(){
 
 // Companion messages per trait
 const COMPANION_INTRO = {
-  speed:   q=>`よし！このクエストをサクッとやろう！👊`,
-  vision:  q=>`じっくり写真を見るんだ。目を開いて！👁️`,
-  thinker: q=>`なぜ？どうやって？深く考えてみて！🔮`,
-  story:   q=>`物語のはじまりだ！さあ、想像の翼を広げよう📖`,
-  brave:   q=>`冒険者よ、このクエストを突破せよ！⚔️`,
+  short:    q=>`よし！サクッとやってみよう！👊`,
+  visual:   q=>`写真をじっくり感じて！答えは目の前にある👁️`,
+  deep:     q=>`なぜ？どうやって？とことん深く考えてみて！🔮`,
+  story:    q=>`想像の翼を広げよう！どんな物語が見える？📖`,
+  survival: q=>`冒険者よ、このミッションを突破せよ！⚔️`,
 };
 
 const COMPLETION_MESSAGES = {
-  discover:['よく見つけたね！そのひみつ、知ってる人は少ないよ！','観察力がすごい！冒険者の目がどんどん鋭くなってる！'],
-  battle:  ['バトル勝利！その判断、正解だと思う！','圧倒的な力！また戦おう！'],
-  mystery: ['なぞとき完了！その答え、深く考えてるね！','ミステリー解決！探偵みたいだったよ！'],
-  craft:   ['クリエイティブすぎる！それ、本当に作ってみたい！','発想がユニーク！世界が広がったよ！'],
-  explore: ['探索完了！新しい地図が見えてきた！','よく旅したね！また新しい場所に行こう！'],
+  shift:['その答え、誰も考えたことなかったかも！','すごい視点！それ、本当にありそう！','意味のズラし方が天才すぎる！'],
+  scale:['スケール感が最高！そのサイズ感、ビジュアルが浮かんだ！','大きさで世界が変わる、を証明してくれた！'],
+  role: ['役割の変換が鮮やか！そのアイデア、本当に使えそう！','ユニークすぎる！誰も思いつかない役割だよ！'],
+  world:['世界を変えた！その宇宙、行ってみたすぎる！','世界観がすごい！本にできるくらいのアイデアだよ！'],
+  feel: ['感情の読み取り方が深い！共感力がハンパない！','心が込められてる！その手紙、届きそうだよ！'],
 };
 
 // =============================================
@@ -1353,6 +1389,7 @@ function startAdventure(){
 // SCREEN 4: MAP
 // =============================================
 function refreshMap(){
+  updateZoneAtm();
   updateHUD();
   const activeCat=getActiveCategory();
   const activePhoto=getActivePhoto();
@@ -1436,11 +1473,30 @@ function buildWorldMap(){
 }
 
 function goToWorldMap(){
+  updateZoneAtm();
   buildWorldMap();
   goTo('worldmap');
 }
 
+// Zone-specific atmospheric tint for background
+const ZONE_ATM = {
+  village: 'radial-gradient(ellipse 70% 50% at 30% 100%,rgba(120,80,10,0.12) 0%,transparent 70%),radial-gradient(ellipse 50% 40% at 70% 0%,rgba(0,180,100,0.10) 0%,transparent 70%)',
+  forest:  'radial-gradient(ellipse 80% 55% at 20% 100%,rgba(0,160,80,0.15) 0%,transparent 70%),radial-gradient(ellipse 60% 50% at 80% 0%,rgba(0,220,140,0.10) 0%,transparent 65%)',
+  mountain:'radial-gradient(ellipse 70% 50% at 50% 0%,rgba(80,140,200,0.12) 0%,transparent 70%),radial-gradient(ellipse 50% 40% at 20% 80%,rgba(60,100,180,0.10) 0%,transparent 65%)',
+  sea:     'radial-gradient(ellipse 90% 60% at 50% 100%,rgba(0,140,200,0.18) 0%,transparent 70%),radial-gradient(ellipse 60% 50% at 80% 40%,rgba(0,180,220,0.12) 0%,transparent 65%)',
+  city:    'radial-gradient(ellipse 70% 55% at 50% 0%,rgba(140,60,220,0.12) 0%,transparent 70%),radial-gradient(ellipse 50% 45% at 80% 80%,rgba(60,80,200,0.10) 0%,transparent 65%)',
+  stars:   'radial-gradient(ellipse 100% 60% at 50% 50%,rgba(100,40,240,0.14) 0%,transparent 70%),radial-gradient(ellipse 60% 50% at 20% 20%,rgba(180,80,255,0.12) 0%,transparent 65%)',
+};
+
+function updateZoneAtm(){
+  const zi=getCurrentZoneIdx();
+  const zoneId=ZONES[zi]?.id||'village';
+  const el=document.getElementById('zone-atm');
+  if(el) el.style.background=ZONE_ATM[zoneId]||'';
+}
+
 function enterCurrentZone(){
+  updateZoneAtm();
   refreshMap();
   goTo('map');
 }
@@ -1532,13 +1588,14 @@ function updateHUD(){
 }
 
 function getQuestsForMap(){
-  const trait=state.trait||'speed';
+  const trait=state.trait||'short';
   const moodBoost={hot:1,ok:0,tired:-1}[state.mood]||0;
   const effectiveDepth=Math.max(0,state.depth+moodBoost);
-  const activeCat=getActiveCategory();
+  // visual/short traits get extra choices-type boost
+  const prefersChoices=(trait==='short'||trait==='visual');
   return QUESTS
-    .filter(q=>(q.cat===activeCat||q.cat==='mystery')&&q.dm<=effectiveDepth)
-    .map(q=>({q, score:(q.tw[trait]||1)+(Math.random()*.4)}))
+    .filter(q=>q.dm<=effectiveDepth&&!state.completedIds.includes(q.id))
+    .map(q=>({q, score:(q.tw[trait]||1)+(prefersChoices&&q.ans==='choices'?.25:0)+(Math.random()*.4)}))
     .sort((a,b)=>b.score-a.score)
     .slice(0,5)
     .map(x=>x.q);
@@ -1579,26 +1636,26 @@ function renderMission(q){
   // top bar
   const pill=document.getElementById('mbar-type-pill');
   const typeColors={
-    discover:'background:rgba(217,119,6,.2);color:#fbbf24;border:1px solid rgba(217,119,6,.3)',
-    battle:'background:rgba(220,38,38,.2);color:#f87171;border:1px solid rgba(220,38,38,.3)',
-    mystery:'background:rgba(124,58,237,.2);color:#a78bfa;border:1px solid rgba(124,58,237,.3)',
-    craft:'background:rgba(5,150,105,.2);color:#34d399;border:1px solid rgba(5,150,105,.3)',
-    explore:'background:rgba(2,132,199,.2);color:#38bdf8;border:1px solid rgba(2,132,199,.3)',
+    shift:'background:rgba(217,119,6,.2);color:#fbbf24;border:1px solid rgba(217,119,6,.3)',
+    scale:'background:rgba(2,132,199,.2);color:#38bdf8;border:1px solid rgba(2,132,199,.3)',
+    role:'background:rgba(220,38,38,.2);color:#f87171;border:1px solid rgba(220,38,38,.3)',
+    world:'background:rgba(124,58,237,.2);color:#a78bfa;border:1px solid rgba(124,58,237,.3)',
+    feel:'background:rgba(5,150,105,.2);color:#34d399;border:1px solid rgba(5,150,105,.3)',
   };
-  pill.style.cssText=typeColors[q.type]||'';
+  pill.style.cssText=typeColors[q.type]||typeColors.shift;
   pill.textContent=q.fl;
   document.getElementById('mbar-title').textContent=q.title;
 
   // hero
   const hero=document.getElementById('mission-hero-vis');
   const heroGrads={
-    discover:'linear-gradient(145deg,#92400e,#d97706,#fde68a)',
-    battle:'linear-gradient(145deg,#7f1d1d,#dc2626,#fca5a5)',
-    mystery:'linear-gradient(145deg,#2e1065,#7c3aed,#c4b5fd)',
-    craft:'linear-gradient(145deg,#064e3b,#059669,#6ee7b7)',
-    explore:'linear-gradient(145deg,#0c4a6e,#0284c7,#7dd3fc)',
+    shift:'linear-gradient(145deg,#92400e,#d97706,#fde68a)',
+    scale:'linear-gradient(145deg,#0c4a6e,#0284c7,#7dd3fc)',
+    role:'linear-gradient(145deg,#7f1d1d,#dc2626,#fca5a5)',
+    world:'linear-gradient(145deg,#2e1065,#7c3aed,#c4b5fd)',
+    feel:'linear-gradient(145deg,#064e3b,#059669,#6ee7b7)',
   };
-  hero.style.background=heroGrads[q.type]||heroGrads.mystery;
+  hero.style.background=heroGrads[q.type]||heroGrads.world;
   document.getElementById('mission-hero-em').textContent=q.em;
   const mpt=document.getElementById('mission-photo-thumb');
   const activePhoto=getActivePhoto();
@@ -1609,8 +1666,8 @@ function renderMission(q){
   const svg=document.getElementById('companion-svg');
   svg.innerHTML=MONSTER_SVG[cat]||MONSTER_SVG.mystery;
   const info=MONSTER_INFO[cat]||MONSTER_INFO.mystery;
-  const trait=state.trait||'brave';
-  const introFn=COMPANION_INTRO[trait]||COMPANION_INTRO.brave;
+  const trait=state.trait||'survival';
+  const introFn=COMPANION_INTRO[trait]||COMPANION_INTRO.survival;
   document.getElementById('companion-msg').innerHTML=
     `<b>${info.name}</b>より：${introFn(q)}`;
 
@@ -1677,8 +1734,8 @@ function submitAnswer(){
   const title=document.getElementById('complete-title');
   const sub=document.getElementById('complete-subtitle');
 
-  const labels={discover:'ひみつ発見！',battle:'バトル勝利！',mystery:'なぞ解明！',craft:'作品完成！',explore:'探索完了！'};
-  label.textContent=labels[q.type]||'クエスト完了！';
+  const labels={shift:'視点シフト！',scale:'スケールアップ！',role:'役割変換！',world:'世界変換！',feel:'感情探索！'};
+  label.textContent=labels[q.type]||'想像完了！';
 
   const titles=['すごい！','やったね！','天才だ！','完璧！','レジェンド！'];
   title.textContent=titles[Math.min(Math.floor(state.depth/3),titles.length-1)];
@@ -1704,8 +1761,9 @@ function submitAnswer(){
   document.getElementById('next-quest-feed').innerHTML=
     nextQuests.map((nq,i)=>questCardHTML(nq,i,'complete')).join('');
 
-  // trivia card
-  const trivia=pickTrivia(state.category||'mystery');
+  // trivia card — pick from all categories randomly
+  const triviaKeys=Object.keys(TRIVIA_DB);
+  const trivia=pickTrivia(triviaKeys[Math.floor(Math.random()*triviaKeys.length)]);
   renderTriviaCard(trivia);
 
   goTo('complete');
@@ -1723,16 +1781,15 @@ function submitAnswer(){
 }
 
 function getNextQuests(completedQ){
-  const trait=state.trait||'speed';
-  // prefer same category, different type, +1 depth
+  const trait=state.trait||'short';
+  // prefer different quest type to encourage variety
   return QUESTS
     .filter(q=>
       q.id!==completedQ.id &&
       !state.completedIds.includes(q.id) &&
-      (q.cat===completedQ.cat||q.cat==='mystery') &&
       q.dm<=state.depth
     )
-    .map(q=>({q, score:(q.tw[trait]||1)+(q.type!==completedQ.type?.3:0)+(Math.random()*.3)}))
+    .map(q=>({q, score:(q.tw[trait]||1)+(q.type!==completedQ.type?.35:0)+(Math.random()*.3)}))
     .sort((a,b)=>b.score-a.score)
     .slice(0,4)
     .map(x=>x.q);
@@ -1955,28 +2012,60 @@ function buildStars(){
 function buildBgOrbs(){
   const wrap=document.getElementById('bg-orbs');
   if(!wrap)return;
-  // {color, size range, opacity range}
+
+  // Large atmospheric glows
   const palettes=[
-    {c:'0,212,255',   sz:[80,180], op:[0.12,0.22]},  // cyan
-    {c:'0,255,180',   sz:[60,140], op:[0.08,0.16]},  // teal-green
-    {c:'130,60,255',  sz:[100,200],op:[0.10,0.18]},  // purple
-    {c:'0,140,220',   sz:[70,150], op:[0.10,0.18]},  // blue
-    {c:'20,220,160',  sz:[60,130], op:[0.08,0.14]},  // turquoise
-    {c:'200,80,255',  sz:[80,160], op:[0.08,0.14]},  // violet
+    {c:'0,212,255',   sz:[90,200], op:[0.10,0.20]},  // cyan
+    {c:'0,255,180',   sz:[70,160], op:[0.07,0.15]},  // teal-green
+    {c:'130,40,255',  sz:[110,220],op:[0.08,0.16]},  // purple
+    {c:'0,140,220',   sz:[80,170], op:[0.09,0.17]},  // blue
+    {c:'20,220,160',  sz:[70,150], op:[0.07,0.13]},  // turquoise
+    {c:'200,60,255',  sz:[90,180], op:[0.07,0.13]},  // violet
+    {c:'0,255,210',   sz:[60,130], op:[0.06,0.12]},  // aqua
   ];
-  for(let i=0;i<14;i++){
+  // Cluster orbs — more near bottom (forest floor) and top (canopy)
+  const positions=[
+    [5,85],[20,75],[35,90],[55,80],[70,85],[90,75],[100,90], // floor cluster
+    [10,5],[30,10],[50,3],[70,8],[90,5],                     // canopy cluster
+    [50,50],[25,45],[75,40],[15,55],[85,60],                 // mid-depth
+    [40,20],[60,25],[80,30],[20,30],                         // upper-mid
+  ];
+  for(let i=0;i<20;i++){
     const p=palettes[i%palettes.length];
     const sz=p.sz[0]+Math.random()*(p.sz[1]-p.sz[0]);
     const op=(p.op[0]+Math.random()*(p.op[1]-p.op[0])).toFixed(2);
-    const dur=10+Math.random()*16;
-    const del=Math.random()*8;
+    const dur=12+Math.random()*18;
+    const del=Math.random()*10;
+    const pos=positions[i]||[Math.random()*110-5,Math.random()*110-5];
     const el=document.createElement('div');
     el.className='bg-orb';
     el.style.cssText=`
-      left:${Math.random()*110-5}%;top:${Math.random()*110-5}%;
+      left:${pos[0]+Math.random()*10-5}%;top:${pos[1]+Math.random()*10-5}%;
       width:${sz}px;height:${sz}px;
       background:radial-gradient(circle,rgba(${p.c},${op}) 0%,rgba(${p.c},0) 70%);
       animation:orbDrift ${dur}s ${del}s ease-in-out infinite`;
+    wrap.appendChild(el);
+  }
+
+  // Small firefly sparks — floating upward like the forest image
+  const sparkColors=['0,255,210','80,240,255','180,100,255','0,240,180','140,200,255'];
+  for(let i=0;i<35;i++){
+    const el=document.createElement('div');
+    el.className='bg-spark';
+    const sz=2+Math.random()*4;
+    const col=sparkColors[Math.floor(Math.random()*sparkColors.length)];
+    const op=(0.4+Math.random()*0.6).toFixed(2);
+    const x=Math.random()*100;
+    const y=40+Math.random()*60; // mostly in lower half
+    const dur=4+Math.random()*8;
+    const del=Math.random()*12;
+    el.style.cssText=`
+      left:${x}%;top:${y}%;
+      width:${sz}px;height:${sz}px;
+      background:radial-gradient(circle,rgba(${col},${op}),rgba(${col},0) 70%);
+      --sx:${(Math.random()-0.5)*40}px;
+      --sy:${-(30+Math.random()*80)}px;
+      animation:sparkTwinkle ${dur}s ${del}s ease-in-out infinite`;
     wrap.appendChild(el);
   }
 }

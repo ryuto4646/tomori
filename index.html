@@ -20,30 +20,10 @@
 body{font-family:'Hiragino Kaku Gothic Pro','Hiragino Sans','Meiryo',sans-serif;
   background:var(--bg0);min-height:100vh;display:flex;align-items:center;justify-content:center}
 #app{width:100%;max-width:420px;min-height:100vh;position:relative;overflow:hidden;
-  background:
-    /* vertical light shafts — forest canopy */
-    radial-gradient(ellipse 16% 60% at 20% 0%,rgba(0,255,200,0.10) 0%,transparent 80%),
-    radial-gradient(ellipse 12% 50% at 55% 0%,rgba(80,240,255,0.07) 0%,transparent 75%),
-    radial-gradient(ellipse 10% 45% at 82% 0%,rgba(0,210,180,0.07) 0%,transparent 70%),
-    /* bioluminescent floor pools */
-    radial-gradient(ellipse 80% 28% at 0% 100%,rgba(130,40,220,0.13) 0%,transparent 70%),
-    radial-gradient(ellipse 55% 22% at 100% 90%,rgba(0,200,160,0.11) 0%,transparent 65%),
-    radial-gradient(ellipse 40% 20% at 50% 100%,rgba(0,180,220,0.08) 0%,transparent 60%),
-    /* mid-depth atmospheric haze */
-    radial-gradient(ellipse 100% 18% at 50% 52%,rgba(0,90,110,0.09) 0%,transparent 100%),
-    radial-gradient(ellipse 65% 40% at 85% 35%,rgba(100,30,200,0.09) 0%,transparent 65%),
-    radial-gradient(ellipse 60% 45% at 10% 40%,rgba(0,180,140,0.07) 0%,transparent 65%),
-    /* deep base — dark forest/ruins */
-    linear-gradient(180deg,#020e12 0%,#010a0e 45%,#010812 100%)}
-/* atmospheric haze layer */
-#app::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
-  background:
-    radial-gradient(ellipse 50% 25% at 50% 30%,rgba(0,60,80,0.18) 0%,transparent 100%),
-    radial-gradient(ellipse 30% 15% at 25% 65%,rgba(0,180,140,0.06) 0%,transparent 100%),
-    radial-gradient(ellipse 25% 12% at 75% 70%,rgba(100,0,180,0.06) 0%,transparent 100%)}
-/* edge vignette */
+  background:#010b10}
+/* edge vignette on top of everything */
 #app::after{content:'';position:fixed;inset:0;
-  background:radial-gradient(ellipse 90% 90% at 50% 50%,transparent 50%,rgba(0,0,0,0.55) 100%);
+  background:radial-gradient(ellipse 85% 85% at 50% 50%,transparent 45%,rgba(0,0,0,0.65) 100%);
   pointer-events:none;z-index:0}
 
 /* zone atmosphere layer */
@@ -2009,6 +1989,185 @@ function buildStars(){
   }
 }
 
+// =============================================
+// FOREST / RUINS CANVAS BACKGROUND
+// =============================================
+function buildForestCanvas(){
+  const canvas=document.createElement('canvas');
+  canvas.id='forest-canvas';
+  canvas.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none';
+  const app=document.getElementById('app');
+  app.insertBefore(canvas,app.firstChild);
+
+  function render(){
+    const W=app.offsetWidth||420;
+    const H=window.innerHeight||900;
+    canvas.width=W; canvas.height=H;
+    const c=canvas.getContext('2d');
+
+    // ── BASE GRADIENT ──
+    const bg=c.createLinearGradient(0,0,0,H);
+    bg.addColorStop(0,'#010e14');
+    bg.addColorStop(0.4,'#010a10');
+    bg.addColorStop(0.75,'#01080e');
+    bg.addColorStop(1,'#00050c');
+    c.fillStyle=bg; c.fillRect(0,0,W,H);
+
+    // ── LIGHT SHAFTS from canopy ──
+    c.save();
+    c.globalCompositeOperation='screen';
+    const shafts=[
+      {x:W*.17,a:-.05,w:55,col:'rgba(0,255,180,0.07)',h:H*.75},
+      {x:W*.38,a: .02,w:42,col:'rgba(80,245,255,0.05)',h:H*.68},
+      {x:W*.60,a:-.03,w:60,col:'rgba(0,230,180,0.06)',h:H*.72},
+      {x:W*.82,a: .04,w:38,col:'rgba(0,200,255,0.05)',h:H*.62},
+    ];
+    shafts.forEach(s=>{
+      c.save();
+      c.translate(s.x,0); c.rotate(s.a);
+      c.filter='blur(22px)';
+      const g=c.createLinearGradient(0,0,0,s.h);
+      g.addColorStop(0,s.col);
+      g.addColorStop(0.55,s.col.replace(/[\d.]+\)$/,'0.025)'));
+      g.addColorStop(1,'rgba(0,0,0,0)');
+      c.fillStyle=g;
+      c.fillRect(-s.w/2,0,s.w,s.h);
+      c.restore();
+    });
+    c.restore();
+
+    // ── TREE SILHOUETTES ──
+    c.save();
+    c.fillStyle='#000c11';
+
+    // Left large tree
+    c.beginPath();
+    c.moveTo(-2,H); c.lineTo(-2,H*.58);
+    c.bezierCurveTo( 8,H*.48, 22,H*.45, 18,H*.34);
+    c.bezierCurveTo(30,H*.41, 52,H*.38, 46,H*.27);
+    c.bezierCurveTo(60,H*.34, 78,H*.30, 66,H*.18);
+    c.bezierCurveTo(80,H*.26, 94,H*.23, 82,H*.12);
+    c.bezierCurveTo(76,H*.22, 56,H*.38, 50,H*.46);
+    c.bezierCurveTo(38,H*.52, 22,H*.54, 14,H*.58);
+    c.lineTo(16,H); c.closePath(); c.fill();
+
+    // Right large tree
+    c.beginPath();
+    c.moveTo(W+2,H); c.lineTo(W+2,H*.54);
+    c.bezierCurveTo(W- 8,H*.44, W-24,H*.41, W-20,H*.30);
+    c.bezierCurveTo(W-32,H*.37, W-56,H*.34, W-48,H*.23);
+    c.bezierCurveTo(W-62,H*.31, W-80,H*.27, W-68,H*.16);
+    c.bezierCurveTo(W-78,H*.24, W-96,H*.21, W-84,H*.11);
+    c.bezierCurveTo(W-78,H*.21, W-58,H*.36, W-52,H*.44);
+    c.bezierCurveTo(W-40,H*.50, W-18,H*.52, W- 6,H*.54);
+    c.lineTo(W-6,H); c.closePath(); c.fill();
+
+    // Mid-depth thinner trees (slightly lighter = farther back)
+    c.globalAlpha=.55;
+    // mid-left
+    c.beginPath();
+    c.moveTo(W*.10,H); c.lineTo(W*.10,H*.50);
+    c.bezierCurveTo(W*.11,H*.40, W*.15,H*.36, W*.13,H*.25);
+    c.bezierCurveTo(W*.16,H*.33, W*.20,H*.30, W*.18,H*.19);
+    c.bezierCurveTo(W*.17,H*.28, W*.13,H*.44, W*.12,H*.50);
+    c.lineTo(W*.14,H); c.closePath(); c.fill();
+    // mid-right
+    c.beginPath();
+    c.moveTo(W*.84,H); c.lineTo(W*.84,H*.47);
+    c.bezierCurveTo(W*.85,H*.37, W*.89,H*.33, W*.87,H*.22);
+    c.bezierCurveTo(W*.90,H*.30, W*.93,H*.27, W*.91,H*.16);
+    c.bezierCurveTo(W*.90,H*.25, W*.86,H*.41, W*.85,H*.47);
+    c.lineTo(W*.87,H); c.closePath(); c.fill();
+
+    c.restore();
+
+    // ── RUINS: STONE COLUMNS ──
+    c.save();
+    c.fillStyle='#001520';
+    const cols=[
+      {x:W*.30,h:H*.38,op:.28},
+      {x:W*.70,h:H*.32,op:.22},
+      {x:W*.50,h:H*.18,op:.14},
+    ];
+    cols.forEach(col=>{
+      c.globalAlpha=col.op;
+      const cw=12;
+      c.fillRect(col.x-cw/2, H-col.h, cw, col.h);
+      c.fillRect(col.x-cw/2-5, H-col.h-7, cw+10, 7);
+      c.fillRect(col.x-cw/2-3, H-col.h-12, cw+6, 5);
+    });
+    c.restore();
+
+    // ── COLUMN GLOW (bioluminescent) ──
+    c.save();
+    c.globalCompositeOperation='screen';
+    [W*.30, W*.70].forEach(cx=>{
+      const cg=c.createRadialGradient(cx,H*.75,0,cx,H*.75,80);
+      cg.addColorStop(0,'rgba(0,220,180,0.12)');
+      cg.addColorStop(1,'rgba(0,0,0,0)');
+      c.fillStyle=cg; c.fillRect(cx-80,H*.5,160,H*.5);
+    });
+    c.restore();
+
+    // ── FLOOR GLOW POOLS ──
+    c.save();
+    c.globalCompositeOperation='screen';
+    // Purple/violet pool — left (like the flower glow in the reference)
+    const pg=c.createRadialGradient(W*.05,H,0,W*.05,H,W*.75);
+    pg.addColorStop(0,'rgba(150,30,230,0.22)');
+    pg.addColorStop(0.45,'rgba(100,15,180,0.09)');
+    pg.addColorStop(1,'rgba(0,0,0,0)');
+    c.fillStyle=pg; c.fillRect(0,H*.45,W,H*.55);
+    // Teal pool — right
+    const tg=c.createRadialGradient(W,H*.88,0,W,H*.88,W*.6);
+    tg.addColorStop(0,'rgba(0,220,170,0.20)');
+    tg.addColorStop(1,'rgba(0,0,0,0)');
+    c.fillStyle=tg; c.fillRect(0,H*.55,W,H*.45);
+    // Center mist glow
+    const mg=c.createRadialGradient(W*.5,H,0,W*.5,H,W*.65);
+    mg.addColorStop(0,'rgba(0,160,140,0.14)');
+    mg.addColorStop(1,'rgba(0,0,0,0)');
+    c.fillStyle=mg; c.fillRect(0,H*.65,W,H*.35);
+    c.restore();
+
+    // ── ATMOSPHERIC MID HAZE ──
+    c.save();
+    c.globalCompositeOperation='screen';
+    const mh=c.createRadialGradient(W*.5,H*.48,0,W*.5,H*.48,W*.9);
+    mh.addColorStop(0,'rgba(0,70,90,0.10)');
+    mh.addColorStop(1,'rgba(0,0,0,0)');
+    c.fillStyle=mh; c.fillRect(0,0,W,H);
+    c.restore();
+
+    // ── TOP DARKNESS ──
+    const top=c.createLinearGradient(0,0,0,H*.20);
+    top.addColorStop(0,'rgba(0,0,0,0.60)');
+    top.addColorStop(1,'rgba(0,0,0,0)');
+    c.fillStyle=top; c.fillRect(0,0,W,H*.20);
+
+    // ── CIRCULAR PORTAL (ruins reference — faint, upper area) ──
+    c.save();
+    c.globalCompositeOperation='screen';
+    c.globalAlpha=0.07;
+    c.strokeStyle='rgba(0,200,255,0.8)';
+    c.lineWidth=3;
+    c.filter='blur(6px)';
+    c.beginPath();
+    c.arc(W*.72,H*.22,44,0,Math.PI*2);
+    c.stroke();
+    c.globalAlpha=0.04;
+    c.lineWidth=1;
+    c.filter='blur(2px)';
+    c.beginPath();
+    c.arc(W*.72,H*.22,54,0,Math.PI*2);
+    c.stroke();
+    c.restore();
+  }
+
+  render();
+  window.addEventListener('resize',render);
+}
+
 function buildBgOrbs(){
   const wrap=document.getElementById('bg-orbs');
   if(!wrap)return;
@@ -2073,6 +2232,7 @@ function buildBgOrbs(){
 // =============================================
 // INIT
 // =============================================
+buildForestCanvas();
 buildBgOrbs();
 buildStars();
 buildSetup();

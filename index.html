@@ -19,11 +19,23 @@
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{font-family:'Hiragino Kaku Gothic Pro','Hiragino Sans','Meiryo',sans-serif;
   background:var(--bg0);min-height:100vh;display:flex;align-items:center;justify-content:center}
+/* ── BACKGROUND IMAGE ── */
+#bg-image{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:url('images/bg-adventure-field.png');
+  background-size:cover;background-position:center;background-repeat:no-repeat;
+  min-height:100vh}
+/* dark overlay — rgba(0,0,0,0.35) as specified */
+#bg-overlay{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:rgba(0,0,0,0.35)}
+/* fallback when no image — dark gradient base */
+#bg-image::before{content:'';position:absolute;inset:0;
+  background:linear-gradient(180deg,#010e14 0%,#010a10 50%,#00060c 100%)}
+
 #app{width:100%;max-width:420px;min-height:100vh;position:relative;overflow:hidden;
-  background:#010b10}
-/* edge vignette on top of everything */
+  background:transparent}
+/* subtle edge vignette — very light, image still visible */
 #app::after{content:'';position:fixed;inset:0;
-  background:radial-gradient(ellipse 85% 85% at 50% 50%,transparent 45%,rgba(0,0,0,0.65) 100%);
+  background:radial-gradient(ellipse 90% 90% at 50% 50%,transparent 55%,rgba(0,0,0,0.30) 100%);
   pointer-events:none;z-index:0}
 
 /* zone atmosphere layer */
@@ -599,6 +611,8 @@ body{font-family:'Hiragino Kaku Gothic Pro','Hiragino Sans','Meiryo',sans-serif;
 </head>
 <body>
 <div id="app">
+<div id="bg-image"></div>
+<div id="bg-overlay"></div>
 <div id="bg-orbs"></div>
 <div id="zone-atm"></div>
 
@@ -1990,9 +2004,12 @@ function buildStars(){
 }
 
 // =============================================
-// FOREST / RUINS CANVAS BACKGROUND
+// [REMOVED] Canvas background replaced by image file
+// Place your image at: tomori/images/bg-adventure-field.png
 // =============================================
 function buildForestCanvas(){
+  // no-op — image file handles the background
+  return;
   const canvas=document.createElement('canvas');
   canvas.id='forest-canvas';
   canvas.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none';

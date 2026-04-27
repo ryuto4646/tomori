@@ -17,25 +17,22 @@
   --glow-md:0 0 14px rgba(0,212,255,0.45),0 0 30px rgba(0,212,255,0.18);
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{font-family:'Hiragino Kaku Gothic Pro','Hiragino Sans','Meiryo',sans-serif;
-  background:var(--bg0);min-height:100vh;display:flex;align-items:center;justify-content:center}
-/* ── BACKGROUND IMAGE — overlay/blur/dark layer 全除去 ── */
-#bg-image{
-  position:fixed;
-  inset:0;
-  z-index:0;
-  pointer-events:none;
-  /* 実際の画像が来たら url('images/bg-adventure-field.png') に変える */
-  background-image:url('images/bg-adventure-field.png'),
-    linear-gradient(135deg,#001a1f 0%,#003020 30%,#1a0030 70%,#000a1a 100%);
+/* ── BACKGROUND IMAGE on body — 全overlay除去・確認モード ── */
+body{
+  font-family:'Hiragino Kaku Gothic Pro','Hiragino Sans','Meiryo',sans-serif;
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background-image:url('images/bg-adventure-field.png');
   background-size:cover;
   background-position:center;
   background-repeat:no-repeat;
-  min-height:100vh;
+  background-attachment:fixed;
 }
-/* overlay: 完全に非表示 */
+
+#bg-image{display:none}
 #bg-overlay{display:none}
-/* zone-atm: 無効化 */
 #zone-atm{display:none}
 
 #app{
@@ -46,7 +43,6 @@ body{font-family:'Hiragino Kaku Gothic Pro','Hiragino Sans','Meiryo',sans-serif;
   overflow:hidden;
   background:transparent;
 }
-/* vignette: 完全に非表示 */
 #app::after{display:none}
 #app::before{display:none}
 

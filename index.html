@@ -694,6 +694,37 @@ body::before{
 .ai-error-msg{background:rgba(220,38,38,.18);border:1px solid rgba(220,38,38,.4);
   border-radius:10px;padding:10px 12px;font-size:.82rem;
   color:#fca5a5;text-align:center;line-height:1.5}
+/* Vision badge */
+.ai-vision-badge{background:linear-gradient(90deg,rgba(0,212,255,.15),rgba(155,93,255,.15));
+  border:1px solid rgba(0,212,255,.4);border-radius:10px;
+  padding:8px 12px;font-size:.82rem;color:var(--cyan);
+  text-align:center;text-shadow:0 1px 6px rgba(0,0,0,.8)}
+/* Preset section */
+.preset-section{padding:12px 0 0;width:100%}
+.preset-label{font-size:.75rem;color:var(--text-dim);margin-bottom:8px;
+  text-align:center;text-shadow:0 1px 6px rgba(0,0,0,.8)}
+.preset-cards{display:flex;gap:10px;justify-content:center}
+.preset-card{flex:1;max-width:100px;background:rgba(0,15,28,.78);
+  border:1px solid var(--border);border-radius:12px;
+  padding:12px 8px;text-align:center;cursor:pointer;
+  font-size:1.6rem;transition:all .2s}
+.preset-card div{font-size:.72rem;color:var(--text-dim);margin-top:4px}
+.preset-card:active{transform:scale(.95);border-color:var(--cyan)}
+/* AI next mission in complete screen */
+.ai-next-head{font-size:.88rem;font-weight:700;color:#ffd700;
+  margin:16px 0 8px;padding:0 16px;
+  text-shadow:0 1px 8px rgba(0,0,0,.9)}
+.ai-next-praise{font-size:.82rem;color:var(--text-dim);
+  padding:0 16px 8px;line-height:1.5;
+  text-shadow:0 1px 6px rgba(0,0,0,.8)}
+.ai-next-btn{width:calc(100% - 32px);margin:0 16px 8px;
+  padding:13px;background:linear-gradient(135deg,rgba(255,215,0,.15),rgba(155,93,255,.15));
+  border:1.5px solid rgba(255,215,0,.4);border-radius:12px;
+  color:#ffd700;font-size:.95rem;font-weight:700;cursor:pointer;
+  font-family:inherit;transition:all .2s}
+.ai-next-btn:active{transform:scale(.97)}
+.ai-next-loading{display:flex;align-items:center;gap:10px;
+  padding:12px 16px;color:var(--text-dim);font-size:.82rem}
 /* AI badge on quest cards */
 .qcard-ai-badge{display:inline-flex;align-items:center;gap:2px;
   background:linear-gradient(90deg,rgba(255,215,0,.18),rgba(155,93,255,.18));
@@ -789,6 +820,16 @@ body::before{
     </div>
   </div>
 
+  <!-- デモ用プリセット -->
+  <div class="preset-section">
+    <div class="preset-label">📌 デモ用サンプル（写真なしでも遊べる）</div>
+    <div class="preset-cards">
+      <div class="preset-card" onclick="usePreset(0)">🌿<div>自然</div></div>
+      <div class="preset-card" onclick="usePreset(1)">🏙️<div>街</div></div>
+      <div class="preset-card" onclick="usePreset(2)">🌊<div>水辺</div></div>
+    </div>
+  </div>
+
   <div class="photo-btn-area">
     <button class="btn btn-success" id="photo-next-btn" onclick="startAdventure()" disabled>
       🗺️ 冒険スタート！
@@ -808,11 +849,15 @@ body::before{
       <img id="ai-preview-img" src="" alt="" style="display:none">
       <div class="ai-preview-placeholder" id="ai-preview-placeholder">📸</div>
     </div>
+    <!-- Vision badge (写真あり時) -->
+    <div class="ai-vision-badge" id="ai-vision-badge" style="display:none">
+      👁️ AIが写真を直接見てミッションを生成します
+    </div>
     <!-- Description input -->
     <div class="ai-desc-section">
-      <div class="ai-desc-label">📝 写真に何が写っている？</div>
-      <div class="ai-desc-hint">雰囲気・色・形・連想したことを自由に書いてみよう</div>
-      <textarea class="ai-desc-textarea" id="ai-desc-input" rows="4"
+      <div class="ai-desc-label" id="ai-desc-label">📝 写真に何が写っている？</div>
+      <div class="ai-desc-hint" id="ai-desc-hint">雰囲気・色・形・連想したことを自由に書いてみよう</div>
+      <textarea class="ai-desc-textarea" id="ai-desc-input" rows="3"
         placeholder="例：古い木の橋。緑のコケがついていて川の上にかかっている。霧っぽくて神秘的な感じ"
         oninput="aiDescChanged()"></textarea>
     </div>
@@ -825,7 +870,7 @@ body::before{
     <!-- Loading state -->
     <div class="ai-loading" id="ai-loading" style="display:none">
       <div class="ai-loading-orb"></div>
-      <div class="ai-loading-text">AIが探究ミッションを考えています…<br>少し待ってね ☕</div>
+      <div class="ai-loading-text" id="ai-loading-text">AIがミッションを考えています…<br>少し待ってね ☕</div>
     </div>
     <!-- Skip -->
     <button class="ai-skip-btn" onclick="skipAIAndStart()">スキップ（通常クエストで遊ぶ）</button>
@@ -927,6 +972,12 @@ body::before{
     </div>
   </div>
 
+  <!-- AI next mission (AI quest完了時のみ表示) -->
+  <div id="ai-next-wrap" style="display:none">
+    <div class="ai-next-head">✨ あなたの答えから生まれた次のミッション</div>
+    <div id="ai-next-content"></div>
+  </div>
+
   <div class="next-head">🗺️ つぎのクエストを選ぼう</div>
   <div class="next-feed" id="next-quest-feed"></div>
 
@@ -1015,6 +1066,8 @@ const state = {
   aiQuests: [],          // AI-generated quest objects
   photoDescription: '',  // text description sent to AI
   lastAnswer: null,      // passed back to AI for next generation
+  photoBase64: null,     // resized photo for Vision API
+  photoMimeType: null,
 };
 
 // =============================================
@@ -1886,6 +1939,18 @@ function submitAnswer(){
   // Save answer for next AI generation
   state.lastAnswer=state.answer;
 
+  // AI next mission: wrap をリセット
+  const aiNextWrap=document.getElementById('ai-next-wrap');
+  if(aiNextWrap){
+    aiNextWrap.style.display='none';
+    const aiNextContent=document.getElementById('ai-next-content');
+    if(aiNextContent)aiNextContent.innerHTML=
+      q.aiGenerated
+        ?`<button class="ai-next-btn" onclick="generateAINextMission(state.currentQuest)">✨ AIに次のミッションを考えてもらう</button>`
+        :'';
+    if(q.aiGenerated)aiNextWrap.style.display='block';
+  }
+
   const pool=q.aiGenerated
     ?[q.completionHint||'すごいアイデアだ！その発想、最高だよ！']
     :(COMPLETION_MESSAGES[q.type]||['よくやった！']);
@@ -2400,27 +2465,63 @@ function buildBgOrbs(){
 // ★ デプロイ後にここをあなたのWorker URLに変更してください
 const TOMORI_API_URL = 'https://tomori-api.tomori-ryuto.workers.dev';
 
+// 写真をVision用にリサイズ（コスト削減：400px以下・JPEG0.7）
+async function resizePhotoForVision(dataUrl,maxSide=400){
+  return new Promise(resolve=>{
+    const img=new Image();
+    img.onload=()=>{
+      let w=img.width,h=img.height;
+      if(w>maxSide||h>maxSide){
+        if(w>=h){h=Math.round(h*maxSide/w);w=maxSide;}
+        else{w=Math.round(w*maxSide/h);h=maxSide;}
+      }
+      const c=document.createElement('canvas');
+      c.width=w;c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      const out=c.toDataURL('image/jpeg',0.7);
+      resolve({base64:out.split(',')[1],mimeType:'image/jpeg'});
+    };
+    img.src=dataUrl;
+  });
+}
+
 function showAIScreen(){
-  // Sync photo preview
   const img=document.getElementById('ai-preview-img');
   const ph=document.getElementById('ai-preview-placeholder');
-  if(state.photoUrl){
-    img.src=state.photoUrl;
-    img.style.display='block';
+  const visionBadge=document.getElementById('ai-vision-badge');
+  const hasPhoto=!!state.photoUrl;
+
+  if(hasPhoto){
+    img.src=state.photoUrl;img.style.display='block';
     if(ph)ph.style.display='none';
+    if(visionBadge)visionBadge.style.display='block';
   } else {
     img.style.display='none';
     if(ph)ph.style.display='block';
+    if(visionBadge)visionBadge.style.display='none';
   }
-  // Reset UI
+
+  // ラベル・ヒント切り替え
+  const lbl=document.getElementById('ai-desc-label');
+  const hint=document.getElementById('ai-desc-hint');
+  if(lbl)lbl.textContent=hasPhoto?'📝 補足メモ（任意）':'📝 写真に何が写っている？（必須）';
+  if(hint)hint.textContent=hasPhoto
+    ?'AIが写真を直接見ます。追加したいことがあれば書いてね'
+    :'雰囲気・色・形・連想したことを自由に書いてみよう';
+
+  // ボタンリセット
   const btn=document.getElementById('ai-gen-btn');
-  if(btn){btn.style.display='block';btn.disabled=true;}
+  if(btn){
+    btn.style.display='block';
+    btn.disabled=!hasPhoto; // 写真あり→即有効、なし→テキスト入力待ち
+    btn.textContent=hasPhoto?'📷 AIが写真を見てミッション生成！':'✨ AIがミッションを考える！';
+  }
   const loading=document.getElementById('ai-loading');
   if(loading)loading.style.display='none';
   const err=document.getElementById('ai-error-msg');
   if(err)err.style.display='none';
   const ta=document.getElementById('ai-desc-input');
-  if(ta){ta.value=state.photoDescription||'';aiDescChanged();}
+  if(ta){ta.value=state.photoDescription||'';}
   goTo('photo-ai');
 }
 
@@ -2428,28 +2529,39 @@ function aiDescChanged(){
   const val=document.getElementById('ai-desc-input').value.trim();
   state.photoDescription=val;
   const btn=document.getElementById('ai-gen-btn');
-  if(btn)btn.disabled=val.length<5;
+  if(btn)btn.disabled=!state.photoUrl&&val.length<5;
 }
 
 async function generateAIMissions(){
   const desc=document.getElementById('ai-desc-input').value.trim();
-  if(!desc)return;
   state.photoDescription=desc;
 
   const btn=document.getElementById('ai-gen-btn');
   const loading=document.getElementById('ai-loading');
+  const loadingText=document.getElementById('ai-loading-text');
   const errEl=document.getElementById('ai-error-msg');
 
   btn.style.display='none';
   loading.style.display='flex';
+  if(loadingText)loadingText.innerHTML=state.photoUrl
+    ?'AIが写真を見てミッションを考えています…<br>少し待ってね ☕'
+    :'AIがミッションを考えています…<br>少し待ってね ☕';
   errEl.style.display='none';
 
   try{
+    // 写真をリサイズしてbase64化
+    let photoBase64=null,photoMimeType=null;
+    if(state.photoUrl){
+      const enc=await resizePhotoForVision(state.photoUrl);
+      photoBase64=enc.base64;photoMimeType=enc.mimeType;
+    }
+
     const res=await fetch(`${TOMORI_API_URL}/generate`,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        photoDescription:desc,
+        photoDescription:desc||null,
+        photoBase64,photoMimeType,
         explorerType:state.trait||'short',
         mood:state.mood||'ok',
         previousAnswer:state.lastAnswer||null,
@@ -2464,40 +2576,122 @@ async function generateAIMissions(){
     const data=await res.json();
     const missions=data.missions||[];
 
-    // Convert to internal quest format
     state.aiQuests=missions.map((m,i)=>({
       id:`ai-${i}`,
-      type:m.type||'shift',
-      dm:0,
-      title:m.title||'AIミッション',
-      em:m.em||'✨',
+      type:m.type||'shift',dm:0,
+      title:m.title||'AIミッション',em:m.em||'✨',
       fl:'✨ AI生成',
       prompt:m.prompt||'自由に想像してみよう！',
-      ans:'text',
-      xp:35,
+      ans:'text',xp:35,
       tw:{short:1,visual:1,deep:1,story:1,survival:1},
       aiGenerated:true,
       completionHint:m.completionHint||'すごいアイデア！その発想、最高だよ！',
     }));
 
-    refreshMap();
-    buildWorldMap();
-    goTo('worldmap');
+    refreshMap();buildWorldMap();goTo('worldmap');
 
   }catch(e){
     loading.style.display='none';
-    btn.style.display='block';
-    btn.disabled=false;
+    btn.style.display='block';btn.disabled=false;
     errEl.style.display='block';
-    errEl.textContent=`⚠️ AIとの通信に失敗しました。もう一度試してみてね。(${e.message})`;
+    errEl.textContent=`⚠️ エラーが発生しました。もう一度試してみてね。(${e.message})`;
   }
 }
 
 function skipAIAndStart(){
   state.aiQuests=[];
-  refreshMap();
-  buildWorldMap();
-  goTo('worldmap');
+  refreshMap();buildWorldMap();goTo('worldmap');
+}
+
+// ─── デモ用プリセット ──────────────────────────────────────────────────────────
+const DEMO_PRESETS=[
+  {em:'🌿',name:'森の木',
+   desc:'森の中の大きな木。太い幹に緑のコケがついている。根元に小さなキノコが生えていて薄暗く神秘的。'},
+  {em:'🏙️',name:'古い商店街',
+   desc:'古い商店街。シャッターが閉まったお店が並んでいる。遠くに新しいビルが見える。昔のにぎわいの面影。'},
+  {em:'🌊',name:'夕暮れの浜辺',
+   desc:'砂浜。波打ち際に貝殻が散らばっている。夕日がオレンジ色に水面に反射している。遠くに小さな船。'},
+];
+
+function usePreset(i){
+  const p=DEMO_PRESETS[i];
+  state.photoUrl=null;
+  state.photoBase64=null;
+  state.photoDescription=p.desc;
+
+  // プレースホルダーとして絵文字カード表示
+  document.getElementById('cam-hero').style.display='none';
+  document.getElementById('preview-state').style.display='flex';
+  const canvas=document.createElement('canvas');
+  canvas.width=200;canvas.height=200;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#020d18';ctx.fillRect(0,0,200,200);
+  ctx.font='80px serif';ctx.textAlign='center';
+  ctx.fillText(p.em,100,130);
+  document.getElementById('photo-preview').src=canvas.toDataURL();
+  const btn=document.getElementById('photo-next-btn');
+  btn.disabled=false;
+  btn.textContent=`🗺️「${p.name}」で冒険スタート！`;
+}
+
+// ─── 次のミッション（ボタン押下時に生成） ────────────────────────────────────
+async function generateAINextMission(completedQuest){
+  const wrap=document.getElementById('ai-next-wrap');
+  const content=document.getElementById('ai-next-content');
+  if(!wrap||!content)return;
+
+  // ボタンをローディング表示に切り替え
+  content.innerHTML=`<div class="ai-next-loading">
+    <div class="ai-loading-orb" style="width:28px;height:28px"></div>
+    <span>AIがあなたの答えから次のミッションを考えています…</span>
+  </div>`;
+  wrap.style.display='block';
+
+  try{
+    let photoBase64=null,photoMimeType=null;
+    if(state.photoUrl){
+      const enc=await resizePhotoForVision(state.photoUrl);
+      photoBase64=enc.base64;photoMimeType=enc.mimeType;
+    }
+
+    const res=await fetch(`${TOMORI_API_URL}/generate-next`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        previousAnswer:state.lastAnswer,
+        missionTitle:completedQuest.title,
+        missionPrompt:completedQuest.prompt,
+        explorerType:state.trait||'short',
+        photoBase64,photoMimeType,
+      }),
+    });
+
+    if(!res.ok)throw new Error(`HTTP ${res.status}`);
+    const data=await res.json();
+    const m=data.mission;
+    if(!m)throw new Error('no mission');
+
+    const nextQ={
+      id:`ai-next-${Date.now()}`,
+      type:m.type||'shift',dm:0,
+      title:m.title||'AIが続きを考えた',em:m.em||'✨',
+      fl:'✨ AI続き',
+      prompt:m.prompt||'続きを想像しよう！',
+      ans:'text',xp:40,
+      tw:{short:1,visual:1,deep:1,story:1,survival:1},
+      aiGenerated:true,
+      completionHint:m.completionHint||'すごい！',
+    };
+    state.aiQuests.unshift(nextQ);
+
+    const praise=m.aiNextMessage||'その答えから新しいミッションが生まれた！';
+    content.innerHTML=`
+      <div class="ai-next-praise">${praise}</div>
+      ${questCardHTML(nextQ,0,'complete')}`;
+
+  }catch(e){
+    wrap.style.display='none';
+  }
 }
 
 // =============================================

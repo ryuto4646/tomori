@@ -651,6 +651,56 @@ body::before{
 .zarr-continue-btn:active{transform:scale(.97)}
 .zarr-skip-link{font-size:12px;color:rgba(255,255,255,.4);cursor:pointer;
   text-decoration:underline;text-underline-offset:3px;text-align:center}
+
+/* =============================================
+   AI MISSION SCREEN
+   ============================================= */
+.screen-photo-ai-body{padding:16px;display:flex;flex-direction:column;gap:14px;min-height:calc(100vh - 60px)}
+.ai-photo-preview{width:100%;border-radius:16px;overflow:hidden;
+  background:rgba(0,30,50,.6);min-height:160px;
+  display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--border);position:relative}
+.ai-photo-preview img{width:100%;object-fit:cover;border-radius:16px;max-height:200px}
+.ai-preview-placeholder{font-size:3rem;opacity:.45;position:absolute}
+.ai-desc-section{background:rgba(0,15,28,.78);backdrop-filter:blur(14px);
+  border:1px solid var(--border);border-radius:14px;padding:14px}
+.ai-desc-label{font-size:.95rem;font-weight:700;color:var(--cyan);margin-bottom:4px;
+  text-shadow:0 1px 8px rgba(0,0,0,.9)}
+.ai-desc-hint{font-size:.78rem;color:var(--text-dim);margin-bottom:10px;
+  text-shadow:0 1px 6px rgba(0,0,0,.8)}
+.ai-desc-textarea{width:100%;background:rgba(0,15,28,.85);
+  border:1px solid var(--border);border-radius:10px;
+  color:var(--text);font-size:.9rem;padding:10px 12px;
+  resize:none;font-family:inherit;line-height:1.5;outline:none}
+.ai-desc-textarea:focus{border-color:var(--cyan);box-shadow:0 0 0 2px rgba(0,212,255,.15)}
+.ai-desc-textarea::placeholder{color:var(--text-dim)}
+.ai-gen-btn{width:100%;padding:15px;
+  background:linear-gradient(135deg,rgba(0,180,220,.22),rgba(155,93,255,.22));
+  border:1.5px solid rgba(0,212,255,.5);border-radius:14px;
+  color:var(--cyan);font-size:1.05rem;font-weight:700;cursor:pointer;
+  transition:all .2s;letter-spacing:.02em;font-family:inherit}
+.ai-gen-btn:disabled{opacity:.35;cursor:not-allowed}
+.ai-gen-btn:not(:disabled):active{transform:scale(.97)}
+.ai-loading{display:flex;flex-direction:column;align-items:center;gap:12px;padding:20px}
+.ai-loading-orb{width:48px;height:48px;border-radius:50%;
+  background:radial-gradient(circle,rgba(0,212,255,.7),rgba(155,93,255,.4));
+  animation:orbPulse 1.2s ease-in-out infinite}
+.ai-loading-text{font-size:.9rem;color:var(--text-dim);text-align:center;
+  line-height:1.6;text-shadow:0 1px 6px rgba(0,0,0,.8)}
+.ai-skip-btn{background:transparent;border:1px solid rgba(208,238,255,.2);
+  border-radius:10px;color:var(--text-dim);font-size:.82rem;
+  padding:10px;cursor:pointer;width:100%;font-family:inherit}
+.ai-skip-btn:active{opacity:.7}
+.ai-error-msg{background:rgba(220,38,38,.18);border:1px solid rgba(220,38,38,.4);
+  border-radius:10px;padding:10px 12px;font-size:.82rem;
+  color:#fca5a5;text-align:center;line-height:1.5}
+/* AI badge on quest cards */
+.qcard-ai-badge{display:inline-flex;align-items:center;gap:2px;
+  background:linear-gradient(90deg,rgba(255,215,0,.18),rgba(155,93,255,.18));
+  border:1px solid rgba(255,215,0,.4);border-radius:5px;
+  font-size:.64rem;font-weight:700;color:#ffd700;
+  padding:1px 5px;margin-left:4px;vertical-align:middle}
+.qcard.ai-quest{border-color:rgba(255,215,0,.3)}
 </style>
 </head>
 <body>
@@ -743,6 +793,42 @@ body::before{
     <button class="btn btn-success" id="photo-next-btn" onclick="startAdventure()" disabled>
       🗺️ 冒険スタート！
     </button>
+  </div>
+</div>
+
+<!-- ===== SCREEN: AI MISSION GENERATION ===== -->
+<div class="screen" id="screen-photo-ai">
+  <div class="setup-header">
+    <button class="hdr-back" onclick="goTo('photo')">←</button>
+    <div class="hdr-title">✨ AIミッション生成</div>
+  </div>
+  <div class="screen-photo-ai-body">
+    <!-- Photo preview -->
+    <div class="ai-photo-preview" id="ai-photo-preview">
+      <img id="ai-preview-img" src="" alt="" style="display:none">
+      <div class="ai-preview-placeholder" id="ai-preview-placeholder">📸</div>
+    </div>
+    <!-- Description input -->
+    <div class="ai-desc-section">
+      <div class="ai-desc-label">📝 写真に何が写っている？</div>
+      <div class="ai-desc-hint">雰囲気・色・形・連想したことを自由に書いてみよう</div>
+      <textarea class="ai-desc-textarea" id="ai-desc-input" rows="4"
+        placeholder="例：古い木の橋。緑のコケがついていて川の上にかかっている。霧っぽくて神秘的な感じ"
+        oninput="aiDescChanged()"></textarea>
+    </div>
+    <!-- Error -->
+    <div class="ai-error-msg" id="ai-error-msg" style="display:none"></div>
+    <!-- Generate button -->
+    <button class="ai-gen-btn" id="ai-gen-btn" onclick="generateAIMissions()" disabled>
+      ✨ AIがミッションを考える！
+    </button>
+    <!-- Loading state -->
+    <div class="ai-loading" id="ai-loading" style="display:none">
+      <div class="ai-loading-orb"></div>
+      <div class="ai-loading-text">AIが探究ミッションを考えています…<br>少し待ってね ☕</div>
+    </div>
+    <!-- Skip -->
+    <button class="ai-skip-btn" onclick="skipAIAndStart()">スキップ（通常クエストで遊ぶ）</button>
   </div>
 </div>
 
@@ -925,6 +1011,10 @@ const state = {
   zonePhotos: {},      // {zoneId: dataUrl}
   zoneCategories: {},  // {zoneId: category string}
   pendingZoneIdx: null,
+  // AI
+  aiQuests: [],          // AI-generated quest objects
+  photoDescription: '',  // text description sent to AI
+  lastAnswer: null,      // passed back to AI for next generation
 };
 
 // =============================================
@@ -1418,9 +1508,7 @@ function analyzeImageCategory(img){
 
 function startAdventure(){
   if(!state.photoUrl)return;
-  refreshMap();
-  buildWorldMap();
-  goTo('worldmap');
+  showAIScreen();
 }
 
 // =============================================
@@ -1629,23 +1717,31 @@ function getQuestsForMap(){
   const trait=state.trait||'short';
   const moodBoost={hot:1,ok:0,tired:-1}[state.mood]||0;
   const effectiveDepth=Math.max(0,state.depth+moodBoost);
-  // visual/short traits get extra choices-type boost
   const prefersChoices=(trait==='short'||trait==='visual');
-  return QUESTS
+
+  // AI quests shown first (未完了のもの)
+  const aiAvailable=state.aiQuests.filter(q=>!state.completedIds.includes(q.id));
+
+  const maxStatic=Math.max(2, 5-aiAvailable.length);
+  const staticQuests=QUESTS
     .filter(q=>q.dm<=effectiveDepth&&!state.completedIds.includes(q.id))
-    .map(q=>({q, score:(q.tw[trait]||1)+(prefersChoices&&q.ans==='choices'?.25:0)+(Math.random()*.4)}))
+    .map(q=>({q,score:(q.tw[trait]||1)+(prefersChoices&&q.ans==='choices'?.25:0)+(Math.random()*.4)}))
     .sort((a,b)=>b.score-a.score)
-    .slice(0,5)
+    .slice(0,maxStatic)
     .map(x=>x.q);
+
+  return [...aiAvailable,...staticQuests];
 }
 
 function questCardHTML(q,i,ctx){
   const stars='★'.repeat(q.dm+1)+'☆'.repeat(Math.max(0,3-q.dm-1));
-  return `<div class="qcard qt-${q.type} new" style="animation-delay:${i*70}ms"
+  const aiBadge=q.aiGenerated?`<span class="qcard-ai-badge">✨ AI</span>`:'';
+  const aiCls=q.aiGenerated?' ai-quest':'';
+  return `<div class="qcard qt-${q.type}${aiCls} new" style="animation-delay:${i*70}ms"
     onclick="${ctx==='map'?`openQuest('${q.id}')`:`openQuestFromComplete('${q.id}')`}">
     <div class="qcard-vis"><div class="qcard-em">${q.em}</div></div>
     <div class="qcard-info">
-      <div class="qcard-badge">${q.fl}</div>
+      <div class="qcard-badge">${q.fl}${aiBadge}</div>
       <div class="qcard-title">${q.title}</div>
       <div class="qcard-meta">
         <div class="qcard-stars">${stars}</div>
@@ -1660,7 +1756,9 @@ function questCardHTML(q,i,ctx){
 // SCREEN 5: MISSION
 // =============================================
 function openQuest(id){
-  const q=QUESTS.find(x=>x.id===id);
+  const q = id.startsWith('ai-')
+    ? state.aiQuests.find(x=>x.id===id)
+    : QUESTS.find(x=>x.id===id);
   if(!q)return;
   state.currentQuest=q;
   state.answer=null;
@@ -1785,7 +1883,12 @@ function submitAnswer(){
   document.getElementById('complete-cname').textContent=
     (MONSTER_INFO[cat]||MONSTER_INFO.mystery).name;
 
-  const pool=COMPLETION_MESSAGES[q.type]||['よくやった！'];
+  // Save answer for next AI generation
+  state.lastAnswer=state.answer;
+
+  const pool=q.aiGenerated
+    ?[q.completionHint||'すごいアイデアだ！その発想、最高だよ！']
+    :(COMPLETION_MESSAGES[q.type]||['よくやった！']);
   document.getElementById('complete-msg').textContent=
     pool[Math.floor(Math.random()*pool.length)];
 
@@ -2288,6 +2391,113 @@ function buildBgOrbs(){
       animation:sparkTwinkle ${dur}s ${del}s ease-in-out infinite`;
     wrap.appendChild(el);
   }
+}
+
+// =============================================
+// AI MISSION GENERATION
+// =============================================
+
+// ★ デプロイ後にここをあなたのWorker URLに変更してください
+const TOMORI_API_URL = 'https://tomori-api.YOUR-SUBDOMAIN.workers.dev';
+
+function showAIScreen(){
+  // Sync photo preview
+  const img=document.getElementById('ai-preview-img');
+  const ph=document.getElementById('ai-preview-placeholder');
+  if(state.photoUrl){
+    img.src=state.photoUrl;
+    img.style.display='block';
+    if(ph)ph.style.display='none';
+  } else {
+    img.style.display='none';
+    if(ph)ph.style.display='block';
+  }
+  // Reset UI
+  const btn=document.getElementById('ai-gen-btn');
+  if(btn){btn.style.display='block';btn.disabled=true;}
+  const loading=document.getElementById('ai-loading');
+  if(loading)loading.style.display='none';
+  const err=document.getElementById('ai-error-msg');
+  if(err)err.style.display='none';
+  const ta=document.getElementById('ai-desc-input');
+  if(ta){ta.value=state.photoDescription||'';aiDescChanged();}
+  goTo('photo-ai');
+}
+
+function aiDescChanged(){
+  const val=document.getElementById('ai-desc-input').value.trim();
+  state.photoDescription=val;
+  const btn=document.getElementById('ai-gen-btn');
+  if(btn)btn.disabled=val.length<5;
+}
+
+async function generateAIMissions(){
+  const desc=document.getElementById('ai-desc-input').value.trim();
+  if(!desc)return;
+  state.photoDescription=desc;
+
+  const btn=document.getElementById('ai-gen-btn');
+  const loading=document.getElementById('ai-loading');
+  const errEl=document.getElementById('ai-error-msg');
+
+  btn.style.display='none';
+  loading.style.display='flex';
+  errEl.style.display='none';
+
+  try{
+    const res=await fetch(`${TOMORI_API_URL}/generate`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        photoDescription:desc,
+        explorerType:state.trait||'short',
+        mood:state.mood||'ok',
+        previousAnswer:state.lastAnswer||null,
+      }),
+    });
+
+    if(!res.ok){
+      const d=await res.json().catch(()=>({}));
+      throw new Error(d.error||`HTTP ${res.status}`);
+    }
+
+    const data=await res.json();
+    const missions=data.missions||[];
+
+    // Convert to internal quest format
+    state.aiQuests=missions.map((m,i)=>({
+      id:`ai-${i}`,
+      type:m.type||'shift',
+      dm:0,
+      title:m.title||'AIミッション',
+      em:m.em||'✨',
+      fl:'✨ AI生成',
+      prompt:m.prompt||'自由に想像してみよう！',
+      ans:'text',
+      xp:35,
+      tw:{short:1,visual:1,deep:1,story:1,survival:1},
+      aiGenerated:true,
+      completionHint:m.completionHint||'すごいアイデア！その発想、最高だよ！',
+    }));
+
+    refreshMap();
+    buildWorldMap();
+    goTo('worldmap');
+
+  }catch(e){
+    loading.style.display='none';
+    btn.style.display='block';
+    btn.disabled=false;
+    errEl.style.display='block';
+    errEl.textContent=`⚠️ AIとの通信に失敗しました。もう一度試してみてね。(${e.message})`;
+  }
+}
+
+function skipAIAndStart(){
+  state.aiQuests=[];
+  refreshMap();
+  buildWorldMap();
+  goTo('worldmap');
 }
 
 // =============================================

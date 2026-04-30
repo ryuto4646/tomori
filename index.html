@@ -17,23 +17,37 @@
   --glow-md:0 0 14px rgba(0,212,255,0.45),0 0 30px rgba(0,212,255,0.18);
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-/* ── BACKGROUND IMAGE on body — 全overlay除去・確認モード ── */
+/* ── BACKGROUND: 画像はJSでランダム設定 ── */
 body{
   font-family:'Hiragino Kaku Gothic Pro','Hiragino Sans','Meiryo',sans-serif;
   min-height:100vh;
   display:flex;
   align-items:center;
   justify-content:center;
-  background-image:url('images/bg-adventure-field.png');
+  background-color:#010b10;
   background-size:cover;
   background-position:center;
   background-repeat:no-repeat;
   background-attachment:fixed;
 }
+/* ── 暗めオーバーレイ: どの背景でも文字を読めるように ── */
+body::before{
+  content:'';
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.52);
+  pointer-events:none;
+  z-index:0;
+}
 
 #bg-image{display:none}
 #bg-overlay{display:none}
-#zone-atm{display:none}
+
+/* zone atmosphere: 復活 */
+#zone-atm{
+  position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden;
+  transition:background 1.8s cubic-bezier(.22,1,.36,1);
+}
 
 #app{
   width:100%;
@@ -43,11 +57,16 @@ body{
   overflow:hidden;
   background:transparent;
 }
-#app::after{display:none}
+/* 周辺ビネット: 軽め */
+#app::after{
+  content:'';position:fixed;inset:0;
+  background:radial-gradient(ellipse 88% 88% at 50% 50%,transparent 52%,rgba(0,0,0,0.4) 100%);
+  pointer-events:none;z-index:0;
+}
 #app::before{display:none}
 
-/* floating bio-luminescent orbs + fireflies — 一時無効化 */
-#bg-orbs{display:none}
+/* floating bio-luminescent orbs + fireflies: 復活 */
+#bg-orbs{position:fixed;inset:0;pointer-events:none;z-index:2;overflow:hidden}
 .bg-orb{position:absolute;border-radius:50%;filter:blur(28px)}
 .bg-spark{position:absolute;border-radius:50%;filter:blur(2px)}
 @keyframes orbDrift{
@@ -67,7 +86,7 @@ body{
   0%,100%{opacity:.2;transform:scale(1)}
   50%{opacity:1;transform:scale(1.6)}
 }
-.screen{display:none;flex-direction:column;min-height:100vh;position:relative;z-index:1;
+.screen{display:none;flex-direction:column;min-height:100vh;position:relative;z-index:3;
   animation:screenIn .28s cubic-bezier(.22,1,.36,1)}
 .screen.active{display:flex}
 @keyframes screenIn{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}
@@ -79,6 +98,24 @@ body{
 @keyframes confettiFall{to{transform:translateY(100vh) rotate(720deg);opacity:0}}
 @keyframes depthFill{from{width:0}to{width:var(--target-w)}}
 @keyframes shimmer{0%,100%{opacity:.4}50%{opacity:1}}
+
+/* ── どの背景でも読めるテキストシャドウ ── */
+--ts-strong:0 1px 8px rgba(0,0,0,0.95),0 0 3px rgba(0,0,0,0.9);
+--ts-mild:0 1px 6px rgba(0,0,0,0.85),0 0 2px rgba(0,0,0,0.7);
+
+/* タイトル・見出し類 */
+.top-title,.setup-title,.complete-title,
+.zone-info-name,.map-sec-title,.next-head,
+.wmap-hud-title{
+  text-shadow:0 1px 10px rgba(0,0,0,0.95),0 0 4px rgba(0,0,0,0.9);
+}
+/* サブテキスト */
+.top-tagline,.setup-sub,.exp-name,.exp-desc,
+.qcard-title,.mood-lbl,.zone-info-sub,
+.complete-subtitle,.gain-lbl,.gain-sub,
+.companion-msg,.trivia-fact{
+  text-shadow:0 1px 6px rgba(0,0,0,0.9),0 0 2px rgba(0,0,0,0.8);
+}
 
 /* ── BUTTONS ── */
 .btn{display:block;width:100%;padding:15px;border:none;border-radius:4px;
@@ -125,17 +162,19 @@ body{
 
 /* ── SCREEN 2: SETUP ── */
 #screen-setup{padding:0;overflow-y:auto;background:transparent}
-.setup-header{padding:28px 20px 16px;background:transparent}
+.setup-header{padding:28px 20px 16px;
+  background:rgba(0,12,22,.72);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}
 .setup-step{font-size:10px;letter-spacing:.2em;color:var(--cyan);
   text-transform:uppercase;margin-bottom:8px}
 .setup-title{font-size:22px;font-weight:900;color:var(--text);line-height:1.3}
 .setup-sub{font-size:13px;color:var(--text-dim);margin-top:6px}
 .explorer-list{display:flex;flex-direction:column;gap:10px;padding:0 20px 20px}
 .exp-card{display:flex;align-items:center;gap:16px;padding:16px 18px;
-  border:1px solid var(--border);background:rgba(0,20,32,.65);cursor:pointer;
+  border:1px solid var(--border);background:rgba(0,15,25,.82);cursor:pointer;
   clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px));
   transition:all .2s;position:relative;
-  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
 .exp-card.sel{border-color:var(--cyan);background:rgba(0,212,255,.1);box-shadow:var(--glow-md)}
 .exp-card:active{transform:scale(.98)}
 .exp-icon{font-size:38px;line-height:1;flex-shrink:0}
@@ -150,9 +189,9 @@ body{
 .mood-title{font-size:15px;font-weight:900;color:var(--text);margin-bottom:14px;letter-spacing:.04em}
 .mood-row{display:flex;gap:10px}
 .mood-card{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;
-  padding:18px 6px;border:1px solid var(--border);background:rgba(0,18,28,.65);
+  padding:18px 6px;border:1px solid var(--border);background:rgba(0,15,25,.82);
   cursor:pointer;border-radius:8px;transition:all .2s;
-  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
 .mood-card.sel{border-color:var(--cyan);background:rgba(0,212,255,.1);box-shadow:var(--glow-sm)}
 .mood-card:active{transform:scale(.96)}
 .mood-em{font-size:32px}
@@ -233,8 +272,8 @@ body{
 /* QUEST CARD — landscape RPG style */
 .qcard{width:100%;height:92px;display:flex;flex-direction:row;cursor:pointer;
   border-radius:14px;overflow:hidden;transition:transform .18s,box-shadow .18s;
-  position:relative;background:rgba(2,12,22,.78);
-  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+  position:relative;background:rgba(2,10,20,.84);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
 .qcard:active{transform:scale(.97)}
 .qcard.new{animation:cardIn .35s cubic-bezier(.22,1,.36,1) both}
 
@@ -335,15 +374,16 @@ body{
 
 .choices-grid{display:flex;flex-direction:column;gap:10px}
 .choice-btn{padding:14px 16px;border:1px solid var(--border);
-  background:rgba(0,20,35,.72);color:var(--text);font-size:15px;font-weight:700;
+  background:rgba(0,15,28,.85);color:var(--text);font-size:15px;font-weight:700;
   border-radius:6px;cursor:pointer;transition:all .15s;text-align:left;
   display:flex;align-items:center;gap:10px;font-family:inherit;width:100%;
-  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
   clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,8px 100%,0 calc(100% - 8px))}
+.choice-btn,.answer-textarea{text-shadow:0 1px 4px rgba(0,0,0,0.7)}
 .choice-btn:active{transform:scale(.97)}
 .choice-btn.chosen{border-color:var(--cyan);background:rgba(0,212,255,.14);box-shadow:var(--glow-sm)}
 
-.answer-textarea{width:100%;background:rgba(0,20,35,.72);
+.answer-textarea{width:100%;background:rgba(0,15,28,.85);
   border:1px solid var(--border);border-radius:6px;padding:14px;
   color:var(--text);font-size:15px;line-height:1.6;resize:none;
   font-family:inherit;min-height:110px;outline:none;
@@ -2251,9 +2291,23 @@ function buildBgOrbs(){
 }
 
 // =============================================
+// RANDOM BACKGROUND
+// =============================================
+// images/ フォルダに画像を追加するだけで自動的に候補になる
+const BG_IMAGES = [
+  'images/bg-adventure-field.png',
+  'images/bg-adventure-field2.png',
+];
+
+function setRandomBackground(){
+  const img = BG_IMAGES[Math.floor(Math.random() * BG_IMAGES.length)];
+  document.body.style.backgroundImage = `url('${img}')`;
+}
+
+// =============================================
 // INIT
 // =============================================
-buildForestCanvas();
+setRandomBackground();   // ← ランダム背景
 buildBgOrbs();
 buildStars();
 buildSetup();

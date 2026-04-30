@@ -1954,8 +1954,26 @@ function submitAnswer(){
   const pool=q.aiGenerated
     ?[q.completionHint||'すごいアイデアだ！その発想、最高だよ！']
     :(COMPLETION_MESSAGES[q.type]||['よくやった！']);
-  document.getElementById('complete-msg').textContent=
-    pool[Math.floor(Math.random()*pool.length)];
+  const msgEl=document.getElementById('complete-msg');
+  msgEl.textContent=pool[Math.floor(Math.random()*pool.length)];
+
+  // AIクエストの場合、答えを読んでパーソナライズされたフィードバックを取得
+  if(q.aiGenerated && state.lastAnswer){
+    msgEl.innerHTML='<span style="opacity:.45;font-size:.85rem">✨ AIがあなたの答えを読んでいます…</span>';
+    fetch(`${TOMORI_API_URL}/feedback`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        answer:state.lastAnswer,
+        missionTitle:q.title,
+        missionPrompt:q.prompt,
+        explorerType:state.trait||'short',
+      }),
+    })
+    .then(r=>r.json())
+    .then(data=>{if(data.message)msgEl.textContent=data.message;})
+    .catch(()=>{msgEl.textContent=pool[0];});
+  }
 
   // gains
   document.getElementById('gain-depth').textContent=state.depth;

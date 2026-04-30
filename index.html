@@ -655,7 +655,18 @@ body::before{
 /* =============================================
    AI MISSION SCREEN
    ============================================= */
-.screen-photo-ai-body{padding:16px;display:flex;flex-direction:column;gap:14px;min-height:calc(100vh - 60px)}
+/* AI screen header — back button + title */
+#screen-photo-ai .setup-header{
+  padding:14px 20px 12px;
+  display:flex;align-items:center;gap:12px;
+  position:sticky;top:0;z-index:10}
+.hdr-back{background:rgba(0,212,255,.12);border:1px solid rgba(0,212,255,.3);
+  border-radius:8px;color:var(--cyan);font-size:1.1rem;
+  width:34px;height:34px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;font-family:inherit}
+.hdr-title{font-size:1rem;font-weight:800;color:var(--text);
+  text-shadow:0 1px 8px rgba(0,0,0,.9);letter-spacing:.03em}
+.screen-photo-ai-body{padding:12px 16px 24px;display:flex;flex-direction:column;gap:14px}
 .ai-photo-preview{width:100%;border-radius:16px;overflow:hidden;
   background:rgba(0,30,50,.6);min-height:160px;
   display:flex;align-items:center;justify-content:center;
@@ -687,9 +698,10 @@ body::before{
   animation:orbPulse 1.2s ease-in-out infinite}
 .ai-loading-text{font-size:.9rem;color:var(--text-dim);text-align:center;
   line-height:1.6;text-shadow:0 1px 6px rgba(0,0,0,.8)}
-.ai-skip-btn{background:transparent;border:1px solid rgba(208,238,255,.2);
-  border-radius:10px;color:var(--text-dim);font-size:.82rem;
-  padding:10px;cursor:pointer;width:100%;font-family:inherit}
+.ai-skip-btn{background:transparent;border:1px solid rgba(208,238,255,.25);
+  border-radius:10px;color:rgba(208,238,255,.65);font-size:.85rem;
+  padding:12px;cursor:pointer;width:100%;font-family:inherit;
+  text-shadow:0 1px 6px rgba(0,0,0,.9);margin-bottom:8px}
 .ai-skip-btn:active{opacity:.7}
 .ai-error-msg{background:rgba(220,38,38,.18);border:1px solid rgba(220,38,38,.4);
   border-radius:10px;padding:10px 12px;font-size:.82rem;

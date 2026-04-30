@@ -1560,7 +1560,7 @@ function analyzeImageCategory(img){
 }
 
 function startAdventure(){
-  if(!state.photoUrl)return;
+  if(!state.photoUrl && !state.photoDescription)return;
   showAIScreen();
 }
 
@@ -2531,9 +2531,13 @@ function showAIScreen(){
   const btn=document.getElementById('ai-gen-btn');
   if(btn){
     btn.style.display='block';
-    btn.disabled=!hasPhoto; // 写真あり→即有効、なし→テキスト入力待ち
+    const hasDesc=(state.photoDescription||'').length>=5;
+    btn.disabled=!hasPhoto&&!hasDesc;
     btn.textContent=hasPhoto?'📷 AIが写真を見てミッション生成！':'✨ AIがミッションを考える！';
   }
+  // プリセットの説明文を事前入力
+  const ta=document.getElementById('ai-desc-input');
+  if(ta&&state.photoDescription)ta.value=state.photoDescription;
   const loading=document.getElementById('ai-loading');
   if(loading)loading.style.display='none';
   const err=document.getElementById('ai-error-msg');

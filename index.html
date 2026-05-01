@@ -2115,8 +2115,7 @@ function submitAnswer(){
   const labels={shift:'視点シフト！',scale:'スケールアップ！',role:'役割変換！',world:'世界変換！',feel:'感情探索！'};
   label.textContent=labels[q.type]||'想像完了！';
 
-  const titles=['すごい！','やったね！','天才だ！','完璧！','レジェンド！'];
-  title.textContent=titles[Math.min(Math.floor(state.depth/3),titles.length-1)];
+  title.textContent='…';
   sub.textContent=`探索深度 ${prevDepth} → ${state.depth}`;
 
   // companion
@@ -2161,8 +2160,29 @@ function submitAnswer(){
       }),
     })
     .then(r=>r.json())
-    .then(data=>{if(data.message)msgEl.textContent=data.message;})
-    .catch(()=>{msgEl.textContent=pool[0];});
+    .then(data=>{
+      if(data.message) msgEl.textContent=data.message;
+      if(data.adventurerTitle){
+        const titleEl=document.getElementById('complete-title');
+        if(titleEl){
+          titleEl.style.transition='opacity .4s';
+          titleEl.style.opacity='0';
+          setTimeout(()=>{
+            titleEl.textContent=data.adventurerTitle;
+            titleEl.style.opacity='1';
+          },300);
+        }
+      }
+    })
+    .catch(()=>{
+      msgEl.textContent=pool[0];
+      const titleEl=document.getElementById('complete-title');
+      if(titleEl) titleEl.textContent='冒険者';
+    });
+  } else {
+    // AI以外のクエストは固定タイトル
+    const fallbacks=['探索者','発見者','想像者','冒険者','考察者'];
+    title.textContent=fallbacks[state.depth%fallbacks.length];
   }
 
   // gains

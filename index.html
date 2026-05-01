@@ -2018,16 +2018,22 @@ function renderMission(q){
   pill.textContent=q.fl;
   document.getElementById('mbar-title').textContent=q.title;
 
-  // hero
+  // hero — village画像をランダム表示
   const hero=document.getElementById('mission-hero-vis');
-  const heroGrads={
-    shift:'linear-gradient(145deg,#92400e,#d97706,#fde68a)',
-    scale:'linear-gradient(145deg,#0c4a6e,#0284c7,#7dd3fc)',
-    role:'linear-gradient(145deg,#7f1d1d,#dc2626,#fca5a5)',
-    world:'linear-gradient(145deg,#2e1065,#7c3aed,#c4b5fd)',
-    feel:'linear-gradient(145deg,#064e3b,#059669,#6ee7b7)',
-  };
-  hero.style.background=heroGrads[q.type]||heroGrads.world;
+  const villageImgs=ZONE_SCENES.village||[];
+  const heroImg=villageImgs[Math.floor(Math.random()*villageImgs.length)];
+  if(heroImg){
+    hero.style.background=`url('${heroImg}') center/cover no-repeat`;
+  } else {
+    const heroGrads={
+      shift:'linear-gradient(145deg,#92400e,#d97706,#fde68a)',
+      scale:'linear-gradient(145deg,#0c4a6e,#0284c7,#7dd3fc)',
+      role:'linear-gradient(145deg,#7f1d1d,#dc2626,#fca5a5)',
+      world:'linear-gradient(145deg,#2e1065,#7c3aed,#c4b5fd)',
+      feel:'linear-gradient(145deg,#064e3b,#059669,#6ee7b7)',
+    };
+    hero.style.background=heroGrads[q.type]||heroGrads.world;
+  }
   document.getElementById('mission-hero-em').textContent=q.em;
   const mpt=document.getElementById('mission-photo-thumb');
   const activePhoto=getActivePhoto();

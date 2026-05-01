@@ -1040,7 +1040,6 @@ body::before{
 
     <!-- Bottom: location identity + enter -->
     <div class="village-bottom">
-      <div class="village-em" id="village-em">🏡</div>
       <div class="village-name" id="village-name">はじまりの村</div>
       <div class="village-sub" id="village-sub">▸ ここから冒険が始まる</div>
       <div class="village-progress" id="village-progress"></div>
@@ -1701,10 +1700,8 @@ function buildWorldMap(){
   }
 
   // ── Location identity ──
-  const emEl   = document.getElementById('village-em');
   const nameEl = document.getElementById('village-name');
   const subEl  = document.getElementById('village-sub');
-  if(emEl)   emEl.textContent  = zone.emoji;
   if(nameEl) nameEl.textContent = zone.name;
   if(subEl){
     if(dm === 0) subEl.textContent = '▸ 冒険の入口に立っている';

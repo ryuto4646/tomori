@@ -201,6 +201,30 @@ body::before{
 .mood-card.sel .mood-lbl{color:var(--cyan)}
 .setup-btn-area{padding:20px}
 
+/* ── SCREEN: PROFILE (年齢選択) ── */
+#screen-profile{padding:0;overflow-y:auto;background:transparent}
+.profile-bar{padding:14px 20px;
+  background:rgba(0,12,22,.72);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10;
+  border-bottom:1px solid rgba(0,212,255,.1)}
+.profile-hero{padding:30px 22px 12px;text-align:center}
+.profile-title{font-size:26px;font-weight:900;color:var(--text);line-height:1.3;margin-bottom:8px}
+.profile-sub{font-size:13px;color:var(--text-dim);line-height:1.7}
+.age-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:8px 20px 4px}
+.age-card{display:flex;flex-direction:column;align-items:center;gap:9px;padding:22px 8px;
+  border:1px solid var(--border);background:rgba(0,15,25,.82);cursor:pointer;
+  border-radius:14px;transition:all .2s;
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+.age-card.sel{border-color:var(--cyan);background:rgba(0,212,255,.1);box-shadow:var(--glow-md)}
+.age-card:active{transform:scale(.96)}
+.age-icon{font-size:38px;line-height:1}
+.age-name{font-size:16px;font-weight:900;color:var(--text);letter-spacing:.03em}
+.age-sub{font-size:11px;color:var(--text-dim);letter-spacing:.04em}
+.age-card.sel .age-name{color:var(--cyan)}
+.age-card.sel .age-sub{color:rgba(0,212,255,.7)}
+.age-tick{font-size:18px;color:var(--cyan);opacity:0;transition:opacity .2s}
+.age-card.sel .age-tick{opacity:1}
+
 /* ── SCREEN 3: PHOTO ── */
 #screen-photo{padding:24px 20px 32px;align-items:center}
 .photo-hdr{width:100%;text-align:center;margin-bottom:10px}
@@ -940,7 +964,7 @@ body::before{
     今日は何を<b>探究</b>する？
   </div>
   <div class="top-cta">
-    <button class="btn btn-primary" onclick="goTo('setup')">⚔️ 冒険をはじめる</button>
+    <button class="btn btn-primary" onclick="goTo('profile')">⚔️ 冒険をはじめる</button>
     <div class="top-folder-btn" id="top-folder-btn" onclick="openFolder()">
       📚 雑学フォルダ
       <span class="top-folder-badge" id="top-folder-badge">0</span>
@@ -948,10 +972,33 @@ body::before{
   </div>
 </div>
 
+<!-- ===== SCREEN: PROFILE (年齢選択) ===== -->
+<div class="screen" id="screen-profile">
+  <div class="profile-bar">
+    <button class="hdr-back" onclick="goTo('top')">←</button>
+    <div>
+      <div class="setup-step" style="margin-bottom:0">STEP 1 — 年齢を選ぼう</div>
+    </div>
+  </div>
+  <div class="profile-hero">
+    <div class="profile-title">きみは<br>何年生？</div>
+    <div class="profile-sub">AIがきみにぴったりの言葉で<br>話しかけてくれるよ🌟</div>
+  </div>
+  <div class="age-grid" id="age-grid"></div>
+  <div class="setup-btn-area">
+    <button class="btn btn-primary" id="profile-next-btn" onclick="finishProfile()" disabled>
+      次へ →
+    </button>
+  </div>
+</div>
+
 <!-- ===== SCREEN 2: SETUP ===== -->
 <div class="screen" id="screen-setup">
   <div class="setup-header">
-    <div class="setup-step">STEP 1 — 探険者タイプを選ぼう</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <button class="hdr-back" onclick="goTo('profile')">←</button>
+      <div class="setup-step" style="margin-bottom:0">STEP 2 — 探険者タイプを選ぼう</div>
+    </div>
     <div class="setup-title">きみはどんな<br>冒険者？</div>
     <div class="setup-sub">1回だけ選ぶよ。あとで変えられるよ！</div>
   </div>
@@ -1093,7 +1140,7 @@ body::before{
   <div class="mission-feed" id="map-quest-feed"></div>
 
   <div class="map-bottom-area">
-    <button class="btn btn-ghost" onclick="goTo('setup')">🔧 探険者タイプを変える</button>
+    <button class="btn btn-ghost" onclick="goTo('profile')">🔧 年齢・タイプを変える</button>
   </div>
 </div>
 
@@ -1351,7 +1398,7 @@ body::before{
 // STATE
 // =============================================
 const state = {
-  trait: null, mood: 'ok',
+  trait: null, mood: 'ok', age: null,
   photoUrl: null, category: 'mystery',
   depth: 0, xp: 0,
   setupDone: false,
@@ -1370,6 +1417,15 @@ const state = {
 };
 
 // =============================================
+// AGE GROUPS
+// =============================================
+const AGES = [
+  { key:'grade_1_2',   icon:'🌱', name:'小1〜2年生', sub:'6〜8さい' },
+  { key:'grade_3_4',   icon:'⚡', name:'小3〜4年生', sub:'9〜10さい' },
+  { key:'grade_5_6',   icon:'🔥', name:'小5〜6年生', sub:'11〜12さい' },
+  { key:'junior_high', icon:'🌙', name:'中学生',     sub:'13さい〜' },
+];
+
 // EXPLORER TYPES
 // =============================================
 const EXPLORERS = [
@@ -1758,6 +1814,38 @@ function goTo(id){
 }
 
 // =============================================
+// =============================================
+// SCREEN: PROFILE (年齢選択)
+// =============================================
+function buildProfile(){
+  const grid = document.getElementById('age-grid');
+  if(!grid) return;
+  grid.innerHTML = AGES.map(a=>`
+    <div class="age-card" id="age-${a.key}" onclick="selectAge('${a.key}',this)">
+      <div class="age-icon">${a.icon}</div>
+      <div class="age-name">${a.name}</div>
+      <div class="age-sub">${a.sub}</div>
+      <div class="age-tick">✓</div>
+    </div>`).join('');
+  if(state.age){
+    const el = document.getElementById('age-'+state.age);
+    if(el){ el.classList.add('sel'); document.getElementById('profile-next-btn').disabled=false; }
+  }
+}
+
+function selectAge(key, el){
+  state.age = key;
+  localStorage.setItem('tomori_age', key);
+  document.querySelectorAll('.age-card').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+  document.getElementById('profile-next-btn').disabled = false;
+}
+
+function finishProfile(){
+  buildSetup();
+  goTo('setup');
+}
+
 // SCREEN 1 → 2: SETUP
 // =============================================
 function buildSetup(){
@@ -1806,9 +1894,8 @@ function finishSetup(){
 
 // 設定画面から特性変更
 function openTraitSettings(){
-  // 現在の特性を選択状態にしてsetup画面を開く
-  buildSetup();
-  goTo('setup');
+  buildProfile();
+  goTo('profile');
 }
 
 // =============================================
@@ -2386,6 +2473,7 @@ function submitAnswer(){
         missionTitle:q.title,
         missionPrompt:q.prompt,
         explorerType:state.trait||'short_attention',
+        age:state.age||'grade_5_6',
         depthLevel:state.depth||0,
       }),
     })
@@ -3023,6 +3111,7 @@ async function generateAIMissions(){
         photoDescription:desc||null,
         photoBase64,photoMimeType,
         explorerType:state.trait||'short_attention',
+        age:state.age||'grade_5_6',
         mood:state.mood||'ok',
         previousAnswer:state.lastAnswer||null,
         answerHistory:getRecentAnswersForAI(),
@@ -3129,6 +3218,7 @@ async function generateAINextMission(completedQuest){
         missionTitle:completedQuest.title,
         missionPrompt:completedQuest.prompt,
         explorerType:state.trait||'short_attention',
+        age:state.age||'grade_5_6',
         photoBase64,photoMimeType,
         depthLevel:state.depth||0,
       }),
@@ -3359,6 +3449,7 @@ async function openJourneyScreen(){
           questType: h.questType,
         })),
         explorerType: state.trait||'short_attention',
+        age: state.age||'grade_5_6',
       }),
     });
     if(!res.ok) throw new Error('HTTP '+res.status);
@@ -3414,14 +3505,15 @@ setRandomBackground();   // ← ランダム背景
 buildBgOrbs();
 buildStars();
 
-// localStorage から特性を復元
-(function restoreTrait(){
-  const saved = localStorage.getItem('tomori_trait');
-  if(saved && EXPLORERS.some(e=>e.key===saved)){
-    state.trait = saved;
-  }
+// localStorage から年齢・特性を復元
+(function restoreProfile(){
+  const savedAge = localStorage.getItem('tomori_age');
+  if(savedAge && AGES.some(a=>a.key===savedAge)) state.age = savedAge;
+  const savedTrait = localStorage.getItem('tomori_trait');
+  if(savedTrait && EXPLORERS.some(e=>e.key===savedTrait)) state.trait = savedTrait;
 })();
 
+buildProfile();
 buildSetup();
 refreshTopFolderBtn();
 </script>

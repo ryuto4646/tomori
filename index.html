@@ -547,8 +547,23 @@ body::before{
   background:rgba(0,0,0,.42);backdrop-filter:blur(10px);
   border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:5px 13px}
 
-/* ── Spacer: pushes bottom content down ── */
-.village-spacer{flex:1;min-height:120px}
+/* ── Center: user's uploaded photo (main focus) ── */
+.village-photo-stage{
+  position:relative;z-index:5;
+  flex:1;display:flex;align-items:center;justify-content:center;
+  padding:12px 24px}
+.village-photo-frame{
+  width:min(72vw,280px);
+  border-radius:18px;overflow:hidden;
+  border:2px solid rgba(0,212,255,.45);
+  box-shadow:
+    0 0 0 1px rgba(0,212,255,.1),
+    0 0 40px rgba(0,212,255,.25),
+    0 12px 48px rgba(0,0,0,.7);
+  background:rgba(0,15,30,.6)}
+.village-photo-frame img{
+  width:100%;height:auto;display:block;
+  max-height:55vh;object-fit:cover}
 
 /* ── Bottom: location badge + progress + enter button ── */
 .village-bottom{
@@ -1036,7 +1051,13 @@ body::before{
       <div class="village-hud-depth" id="wmap-depth">深度 0</div>
     </div>
 
-    <div class="village-spacer"></div>
+    <!-- CENTER: uploaded photo (main focus) -->
+    <div class="village-photo-stage" id="village-photo-stage" style="display:none">
+      <div class="village-photo-frame">
+        <img id="village-photo-img" src="" alt="探究の写真">
+      </div>
+    </div>
+    <div class="village-spacer" id="village-spacer"></div>
 
     <!-- Bottom: location identity + enter -->
     <div class="village-bottom">
@@ -1697,6 +1718,20 @@ function buildWorldMap(){
       _sceneCache[zone.id] = imgs[Math.floor(Math.random()*imgs.length)];
     }
     scene.style.backgroundImage = `url('${_sceneCache[zone.id]}')`;
+  }
+
+  // ── Uploaded photo (main focus) ──
+  const photoStage  = document.getElementById('village-photo-stage');
+  const photoSpacer = document.getElementById('village-spacer');
+  const photoImg    = document.getElementById('village-photo-img');
+  const activePhoto = getActivePhoto();
+  if(activePhoto && photoStage && photoImg){
+    photoImg.src = activePhoto;
+    photoStage.style.display = 'flex';
+    if(photoSpacer) photoSpacer.style.display = 'none';
+  } else {
+    if(photoStage)  photoStage.style.display  = 'none';
+    if(photoSpacer) photoSpacer.style.display = '';
   }
 
   // ── Location identity ──

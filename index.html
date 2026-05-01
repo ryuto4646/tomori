@@ -919,21 +919,36 @@ body::before{
   font-size:1.6rem;transition:all .2s}
 .preset-card div{font-size:.72rem;color:var(--text-dim);margin-top:4px}
 .preset-card:active{transform:scale(.95);border-color:var(--cyan)}
-/* AI next mission in complete screen */
-.ai-next-head{font-size:.88rem;font-weight:700;color:#ffd700;
-  margin:16px 0 8px;padding:0 16px;
-  text-shadow:0 1px 8px rgba(0,0,0,.9)}
-.ai-next-praise{font-size:.82rem;color:var(--text-dim);
-  padding:0 16px 8px;line-height:1.5;
-  text-shadow:0 1px 6px rgba(0,0,0,.8)}
-.ai-next-btn{width:calc(100% - 32px);margin:0 16px 8px;
-  padding:13px;background:linear-gradient(135deg,rgba(255,215,0,.15),rgba(155,93,255,.15));
-  border:1.5px solid rgba(255,215,0,.4);border-radius:12px;
-  color:#ffd700;font-size:.95rem;font-weight:700;cursor:pointer;
-  font-family:inherit;transition:all .2s}
-.ai-next-btn:active{transform:scale(.97)}
-.ai-next-loading{display:flex;align-items:center;gap:10px;
-  padding:12px 16px;color:var(--text-dim);font-size:.82rem}
+/* ── AI suggest section (complete screen) ── */
+.ai-sug-loading{display:flex;align-items:center;gap:10px;
+  padding:14px 20px;color:var(--text-dim);font-size:12px}
+.ai-sug-hd{padding:18px 20px 10px;display:flex;align-items:center;gap:8px}
+.ai-sug-hd-text{font-size:13px;font-weight:900;color:var(--cyan);letter-spacing:.04em}
+/* 一番上の「きみの答えから生まれた問い」カード */
+.ai-sug-primary{margin:0 16px 10px;padding:16px;
+  border:1.5px solid rgba(0,212,255,.42);border-radius:14px;
+  background:rgba(0,212,255,.06);box-shadow:0 0 22px rgba(0,212,255,.1);
+  cursor:pointer;transition:all .18s;animation:cardIn .4s .08s both}
+.ai-sug-primary:active{transform:scale(.98);background:rgba(0,212,255,.11)}
+.ai-sug-primary-tag{font-size:9px;letter-spacing:.18em;color:var(--cyan);
+  font-weight:700;margin-bottom:8px;text-transform:uppercase}
+.ai-sug-primary-q{font-size:15px;font-weight:800;color:var(--text);
+  line-height:1.7;margin-bottom:12px}
+.ai-sug-primary-btn{width:100%;padding:11px;border-radius:10px;
+  background:rgba(0,212,255,.14);border:1px solid rgba(0,212,255,.35);
+  color:var(--cyan);font-size:14px;font-weight:800;cursor:pointer;
+  font-family:inherit;letter-spacing:.02em;pointer-events:none}
+/* 別の視点 3択 */
+.ai-sug-alt-label{text-align:center;padding:8px 20px 6px;
+  font-size:10px;letter-spacing:.16em;color:var(--text-dim);font-weight:700}
+.ai-sug-alts{display:flex;flex-direction:column;gap:8px;padding:0 16px 8px}
+.ai-sug-alt{display:flex;align-items:center;gap:12px;padding:13px 14px;
+  border:1px solid var(--border);border-radius:12px;
+  background:rgba(0,15,25,.78);cursor:pointer;transition:all .18s;
+  animation:cardIn .4s both}
+.ai-sug-alt:active{transform:scale(.98);border-color:var(--cyan);background:rgba(0,212,255,.06)}
+.ai-sug-alt-q{flex:1;font-size:13px;font-weight:700;color:var(--text);line-height:1.5}
+.ai-sug-alt-arr{font-size:16px;color:var(--text-dim);flex-shrink:0}
 /* AI badge on quest cards */
 .qcard-ai-badge{display:inline-flex;align-items:center;gap:2px;
   background:linear-gradient(90deg,rgba(255,215,0,.18),rgba(155,93,255,.18));
@@ -1204,20 +1219,14 @@ body::before{
     </div>
   </div>
 
-  <!-- AI next mission (AI quest完了時のみ表示) -->
-  <div id="ai-next-wrap" style="display:none">
-    <div class="ai-next-head">✨ あなたの答えから生まれた次のミッション</div>
-    <div id="ai-next-content"></div>
-  </div>
+  <!-- AI-suggested next missions (always shown) -->
+  <div id="ai-suggest-wrap"></div>
 
   <!-- 振り返り・進化コメント（動的） -->
   <div id="complete-reflection"></div>
   <div id="complete-evolution"></div>
   <!-- 7回ジャーニートリガー（動的） -->
   <div id="complete-journey-trigger"></div>
-
-  <div class="next-head">🗺️ つぎのクエストを選ぼう</div>
-  <div class="next-feed" id="next-quest-feed"></div>
 
   <div class="complete-btns">
     <button class="btn btn-ghost" onclick="goToWorldMap()">← ワールドマップへ</button>
@@ -2444,26 +2453,15 @@ function submitAnswer(){
   renderReflection(completionN);
   renderJourneyTrigger(completionN);
 
-  // AI next mission: wrap をリセット
-  const aiNextWrap=document.getElementById('ai-next-wrap');
-  if(aiNextWrap){
-    aiNextWrap.style.display='none';
-    const aiNextContent=document.getElementById('ai-next-content');
-    if(aiNextContent)aiNextContent.innerHTML=
-      q.aiGenerated
-        ?`<button class="ai-next-btn" onclick="generateAINextMission(state.currentQuest)">✨ AIに次のミッションを考えてもらう</button>`
-        :'';
-    if(q.aiGenerated)aiNextWrap.style.display='block';
-  }
-
+  // フィードバック + 次のミッション候補（全クエスト対象）
   const pool=q.aiGenerated
-    ?[q.completionHint||'すごいアイデアだ！その発想、最高だよ！']
+    ?[q.completionHint||'なるほど、その見方があったか。']
     :(COMPLETION_MESSAGES[q.type]||['よくやった！']);
   const msgEl=document.getElementById('complete-msg');
   msgEl.textContent=pool[Math.floor(Math.random()*pool.length)];
+  renderAISuggestionsLoading();
 
-  // AIクエストの場合、答えを読んでパーソナライズされたフィードバックを取得
-  if(q.aiGenerated && state.lastAnswer){
+  if(state.lastAnswer){
     msgEl.innerHTML='<span style="opacity:.45;font-size:.85rem">✨ AIがあなたの答えを読んでいます…</span>';
     fetch(`${TOMORI_API_URL}/feedback`,{
       method:'POST',
@@ -2472,6 +2470,7 @@ function submitAnswer(){
         answer:state.lastAnswer,
         missionTitle:q.title,
         missionPrompt:q.prompt,
+        questType:q.type||'shift',
         explorerType:state.trait||'short_attention',
         age:state.age||'grade_5_6',
         depthLevel:state.depth||0,
@@ -2485,33 +2484,27 @@ function submitAnswer(){
         if(titleEl){
           titleEl.style.transition='opacity .4s';
           titleEl.style.opacity='0';
-          setTimeout(()=>{
-            titleEl.textContent=data.adventurerTitle;
-            titleEl.style.opacity='1';
-          },300);
+          setTimeout(()=>{ titleEl.textContent=data.adventurerTitle; titleEl.style.opacity='1'; },300);
         }
       }
+      renderAISuggestions(q, data);
     })
     .catch(()=>{
       msgEl.textContent=pool[0];
       const titleEl=document.getElementById('complete-title');
-      if(titleEl) titleEl.textContent='冒険者';
+      if(titleEl){ const fb=['探索者','発見者','想像者','冒険者','考察者']; titleEl.textContent=fb[state.depth%fb.length]; }
+      document.getElementById('ai-suggest-wrap').innerHTML='';
     });
   } else {
-    // AI以外のクエストは固定タイトル
     const fallbacks=['探索者','発見者','想像者','冒険者','考察者'];
     title.textContent=fallbacks[state.depth%fallbacks.length];
+    document.getElementById('ai-suggest-wrap').innerHTML='';
   }
 
   // gains
   document.getElementById('gain-depth').textContent=state.depth;
   document.getElementById('gain-depth-sub').textContent=milestone||`深度 ${state.depth}`;
   document.getElementById('gain-xp').textContent=`+${q.xp}`;
-
-  // next quests (related)
-  const nextQuests=getNextQuests(q);
-  document.getElementById('next-quest-feed').innerHTML=
-    nextQuests.map((nq,i)=>questCardHTML(nq,i,'complete')).join('');
 
   // trivia card — pick from all categories randomly
   const triviaKeys=Object.keys(TRIVIA_DB);
@@ -3190,7 +3183,82 @@ function usePreset(i){
   btn.textContent=`🗺️「${p.name}」で冒険スタート！`;
 }
 
-// ─── 次のミッション（ボタン押下時に生成） ────────────────────────────────────
+// ─── AI suggest: ローディング表示 ─────────────────────────────────────────────
+function renderAISuggestionsLoading(){
+  const wrap=document.getElementById('ai-suggest-wrap');
+  if(!wrap)return;
+  wrap.innerHTML=`
+    <div class="ai-sug-loading">
+      <div class="ai-loading-orb" style="width:22px;height:22px;border-width:2px"></div>
+      <span>AIが次のミッションを考えています…</span>
+    </div>`;
+}
+
+// ─── AI suggest: 結果を表示 ───────────────────────────────────────────────────
+// 選択肢をグローバルに保持（onclick内でインデックスで参照）
+let _aiSugItems=[];
+
+function renderAISuggestions(q, data){
+  const wrap=document.getElementById('ai-suggest-wrap');
+  if(!wrap)return;
+  const type=q.type||'shift';
+  const fq=(data.followUpQuestion||'').trim();
+  const alts=(Array.isArray(data.alternatives)?data.alternatives:[]).map(s=>(s||'').trim()).filter(Boolean);
+  if(!fq && alts.length===0){ wrap.innerHTML=''; return; }
+
+  // グローバルに保存
+  _aiSugItems=[];
+  if(fq) _aiSugItems.push({prompt:fq,type});
+  alts.slice(0,3).forEach(a=>_aiSugItems.push({prompt:a,type}));
+
+  let html=`<div class="ai-sug-hd"><div class="ai-sug-hd-text">✨ 次のミッションを選ぼう</div></div>`;
+
+  if(fq){
+    html+=`
+    <div class="ai-sug-primary" onclick="launchAISuggestion(0)">
+      <div class="ai-sug-primary-tag">きみの答えからうまれた問い</div>
+      <div class="ai-sug-primary-q">${escH(fq)}</div>
+      <div class="ai-sug-primary-btn">これでいく →</div>
+    </div>`;
+  }
+
+  if(alts.length>0){
+    html+=`<div class="ai-sug-alt-label">── 別の視点から ──</div><div class="ai-sug-alts">`;
+    // fqがある場合はindex 1〜3、ない場合は0〜2
+    const startIdx=fq?1:0;
+    alts.slice(0,3).forEach((alt,i)=>{
+      html+=`
+      <div class="ai-sug-alt" style="animation-delay:${(i+1)*80}ms" onclick="launchAISuggestion(${startIdx+i})">
+        <div class="ai-sug-alt-q">${escH(alt)}</div>
+        <div class="ai-sug-alt-arr">›</div>
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+  wrap.innerHTML=html;
+}
+
+function escH(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function launchAISuggestion(idx){
+  const item=_aiSugItems[idx];
+  if(!item) return;
+  const q={
+    id:'ai-sug-'+Date.now(),
+    type:item.type||'shift', dm:0,
+    title:item.prompt.substring(0,10),
+    em:'✨', fl:'AI続き',
+    prompt:item.prompt,
+    ans:'text', xp:35,
+    tw:{short_attention:1,non_reader:1,deep_thinker:1,story_style:1,survival_like:1},
+    aiGenerated:true,
+    completionHint:'おもしろい視点だね！',
+  };
+  state.aiQuests.unshift(q);
+  openQuest(q.id);
+}
+
+// ─── 次のミッション（旧・互換用に残す） ──────────────────────────────────────
 async function generateAINextMission(completedQuest){
   const wrap=document.getElementById('ai-next-wrap');
   const content=document.getElementById('ai-next-content');

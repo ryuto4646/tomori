@@ -426,7 +426,7 @@ body::before{
 .next-feed{display:flex;flex-direction:column;gap:10px;padding:4px 16px 20px}
 .complete-btns{padding:4px 20px 40px}
 
-/* ── 7回ジャーニーボタン（complete画面） ── */
+/* ── 7回ジャーニートリガーボタン ── */
 .journey-trigger-wrap{margin:20px 20px 0;animation:cardIn .5s cubic-bezier(.22,1,.36,1) .2s both}
 .journey-trigger-btn{
   width:100%;padding:16px;border-radius:16px;cursor:pointer;font-family:inherit;
@@ -438,64 +438,114 @@ body::before{
 .journey-trigger-sub{font-size:10px;color:rgba(200,180,255,.6);text-align:center;
   margin-top:6px;letter-spacing:.06em}
 
-/* ── SCREEN: JOURNEY ── */
-#screen-journey{padding:0;overflow-y:auto;min-height:100vh;background:transparent}
-.journey-body{padding:36px 24px 60px;display:flex;flex-direction:column;gap:20px;
-  min-height:100vh}
+/* ── JOURNEY OVERLAY (fixed・blur演出) ── */
+#journey-overlay{
+  position:fixed;inset:0;z-index:9999;
+  display:none;flex-direction:column;align-items:center;
+  overflow-y:auto;-webkit-overflow-scrolling:touch}
+.journey-blur-bg{
+  position:fixed;inset:0;
+  background:rgba(0,4,14,.84);
+  backdrop-filter:blur(7px) brightness(.55);
+  -webkit-backdrop-filter:blur(7px) brightness(.55);
+  animation:fadeIn .6s ease both}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
 
-.journey-header{text-align:center;padding-bottom:8px}
-.journey-badge{font-size:10px;letter-spacing:.22em;color:rgba(155,93,255,.8);
-  text-transform:uppercase;font-weight:700;margin-bottom:10px}
-.journey-title{font-size:28px;font-weight:900;color:#fff;line-height:1.25;
-  text-shadow:0 2px 20px rgba(0,0,0,.9),0 0 40px rgba(155,93,255,.3)}
-.journey-title span{color:var(--cyan)}
+/* Particles */
+.journey-particles{position:fixed;inset:0;pointer-events:none;overflow:hidden}
+.jparticle{
+  position:absolute;border-radius:50%;
+  background:radial-gradient(circle,rgba(155,93,255,.75),transparent 70%);
+  animation:jfloat linear infinite}
+@keyframes jfloat{
+  0%{transform:translateY(105vh) scale(.3);opacity:0}
+  8%{opacity:.7}
+  88%{opacity:.4}
+  100%{transform:translateY(-15vh) scale(1.4);opacity:0}}
 
-/* Loading */
-.journey-loading{display:flex;flex-direction:column;align-items:center;gap:14px;
-  padding:40px 0;flex:1;justify-content:center}
-.journey-loading-orb{width:52px;height:52px;border-radius:50%;
-  background:radial-gradient(circle,rgba(155,93,255,.7),rgba(0,212,255,.4));
-  animation:orbPulse 1.4s ease-in-out infinite}
-.journey-loading-text{font-size:.9rem;color:var(--text-dim);text-align:center;
-  line-height:1.6;text-shadow:0 1px 6px rgba(0,0,0,.8)}
+/* Loading orb */
+.journey-loading-orb{
+  width:52px;height:52px;border-radius:50%;
+  border:3px solid rgba(0,212,255,.18);
+  border-top-color:var(--cyan);
+  animation:spin 1s linear infinite}
+.journey-loading-text{
+  font-size:14px;color:var(--text-dim);text-align:center;line-height:1.8}
 
-/* Summary cards */
-.journey-card{background:rgba(0,10,22,.72);border:1px solid var(--border);
-  border-radius:16px;padding:18px 18px 16px;backdrop-filter:blur(14px);
-  animation:cardIn .4s cubic-bezier(.22,1,.36,1) both}
-.journey-card-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-.journey-card-icon{font-size:1.5rem;line-height:1}
-.journey-card-label{font-size:10px;letter-spacing:.18em;color:var(--cyan);
-  text-transform:uppercase;font-weight:700}
-.journey-card-text{font-size:14px;color:var(--text);line-height:1.7;font-weight:600}
+/* Content wrapper */
+.journey-content-wrap{
+  position:relative;z-index:1;
+  width:100%;max-width:460px;
+  padding:54px 22px 80px;
+  display:flex;flex-direction:column;gap:14px;min-height:100vh}
 
-/* Personal message */
-.journey-message{background:linear-gradient(135deg,rgba(155,93,255,.12),rgba(0,212,255,.08));
-  border:1px solid rgba(155,93,255,.25);border-radius:16px;padding:20px 18px;
-  text-align:center;animation:cardIn .4s cubic-bezier(.22,1,.36,1) .1s both}
-.journey-message-label{font-size:9px;letter-spacing:.2em;color:rgba(155,93,255,.7);
-  margin-bottom:8px;font-weight:700;text-transform:uppercase}
-.journey-message-text{font-size:15px;font-weight:700;color:#fff;line-height:1.7;
-  text-shadow:0 1px 10px rgba(0,0,0,.8)}
+/* タイトル (0.3s後) */
+.journey-header{
+  text-align:center;margin-bottom:8px;
+  opacity:0;animation:jSlideUp .6s cubic-bezier(.22,1,.36,1) .3s forwards}
+.journey-badge-new{font-size:9px;letter-spacing:.24em;
+  color:rgba(155,93,255,.75);text-transform:uppercase;font-weight:700;margin-bottom:10px}
+.journey-title-new{font-size:21px;font-weight:900;color:#fff;line-height:1.45;
+  text-shadow:0 2px 20px rgba(0,0,0,.95)}
+.journey-title-new em{font-style:normal;color:var(--cyan)}
 
-/* Mini timeline of past answers */
-.journey-timeline{display:flex;flex-direction:column;gap:8px;
-  animation:cardIn .4s cubic-bezier(.22,1,.36,1) .2s both}
-.journey-timeline-label{font-size:9px;letter-spacing:.2em;color:var(--text-dim);
-  text-transform:uppercase;font-weight:700;margin-bottom:2px}
-.journey-answer-chip{background:rgba(0,15,28,.6);border:1px solid rgba(255,255,255,.08);
-  border-radius:10px;padding:8px 12px;display:flex;gap:10px;align-items:baseline}
-.jchip-num{font-size:9px;color:var(--text-dim);flex-shrink:0;min-width:18px}
-.jchip-mission{font-size:9px;color:var(--text-dim);flex-shrink:0}
-.jchip-answer{font-size:12px;color:var(--text);line-height:1.4;
-  overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+/* 汎用カード — animation-delayをインラインで指定 */
+.jcard{
+  background:rgba(0,10,22,.78);border:1px solid var(--border);
+  border-radius:16px;padding:17px 16px;backdrop-filter:blur(14px);
+  opacity:0;transform:translateY(22px);
+  animation:jSlideUp .65s cubic-bezier(.22,1,.36,1) forwards}
+.jcard-icon{font-size:1.2rem;margin-bottom:5px;line-height:1}
+.jcard-label{font-size:9px;letter-spacing:.18em;color:var(--teal);
+  text-transform:uppercase;font-weight:700;margin-bottom:7px}
+.jcard-text{font-size:14px;color:var(--text);line-height:1.8;font-weight:600}
 
-/* Continue button */
-.journey-continue-btn{width:100%;padding:16px;border-radius:14px;cursor:pointer;
-  font-family:inherit;background:rgba(0,212,255,.12);
-  border:1.5px solid rgba(0,212,255,.4);color:var(--cyan);font-size:1rem;font-weight:800;
-  letter-spacing:.04em;transition:all .2s;margin-top:4px}
-.journey-continue-btn:active{transform:scale(.97)}
+/* まえ vs いま比較カード */
+.jcompare{
+  background:rgba(0,10,22,.78);border:1px solid rgba(0,212,255,.16);
+  border-radius:16px;padding:17px 16px;backdrop-filter:blur(14px);
+  opacity:0;transform:translateY(22px);
+  animation:jSlideUp .65s cubic-bezier(.22,1,.36,1) forwards}
+.jcompare-label{font-size:9px;letter-spacing:.18em;color:var(--cyan);
+  text-transform:uppercase;font-weight:700;margin-bottom:12px}
+.jcompare-rows{display:flex;flex-direction:column;gap:9px}
+.jcompare-past{
+  padding:10px 13px;border-radius:10px;font-size:13px;font-weight:700;line-height:1.5;
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);
+  color:var(--text-dim);
+  opacity:0;transform:translateX(-18px);
+  animation:jSlideRight .5s cubic-bezier(.22,1,.36,1) forwards}
+.jcompare-now{
+  padding:10px 13px;border-radius:10px;font-size:13px;font-weight:700;line-height:1.5;
+  background:rgba(0,212,255,.07);border:1px solid rgba(0,212,255,.2);
+  color:var(--text);box-shadow:0 0 14px rgba(0,212,255,.08);
+  opacity:0;transform:translateX(18px);
+  animation:jSlideLeft .5s cubic-bezier(.22,1,.36,1) forwards}
+.jctag{font-size:9px;font-weight:700;margin-bottom:3px;letter-spacing:.06em}
+.jctag-past{color:rgba(255,255,255,.3)}
+.jctag-now{color:var(--cyan)}
+
+/* ポジティブコメント */
+.jcomment{
+  text-align:center;padding:20px 18px;
+  background:linear-gradient(135deg,rgba(155,93,255,.1),rgba(0,212,255,.07));
+  border:1px solid rgba(155,93,255,.22);border-radius:16px;
+  opacity:0;animation:jSlideUp .65s cubic-bezier(.22,1,.36,1) forwards}
+.jcomment-text{font-size:15px;font-weight:800;color:#fff;line-height:1.7;
+  text-shadow:0 1px 10px rgba(0,0,0,.9)}
+
+/* ボタン */
+.jbtn-wrap{opacity:0;animation:jSlideUp .5s cubic-bezier(.22,1,.36,1) forwards}
+.journey-btn-new{
+  width:100%;padding:17px;border-radius:14px;cursor:pointer;font-family:inherit;
+  background:rgba(0,212,255,.1);border:1.5px solid rgba(0,212,255,.4);
+  color:#fff;font-size:1.05rem;font-weight:800;letter-spacing:.05em;
+  text-shadow:0 1px 8px rgba(0,0,0,.9);transition:all .2s}
+.journey-btn-new:active{transform:scale(.97)}
+
+@keyframes jSlideUp{to{opacity:1;transform:translateY(0)}}
+@keyframes jSlideRight{to{opacity:1;transform:translateX(0)}}
+@keyframes jSlideLeft{to{opacity:1;transform:translateX(0)}}
 
 /* ── 継続価値UI ── */
 /* 振り返りカード */
@@ -1127,48 +1177,82 @@ body::before{
   </div>
 </div>
 
-<!-- ===== SCREEN: JOURNEY (7回記録) ===== -->
-<div class="screen" id="screen-journey">
-  <div class="journey-body">
+<!-- ===== JOURNEY OVERLAY (fixed・blur演出) ===== -->
+<div id="journey-overlay" role="dialog" aria-modal="true">
+  <!-- ① ぼかし背景 -->
+  <div class="journey-blur-bg"></div>
+  <!-- ② パーティクル -->
+  <div class="journey-particles" id="journey-particles"></div>
+
+  <!-- ③ スクロール可能コンテンツ -->
+  <div class="journey-content-wrap">
+
+    <!-- ヘッダー (0.3s) -->
     <div class="journey-header">
-      <div class="journey-badge">✨ 7回の探究記録</div>
-      <div class="journey-title">あなたの<br><span>思考の旅</span></div>
+      <div class="journey-badge-new">✨ 7かいのたんきゅうきろく</div>
+      <div class="journey-title-new">きみの<br><em>かんがえのたび</em></div>
     </div>
-    <!-- Loading -->
-    <div class="journey-loading" id="journey-loading">
+
+    <!-- ローディング -->
+    <div id="journey-loading" style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:40px 0">
       <div class="journey-loading-orb"></div>
-      <div class="journey-loading-text">AIがあなたの7回を<br>読んでいます…</div>
+      <div class="journey-loading-text">AIがきみの7かいを<br>よんでいます…</div>
     </div>
-    <!-- Content (hidden until loaded) -->
-    <div id="journey-content" style="display:none">
-      <div class="journey-card" style="animation-delay:.05s">
-        <div class="journey-card-header">
-          <div class="journey-card-icon">🔄</div>
-          <div class="journey-card-label">思考の変化</div>
+
+    <!-- コンテンツ (ロード後に表示) -->
+    <div id="journey-content" style="display:none;flex-direction:column;gap:14px">
+
+      <!-- カード1: 思考の変化 (1.0s) -->
+      <div class="jcard" style="animation-delay:1.0s">
+        <div class="jcard-icon">🔄</div>
+        <div class="jcard-label">かんがえのへんか</div>
+        <div class="jcard-text" id="journey-thinking"></div>
+      </div>
+
+      <!-- カード2: 興味の傾向 (1.7s) -->
+      <div class="jcard" style="animation-delay:1.7s">
+        <div class="jcard-icon">🔍</div>
+        <div class="jcard-label">すきなもの・きょうみ</div>
+        <div class="jcard-text" id="journey-interest"></div>
+      </div>
+
+      <!-- カード3: まえ vs いま (2.4s) -->
+      <div class="jcompare" id="journey-compare" style="animation-delay:2.4s;display:none">
+        <div class="jcompare-label">まえ → いま</div>
+        <div class="jcompare-rows">
+          <div class="jcompare-past" style="animation-delay:2.7s">
+            <div class="jctag jctag-past">さいしょのころ</div>
+            <div id="journey-past-example"></div>
+          </div>
+          <div class="jcompare-now" style="animation-delay:3.0s">
+            <div class="jctag jctag-now">さいきん</div>
+            <div id="journey-now-example"></div>
+          </div>
         </div>
-        <div class="journey-card-text" id="journey-thinking"></div>
       </div>
-      <div class="journey-card" style="animation-delay:.12s">
-        <div class="journey-card-header">
-          <div class="journey-card-icon">🔍</div>
-          <div class="journey-card-label">興味の傾向</div>
-        </div>
-        <div class="journey-card-text" id="journey-interest"></div>
+
+      <!-- カード4: ポジティブコメント (3.0 / 3.6s) -->
+      <div class="jcomment" style="animation-delay:3.6s">
+        <div class="jcard-label" style="color:var(--purple);margin-bottom:10px">✨ きみへ</div>
+        <div class="jcomment-text" id="journey-comment"></div>
       </div>
-      <div class="journey-message">
-        <div class="journey-message-label">あなたへ</div>
-        <div class="journey-message-text" id="journey-personal"></div>
-      </div>
-      <div class="journey-timeline">
-        <div class="journey-timeline-label">📝 これまでの答え</div>
-        <div id="journey-answer-list"></div>
-      </div>
+
+    </div><!-- /journey-content -->
+
+    <!-- エラー表示 -->
+    <div id="journey-error" style="display:none;text-align:center;padding:24px;color:rgba(255,150,150,.8);font-size:13px;line-height:1.8">
+      よみこめませんでした。<br>つぎのぼうけんへすすんでみてね。
     </div>
-    <button class="journey-continue-btn" onclick="goToWorldMap()">
-      続きの冒険へ →
-    </button>
-  </div>
-</div>
+
+    <!-- ボタン -->
+    <div class="jbtn-wrap" id="journey-btn-wrap" style="animation-delay:4.2s;display:none">
+      <button class="journey-btn-new" onclick="closeJourneyOverlay()">
+        つぎのぼうけんへ →
+      </button>
+    </div>
+
+  </div><!-- /journey-content-wrap -->
+</div><!-- /journey-overlay -->
 
 <!-- ===== SCREEN 7: FOLDER ===== -->
 <div class="screen" id="screen-folder">
@@ -3208,24 +3292,61 @@ function renderJourneyTrigger(completionCount){
   }
 }
 
-// ジャーニー画面を開いてAI分析を取得
+// ─── Journey Overlay helpers ─────────────────────────────────────────────────
+
+function buildJourneyParticles(){
+  const container = document.getElementById('journey-particles');
+  if(!container) return;
+  container.innerHTML='';
+  for(let i=0;i<18;i++){
+    const p = document.createElement('div');
+    p.className='jparticle';
+    const size = 4 + Math.random()*10;
+    p.style.cssText=`
+      width:${size}px;height:${size}px;
+      left:${Math.random()*100}%;
+      animation-duration:${5+Math.random()*9}s;
+      animation-delay:${Math.random()*6}s`;
+    container.appendChild(p);
+  }
+}
+
+function closeJourneyOverlay(){
+  const ov = document.getElementById('journey-overlay');
+  if(!ov) return;
+  ov.style.transition='opacity .35s ease';
+  ov.style.opacity='0';
+  setTimeout(()=>{
+    ov.style.display='none';
+    ov.style.opacity='';
+    ov.style.transition='';
+  },360);
+  goToWorldMap();
+}
+
+// ジャーニーオーバーレイを開いてAI分析を取得
 async function openJourneyScreen(){
-  goTo('journey');
+  const ov = document.getElementById('journey-overlay');
+  if(!ov) return;
+
+  // リセット
   document.getElementById('journey-loading').style.display='flex';
   document.getElementById('journey-content').style.display='none';
+  document.getElementById('journey-error').style.display='none';
+  const btnWrap = document.getElementById('journey-btn-wrap');
+  if(btnWrap) btnWrap.style.display='none';
+
+  // パーティクル生成
+  buildJourneyParticles();
+
+  // オーバーレイ表示
+  ov.style.display='flex';
+  ov.style.opacity='0';
+  ov.style.transition='opacity .4s ease';
+  requestAnimationFrame(()=>{ ov.style.opacity='1'; });
+  setTimeout(()=>{ ov.style.transition=''; }, 420);
 
   const history = getAnswerHistory();
-
-  // 過去の回答タイムラインを先に表示
-  const listEl = document.getElementById('journey-answer-list');
-  if(listEl){
-    listEl.innerHTML = history.slice(-7).map((h,i)=>`
-      <div class="journey-answer-chip">
-        <span class="jchip-num">${i+1}</span>
-        <span class="jchip-mission">${(h.missionTitle||'').substring(0,8)}</span>
-        <span class="jchip-answer">「${h.answer}」</span>
-      </div>`).join('');
-  }
 
   try{
     const res = await fetch(`${TOMORI_API_URL}/journey`,{
@@ -3243,17 +3364,37 @@ async function openJourneyScreen(){
     if(!res.ok) throw new Error('HTTP '+res.status);
     const data = await res.json();
 
+    // テキストを埋める
     document.getElementById('journey-thinking').textContent = data.thinkingChange||'';
     document.getElementById('journey-interest').textContent  = data.interestPattern||'';
-    document.getElementById('journey-personal').textContent  = data.personalMessage||'';
+    document.getElementById('journey-comment').textContent   = data.positiveComment || data.personalMessage||'';
 
+    // まえ vs いま 比較
+    const compareEl = document.getElementById('journey-compare');
+    const pastEl    = document.getElementById('journey-past-example');
+    const nowEl     = document.getElementById('journey-now-example');
+    if(compareEl && pastEl && nowEl && (data.pastExample||data.nowExample)){
+      pastEl.textContent = data.pastExample||'';
+      nowEl.textContent  = data.nowExample||'';
+      compareEl.style.display='';
+    } else if(compareEl){
+      compareEl.style.display='none';
+    }
+
+    // ローディング非表示 → コンテンツ表示
     document.getElementById('journey-loading').style.display='none';
-    document.getElementById('journey-content').style.display='block';
+    const contentEl = document.getElementById('journey-content');
+    contentEl.style.display='flex';
+
+    // ボタンを遅延表示
+    setTimeout(()=>{
+      if(btnWrap){ btnWrap.style.display='block'; }
+    }, 4500);
+
   }catch(e){
-    document.getElementById('journey-loading').innerHTML=
-      `<div class="journey-loading-text" style="color:rgba(255,150,150,.8)">
-        読み込めませんでした。<br>続きの冒険へ進んでみてください。
-      </div>`;
+    document.getElementById('journey-loading').style.display='none';
+    document.getElementById('journey-error').style.display='block';
+    if(btnWrap){ btnWrap.style.display='block'; }
   }
 }
 

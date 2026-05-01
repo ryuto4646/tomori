@@ -1149,11 +1149,11 @@ const state = {
 // EXPLORER TYPES
 // =============================================
 const EXPLORERS = [
-  { key:'short',    icon:'⚡', name:'スプリンター',    desc:'サクッと終わる！タップ中心で進めたい' },
-  { key:'visual',   icon:'👁️', name:'ビジョナー',      desc:'文字より感覚・選択で探究したい' },
-  { key:'deep',     icon:'🔮', name:'ディープダイバー', desc:'理由・仮説・とことん深く考えたい' },
-  { key:'story',    icon:'📖', name:'ストーリーテラー', desc:'物語の中で想像を広げたい！' },
-  { key:'survival', icon:'⚔️', name:'サバイバラー',    desc:'ミッション・探索・生き残り最高！' },
+  { key:'short_attention', icon:'⚡', name:'サクサク探険家',   desc:'短くてOK！タップ中心でサクッと進みたい' },
+  { key:'non_reader',      icon:'🎨', name:'えらぶ探険家',     desc:'文字より絵・選択肢で答えたい' },
+  { key:'deep_thinker',    icon:'🔮', name:'とことん探険家',   desc:'理由・仮説・深く考えるのが好き' },
+  { key:'story_style',     icon:'📖', name:'ものがたり探険家', desc:'キャラが話しかける物語スタイルで進みたい' },
+  { key:'survival_like',   icon:'⚔️', name:'サバイバル探険家', desc:'ミッション・作戦・生き残り感が最高！' },
 ];
 
 // =============================================
@@ -1509,11 +1509,11 @@ function getActiveCategory(){
 
 // Companion messages per trait
 const COMPANION_INTRO = {
-  short:    q=>`よし！サクッとやってみよう！👊`,
-  visual:   q=>`写真をじっくり感じて！答えは目の前にある👁️`,
-  deep:     q=>`なぜ？どうやって？とことん深く考えてみて！🔮`,
-  story:    q=>`想像の翼を広げよう！どんな物語が見える？📖`,
-  survival: q=>`冒険者よ、このミッションを突破せよ！⚔️`,
+  short_attention: q=>`よし！サクッとやってみよう！👊`,
+  non_reader:      q=>`えらんでみて！どっちがしっくりくる？🎨`,
+  deep_thinker:    q=>`なぜ？どうやって？とことん深く考えてみて！🔮`,
+  story_style:   q=>`想像の翼を広げよう！どんな物語が見える？📖`,
+  survival_like: q=>`冒険者よ、このミッションを突破せよ！⚔️`,
 };
 
 const COMPLETION_MESSAGES = {
@@ -1558,6 +1558,7 @@ function buildSetup(){
 
 function selectExplorer(key,el){
   state.trait=key;
+  localStorage.setItem('tomori_trait',key);
   document.querySelectorAll('.exp-card').forEach(c=>c.classList.remove('sel'));
   el.classList.add('sel');
   document.getElementById('mood-section').classList.add('on');
@@ -1577,6 +1578,13 @@ function finishSetup(){
   state.setupDone=true;
   if(state.photoUrl){buildWorldMap();goTo('worldmap');}
   else goTo('photo');
+}
+
+// 設定画面から特性変更
+function openTraitSettings(){
+  // 現在の特性を選択状態にしてsetup画面を開く
+  buildSetup();
+  goTo('setup');
 }
 
 // =============================================
@@ -2142,7 +2150,8 @@ function submitAnswer(){
         answer:state.lastAnswer,
         missionTitle:q.title,
         missionPrompt:q.prompt,
-        explorerType:state.trait||'short',
+        explorerType:state.trait||'short_attention',
+        depthLevel:state.depth||0,
       }),
     })
     .then(r=>r.json())
@@ -2757,9 +2766,10 @@ async function generateAIMissions(){
       body:JSON.stringify({
         photoDescription:desc||null,
         photoBase64,photoMimeType,
-        explorerType:state.trait||'short',
+        explorerType:state.trait||'short_attention',
         mood:state.mood||'ok',
         previousAnswer:state.lastAnswer||null,
+        depthLevel:state.depth||0,
       }),
     });
 
@@ -2856,8 +2866,9 @@ async function generateAINextMission(completedQuest){
         previousAnswer:state.lastAnswer,
         missionTitle:completedQuest.title,
         missionPrompt:completedQuest.prompt,
-        explorerType:state.trait||'short',
+        explorerType:state.trait||'short_attention',
         photoBase64,photoMimeType,
+        depthLevel:state.depth||0,
       }),
     });
 
@@ -2909,6 +2920,15 @@ function setRandomBackground(){
 setRandomBackground();   // ← ランダム背景
 buildBgOrbs();
 buildStars();
+
+// localStorage から特性を復元
+(function restoreTrait(){
+  const saved = localStorage.getItem('tomori_trait');
+  if(saved && EXPLORERS.some(e=>e.key===saved)){
+    state.trait = saved;
+  }
+})();
+
 buildSetup();
 refreshTopFolderBtn();
 </script>

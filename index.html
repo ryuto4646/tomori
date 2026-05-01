@@ -2787,17 +2787,22 @@ async function generateAIMissions(){
     const data=await res.json();
     const missions=data.missions||[];
 
-    state.aiQuests=missions.map((m,i)=>({
-      id:`ai-${i}`,
-      type:m.type||'shift',dm:0,
-      title:m.title||'AIミッション',em:m.em||'✨',
-      fl:'✨ AI生成',
-      prompt:m.prompt||'自由に想像してみよう！',
-      ans:'text',xp:35,
-      tw:{short:1,visual:1,deep:1,story:1,survival:1},
-      aiGenerated:true,
-      completionHint:m.completionHint||'すごいアイデア！その発想、最高だよ！',
-    }));
+    state.aiQuests=missions.map((m,i)=>{
+      const hasChoices=m.ans==='choices'&&Array.isArray(m.choices)&&m.choices.length>=2;
+      return {
+        id:`ai-${i}`,
+        type:m.type||'shift',dm:0,
+        title:m.title||'AIミッション',em:m.em||'✨',
+        fl:'✨ AI生成',
+        prompt:m.prompt||'自由に想像してみよう！',
+        ans:hasChoices?'choices':'text',
+        ch:hasChoices?m.choices:undefined,
+        xp:35,
+        tw:{short_attention:1,non_reader:1,deep_thinker:1,story_style:1,survival_like:1},
+        aiGenerated:true,
+        completionHint:m.completionHint||'おもしろい発想だ！',
+      };
+    });
 
     refreshMap();buildWorldMap();goTo('worldmap');
 
@@ -2889,10 +2894,12 @@ async function generateAINextMission(completedQuest){
       title:m.title||'AIが続きを考えた',em:m.em||'✨',
       fl:'✨ AI続き',
       prompt:m.prompt||'続きを想像しよう！',
-      ans:'text',xp:40,
-      tw:{short:1,visual:1,deep:1,story:1,survival:1},
+      ans:(m.ans==='choices'&&Array.isArray(m.choices)&&m.choices.length>=2)?'choices':'text',
+      ch:(m.ans==='choices'&&Array.isArray(m.choices)&&m.choices.length>=2)?m.choices:undefined,
+      xp:40,
+      tw:{short_attention:1,non_reader:1,deep_thinker:1,story_style:1,survival_like:1},
       aiGenerated:true,
-      completionHint:m.completionHint||'すごい！',
+      completionHint:m.completionHint||'なるほど、そういう見方もある！',
     };
     state.aiQuests.unshift(nextQ);
 

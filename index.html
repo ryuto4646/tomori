@@ -426,6 +426,26 @@ body::before{
 .next-feed{display:flex;flex-direction:column;gap:10px;padding:4px 16px 20px}
 .complete-btns{padding:4px 20px 40px}
 
+/* ── 継続価値UI ── */
+/* 振り返りカード */
+.reflection-wrap{margin:16px 20px 0;animation:cardIn .45s cubic-bezier(.22,1,.36,1) both}
+.reflection-label{font-size:9px;letter-spacing:.2em;color:var(--teal);
+  text-transform:uppercase;font-weight:700;margin-bottom:6px}
+.reflection-card{background:rgba(0,255,200,.06);border:1px solid rgba(0,255,200,.18);
+  border-radius:14px;padding:14px 16px}
+.reflection-past-mission{font-size:10px;color:rgba(0,255,200,.55);margin-bottom:5px;
+  letter-spacing:.05em}
+.reflection-past-answer{font-size:14px;font-weight:700;color:var(--text);
+  line-height:1.55;font-style:italic}
+.reflection-note{font-size:11px;color:var(--text-dim);margin-top:6px;line-height:1.5}
+
+/* 思考進化コメント */
+.evolution-wrap{margin:14px 20px 0;animation:cardIn .5s cubic-bezier(.22,1,.36,1) .1s both}
+.evolution-card{background:rgba(155,93,255,.08);border:1px solid rgba(155,93,255,.2);
+  border-radius:12px;padding:12px 16px;display:flex;align-items:flex-start;gap:10px}
+.evolution-icon{font-size:1.4rem;flex-shrink:0;line-height:1}
+.evolution-text{font-size:12px;color:rgba(200,180,255,.9);line-height:1.6;font-weight:600}
+
 /* depth toast */
 .depth-toast{position:fixed;top:76px;left:50%;transform:translateX(-50%) translateY(-20px);
   background:linear-gradient(135deg,var(--purple),var(--cyan));color:#000;
@@ -1021,6 +1041,10 @@ body::before{
     <div class="ai-next-head">✨ あなたの答えから生まれた次のミッション</div>
     <div id="ai-next-content"></div>
   </div>
+
+  <!-- 振り返り・進化コメント（動的） -->
+  <div id="complete-reflection"></div>
+  <div id="complete-evolution"></div>
 
   <div class="next-head">🗺️ つぎのクエストを選ぼう</div>
   <div class="next-feed" id="next-quest-feed"></div>
@@ -2127,6 +2151,11 @@ function submitAnswer(){
   // Save answer for next AI generation
   state.lastAnswer=state.answer;
 
+  // 継続価値：履歴保存 → 振り返り・進化コメント表示
+  if(state.answer) saveAnswerHistory(state.answer, q);
+  const completionN = getCompletionCount();
+  renderReflection(completionN);
+
   // AI next mission: wrap をリセット
   const aiNextWrap=document.getElementById('ai-next-wrap');
   if(aiNextWrap){
@@ -2795,6 +2824,7 @@ async function generateAIMissions(){
         explorerType:state.trait||'short_attention',
         mood:state.mood||'ok',
         previousAnswer:state.lastAnswer||null,
+        answerHistory:getRecentAnswersForAI(),
         depthLevel:state.depth||0,
       }),
     });
@@ -2945,6 +2975,113 @@ const BG_IMAGES = [
 function setRandomBackground(){
   const img = BG_IMAGES[Math.floor(Math.random() * BG_IMAGES.length)];
   document.body.style.backgroundImage = `url('${img}')`;
+}
+
+// =============================================
+// 継続価値・感動設計
+// =============================================
+
+// 思考タイプ → ラベル
+const THOUGHT_TYPE_LABEL = {
+  shift: '視点をひっくり返す',
+  scale: 'スケールを変える',
+  role:  '役割を入れ替える',
+  world: '世界のルールを変える',
+  feel:  '感情・感覚で見る',
+};
+
+// 回答を履歴に保存（最大15件）
+function saveAnswerHistory(answer, quest){
+  const history = JSON.parse(localStorage.getItem('tomori_history')||'[]');
+  history.push({
+    answer,
+    missionTitle: quest.title,
+    missionPrompt: quest.prompt,
+    questType: quest.type||'shift',
+    depth: state.depth,
+    ts: Date.now(),
+  });
+  if(history.length>15) history.splice(0,history.length-15);
+  localStorage.setItem('tomori_history', JSON.stringify(history));
+}
+
+// 履歴を取得
+function getAnswerHistory(){
+  return JSON.parse(localStorage.getItem('tomori_history')||'[]');
+}
+
+// 何番目のクエスト完了か
+function getCompletionCount(){
+  const n = parseInt(localStorage.getItem('tomori_completion_count')||'0',10)+1;
+  localStorage.setItem('tomori_completion_count', String(n));
+  return n;
+}
+
+// 思考進化コメントを生成
+function buildEvolutionComment(){
+  const history = getAnswerHistory();
+  if(history.length < 4) return null;
+  // 直近5件の思考タイプ集計
+  const recent = history.slice(-5);
+  const counts = {};
+  recent.forEach(h=>{ counts[h.questType]=(counts[h.questType]||0)+1; });
+  const dominant = Object.entries(counts).sort((a,b)=>b[1]-a[1])[0]?.[0];
+  const comments = {
+    shift: '最近は「視点をひっくり返す」考え方が増えてきたよ',
+    scale: '最近は「スケールを変える」発想が多くなってきたね',
+    role:  '最近は「役割を変える」視点がよく出てきてる',
+    world: '最近は「世界のルールを変える」考え方が広がってるよ',
+    feel:  '最近は「感情・感覚で見る」発想が増えてきた',
+  };
+  return comments[dominant]||null;
+}
+
+// 振り返りカードを表示（過去の回答をランダムに1件）
+function renderReflection(completionCount){
+  const wrap = document.getElementById('complete-reflection');
+  const evoWrap = document.getElementById('complete-evolution');
+  if(!wrap||!evoWrap) return;
+  wrap.innerHTML=''; evoWrap.innerHTML='';
+
+  const history = getAnswerHistory();
+  // 振り返りは5回に1回、過去の回答が2件以上あるとき
+  if(completionCount%5===0 && history.length>=2){
+    // 直近以外からランダムに1件選ぶ
+    const past = history.slice(0,-1);
+    const entry = past[Math.floor(Math.random()*past.length)];
+    wrap.innerHTML=`
+      <div class="reflection-wrap">
+        <div class="reflection-label">📖 以前の探究</div>
+        <div class="reflection-card">
+          <div class="reflection-past-mission">「${entry.missionTitle}」への答え</div>
+          <div class="reflection-past-answer">「${entry.answer}」</div>
+          <div class="reflection-note">あのとき、こんなことを考えてたね。今なら何て答える？</div>
+        </div>
+      </div>`;
+  }
+
+  // 進化コメントは3回に1回
+  if(completionCount%3===0){
+    const comment = buildEvolutionComment();
+    if(comment){
+      evoWrap.innerHTML=`
+        <div class="evolution-wrap">
+          <div class="evolution-card">
+            <div class="evolution-icon">🌱</div>
+            <div class="evolution-text">${comment}</div>
+          </div>
+        </div>`;
+    }
+  }
+}
+
+// 直近2件の回答をAI送信用に整形
+function getRecentAnswersForAI(){
+  const history = getAnswerHistory();
+  return history.slice(-2).map(h=>({
+    answer: h.answer,
+    missionTitle: h.missionTitle,
+  }));
 }
 
 // =============================================

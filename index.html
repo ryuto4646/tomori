@@ -578,6 +578,115 @@ body::before{
 @keyframes jSlideRight{to{opacity:1;transform:translateX(0)}}
 @keyframes jSlideLeft{to{opacity:1;transform:translateX(0)}}
 
+/* ── TEACHER MODE / PIN OVERLAY ── */
+/* Teacher entry button (top screen) */
+.top-teacher-btn{
+  margin-top:28px;font-size:11px;color:rgba(255,255,255,.28);
+  cursor:pointer;letter-spacing:.06em;padding:6px 16px;
+  border:1px solid rgba(255,255,255,.1);border-radius:20px;
+  transition:all .2s;background:transparent}
+.top-teacher-btn:active{color:rgba(255,255,255,.55);border-color:rgba(255,255,255,.25)}
+
+/* PIN overlay */
+#pin-overlay{
+  position:fixed;inset:0;z-index:10001;
+  display:none;flex-direction:column;align-items:center;justify-content:center;
+  background:rgba(0,4,14,.95);backdrop-filter:blur(10px)}
+.pin-title{font-size:20px;font-weight:900;color:#fff;margin-bottom:6px;text-align:center}
+.pin-sub{font-size:13px;color:var(--text-dim);margin-bottom:28px;text-align:center;line-height:1.6}
+.pin-error{font-size:12px;color:#f87171;min-height:18px;margin-bottom:8px;text-align:center;
+  transition:opacity .2s}
+.pin-dots{display:flex;gap:18px;margin-bottom:36px}
+.pin-dot{width:15px;height:15px;border-radius:50%;
+  border:2px solid rgba(155,93,255,.6);transition:background .15s,transform .15s}
+.pin-dot.filled{background:var(--purple);transform:scale(1.15)}
+.pin-numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;width:238px}
+.pin-key{height:62px;border-radius:14px;font-size:22px;font-weight:800;
+  background:rgba(0,15,30,.75);border:1px solid var(--border);color:var(--text);
+  cursor:pointer;font-family:inherit;transition:all .12s}
+.pin-key:active{transform:scale(.92);background:rgba(155,93,255,.18);border-color:var(--purple)}
+.pin-key-empty{visibility:hidden;pointer-events:none}
+.pin-cancel{margin-top:22px;font-size:13px;color:var(--text-dim);cursor:pointer;
+  padding:8px 22px;border-radius:10px;border:1px solid var(--border);background:transparent;
+  font-family:inherit;transition:all .18s}
+.pin-cancel:active{border-color:var(--cyan);color:var(--cyan)}
+.pin-badge{display:inline-block;font-size:9px;letter-spacing:.18em;
+  background:rgba(155,93,255,.18);border:1px solid rgba(155,93,255,.35);
+  color:#c084fc;padding:3px 10px;border-radius:20px;font-weight:700;margin-bottom:18px}
+
+/* Teacher overlay */
+#teacher-overlay{
+  position:fixed;inset:0;z-index:9998;
+  display:none;flex-direction:column;
+  background:rgba(0,4,14,.97)}
+.teacher-bar{padding:13px 20px;
+  background:rgba(0,10,22,.85);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  display:flex;align-items:center;gap:12px;
+  border-bottom:1px solid rgba(155,93,255,.18);flex-shrink:0}
+.teacher-bar-badge{font-size:9px;letter-spacing:.18em;
+  background:rgba(155,93,255,.18);border:1px solid rgba(155,93,255,.35);
+  color:#c084fc;padding:3px 9px;border-radius:20px;font-weight:700}
+.teacher-bar-title{font-size:15px;font-weight:900;color:#fff;flex:1}
+.teacher-close{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);
+  border-radius:8px;color:var(--text-dim);font-size:1rem;width:34px;height:34px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-family:inherit;transition:all .18s}
+.teacher-close:active{background:rgba(255,255,255,.14)}
+.teacher-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:16px 18px 64px;display:flex;flex-direction:column;gap:14px}
+/* Nickname */
+.teacher-nick{display:flex;align-items:center;gap:12px;
+  padding:13px 15px;background:rgba(155,93,255,.08);
+  border:1px solid rgba(155,93,255,.2);border-radius:12px}
+.teacher-nick-icon{font-size:28px;line-height:1;flex-shrink:0}
+.teacher-nick-name{font-size:16px;font-weight:800;color:#fff;flex:1;min-width:0}
+.teacher-nick-edit{font-size:11px;color:var(--text-dim);cursor:pointer;
+  padding:5px 10px;border-radius:8px;border:1px solid var(--border);
+  background:transparent;font-family:inherit;transition:all .18s;flex-shrink:0}
+.teacher-nick-edit:active{border-color:var(--cyan);color:var(--cyan)}
+/* Section card */
+.tsec{background:rgba(0,10,22,.82);border:1px solid var(--border);
+  border-radius:14px;padding:15px 16px;backdrop-filter:blur(10px)}
+.tsec-label{font-size:9.5px;letter-spacing:.2em;color:var(--teal);
+  font-weight:700;text-transform:uppercase;margin-bottom:10px}
+.tsec-text{font-size:14px;color:var(--text);line-height:1.8;font-weight:600}
+.tsec-tags{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+.tsec-tag{display:inline-block;padding:4px 12px;border-radius:20px;
+  font-size:11px;font-weight:700;letter-spacing:.05em;
+  background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.25);color:var(--cyan)}
+.tsec-tag-purple{background:rgba(155,93,255,.12);border-color:rgba(155,93,255,.3);color:#c084fc}
+.tsec-tag-green{background:rgba(0,255,136,.07);border-color:rgba(0,255,136,.22);color:var(--green)}
+/* Mood dots */
+.teacher-mood-row{display:flex;gap:5px;margin-top:10px;flex-wrap:wrap}
+.tmood-dot{width:30px;height:30px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:14px;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1)}
+.tmood-dot.hot{background:rgba(255,100,0,.14);border-color:rgba(255,100,0,.28)}
+.tmood-dot.ok{background:rgba(0,212,255,.1);border-color:rgba(0,212,255,.24)}
+.tmood-dot.tired{background:rgba(120,130,220,.1);border-color:rgba(120,130,220,.24)}
+/* AI Hints */
+.teacher-hint{display:flex;align-items:flex-start;gap:10px;
+  padding:12px 14px;background:rgba(155,93,255,.07);
+  border:1px solid rgba(155,93,255,.16);border-radius:10px;margin-bottom:8px}
+.teacher-hint:last-child{margin-bottom:0}
+.teacher-hint-dot{width:6px;height:6px;border-radius:50%;
+  background:var(--purple);flex-shrink:0;margin-top:6px}
+.teacher-hint-text{font-size:13px;color:var(--text);line-height:1.75}
+/* AI loading */
+.teacher-loading{display:flex;align-items:center;gap:10px;
+  padding:10px 0;color:var(--text-dim);font-size:12px}
+.teacher-spinner{width:18px;height:18px;border-radius:50%;
+  border:2px solid rgba(155,93,255,.2);border-top-color:var(--purple);
+  animation:spin 1s linear infinite;flex-shrink:0}
+/* Reset button */
+.teacher-reset-btn{width:100%;padding:13px;border-radius:12px;
+  background:rgba(255,60,60,.05);border:1px solid rgba(255,80,80,.18);
+  color:rgba(255,140,140,.5);font-size:12px;cursor:pointer;
+  font-family:inherit;transition:all .2s}
+.teacher-reset-btn:active{background:rgba(255,60,60,.1);color:rgba(255,140,140,.8)}
+.teacher-privacy-note{text-align:center;font-size:10px;color:var(--text-dim);
+  line-height:1.9;padding:4px 0}
+
 /* ── 継続価値UI ── */
 /* 振り返りカード */
 .reflection-wrap{margin:16px 20px 0;animation:cardIn .45s cubic-bezier(.22,1,.36,1) both}
@@ -991,6 +1100,111 @@ body::before{
       📚 雑学フォルダ
       <span class="top-folder-badge" id="top-folder-badge">0</span>
     </div>
+    <button class="top-teacher-btn" onclick="openTeacherMode()">
+      👩‍🏫 先生・支援者の方はこちら
+    </button>
+  </div>
+</div>
+
+<!-- ===== PIN OVERLAY ===== -->
+<div id="pin-overlay">
+  <div class="pin-badge">👩‍🏫 TEACHER MODE</div>
+  <div class="pin-title" id="pin-title">先生・支援者モード</div>
+  <div class="pin-sub" id="pin-sub">パスコードを入力してください</div>
+  <div class="pin-error" id="pin-error"></div>
+  <div class="pin-dots">
+    <div class="pin-dot" id="pd0"></div>
+    <div class="pin-dot" id="pd1"></div>
+    <div class="pin-dot" id="pd2"></div>
+    <div class="pin-dot" id="pd3"></div>
+  </div>
+  <div class="pin-numpad">
+    <button class="pin-key" onclick="pinInput('1')">1</button>
+    <button class="pin-key" onclick="pinInput('2')">2</button>
+    <button class="pin-key" onclick="pinInput('3')">3</button>
+    <button class="pin-key" onclick="pinInput('4')">4</button>
+    <button class="pin-key" onclick="pinInput('5')">5</button>
+    <button class="pin-key" onclick="pinInput('6')">6</button>
+    <button class="pin-key" onclick="pinInput('7')">7</button>
+    <button class="pin-key" onclick="pinInput('8')">8</button>
+    <button class="pin-key" onclick="pinInput('9')">9</button>
+    <button class="pin-key pin-key-empty" disabled></button>
+    <button class="pin-key" onclick="pinInput('0')">0</button>
+    <button class="pin-key" onclick="pinBackspace()" style="font-size:18px">⌫</button>
+  </div>
+  <button class="pin-cancel" onclick="closePinOverlay()">キャンセル</button>
+</div>
+
+<!-- ===== TEACHER OVERLAY ===== -->
+<div id="teacher-overlay">
+  <div class="teacher-bar">
+    <div class="teacher-bar-badge">先生・支援者モード</div>
+    <div class="teacher-bar-title"></div>
+    <button class="teacher-close" onclick="closeTeacherMode()">✕</button>
+  </div>
+  <div class="teacher-body">
+
+    <!-- ニックネーム -->
+    <div class="teacher-nick">
+      <div class="teacher-nick-icon">🧒</div>
+      <div class="teacher-nick-name" id="teacher-nick-name">なまえなし</div>
+      <button class="teacher-nick-edit" onclick="editNickname()">✏️ 変更</button>
+    </div>
+
+    <!-- ① 今日の気分 -->
+    <div class="tsec">
+      <div class="tsec-label">😊 最近の気分</div>
+      <div class="tsec-text" id="teacher-mood-text">データがありません</div>
+      <div class="teacher-mood-row" id="teacher-mood-row"></div>
+    </div>
+
+    <!-- ② 思考の傾向 -->
+    <div class="tsec">
+      <div class="tsec-label">🧠 考え方のくせ</div>
+      <div class="tsec-text" id="teacher-thinking-text">データがありません</div>
+      <div class="tsec-tags" id="teacher-thinking-tags"></div>
+    </div>
+
+    <!-- ③ 興味の傾向 -->
+    <div class="tsec">
+      <div class="tsec-label">🔍 きょうみのかたむき</div>
+      <div class="tsec-text" id="teacher-interest-text">7回の探究完了後に表示されます</div>
+      <div class="tsec-tags" id="teacher-interest-tags"></div>
+    </div>
+
+    <!-- ④ 変化の観察（AI） -->
+    <div class="tsec">
+      <div class="tsec-label">📈 最近の変化</div>
+      <div id="teacher-change-content">
+        <div class="teacher-loading">
+          <div class="teacher-spinner"></div>
+          <span>AIが分析中…</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ⑤ 関わりのヒント（AI） -->
+    <div class="tsec">
+      <div class="tsec-label">💡 関わりのヒント</div>
+      <div id="teacher-hints-content">
+        <div class="teacher-loading">
+          <div class="teacher-spinner"></div>
+          <span>AIが生成中…</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- プライバシー注記 -->
+    <div class="teacher-privacy-note">
+      🔒 すべてのデータはこの端末のみに保存されています<br>
+      評価ではなく、理解と支援のための記録です
+    </div>
+
+    <!-- データリセット -->
+    <button class="teacher-reset-btn" onclick="confirmResetData()">
+      🗑️ 探究データをリセットする
+    </button>
+
   </div>
 </div>
 
@@ -1895,6 +2109,11 @@ function selectExplorer(key,el){
 }
 function selectMood(key,el){
   state.mood=key;
+  // 気分履歴を保存（先生モード用・最大30件）
+  const mh = JSON.parse(localStorage.getItem('tomori_mood_history')||'[]');
+  mh.push({ mood: key, ts: Date.now() });
+  if(mh.length > 30) mh.splice(0, mh.length-30);
+  localStorage.setItem('tomori_mood_history', JSON.stringify(mh));
   document.querySelectorAll('.mood-card').forEach(c=>c.classList.remove('sel'));
   el.classList.add('sel');
   updateSetupBtn();
@@ -3604,6 +3823,260 @@ async function openJourneyScreen(){
     document.getElementById('journey-loading').style.display='none';
     document.getElementById('journey-error').style.display='block';
     if(btnWrap){ btnWrap.style.display='block'; }
+  }
+}
+
+// =============================================
+// TEACHER / SUPPORTER MODE
+// =============================================
+
+let _pinBuf = '';
+let _pinMode = 'verify'; // 'verify' | 'set1' | 'set2'
+let _pinTemp = '';
+
+const MOOD_EMOJI = { hot:'🔥', ok:'😊', tired:'😴' };
+const MOOD_DESC  = {
+  hot:   '元気いっぱいのセッションが多い',
+  ok:    '落ち着いた状態でのセッションが多い',
+  tired: '最近、少し疲れ気味なことが多い',
+};
+const THINK_DESC = {
+  '想像':     '想像して考えることが多い',
+  'スケール感': 'スケールを変えて考えるのが得意そう',
+  '視点切替':  '視点を切り替えることが多い',
+  '世界づくり': '世界観を作って考えることが多い',
+  '感情探索':  '感情や感覚で考えることが多い',
+  '観察':     'じっくり観察する傾向がある',
+};
+
+// ── PIN 管理 ────────────────────────────────
+function openTeacherMode(){
+  const stored = localStorage.getItem('tomori_teacher_pin');
+  openPinOverlay(stored ? 'verify' : 'set1');
+}
+
+function openPinOverlay(mode){
+  _pinMode = mode; _pinBuf = ''; _pinTemp = '';
+  _updatePinDots();
+  document.getElementById('pin-error').textContent = '';
+  const titles = {
+    verify: ['先生・支援者モード',      'パスコードを入力してください'],
+    set1:   ['パスコードを設定してください', '4桁の数字を決めてください'],
+    set2:   ['もう一度入力してください',  '同じ数字を入力してください'],
+  };
+  const [t, s] = titles[mode] || titles.verify;
+  document.getElementById('pin-title').textContent = t;
+  document.getElementById('pin-sub').textContent   = s;
+  document.getElementById('pin-overlay').style.display = 'flex';
+}
+
+function closePinOverlay(){
+  document.getElementById('pin-overlay').style.display = 'none';
+  _pinBuf = '';
+}
+
+function pinInput(d){
+  if(_pinBuf.length >= 4) return;
+  _pinBuf += d;
+  _updatePinDots();
+  if(_pinBuf.length === 4) setTimeout(_pinSubmit, 200);
+}
+
+function pinBackspace(){
+  _pinBuf = _pinBuf.slice(0, -1);
+  _updatePinDots();
+  document.getElementById('pin-error').textContent = '';
+}
+
+function _updatePinDots(){
+  for(let i=0;i<4;i++){
+    const d = document.getElementById('pd'+i);
+    if(d) d.classList.toggle('filled', i < _pinBuf.length);
+  }
+}
+
+function _pinSubmit(){
+  const errEl = document.getElementById('pin-error');
+  if(_pinMode === 'verify'){
+    if(_pinBuf === localStorage.getItem('tomori_teacher_pin')){
+      closePinOverlay();
+      _openTeacherDashboard();
+    } else {
+      errEl.textContent = 'パスコードが違います。もう一度。';
+      _pinBuf = ''; _updatePinDots();
+    }
+  } else if(_pinMode === 'set1'){
+    _pinTemp = _pinBuf; _pinBuf = '';
+    openPinOverlay('set2');
+  } else if(_pinMode === 'set2'){
+    if(_pinBuf === _pinTemp){
+      localStorage.setItem('tomori_teacher_pin', _pinBuf);
+      closePinOverlay();
+      _openTeacherDashboard();
+    } else {
+      errEl.textContent = '一致しません。最初からやり直してください。';
+      _pinBuf = ''; _pinTemp = ''; _updatePinDots();
+      setTimeout(()=>openPinOverlay('set1'), 1600);
+    }
+  }
+}
+
+// ── ダッシュボード ────────────────────────────
+function _openTeacherDashboard(){
+  _buildTeacherDashboard();
+  const ov = document.getElementById('teacher-overlay');
+  ov.style.display = 'flex';
+}
+
+function closeTeacherMode(){
+  document.getElementById('teacher-overlay').style.display = 'none';
+}
+
+function _buildTeacherDashboard(){
+  // ニックネーム
+  const nick = localStorage.getItem('tomori_nickname') || 'なまえなし';
+  document.getElementById('teacher-nick-name').textContent = nick;
+
+  // ① 気分
+  const moodHistory = JSON.parse(localStorage.getItem('tomori_mood_history')||'[]');
+  _buildMoodSection(moodHistory);
+
+  // ② 思考
+  const history = getAnswerHistory();
+  _buildThinkingSection(history);
+
+  // ③ 興味
+  _buildInterestSection();
+
+  // ④⑤ AI（非同期）
+  _loadTeacherAI(history);
+}
+
+function _buildMoodSection(moodHistory){
+  const textEl = document.getElementById('teacher-mood-text');
+  const rowEl  = document.getElementById('teacher-mood-row');
+  if(!moodHistory.length){
+    textEl.textContent = 'まだ記録がありません';
+    rowEl.innerHTML = ''; return;
+  }
+  const recent = moodHistory.slice(-14);
+  const counts = {hot:0, ok:0, tired:0};
+  recent.forEach(m => { if(m.mood in counts) counts[m.mood]++; });
+  const dominant = Object.entries(counts).sort((a,b)=>b[1]-a[1])[0][0];
+  textEl.textContent = MOOD_DESC[dominant] || '';
+  rowEl.innerHTML = recent.map(m =>
+    `<div class="tmood-dot ${m.mood}" title="${m.mood}">${MOOD_EMOJI[m.mood]||''}</div>`
+  ).join('');
+}
+
+function _buildThinkingSection(history){
+  const textEl = document.getElementById('teacher-thinking-text');
+  const tagsEl = document.getElementById('teacher-thinking-tags');
+  if(!history.length){
+    textEl.textContent = 'まだ記録がありません';
+    tagsEl.innerHTML = ''; return;
+  }
+  const counts = {};
+  history.forEach(h => { const t = h.thinkingTag; if(t) counts[t] = (counts[t]||0)+1; });
+  const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  const top = sorted[0]?.[0] || '';
+  textEl.textContent = THINK_DESC[top] || `「${top}」の考え方が多め`;
+  tagsEl.innerHTML = sorted.map(([tag,cnt]) =>
+    `<span class="tsec-tag tsec-tag-purple">${tag}（${cnt}回）</span>`).join('');
+}
+
+function _buildInterestSection(){
+  const textEl = document.getElementById('teacher-interest-text');
+  const tagsEl = document.getElementById('teacher-interest-tags');
+  const tags = JSON.parse(localStorage.getItem('tomori_interest_tags')||'[]');
+  if(!tags.length){
+    textEl.textContent = '7回の探究完了後に表示されます';
+    tagsEl.innerHTML = ''; return;
+  }
+  textEl.textContent = tags.slice(0,2).join('や') + 'などに興味を持っている';
+  tagsEl.innerHTML = tags.map(t=>`<span class="tsec-tag">${t}</span>`).join('');
+}
+
+async function _loadTeacherAI(history){
+  const changeEl = document.getElementById('teacher-change-content');
+  const hintsEl  = document.getElementById('teacher-hints-content');
+
+  if(history.length < 3){
+    const msg = '<div class="tsec-text" style="color:var(--text-dim)">3回以上プレイすると表示されます</div>';
+    changeEl.innerHTML = hintsEl.innerHTML = msg; return;
+  }
+
+  try{
+    const res = await fetch(`${TOMORI_API_URL}/teacher`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        answers: history.slice(-7).map(h=>({
+          answer:h.answer, missionTitle:h.missionTitle,
+          questType:h.questType, thinkingTag:h.thinkingTag,
+        })),
+        thinkingTags: [...new Set(history.map(h=>h.thinkingTag).filter(Boolean))],
+        interestTags: JSON.parse(localStorage.getItem('tomori_interest_tags')||'[]'),
+        explorerType: state.trait||'short_attention',
+        moodHistory: JSON.parse(localStorage.getItem('tomori_mood_history')||'[]').slice(-10),
+        age: state.age||'grade_5_6',
+      }),
+    });
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+
+    changeEl.innerHTML = data.changeObservation
+      ? `<div class="tsec-text">${data.changeObservation}</div>`
+      : '<div class="tsec-text" style="color:var(--text-dim)">もう少しデータが必要です</div>';
+
+    hintsEl.innerHTML = (Array.isArray(data.approachHints) && data.approachHints.length)
+      ? data.approachHints.map(h=>`
+          <div class="teacher-hint">
+            <div class="teacher-hint-dot"></div>
+            <div class="teacher-hint-text">${h}</div>
+          </div>`).join('')
+      : '<div class="tsec-text" style="color:var(--text-dim)">もう少しデータが必要です</div>';
+  }catch(e){
+    const err = '<div class="tsec-text" style="color:rgba(255,150,150,.7)">読み込めませんでした</div>';
+    changeEl.innerHTML = hintsEl.innerHTML = err;
+  }
+}
+
+// ニックネーム編集（インライン）
+function editNickname(){
+  const nameEl = document.getElementById('teacher-nick-name');
+  const cur = localStorage.getItem('tomori_nickname') || '';
+  nameEl.innerHTML = `<input id="nick-input" value="${cur.replace(/"/g,'&quot;')}"
+    style="background:transparent;border:none;border-bottom:1px solid var(--cyan);
+    color:#fff;font-size:15px;font-weight:800;width:100%;outline:none;
+    font-family:inherit" maxlength="20"
+    onblur="saveNickname()" onkeydown="if(event.key==='Enter')this.blur()">`;
+  const inp = document.getElementById('nick-input');
+  if(inp){ inp.focus(); inp.select(); }
+}
+
+function saveNickname(){
+  const inp = document.getElementById('nick-input');
+  if(!inp) return;
+  const nick = inp.value.trim() || 'なまえなし';
+  localStorage.setItem('tomori_nickname', nick);
+  document.getElementById('teacher-nick-name').textContent = nick;
+}
+
+// データリセット（2段階確認）
+let _resetStep = 0;
+function confirmResetData(){
+  const btn = document.querySelector('.teacher-reset-btn');
+  if(_resetStep === 0){
+    _resetStep = 1;
+    if(btn) btn.textContent = '⚠️ 本当に削除しますか？もう一度タップで削除';
+    setTimeout(()=>{ _resetStep=0; if(btn) btn.textContent='🗑️ 探究データをリセットする'; }, 3000);
+  } else {
+    _resetStep = 0;
+    ['tomori_history','tomori_completion_count','tomori_interest_tags','tomori_mood_history']
+      .forEach(k=>localStorage.removeItem(k));
+    closeTeacherMode();
+    if(btn) btn.textContent = '🗑️ 探究データをリセットする';
   }
 }
 

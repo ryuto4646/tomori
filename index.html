@@ -559,6 +559,12 @@ body::before{
 .jcomment-text{font-size:15px;font-weight:800;color:#fff;line-height:1.7;
   text-shadow:0 1px 10px rgba(0,0,0,.9)}
 
+/* 興味タグ */
+.journey-interest-tags{display:none;flex-wrap:wrap;gap:6px;margin-top:10px}
+.jtag{display:inline-block;padding:4px 10px;border-radius:20px;font-size:10px;font-weight:700;
+  letter-spacing:.08em;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.25);
+  color:var(--cyan)}
+
 /* ボタン */
 .jbtn-wrap{opacity:0;animation:jSlideUp .5s cubic-bezier(.22,1,.36,1) forwards}
 .journey-btn-new{
@@ -1271,6 +1277,7 @@ body::before{
         <div class="jcard-icon">🔍</div>
         <div class="jcard-label">すきなもの・きょうみ</div>
         <div class="jcard-text" id="journey-interest"></div>
+        <div class="journey-interest-tags" id="journey-interest-tags"></div>
       </div>
 
       <!-- カード3: まえ vs いま (2.4s) -->
@@ -3351,6 +3358,15 @@ const THOUGHT_TYPE_LABEL = {
   feel:  '感情・感覚で見る',
 };
 
+// questType → 思考タグ（AIに渡す短いキーワード）
+const THINKING_TAG_MAP = {
+  shift: '想像',
+  scale: 'スケール感',
+  role:  '視点切替',
+  world: '世界づくり',
+  feel:  '感情探索',
+};
+
 // 回答を履歴に保存（最大15件）
 function saveAnswerHistory(answer, quest){
   const history = JSON.parse(localStorage.getItem('tomori_history')||'[]');
@@ -3359,11 +3375,22 @@ function saveAnswerHistory(answer, quest){
     missionTitle: quest.title,
     missionPrompt: quest.prompt,
     questType: quest.type||'shift',
+    thinkingTag: THINKING_TAG_MAP[quest.type] || '観察',
     depth: state.depth,
     ts: Date.now(),
   });
   if(history.length>15) history.splice(0,history.length-15);
   localStorage.setItem('tomori_history', JSON.stringify(history));
+}
+
+// 蓄積されたタグを取得
+function getAccumulatedTags(){
+  const history = getAnswerHistory();
+  // 重複を除いた思考タグ一覧
+  const thinkingTags = [...new Set(history.map(h=>h.thinkingTag).filter(Boolean))];
+  // 前回のジャーニーAIが返した興味タグ（あれば）
+  const interestTags = JSON.parse(localStorage.getItem('tomori_interest_tags')||'[]');
+  return { thinkingTags, interestTags };
 }
 
 // 履歴を取得
@@ -3508,6 +3535,9 @@ async function openJourneyScreen(){
 
   const history = getAnswerHistory();
 
+  // 蓄積タグを取得して一緒に送る
+  const { thinkingTags, interestTags } = getAccumulatedTags();
+
   try{
     const res = await fetch(`${TOMORI_API_URL}/journey`,{
       method:'POST',
@@ -3517,13 +3547,21 @@ async function openJourneyScreen(){
           answer: h.answer,
           missionTitle: h.missionTitle,
           questType: h.questType,
+          thinkingTag: h.thinkingTag,
         })),
+        thinkingTags,
+        interestTags,
         explorerType: state.trait||'short_attention',
         age: state.age||'grade_5_6',
       }),
     });
     if(!res.ok) throw new Error('HTTP '+res.status);
     const data = await res.json();
+
+    // AIが返した興味タグを保存（次回のジャーニーで活用）
+    if(Array.isArray(data.interestTags) && data.interestTags.length > 0){
+      localStorage.setItem('tomori_interest_tags', JSON.stringify(data.interestTags));
+    }
 
     // テキストを埋める
     document.getElementById('journey-thinking').textContent = data.thinkingChange||'';
@@ -3540,6 +3578,16 @@ async function openJourneyScreen(){
       compareEl.style.display='';
     } else if(compareEl){
       compareEl.style.display='none';
+    }
+
+    // 興味タグバッジを表示（あれば）
+    const tagsEl = document.getElementById('journey-interest-tags');
+    if(tagsEl && Array.isArray(data.interestTags) && data.interestTags.length > 0){
+      tagsEl.innerHTML = data.interestTags.map(t=>
+        `<span class="jtag">${t}</span>`).join('');
+      tagsEl.style.display='flex';
+    } else if(tagsEl){
+      tagsEl.style.display='none';
     }
 
     // ローディング非表示 → コンテンツ表示

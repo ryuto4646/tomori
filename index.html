@@ -1081,6 +1081,59 @@ body::before{
   font-size:.64rem;font-weight:700;color:#ffd700;
   padding:1px 5px;margin-left:4px;vertical-align:middle}
 .qcard.ai-quest{border-color:rgba(255,215,0,.3)}
+
+/* ── TTS TOGGLE FLOATING BUTTON ── */
+#tts-btn{
+  position:fixed;bottom:22px;right:14px;z-index:8100;
+  width:46px;height:46px;border-radius:50%;
+  background:rgba(0,15,30,.88);border:1.5px solid rgba(208,238,255,.18);
+  color:var(--text-dim);font-size:21px;cursor:pointer;
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  transition:all .22s;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 20px rgba(0,0,0,.55);line-height:1;
+  -webkit-tap-highlight-color:transparent}
+#tts-btn.on{
+  border-color:var(--cyan);color:var(--cyan);
+  background:rgba(0,212,255,.14);
+  box-shadow:0 0 18px rgba(0,212,255,.35),0 4px 20px rgba(0,0,0,.45)}
+#tts-btn:active{transform:scale(.86)}
+@keyframes ttsPulse{
+  0%,100%{box-shadow:0 0 18px rgba(0,212,255,.35)}
+  50%{box-shadow:0 0 32px rgba(0,212,255,.85),0 0 54px rgba(0,212,255,.28)}}
+#tts-btn.pulse{animation:ttsPulse 1s ease-in-out 3}
+
+/* ── SPEAKABLE TEXT ELEMENTS ── */
+.speakable{cursor:pointer}
+.speakable:active{opacity:.72}
+@keyframes speakRipple{
+  0%,100%{outline-color:rgba(0,212,255,.5)}
+  50%{outline-color:rgba(0,212,255,.95)}}
+.speakable.speaking{
+  outline:2px solid rgba(0,212,255,.6);outline-offset:4px;
+  border-radius:6px;
+  animation:speakRipple .9s ease-in-out infinite}
+
+/* ── VOICE MIC BUTTON ── */
+.mic-btn-wrap{margin-top:10px}
+.mic-btn-wrap.no-support{display:none}
+.mic-btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;padding:12px 16px;
+  border:1.5px solid rgba(0,212,255,.35);border-radius:10px;
+  background:rgba(0,212,255,.07);color:var(--cyan);
+  font-size:15px;font-weight:700;cursor:pointer;
+  font-family:inherit;transition:all .2s;letter-spacing:.04em}
+.mic-btn.recording{
+  border-color:#f87171;background:rgba(248,113,113,.12);color:#f87171;
+  animation:micPulse .75s ease-in-out infinite}
+.mic-btn:active{transform:scale(.97)}
+@keyframes micPulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(248,113,113,0)}
+  50%{box-shadow:0 0 0 7px rgba(248,113,113,.18)}}
+/* non_reader: bigger mic */
+.non-reader .mic-btn{font-size:19px;padding:18px;border-radius:14px;
+  border-width:2px;margin-top:14px;
+  box-shadow:0 0 20px rgba(0,212,255,.1)}
 </style>
 </head>
 <body>
@@ -1408,11 +1461,11 @@ body::before{
 
   <div class="companion-strip">
     <div class="companion-avatar" id="companion-svg"></div>
-    <div class="companion-bubble" id="companion-msg"></div>
+    <div class="companion-bubble speakable" id="companion-msg"></div>
   </div>
 
   <div class="mission-body">
-    <div class="mission-prompt" id="mission-prompt"></div>
+    <div class="mission-prompt speakable" id="mission-prompt"></div>
     <div id="answer-area"></div>
   </div>
   <div class="mission-submit-area">
@@ -1435,7 +1488,7 @@ body::before{
     <div class="complete-svg" id="complete-companion-svg"></div>
     <div class="complete-cname" id="complete-cname"></div>
   </div>
-  <div class="complete-msg" id="complete-msg"></div>
+  <div class="complete-msg speakable" id="complete-msg"></div>
 
   <!-- 雑学カード -->
   <div id="trivia-card-wrap"></div>
@@ -1496,14 +1549,14 @@ body::before{
       <div class="jcard" style="animation-delay:1.0s">
         <div class="jcard-icon">🔄</div>
         <div class="jcard-label">かんがえのへんか</div>
-        <div class="jcard-text" id="journey-thinking"></div>
+        <div class="jcard-text speakable" id="journey-thinking"></div>
       </div>
 
       <!-- カード2: 興味の傾向 (1.7s) -->
       <div class="jcard" style="animation-delay:1.7s">
         <div class="jcard-icon">🔍</div>
         <div class="jcard-label">すきなもの・きょうみ</div>
-        <div class="jcard-text" id="journey-interest"></div>
+        <div class="jcard-text speakable" id="journey-interest"></div>
         <div class="journey-interest-tags" id="journey-interest-tags"></div>
       </div>
 
@@ -1525,7 +1578,7 @@ body::before{
       <!-- カード4: ポジティブコメント (3.0 / 3.6s) -->
       <div class="jcomment" style="animation-delay:3.6s">
         <div class="jcard-label" style="color:var(--purple);margin-bottom:10px">✨ きみへ</div>
-        <div class="jcomment-text" id="journey-comment"></div>
+        <div class="jcomment-text speakable" id="journey-comment"></div>
       </div>
 
     </div><!-- /journey-content -->
@@ -1630,6 +1683,9 @@ body::before{
 </div>
 
 </div><!-- /#app -->
+
+<!-- TTS floating toggle -->
+<button id="tts-btn" onclick="toggleTTS()" aria-label="読み上げのON/OFF">🔇</button>
 
 <div class="depth-toast" id="depth-toast"></div>
 <input type="file" id="file-input" accept="image/*"
@@ -2204,6 +2260,8 @@ const COMPLETION_MESSAGES = {
 // SCREEN NAVIGATION
 // =============================================
 function goTo(id){
+  if(typeof stopSpeech === 'function') stopSpeech();
+  if(typeof _voiceRec !== 'undefined' && _voiceRec) try{_voiceRec.stop();}catch(e){}
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('screen-'+id).classList.add('active');
   window.scrollTo(0,0);
@@ -2273,6 +2331,15 @@ function selectExplorer(key,el){
   el.classList.add('sel');
   document.getElementById('mood-section').classList.add('on');
   updateSetupBtn();
+  // non_reader: recommend TTS if not already ON
+  if(key==='non_reader' && !ttsEnabled){
+    const msg = state.language==='en'
+      ? '🔊 Turn on Read Aloud! Tap 🔇 button at bottom-right'
+      : '🔊 読み上げをONにしよう！右下の 🔇 ボタンをタップ';
+    setTimeout(()=>showToast(msg), 700);
+    const btn=document.getElementById('tts-btn');
+    if(btn){ btn.classList.add('pulse'); setTimeout(()=>btn.classList.remove('pulse'),3200); }
+  }
 }
 function selectMood(key,el){
   state.mood=key;
@@ -2774,12 +2841,19 @@ function renderMission(q){
 
   if(q.ans==='choices'){
     area.innerHTML=`<div class="choices-grid">`+
-      q.ch.map((c,i)=>`<button class="choice-btn" onclick="selectChoice(${i},this)">${c}</button>`).join('')+
+      q.ch.map((c,i)=>`<button class="choice-btn speakable" onclick="selectChoice(${i},this)">${c}</button>`).join('')+
       `</div>`;
   } else {
+    const isNonReader = state.trait === 'non_reader';
+    const hasSR = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+    const micLabel = state.language === 'en' ? '🎙️ Speak' : '🎙️ はなす';
+    const placeholder = state.language === 'en' ? 'Write your answer here!' : 'ここに書いてみよう！';
     area.innerHTML=`<textarea class="answer-textarea" id="ans-ta"
-      placeholder="ここに書いてみよう！" oninput="textChanged(this)"></textarea>
-      <div class="char-hint" id="char-hint">10文字以上書くと完成！</div>`;
+      placeholder="${placeholder}" oninput="textChanged(this)"></textarea>
+      <div class="char-hint" id="char-hint">${state.language==='en'?'Write 10+ characters to finish!':'10文字以上書くと完成！'}</div>
+      <div class="mic-btn-wrap${hasSR?'':' no-support'}${isNonReader?' non-reader':''}">
+        <button class="mic-btn" id="voice-mic-btn" onclick="startVoiceInput()">${micLabel}</button>
+      </div>`;
   }
 }
 
@@ -3058,7 +3132,7 @@ function renderTriviaCard(trivia){
     <div class="trivia-vis"><div class="trivia-vis-em">${trivia.em}</div></div>
     <div class="trivia-body">
       <div class="trivia-label">✨ 今日の雑学 — ${catLabel[trivia.category]||'ふしぎ'}</div>
-      <div class="trivia-fact">${trivia.fact}</div>
+      <div class="trivia-fact speakable">${trivia.fact}</div>
       <button class="trivia-save-btn ${saved?'saved':''}" id="trivia-save-btn"
         onclick="toggleTriviaSave(${JSON.stringify(trivia).replace(/"/g,'&quot;')})">
         ${saved?'✅ 保存済み！':'⭐ 雑学フォルダに保存'}
@@ -3614,7 +3688,7 @@ function renderAISuggestions(q, data){
     html+=`
     <div class="ai-sug-primary" onclick="launchAISuggestion(0)">
       <div class="ai-sug-primary-tag">きみの答えからうまれた問い</div>
-      <div class="ai-sug-primary-q">${escH(fq)}</div>
+      <div class="ai-sug-primary-q speakable">${escH(fq)}</div>
       <div class="ai-sug-primary-btn">これでいく →</div>
     </div>`;
   }
@@ -3626,7 +3700,7 @@ function renderAISuggestions(q, data){
     alts.slice(0,3).forEach((alt,i)=>{
       html+=`
       <div class="ai-sug-alt" style="animation-delay:${(i+1)*80}ms" onclick="launchAISuggestion(${startIdx+i})">
-        <div class="ai-sug-alt-q">${escH(alt)}</div>
+        <div class="ai-sug-alt-q speakable">${escH(alt)}</div>
         <div class="ai-sug-alt-arr">›</div>
       </div>`;
     });
@@ -4198,14 +4272,14 @@ async function _loadTeacherAI(history){
     const data = await res.json();
 
     changeEl.innerHTML = data.changeObservation
-      ? `<div class="tsec-text">${data.changeObservation}</div>`
+      ? `<div class="tsec-text speakable">${data.changeObservation}</div>`
       : '<div class="tsec-text" style="color:var(--text-dim)">もう少しデータが必要です</div>';
 
     hintsEl.innerHTML = (Array.isArray(data.approachHints) && data.approachHints.length)
       ? data.approachHints.map(h=>`
           <div class="teacher-hint">
             <div class="teacher-hint-dot"></div>
-            <div class="teacher-hint-text">${h}</div>
+            <div class="teacher-hint-text speakable">${h}</div>
           </div>`).join('')
       : '<div class="tsec-text" style="color:var(--text-dim)">もう少しデータが必要です</div>';
   }catch(e){
@@ -4262,6 +4336,142 @@ function getRecentAnswersForAI(){
 }
 
 // =============================================
+// TTS — TEXT TO SPEECH (Web Speech API)
+// =============================================
+let ttsEnabled = localStorage.getItem('tomori_tts') === 'on';
+let _currentSpeakEl = null;
+
+function updateTTSBtn(){
+  const btn = document.getElementById('tts-btn');
+  if(!btn) return;
+  btn.textContent = ttsEnabled ? '🔊' : '🔇';
+  btn.classList.toggle('on', ttsEnabled);
+  const la = state.language === 'en';
+  btn.title = ttsEnabled
+    ? (la ? 'Read Aloud ON (tap to OFF)' : '読み上げ ON（タップでOFF）')
+    : (la ? 'Read Aloud OFF (tap to ON)' : '読み上げ OFF（タップでON）');
+}
+
+function toggleTTS(){
+  ttsEnabled = !ttsEnabled;
+  localStorage.setItem('tomori_tts', ttsEnabled ? 'on' : 'off');
+  updateTTSBtn();
+  if(!ttsEnabled){
+    stopSpeech();
+  } else {
+    const msg = state.language==='en'
+      ? '🔊 Read Aloud ON! Tap any text to hear it'
+      : '🔊 読み上げON！テキストをタップすると読み上げるよ';
+    showToast(msg);
+  }
+}
+
+function speak(text, el){
+  if(!ttsEnabled || !text || !('speechSynthesis' in window)) return;
+  // Tap same element while speaking → stop
+  if(_currentSpeakEl === el && speechSynthesis.speaking){
+    stopSpeech(); return;
+  }
+  stopSpeech();
+  const lang = (state.language === 'en') ? 'en-US' : 'ja-JP';
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = lang;
+  // Slower rate for younger kids
+  utter.rate = (state.age === 'grade_1_2' || state.age === 'grade_3_4') ? 0.82 : 0.95;
+  _currentSpeakEl = el;
+  if(el) el.classList.add('speaking');
+  utter.onend = utter.onerror = ()=>{
+    if(el) el.classList.remove('speaking');
+    if(_currentSpeakEl === el) _currentSpeakEl = null;
+  };
+  speechSynthesis.speak(utter);
+}
+
+function stopSpeech(){
+  if('speechSynthesis' in window) speechSynthesis.cancel();
+  if(_currentSpeakEl){ _currentSpeakEl.classList.remove('speaking'); _currentSpeakEl = null; }
+}
+
+// Delegated click listener: any .speakable tapped → read aloud
+document.addEventListener('click', function(e){
+  if(!ttsEnabled) return;
+  const el = e.target.closest('.speakable');
+  if(!el) return;
+  const text = el.getAttribute('data-speak') || el.innerText.trim();
+  if(text) speak(text, el);
+}, false);
+
+// (stopSpeech is called inside goTo — see the goTo function definition)
+
+// =============================================
+// VOICE INPUT — Speech Recognition
+// =============================================
+let _voiceRec = null;
+let _voiceActive = false;
+
+function startVoiceInput(){
+  const btn = document.getElementById('voice-mic-btn');
+  const ta  = document.getElementById('ans-ta');
+  if(!ta) return;
+
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){
+    const msg = state.language==='en'
+      ? 'Voice input is not supported in this browser'
+      : 'このブラウザは音声入力に未対応です';
+    showToast(msg); return;
+  }
+
+  // If already recording, stop
+  if(_voiceActive){
+    if(_voiceRec) _voiceRec.stop();
+    return;
+  }
+
+  const lang = (state.language === 'en') ? 'en-US' : 'ja-JP';
+  const rec = new SR();
+  rec.lang = lang;
+  rec.interimResults = true;
+  rec.maxAlternatives = 1;
+  rec.continuous = false;
+  _voiceRec = rec;
+  _voiceActive = true;
+
+  const recLabel = state.language==='en' ? '🔴 Speak now…' : '🔴 はなしてね…';
+  const idleLabel = state.language==='en' ? '🎙️ Speak' : '🎙️ はなす';
+  if(btn){ btn.classList.add('recording'); btn.textContent = recLabel; }
+
+  rec.onresult = e=>{
+    let transcript = '';
+    for(let i = e.resultIndex; i < e.results.length; i++){
+      transcript += e.results[i][0].transcript;
+    }
+    ta.value = transcript;
+    textChanged(ta);
+  };
+
+  rec.onend = ()=>{
+    _voiceActive = false; _voiceRec = null;
+    if(btn){ btn.classList.remove('recording'); btn.textContent = idleLabel; }
+    if(ta.value.trim()) textChanged(ta);
+  };
+
+  rec.onerror = e=>{
+    _voiceActive = false; _voiceRec = null;
+    if(btn){ btn.classList.remove('recording'); btn.textContent = idleLabel; }
+    if(e.error && e.error !== 'aborted' && e.error !== 'no-speech'){
+      showToast(state.language==='en' ? 'Voice recognition error' : '音声認識でエラーが起きました');
+    }
+  };
+
+  try{ rec.start(); }
+  catch(err){
+    _voiceActive = false; _voiceRec = null;
+    if(btn){ btn.classList.remove('recording'); btn.textContent = idleLabel; }
+  }
+}
+
+// =============================================
 // INIT
 // =============================================
 setRandomBackground();   // ← ランダム背景
@@ -4280,6 +4490,7 @@ buildStars();
 
 applyLanguage();  // buildProfile + buildSetup も内部で呼ばれる
 refreshTopFolderBtn();
+updateTTSBtn();   // TTS toggle initial state
 </script>
 </body>
 </html>

@@ -578,6 +578,15 @@ body::before{
 @keyframes jSlideRight{to{opacity:1;transform:translateX(0)}}
 @keyframes jSlideLeft{to{opacity:1;transform:translateX(0)}}
 
+/* ── LANGUAGE PICKER ── */
+.lang-picker{display:flex;gap:6px;align-items:center;flex-shrink:0}
+.lang-btn{padding:5px 9px;border-radius:8px;font-size:13px;line-height:1;
+  background:rgba(0,15,30,.65);border:1px solid var(--border);
+  cursor:pointer;font-family:inherit;transition:all .18s;color:var(--text-dim)}
+.lang-btn.sel{border-color:var(--cyan);background:rgba(0,212,255,.14);
+  color:#fff;box-shadow:var(--glow-sm)}
+.lang-btn:active{transform:scale(.93)}
+
 /* ── TEACHER MODE / PIN OVERLAY ── */
 /* Teacher entry button (top screen) */
 .top-teacher-btn{
@@ -1212,8 +1221,12 @@ body::before{
 <div class="screen" id="screen-profile">
   <div class="profile-bar">
     <button class="hdr-back" onclick="goTo('top')">←</button>
-    <div>
-      <div class="setup-step" style="margin-bottom:0">STEP 1 — 年齢を選ぼう</div>
+    <div style="flex:1">
+      <div class="setup-step" id="profile-step-label" style="margin-bottom:0">STEP 1 — 年齢を選ぼう</div>
+    </div>
+    <div class="lang-picker">
+      <button class="lang-btn sel" id="lb-ja" onclick="selectLanguage('ja',this)">🇯🇵 JP</button>
+      <button class="lang-btn"     id="lb-en" onclick="selectLanguage('en',this)">🇬🇧 EN</button>
     </div>
   </div>
   <div class="profile-hero">
@@ -1629,7 +1642,7 @@ body::before{
 // STATE
 // =============================================
 const state = {
-  trait: null, mood: 'ok', age: null,
+  trait: null, mood: 'ok', age: null, language: 'ja',
   photoUrl: null, category: 'mystery',
   depth: 0, xp: 0,
   setupDone: false,
@@ -1648,23 +1661,175 @@ const state = {
 };
 
 // =============================================
+// =============================================
+// I18N — UI 文言辞書
+// =============================================
+const TEXTS = {
+  ja: {
+    // Top
+    topTagline:   '<b>写真</b> が冒険の扉。<br>今日は何を<b>探究</b>する？',
+    startBtn:     '⚔️ 冒険をはじめる',
+    teacherBtn:   '👩‍🏫 先生・支援者の方はこちら',
+    // Profile
+    profileStep:  'STEP 1 — 年齢を選ぼう',
+    profileTitle: 'きみは<br>何年生？',
+    profileSub:   'AIがきみにぴったりの言葉で<br>話しかけてくれるよ🌟',
+    nextBtn:      '次へ →',
+    // Setup
+    setupStep:    'STEP 2 — 探険者タイプを選ぼう',
+    setupTitle:   'きみはどんな<br>冒険者？',
+    setupSub:     '1回だけ選ぶよ。あとで変えられるよ！',
+    moodTitle:    '✨ 今日の気分は？',
+    setupBtn:     '📷 写真を撮りに行く →',
+    // Photo
+    photoTitle:   '📸 冒険の起点',
+    photoSub:     '気になるものを撮ろう！何でもOK',
+    camLabel:     '写真をとろう',
+    camSub:       'タップして撮影・選択',
+    camAlt:       '📁 ライブラリから選ぶ',
+    photoBtn:     '🗺️ 冒険スタート！',
+  },
+  en: {
+    // Top
+    topTagline:   'A <b>photo</b> opens the adventure.<br>What will you <b>explore</b> today?',
+    startBtn:     '⚔️ Start Adventure',
+    teacherBtn:   '👩‍🏫 For teachers & supporters',
+    // Profile
+    profileStep:  'STEP 1 — Choose your age',
+    profileTitle: "What's your<br>grade?",
+    profileSub:   'AI will talk to you in<br>the right way for your age 🌟',
+    nextBtn:      'Next →',
+    // Setup
+    setupStep:    'STEP 2 — Choose your explorer type',
+    setupTitle:   'What kind of<br>adventurer are you?',
+    setupSub:     'Choose once. You can change it later!',
+    moodTitle:    '✨ How are you feeling today?',
+    setupBtn:     '📷 Go take a photo →',
+    // Photo
+    photoTitle:   '📸 Start of your adventure',
+    photoSub:     'Take a photo of anything you\'re curious about!',
+    camLabel:     'Take a photo',
+    camSub:       'Tap to shoot or choose',
+    camAlt:       '📁 Choose from library',
+    photoBtn:     '🗺️ Start Adventure!',
+  },
+};
+
+const MOOD_LABELS = {
+  ja: { hot:'めちゃ<br>元気！', ok:'ふつう', tired:'ちょっと<br>つかれた' },
+  en: { hot:'Super<br>energetic!', ok:'Normal', tired:'A bit<br>tired' },
+};
+
+// 言語を選択してUIを更新
+function selectLanguage(lang, el){
+  state.language = lang;
+  localStorage.setItem('tomori_language', lang);
+  document.querySelectorAll('.lang-btn').forEach(b=>b.classList.remove('sel'));
+  if(el) el.classList.add('sel');
+  applyLanguage();
+}
+
+// 言語に合わせてUI文言を更新
+function applyLanguage(){
+  const lang = state.language || 'ja';
+  const t = TEXTS[lang] || TEXTS.ja;
+  const ml = MOOD_LABELS[lang] || MOOD_LABELS.ja;
+
+  // ランゲージボタンの選択状態
+  document.querySelectorAll('.lang-btn').forEach(b=>b.classList.remove('sel'));
+  const activeLbEl = document.getElementById('lb-'+lang);
+  if(activeLbEl) activeLbEl.classList.add('sel');
+
+  // TOP画面
+  const topTagEl = document.querySelector('.top-tagline');
+  if(topTagEl) topTagEl.innerHTML = t.topTagline;
+  const topStartBtn = document.querySelector('#screen-top .btn-primary');
+  if(topStartBtn) topStartBtn.textContent = t.startBtn;
+  const teacherBtn = document.querySelector('.top-teacher-btn');
+  if(teacherBtn) teacherBtn.textContent = t.teacherBtn;
+
+  // PROFILE画面
+  const profileStepEl = document.getElementById('profile-step-label');
+  if(profileStepEl) profileStepEl.textContent = t.profileStep;
+  const profileTitleEl = document.querySelector('.profile-title');
+  if(profileTitleEl) profileTitleEl.innerHTML = t.profileTitle;
+  const profileSubEl = document.querySelector('.profile-sub');
+  if(profileSubEl) profileSubEl.innerHTML = t.profileSub;
+  const profileNextBtn = document.getElementById('profile-next-btn');
+  if(profileNextBtn) profileNextBtn.textContent = t.nextBtn;
+
+  // SETUP画面
+  const setupStepEl = document.querySelector('#screen-setup .setup-step');
+  if(setupStepEl) setupStepEl.textContent = t.setupStep;
+  const setupTitleEl = document.querySelector('#screen-setup .setup-title');
+  if(setupTitleEl) setupTitleEl.innerHTML = t.setupTitle;
+  const setupSubEl = document.querySelector('#screen-setup .setup-sub');
+  if(setupSubEl) setupSubEl.textContent = t.setupSub;
+  const moodTitleEl = document.querySelector('.mood-title');
+  if(moodTitleEl) moodTitleEl.textContent = t.moodTitle;
+  const setupNextBtn = document.getElementById('setup-next-btn');
+  if(setupNextBtn) setupNextBtn.textContent = t.setupBtn;
+
+  // 気分ラベル（hot / ok / tired 順）
+  const moodKeys = ['hot','ok','tired'];
+  document.querySelectorAll('.mood-lbl').forEach((el,i)=>{
+    if(moodKeys[i]) el.innerHTML = ml[moodKeys[i]];
+  });
+
+  // PHOTO画面
+  const photoTitleEl = document.querySelector('.photo-hdr-title');
+  if(photoTitleEl) photoTitleEl.textContent = t.photoTitle;
+  const photoSubEl = document.querySelector('.photo-hdr-sub');
+  if(photoSubEl) photoSubEl.textContent = t.photoSub;
+  const camLabelEl = document.querySelector('.cam-label');
+  if(camLabelEl) camLabelEl.textContent = t.camLabel;
+  const camSubEl = document.querySelector('.cam-sub');
+  if(camSubEl) camSubEl.textContent = t.camSub;
+  const camAltEl = document.querySelector('.cam-alt');
+  if(camAltEl) camAltEl.textContent = t.camAlt;
+  const photoBtnEl = document.getElementById('photo-next-btn');
+  if(photoBtnEl && !photoBtnEl.disabled) photoBtnEl.textContent = t.photoBtn;
+
+  // AGES / EXPLORERSの表示を再ビルド
+  buildProfile();
+  if(document.getElementById('explorer-list').childElementCount > 0) buildSetup();
+}
+
 // AGE GROUPS
 // =============================================
 const AGES = [
-  { key:'grade_1_2',   icon:'🌱', name:'小1〜2年生', sub:'6〜8さい' },
-  { key:'grade_3_4',   icon:'⚡', name:'小3〜4年生', sub:'9〜10さい' },
-  { key:'grade_5_6',   icon:'🔥', name:'小5〜6年生', sub:'11〜12さい' },
-  { key:'junior_high', icon:'🌙', name:'中学生',     sub:'13さい〜' },
+  { key:'grade_1_2',   icon:'🌱',
+    name:{ja:'小1〜2年生', en:'Grade 1-2'},
+    sub: {ja:'6〜8さい',   en:'6-8 years'} },
+  { key:'grade_3_4',   icon:'⚡',
+    name:{ja:'小3〜4年生', en:'Grade 3-4'},
+    sub: {ja:'9〜10さい',  en:'9-10 years'} },
+  { key:'grade_5_6',   icon:'🔥',
+    name:{ja:'小5〜6年生', en:'Grade 5-6'},
+    sub: {ja:'11〜12さい', en:'11-12 years'} },
+  { key:'junior_high', icon:'🌙',
+    name:{ja:'中学生',     en:'Middle School'},
+    sub: {ja:'13さい〜',   en:'13+ years'} },
 ];
 
 // EXPLORER TYPES
 // =============================================
 const EXPLORERS = [
-  { key:'short_attention', icon:'⚡', name:'サクサク探険家',   desc:'短くてOK！タップ中心でサクッと進みたい' },
-  { key:'non_reader',      icon:'🎨', name:'えらぶ探険家',     desc:'文字より絵・選択肢で答えたい' },
-  { key:'deep_thinker',    icon:'🔮', name:'とことん探険家',   desc:'理由・仮説・深く考えるのが好き' },
-  { key:'story_style',     icon:'📖', name:'ものがたり探険家', desc:'キャラが話しかける物語スタイルで進みたい' },
-  { key:'survival_like',   icon:'⚔️', name:'サバイバル探険家', desc:'ミッション・作戦・生き残り感が最高！' },
+  { key:'short_attention', icon:'⚡',
+    name:{ja:'サクサク探険家',   en:'Quick Explorer'},
+    desc:{ja:'短くてOK！タップ中心でサクッと進みたい', en:'Short & fast! Tap-based quick answers'} },
+  { key:'non_reader',      icon:'🎨',
+    name:{ja:'えらぶ探険家',     en:'Choice Explorer'},
+    desc:{ja:'文字より絵・選択肢で答えたい',          en:'Prefer images & choices over text'} },
+  { key:'deep_thinker',    icon:'🔮',
+    name:{ja:'とことん探険家',   en:'Deep Thinker'},
+    desc:{ja:'理由・仮説・深く考えるのが好き',        en:'Love reasoning & deep thinking'} },
+  { key:'story_style',     icon:'📖',
+    name:{ja:'ものがたり探険家', en:'Story Explorer'},
+    desc:{ja:'キャラが話しかける物語スタイルで進みたい', en:'Story & character-driven style'} },
+  { key:'survival_like',   icon:'⚔️',
+    name:{ja:'サバイバル探険家', en:'Survival Explorer'},
+    desc:{ja:'ミッション・作戦・生き残り感が最高！',  en:'Mission mode & survival vibes!'} },
 ];
 
 // =============================================
@@ -2051,11 +2216,12 @@ function goTo(id){
 function buildProfile(){
   const grid = document.getElementById('age-grid');
   if(!grid) return;
+  const lang = state.language || 'ja';
   grid.innerHTML = AGES.map(a=>`
     <div class="age-card" id="age-${a.key}" onclick="selectAge('${a.key}',this)">
       <div class="age-icon">${a.icon}</div>
-      <div class="age-name">${a.name}</div>
-      <div class="age-sub">${a.sub}</div>
+      <div class="age-name">${a.name[lang]||a.name.ja}</div>
+      <div class="age-sub">${a.sub[lang]||a.sub.ja}</div>
       <div class="age-tick">✓</div>
     </div>`).join('');
   if(state.age){
@@ -2081,12 +2247,13 @@ function finishProfile(){
 // =============================================
 function buildSetup(){
   const list = document.getElementById('explorer-list');
+  const lang = state.language || 'ja';
   list.innerHTML = EXPLORERS.map(e=>`
     <div class="exp-card" id="exp-${e.key}" onclick="selectExplorer('${e.key}',this)">
       <div class="exp-icon">${e.icon}</div>
       <div class="exp-text">
-        <div class="exp-name">${e.name}</div>
-        <div class="exp-desc">${e.desc}</div>
+        <div class="exp-name">${e.name[lang]||e.name.ja}</div>
+        <div class="exp-desc">${e.desc[lang]||e.desc.ja}</div>
       </div>
       <div class="exp-tick">✓</div>
     </div>`).join('');
@@ -2701,6 +2868,7 @@ function submitAnswer(){
         questType:q.type||'shift',
         explorerType:state.trait||'short_attention',
         age:state.age||'grade_5_6',
+        language:state.language||'ja',
         depthLevel:state.depth||0,
       }),
     })
@@ -3333,6 +3501,7 @@ async function generateAIMissions(){
         photoBase64,photoMimeType,
         explorerType:state.trait||'short_attention',
         age:state.age||'grade_5_6',
+        language:state.language||'ja',
         mood:state.mood||'ok',
         previousAnswer:state.lastAnswer||null,
         answerHistory:getRecentAnswersForAI(),
@@ -3515,6 +3684,7 @@ async function generateAINextMission(completedQuest){
         missionPrompt:completedQuest.prompt,
         explorerType:state.trait||'short_attention',
         age:state.age||'grade_5_6',
+        language:state.language||'ja',
         photoBase64,photoMimeType,
         depthLevel:state.depth||0,
       }),
@@ -3772,6 +3942,7 @@ async function openJourneyScreen(){
         interestTags,
         explorerType: state.trait||'short_attention',
         age: state.age||'grade_5_6',
+        language: state.language||'ja',
       }),
     });
     if(!res.ok) throw new Error('HTTP '+res.status);
@@ -4020,6 +4191,7 @@ async function _loadTeacherAI(history){
         explorerType: state.trait||'short_attention',
         moodHistory: JSON.parse(localStorage.getItem('tomori_mood_history')||'[]').slice(-10),
         age: state.age||'grade_5_6',
+        language: state.language||'ja',
       }),
     });
     if(!res.ok) throw new Error('HTTP '+res.status);
@@ -4096,16 +4268,17 @@ setRandomBackground();   // ← ランダム背景
 buildBgOrbs();
 buildStars();
 
-// localStorage から年齢・特性を復元
+// localStorage から言語・年齢・特性を復元
 (function restoreProfile(){
+  const savedLang = localStorage.getItem('tomori_language');
+  if(savedLang && TEXTS[savedLang]) state.language = savedLang;
   const savedAge = localStorage.getItem('tomori_age');
   if(savedAge && AGES.some(a=>a.key===savedAge)) state.age = savedAge;
   const savedTrait = localStorage.getItem('tomori_trait');
   if(savedTrait && EXPLORERS.some(e=>e.key===savedTrait)) state.trait = savedTrait;
 })();
 
-buildProfile();
-buildSetup();
+applyLanguage();  // buildProfile + buildSetup も内部で呼ばれる
 refreshTopFolderBtn();
 </script>
 </body>

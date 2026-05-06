@@ -463,6 +463,23 @@ body::before{
 .journey-trigger-sub{font-size:10px;color:rgba(200,180,255,.6);text-align:center;
   margin-top:6px;letter-spacing:.06em}
 
+/* ── ゾーン進出ボタン ── */
+#zone-advance-wrap{margin:0 20px 4px;animation:cardIn .5s cubic-bezier(.22,1,.36,1) .4s both}
+.zone-advance-btn{
+  width:100%;padding:18px 16px;border-radius:16px;cursor:pointer;font-family:inherit;
+  background:linear-gradient(135deg,rgba(255,200,50,.18),rgba(255,120,30,.14));
+  border:2px solid rgba(255,180,40,.65);color:#fff;
+  font-size:1.05rem;font-weight:900;letter-spacing:.04em;
+  text-shadow:0 1px 10px rgba(0,0,0,.9);
+  box-shadow:0 0 32px rgba(255,180,40,.28),0 0 8px rgba(255,180,40,.18);
+  transition:all .2s;line-height:1.4}
+.zone-advance-btn:active{transform:scale(.97)}
+@keyframes zoneGlow{0%,100%{box-shadow:0 0 32px rgba(255,180,40,.28),0 0 8px rgba(255,180,40,.18)}
+  50%{box-shadow:0 0 48px rgba(255,180,40,.52),0 0 16px rgba(255,180,40,.36)}}
+.zone-advance-btn{animation:zoneGlow 2s ease-in-out infinite}
+.zone-advance-sub{font-size:10px;color:rgba(255,220,120,.55);text-align:center;
+  margin-top:6px;letter-spacing:.06em}
+
 /* ── JOURNEY OVERLAY (fixed・blur演出) ── */
 #journey-overlay{
   position:fixed;inset:0;z-index:9999;
@@ -1108,6 +1125,19 @@ body::before{
   50%{box-shadow:0 0 32px rgba(0,212,255,.85),0 0 54px rgba(0,212,255,.28)}}
 #tts-btn.pulse{animation:ttsPulse 1s ease-in-out 3}
 
+/* ── HOME FLOATING BUTTON ── */
+#home-btn{
+  position:fixed;bottom:22px;left:14px;z-index:8100;
+  width:46px;height:46px;border-radius:50%;
+  background:rgba(0,15,30,.88);border:1.5px solid rgba(208,238,255,.18);
+  color:var(--text-dim);font-size:21px;cursor:pointer;
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  transition:all .22s;display:none;align-items:center;justify-content:center;
+  box-shadow:0 4px 20px rgba(0,0,0,.55);line-height:1;
+  -webkit-tap-highlight-color:transparent}
+#home-btn:active{transform:scale(.86)}
+#home-btn.visible{display:flex}
+
 /* ── SPEAKABLE TEXT ELEMENTS ── */
 .speakable{cursor:pointer}
 .speakable:active{opacity:.72}
@@ -1224,6 +1254,18 @@ body::before{
     <button class="top-teacher-btn" onclick="openTeacherMode()">
       👩‍🏫 先生・支援者の方はこちら
     </button>
+    <div class="lang-picker" style="margin-top:14px;display:flex;justify-content:center">
+      <select class="lang-select" id="lang-select-top" onchange="selectLanguage(this.value)">
+        <option value="ja">🇯🇵 日本語</option>
+        <option value="en">🇬🇧 English</option>
+        <option value="zh">🇨🇳 中文</option>
+        <option value="ko">🇰🇷 한국어</option>
+        <option value="pt">🇧🇷 Português</option>
+        <option value="es">🇪🇸 Español</option>
+        <option value="vi">🇻🇳 Tiếng Việt</option>
+        <option value="tl">🇵🇭 Filipino</option>
+      </select>
+    </div>
   </div>
 </div>
 
@@ -1582,6 +1624,9 @@ body::before{
   <!-- 7回ジャーニートリガー（動的） -->
   <div id="complete-journey-trigger"></div>
 
+  <!-- ゾーン進出ボタン（動的） -->
+  <div id="zone-advance-wrap"></div>
+
   <div class="complete-btns">
     <button class="btn btn-ghost" onclick="goToWorldMap()">← ワールドマップへ</button>
   </div>
@@ -1753,6 +1798,9 @@ body::before{
 
 <!-- TTS floating toggle -->
 <button id="tts-btn" onclick="toggleTTS()" aria-label="読み上げのON/OFF">🔇</button>
+
+<!-- Home floating button -->
+<button id="home-btn" onclick="goHome()" aria-label="スタートページへ戻る" title="スタートページへ">🏠</button>
 
 <div class="depth-toast" id="depth-toast"></div>
 <input type="file" id="file-input" accept="image/*"
@@ -2027,9 +2075,8 @@ function applyLanguage(){
   const t = TEXTS[lang] || TEXTS.ja;
   const ml = MOOD_LABELS[lang] || MOOD_LABELS.ja;
 
-  // プルダウン選択状態を同期
-  const sel = document.getElementById('lang-select');
-  if(sel) sel.value = lang;
+  // プルダウン選択状態を同期（複数インスタンス対応）
+  document.querySelectorAll('.lang-select').forEach(sel => { sel.value = lang; });
 
   // TOP画面
   const topTagEl = document.querySelector('.top-tagline');
@@ -2500,6 +2547,14 @@ function goTo(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('screen-'+id).classList.add('active');
   window.scrollTo(0,0);
+  // clear zone-advance button when leaving complete screen
+  if(id!=='complete'){
+    const zaw=document.getElementById('zone-advance-wrap');
+    if(zaw) zaw.innerHTML='';
+  }
+  // home button: トップ画面では非表示、それ以外は表示
+  const homeBtn=document.getElementById('home-btn');
+  if(homeBtn) homeBtn.classList.toggle('visible', id!=='top');
 }
 
 // =============================================
@@ -2854,6 +2909,14 @@ function _buildMinimapSVG(zi){
   });
 
   svg.innerHTML = s;
+}
+
+function goHome(){
+  // 進捗がある場合のみ保存（空データでリジュームパネルが出ないように）
+  if(state.depth > 0 || state.photoUrl || (state.aiQuests && state.aiQuests.length > 0)){
+    saveGameState();
+  }
+  goTo('top');
 }
 
 function goToWorldMap(){
@@ -3240,9 +3303,18 @@ function submitAnswer(){
   if(milestone){
     setTimeout(()=>showToast(milestone),600);
   }
-  // Zone transition
+  // Zone transition — show special button instead of auto-navigating
   if(newZoneI>prevZoneI&&newZoneI<ZONES.length){
-    setTimeout(()=>showZoneArrival(newZoneI),2400);
+    const zone=ZONES[newZoneI];
+    const wrap=document.getElementById('zone-advance-wrap');
+    if(wrap){
+      const btnLabel=`${zone.emoji} ${zone.name} へ進む！`;
+      const btnSpeak=`新しいステージ ${zone.name} に進めるよ！タップして次のぼうけんへ！`;
+      wrap.innerHTML=`
+        <button class="zone-advance-btn speakable" data-speak="${btnSpeak.replace(/"/g,'&quot;')}"
+          onclick="showZoneArrival(${newZoneI})">${zone.emoji}<br>${zone.name}へ進む！</button>
+        <div class="zone-advance-sub">✨ 新しいステージ解放！</div>`;
+    }
   }
 }
 
@@ -4862,18 +4934,28 @@ function stopSpeech(){
 // they are the click target themselves (no parent onClick to block).
 document.addEventListener('click', function(e){
   if(!ttsEnabled) return;
+
+  // ① .speakable 要素（既存ロジック）
   const el = e.target.closest('.speakable');
-  if(!el) return;
-  const text = el.getAttribute('data-speak') || el.innerText.trim();
-  if(!text) return;
+  if(el){
+    const text = el.getAttribute('data-speak') || el.innerText.trim();
+    if(text){
+      const tag = el.tagName;
+      const isInteractive = tag === 'BUTTON' || tag === 'A' || el.hasAttribute('onclick');
+      if(!isInteractive) e.stopPropagation();
+      speak(text, el);
+    }
+    return;
+  }
 
-  // If the speakable element itself is a button/link, let onclick also fire.
-  // Otherwise (e.g. qcard-info, gain-blk, zone name) block navigation.
-  const tag = el.tagName;
-  const isInteractive = tag === 'BUTTON' || tag === 'A' || el.hasAttribute('onclick');
-  if(!isInteractive) e.stopPropagation();
-
-  speak(text, el);
+  // ② .speakable 以外のボタン → テキストを読み上げる（onclickはそのまま発火）
+  const btnEl = e.target.closest('button');
+  if(btnEl){
+    // 言語選択 select の矢印エリアなど意図しない要素を除外
+    if(btnEl.disabled) return;
+    const text = btnEl.getAttribute('data-speak') || btnEl.innerText.trim();
+    if(text) speak(text, btnEl);
+  }
 }, true); // capture phase
 
 // (stopSpeech is called inside goTo — see the goTo function definition)

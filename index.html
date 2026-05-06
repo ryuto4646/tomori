@@ -579,10 +579,11 @@ body::before{
 @keyframes jSlideLeft{to{opacity:1;transform:translateX(0)}}
 
 /* ── LANGUAGE PICKER ── */
-.lang-picker{display:flex;gap:6px;align-items:center;flex-shrink:0}
-.lang-btn{padding:5px 9px;border-radius:8px;font-size:13px;line-height:1;
+.lang-picker{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;flex-shrink:0;width:148px}
+.lang-btn{padding:4px 2px;border-radius:7px;font-size:12px;line-height:1.2;
   background:rgba(0,15,30,.65);border:1px solid var(--border);
-  cursor:pointer;font-family:inherit;transition:all .18s;color:var(--text-dim)}
+  cursor:pointer;font-family:inherit;transition:all .18s;color:var(--text-dim);
+  text-align:center;white-space:nowrap}
 .lang-btn.sel{border-color:var(--cyan);background:rgba(0,212,255,.14);
   color:#fff;box-shadow:var(--glow-sm)}
 .lang-btn:active{transform:scale(.93)}
@@ -1331,8 +1332,14 @@ body::before{
       <div class="setup-step" id="profile-step-label" style="margin-bottom:0">STEP 1 — 年齢を選ぼう</div>
     </div>
     <div class="lang-picker">
-      <button class="lang-btn sel" id="lb-ja" onclick="selectLanguage('ja',this)">🇯🇵 JP</button>
-      <button class="lang-btn"     id="lb-en" onclick="selectLanguage('en',this)">🇬🇧 EN</button>
+      <button class="lang-btn sel" id="lb-ja" onclick="selectLanguage('ja',this)">🇯🇵JP</button>
+      <button class="lang-btn"     id="lb-en" onclick="selectLanguage('en',this)">🇬🇧EN</button>
+      <button class="lang-btn"     id="lb-zh" onclick="selectLanguage('zh',this)">🇨🇳ZH</button>
+      <button class="lang-btn"     id="lb-ko" onclick="selectLanguage('ko',this)">🇰🇷KO</button>
+      <button class="lang-btn"     id="lb-pt" onclick="selectLanguage('pt',this)">🇧🇷PT</button>
+      <button class="lang-btn"     id="lb-es" onclick="selectLanguage('es',this)">🇪🇸ES</button>
+      <button class="lang-btn"     id="lb-vi" onclick="selectLanguage('vi',this)">🇻🇳VI</button>
+      <button class="lang-btn"     id="lb-tl" onclick="selectLanguage('tl',this)">🇵🇭TL</button>
     </div>
   </div>
   <div class="profile-hero">
@@ -1799,34 +1806,205 @@ const TEXTS = {
     photoBtn:     '🗺️ 冒険スタート！',
   },
   en: {
-    // Top
     topTagline:   'A <b>photo</b> opens the adventure.<br>What will you <b>explore</b> today?',
     startBtn:     '⚔️ Start Adventure',
     teacherBtn:   '👩‍🏫 For teachers & supporters',
-    // Profile
     profileStep:  'STEP 1 — Choose your age',
     profileTitle: "What's your<br>grade?",
     profileSub:   'AI will talk to you in<br>the right way for your age 🌟',
     nextBtn:      'Next →',
-    // Setup
     setupStep:    'STEP 2 — Choose your explorer type',
     setupTitle:   'What kind of<br>adventurer are you?',
     setupSub:     'Choose once. You can change it later!',
     moodTitle:    '✨ How are you feeling today?',
     setupBtn:     '📷 Go take a photo →',
-    // Photo
     photoTitle:   '📸 Start of your adventure',
     photoSub:     'Take a photo of anything you\'re curious about!',
     camLabel:     'Take a photo',
     camSub:       'Tap to shoot or choose',
     camAlt:       '📁 Choose from library',
     photoBtn:     '🗺️ Start Adventure!',
+    micBtn:       '🎙️ Speak', micActive:'🔴 Speak now…',
+    charHint:     'Write 10+ characters to finish!',
+    voiceErr:     'Voice recognition error',
+    ttsOn:        '🔊 Read Aloud ON! Tap any text to hear it',
+    resumeContinue:'⚔️ Continue Adventure',
+    resumeNew:    '📷 New Photo (keep progress)',
+    resumeSaved:  '⚔️ ADVENTURE SAVED',
+  },
+  zh: {
+    topTagline:   '<b>照片</b>是冒险的入口。<br>今天探究什么？',
+    startBtn:     '⚔️ 开始冒险',
+    teacherBtn:   '👩‍🏫 教师·支持者入口',
+    profileStep:  'STEP 1 — 选择年级',
+    profileTitle: '你上<br>几年级？',
+    profileSub:   'AI会用适合你年龄的<br>语言和你说话 🌟',
+    nextBtn:      '下一步 →',
+    setupStep:    'STEP 2 — 选择探险家类型',
+    setupTitle:   '你是哪种<br>冒险者？',
+    setupSub:     '选一次。之后可以修改！',
+    moodTitle:    '✨ 今天心情怎么样？',
+    setupBtn:     '📷 去拍照 →',
+    photoTitle:   '📸 冒险起点',
+    photoSub:     '拍下你感兴趣的东西！什么都可以',
+    camLabel:     '拍照',
+    camSub:       '点击拍摄或选择',
+    camAlt:       '📁 从相册选择',
+    photoBtn:     '🗺️ 开始冒险！',
+    micBtn:       '🎙️ 说话', micActive:'🔴 请说…',
+    charHint:     '写10个以上字即可完成！',
+    voiceErr:     '语音识别出错了',
+    ttsOn:        '🔊 朗读已开启！点击任意文字来听',
+    resumeContinue:'⚔️ 继续冒险',
+    resumeNew:    '📷 新照片继续冒险（保留进度）',
+    resumeSaved:  '⚔️ 冒险数据已保存',
+  },
+  ko: {
+    topTagline:   '<b>사진</b>이 모험의 문.<br>오늘은 무엇을 <b>탐구</b>할까?',
+    startBtn:     '⚔️ 모험 시작',
+    teacherBtn:   '👩‍🏫 선생님·지원자 입구',
+    profileStep:  'STEP 1 — 학년 선택',
+    profileTitle: '몇 학년<br>인가요?',
+    profileSub:   'AI가 나이에 맞는 말로<br>대화해드려요 🌟',
+    nextBtn:      '다음 →',
+    setupStep:    'STEP 2 — 탐험가 유형 선택',
+    setupTitle:   '어떤 유형의<br>모험가인가요?',
+    setupSub:     '한 번만 선택해요. 나중에 바꿀 수 있어요!',
+    moodTitle:    '✨ 오늘 기분은 어때요?',
+    setupBtn:     '📷 사진 찍으러 가기 →',
+    photoTitle:   '📸 모험의 출발점',
+    photoSub:     '궁금한 것을 찍어보세요! 무엇이든 OK',
+    camLabel:     '사진 찍기',
+    camSub:       '탭해서 촬영 또는 선택',
+    camAlt:       '📁 라이브러리에서 선택',
+    photoBtn:     '🗺️ 모험 시작!',
+    micBtn:       '🎙️ 말하기', micActive:'🔴 말해주세요…',
+    charHint:     '10자 이상 쓰면 완성!',
+    voiceErr:     '음성 인식 오류가 발생했어요',
+    ttsOn:        '🔊 읽기 ON! 텍스트를 탭하면 읽어줘요',
+    resumeContinue:'⚔️ 이어서 모험하기',
+    resumeNew:    '📷 새 사진으로 모험하기（진행 유지）',
+    resumeSaved:  '⚔️ 모험 데이터 있음',
+  },
+  pt: {
+    topTagline:   'Uma <b>foto</b> abre a aventura.<br>O que você vai <b>explorar</b> hoje?',
+    startBtn:     '⚔️ Iniciar Aventura',
+    teacherBtn:   '👩‍🏫 Para professores e apoiadores',
+    profileStep:  'PASSO 1 — Escolha sua série',
+    profileTitle: 'Qual é sua<br>série?',
+    profileSub:   'A IA vai falar com você da<br>forma certa para sua idade 🌟',
+    nextBtn:      'Próximo →',
+    setupStep:    'PASSO 2 — Escolha seu tipo de explorador',
+    setupTitle:   'Que tipo de<br>aventureiro você é?',
+    setupSub:     'Escolha uma vez. Pode mudar depois!',
+    moodTitle:    '✨ Como você está hoje?',
+    setupBtn:     '📷 Ir tirar uma foto →',
+    photoTitle:   '📸 Início da aventura',
+    photoSub:     'Tire uma foto de algo que te deixa curioso!',
+    camLabel:     'Tirar foto',
+    camSub:       'Toque para fotografar ou escolher',
+    camAlt:       '📁 Escolher da galeria',
+    photoBtn:     '🗺️ Começar Aventura!',
+    micBtn:       '🎙️ Falar', micActive:'🔴 Fale agora…',
+    charHint:     'Escreva 10+ caracteres para terminar!',
+    voiceErr:     'Erro no reconhecimento de voz',
+    ttsOn:        '🔊 Leitura em voz alta ON! Toque em qualquer texto',
+    resumeContinue:'⚔️ Continuar Aventura',
+    resumeNew:    '📷 Nova Foto (manter progresso)',
+    resumeSaved:  '⚔️ AVENTURA SALVA',
+  },
+  es: {
+    topTagline:   'Una <b>foto</b> abre la aventura.<br>¿Qué <b>explorarás</b> hoy?',
+    startBtn:     '⚔️ Iniciar Aventura',
+    teacherBtn:   '👩‍🏫 Para maestros y apoyadores',
+    profileStep:  'PASO 1 — Elige tu grado',
+    profileTitle: '¿En qué<br>grado estás?',
+    profileSub:   'La IA te hablará de la forma<br>adecuada para tu edad 🌟',
+    nextBtn:      'Siguiente →',
+    setupStep:    'PASO 2 — Elige tu tipo de explorador',
+    setupTitle:   '¿Qué tipo de<br>aventurero eres?',
+    setupSub:     '¡Elige una vez. Puedes cambiarlo después!',
+    moodTitle:    '✨ ¿Cómo te sientes hoy?',
+    setupBtn:     '📷 Ir a tomar una foto →',
+    photoTitle:   '📸 Inicio de la aventura',
+    photoSub:     '¡Toma una foto de algo que te da curiosidad!',
+    camLabel:     'Tomar foto',
+    camSub:       'Toca para fotografiar o elegir',
+    camAlt:       '📁 Elegir de la galería',
+    photoBtn:     '🗺️ ¡Comenzar Aventura!',
+    micBtn:       '🎙️ Hablar', micActive:'🔴 Habla ahora…',
+    charHint:     '¡Escribe 10+ caracteres para terminar!',
+    voiceErr:     'Error de reconocimiento de voz',
+    ttsOn:        '🔊 Lectura en voz alta ON! Toca cualquier texto',
+    resumeContinue:'⚔️ Continuar Aventura',
+    resumeNew:    '📷 Nueva Foto (mantener progreso)',
+    resumeSaved:  '⚔️ AVENTURA GUARDADA',
+  },
+  vi: {
+    topTagline:   '<b>Ảnh</b> mở ra cuộc phiêu lưu.<br>Hôm nay bạn sẽ <b>khám phá</b> gì?',
+    startBtn:     '⚔️ Bắt đầu phiêu lưu',
+    teacherBtn:   '👩‍🏫 Dành cho giáo viên & người hỗ trợ',
+    profileStep:  'BƯỚC 1 — Chọn lớp học',
+    profileTitle: 'Bạn học<br>lớp mấy?',
+    profileSub:   'AI sẽ nói chuyện với bạn theo<br>cách phù hợp với lứa tuổi 🌟',
+    nextBtn:      'Tiếp theo →',
+    setupStep:    'BƯỚC 2 — Chọn kiểu nhà thám hiểm',
+    setupTitle:   'Bạn là loại<br>nhà phiêu lưu nào?',
+    setupSub:     'Chọn một lần. Có thể thay đổi sau!',
+    moodTitle:    '✨ Hôm nay bạn cảm thấy thế nào?',
+    setupBtn:     '📷 Đi chụp ảnh →',
+    photoTitle:   '📸 Điểm bắt đầu phiêu lưu',
+    photoSub:     'Chụp ảnh thứ gì đó bạn tò mò! Gì cũng được',
+    camLabel:     'Chụp ảnh',
+    camSub:       'Nhấn để chụp hoặc chọn',
+    camAlt:       '📁 Chọn từ thư viện',
+    photoBtn:     '🗺️ Bắt đầu phiêu lưu!',
+    micBtn:       '🎙️ Nói', micActive:'🔴 Hãy nói…',
+    charHint:     'Viết 10+ ký tự để hoàn thành!',
+    voiceErr:     'Lỗi nhận dạng giọng nói',
+    ttsOn:        '🔊 Đọc to đã BẬT! Nhấn vào bất kỳ văn bản nào',
+    resumeContinue:'⚔️ Tiếp tục phiêu lưu',
+    resumeNew:    '📷 Ảnh mới (giữ tiến trình)',
+    resumeSaved:  '⚔️ DỮ LIỆU PHIÊU LƯU ĐÃ LƯU',
+  },
+  tl: {
+    topTagline:   'Ang <b>larawan</b> ay pinto ng pakikipagsapalaran.<br>Ano ang iyong <b>susuriin</b> ngayon?',
+    startBtn:     '⚔️ Simulan ang Pakikipagsapalaran',
+    teacherBtn:   '👩‍🏫 Para sa mga guro at tagasuporta',
+    profileStep:  'HAKBANG 1 — Pumili ng baitang',
+    profileTitle: 'Anong baitang<br>ka?',
+    profileSub:   'Makikipag-usap sa iyo ang AI sa<br>paraang angkop sa iyong edad 🌟',
+    nextBtn:      'Susunod →',
+    setupStep:    'HAKBANG 2 — Pumili ng uri ng manlalakbay',
+    setupTitle:   'Anong uri ng<br>manlalakbay ka?',
+    setupSub:     'Pumili nang isang beses. Maaaring baguhin!',
+    moodTitle:    '✨ Paano ka ngayon?',
+    setupBtn:     '📷 Pumunta kumuha ng larawan →',
+    photoTitle:   '📸 Simula ng pakikipagsapalaran',
+    photoSub:     'Kumuha ng larawan ng bagay na nagpapausisa sa iyo!',
+    camLabel:     'Kumuha ng larawan',
+    camSub:       'I-tap para kumuha o pumili',
+    camAlt:       '📁 Pumili mula sa gallery',
+    photoBtn:     '🗺️ Simulan ang Pakikipagsapalaran!',
+    micBtn:       '🎙️ Magsalita', micActive:'🔴 Magsalita na…',
+    charHint:     'Sumulat ng 10+ karakter para matapos!',
+    voiceErr:     'May error sa pagkilala ng boses',
+    ttsOn:        '🔊 Pagbabasa ON! I-tap ang kahit anong teksto',
+    resumeContinue:'⚔️ Ituloy ang Pakikipagsapalaran',
+    resumeNew:    '📷 Bagong Larawan (panatilihin ang progreso)',
+    resumeSaved:  '⚔️ NAKA-SAVE ANG PAKIKIPAGSAPALARAN',
   },
 };
 
 const MOOD_LABELS = {
-  ja: { hot:'めちゃ<br>元気！', ok:'ふつう', tired:'ちょっと<br>つかれた' },
-  en: { hot:'Super<br>energetic!', ok:'Normal', tired:'A bit<br>tired' },
+  ja: { hot:'めちゃ<br>元気！',    ok:'ふつう',   tired:'ちょっと<br>つかれた' },
+  en: { hot:'Super<br>energetic!', ok:'Normal',   tired:'A bit<br>tired' },
+  zh: { hot:'超级<br>有活力！',    ok:'一般',     tired:'有点<br>累了' },
+  ko: { hot:'엄청<br>활기차요!',   ok:'보통',     tired:'조금<br>피곤해요' },
+  pt: { hot:'Super<br>animado!',   ok:'Normal',   tired:'Um pouco<br>cansado' },
+  es: { hot:'¡Super<br>animado!',  ok:'Normal',   tired:'Un poco<br>cansado' },
+  vi: { hot:'Rất<br>năng động!',   ok:'Bình thường', tired:'Hơi<br>mệt' },
+  tl: { hot:'Sobrang<br>masaya!',  ok:'Normal',   tired:'Medyo<br>pagod' },
 };
 
 // 言語を選択してUIを更新
@@ -1908,37 +2086,37 @@ function applyLanguage(){
 // =============================================
 const AGES = [
   { key:'grade_1_2',   icon:'🌱',
-    name:{ja:'小1〜2年生', en:'Grade 1-2'},
-    sub: {ja:'6〜8さい',   en:'6-8 years'} },
+    name:{ja:'小1〜2年生', en:'Grade 1-2',    zh:'小学1-2年级', ko:'초등 1-2학년', pt:'1º-2º Ano',    es:'1º-2º Grado', vi:'Lớp 1-2',     tl:'Baitang 1-2'},
+    sub: {ja:'6〜8さい',   en:'6-8 years',    zh:'6-8岁',       ko:'6-8세',        pt:'6-8 anos',    es:'6-8 años',    vi:'6-8 tuổi',    tl:'6-8 taon'} },
   { key:'grade_3_4',   icon:'⚡',
-    name:{ja:'小3〜4年生', en:'Grade 3-4'},
-    sub: {ja:'9〜10さい',  en:'9-10 years'} },
+    name:{ja:'小3〜4年生', en:'Grade 3-4',    zh:'小学3-4年级', ko:'초등 3-4학년', pt:'3º-4º Ano',    es:'3º-4º Grado', vi:'Lớp 3-4',     tl:'Baitang 3-4'},
+    sub: {ja:'9〜10さい',  en:'9-10 years',   zh:'9-10岁',      ko:'9-10세',       pt:'9-10 anos',   es:'9-10 años',   vi:'9-10 tuổi',   tl:'9-10 taon'} },
   { key:'grade_5_6',   icon:'🔥',
-    name:{ja:'小5〜6年生', en:'Grade 5-6'},
-    sub: {ja:'11〜12さい', en:'11-12 years'} },
+    name:{ja:'小5〜6年生', en:'Grade 5-6',    zh:'小学5-6年级', ko:'초등 5-6학년', pt:'5º-6º Ano',    es:'5º-6º Grado', vi:'Lớp 5-6',     tl:'Baitang 5-6'},
+    sub: {ja:'11〜12さい', en:'11-12 years',  zh:'11-12岁',     ko:'11-12세',      pt:'11-12 anos',  es:'11-12 años',  vi:'11-12 tuổi',  tl:'11-12 taon'} },
   { key:'junior_high', icon:'🌙',
-    name:{ja:'中学生',     en:'Middle School'},
-    sub: {ja:'13さい〜',   en:'13+ years'} },
+    name:{ja:'中学生',     en:'Middle School', zh:'初中生',      ko:'중학생',       pt:'Ensino Médio', es:'Secundaria',  vi:'THCS',        tl:'Junior High'},
+    sub: {ja:'13さい〜',   en:'13+ years',    zh:'13岁以上',    ko:'13세 이상',    pt:'13+ anos',    es:'13+ años',    vi:'13+ tuổi',    tl:'13+ taon'} },
 ];
 
 // EXPLORER TYPES
 // =============================================
 const EXPLORERS = [
   { key:'short_attention', icon:'⚡',
-    name:{ja:'サクサク探険家',   en:'Quick Explorer'},
-    desc:{ja:'短くてOK！タップ中心でサクッと進みたい', en:'Short & fast! Tap-based quick answers'} },
+    name:{ja:'サクサク探険家',   en:'Quick Explorer',    zh:'快速探险家',        ko:'빠른 탐험가',       pt:'Explorador Rápido',    es:'Explorador Rápido',    vi:'Nhà thám hiểm nhanh',        tl:'Mabilis na Manlalakbay'},
+    desc:{ja:'短くてOK！タップ中心でサクッと進みたい', en:'Short & fast! Tap-based quick answers', zh:'简短OK！靠点击快速前进', ko:'짧아도 OK! 탭 중심으로 빠르게', pt:'Curto tudo bem! Avançar rápido', es:'¡Corto está bien! Avanzar rápido', vi:'Ngắn cũng OK! Tiến nhanh bằng cách nhấn', tl:'Maikli OK! Mabilis na sulong sa pag-tap'} },
   { key:'non_reader',      icon:'🎨',
-    name:{ja:'えらぶ探険家',     en:'Choice Explorer'},
-    desc:{ja:'文字より絵・選択肢で答えたい',          en:'Prefer images & choices over text'} },
+    name:{ja:'えらぶ探険家',     en:'Choice Explorer',   zh:'选择探险家',        ko:'선택 탐험가',       pt:'Explorador de Escolhas', es:'Explorador de Opciones', vi:'Nhà thám hiểm lựa chọn',    tl:'Pumipili na Manlalakbay'},
+    desc:{ja:'文字より絵・選択肢で答えたい',          en:'Prefer images & choices over text',     zh:'喜欢用图片和选项回答',  ko:'글보다 그림·선택지로 답하고 싶어요', pt:'Prefiro imagens e escolhas', es:'Prefiero imágenes y opciones', vi:'Thích trả lời bằng hình ảnh và lựa chọn', tl:'Mas gusto ko ang larawan at pagpipilian'} },
   { key:'deep_thinker',    icon:'🔮',
-    name:{ja:'とことん探険家',   en:'Deep Thinker'},
-    desc:{ja:'理由・仮説・深く考えるのが好き',        en:'Love reasoning & deep thinking'} },
+    name:{ja:'とことん探険家',   en:'Deep Thinker',      zh:'深度思考家',        ko:'깊은 사고가',       pt:'Pensador Profundo',    es:'Pensador Profundo',    vi:'Nhà tư duy sâu',             tl:'Malalim na Mag-iisip'},
+    desc:{ja:'理由・仮説・深く考えるのが好き',        en:'Love reasoning & deep thinking',        zh:'喜欢理由·假设·深度思考', ko:'이유·가설·깊이 생각하는 것을 좋아해요', pt:'Adoro razões e hipóteses', es:'Me encantan las razones e hipótesis', vi:'Thích lý do, giả thuyết, suy nghĩ sâu', tl:'Mahilig sa dahilan at malalim na pag-iisip'} },
   { key:'story_style',     icon:'📖',
-    name:{ja:'ものがたり探険家', en:'Story Explorer'},
-    desc:{ja:'キャラが話しかける物語スタイルで進みたい', en:'Story & character-driven style'} },
+    name:{ja:'ものがたり探険家', en:'Story Explorer',    zh:'故事探险家',        ko:'이야기 탐험가',     pt:'Explorador de Histórias', es:'Explorador de Historias', vi:'Nhà thám hiểm câu chuyện', tl:'Kwento na Manlalakbay'},
+    desc:{ja:'キャラが話しかける物語スタイルで進みたい', en:'Story & character-driven style',     zh:'喜欢角色对话的故事风格', ko:'캐릭터가 말을 거는 스토리 스타일', pt:'Estilo de história com personagens', es:'Estilo historia con personajes', vi:'Phong cách câu chuyện có nhân vật', tl:'Estilo ng kwento na may karakter'} },
   { key:'survival_like',   icon:'⚔️',
-    name:{ja:'サバイバル探険家', en:'Survival Explorer'},
-    desc:{ja:'ミッション・作戦・生き残り感が最高！',  en:'Mission mode & survival vibes!'} },
+    name:{ja:'サバイバル探険家', en:'Survival Explorer', zh:'生存探险家',        ko:'서바이벌 탐험가',   pt:'Explorador Survival',  es:'Explorador Survival',  vi:'Nhà thám hiểm sinh tồn',     tl:'Survival na Manlalakbay'},
+    desc:{ja:'ミッション・作戦・生き残り感が最高！',  en:'Mission mode & survival vibes!',        zh:'任务·作战·生存感最棒！', ko:'미션·작전·생존감이 최고!', pt:'Missões, estratégias e sobrevivência!', es:'¡Misiones, estrategias y supervivencia!', vi:'Nhiệm vụ, chiến lược và cảm giác sinh tồn!', tl:'Misyon, estratehiya at pakiramdam ng survival!'} },
 ];
 
 // =============================================
@@ -2386,9 +2564,9 @@ function selectExplorer(key,el){
   updateSetupBtn();
   // non_reader: recommend TTS if not already ON
   if(key==='non_reader' && !ttsEnabled){
-    const msg = state.language==='en'
-      ? '🔊 Turn on Read Aloud! Tap 🔇 button at bottom-right'
-      : '🔊 読み上げをONにしよう！右下の 🔇 ボタンをタップ';
+    const msg = state.language==='ja'
+      ? '🔊 読み上げをONにしよう！右下の 🔇 ボタンをタップ'
+      : '🔊 Turn on Read Aloud! Tap 🔇 button at bottom-right';
     setTimeout(()=>showToast(msg), 700);
     const btn=document.getElementById('tts-btn');
     if(btn){ btn.classList.add('pulse'); setTimeout(()=>btn.classList.remove('pulse'),3200); }
@@ -2900,11 +3078,11 @@ function renderMission(q){
   } else {
     const isNonReader = state.trait === 'non_reader';
     const hasSR = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
-    const micLabel = state.language === 'en' ? '🎙️ Speak' : '🎙️ はなす';
-    const placeholder = state.language === 'en' ? 'Write your answer here!' : 'ここに書いてみよう！';
+    const micLabel   = lt('micBtn')   || '🎙️ はなす';
+    const placeholder = state.language==='ja' ? 'ここに書いてみよう！' : 'Write your answer here!';
     area.innerHTML=`<textarea class="answer-textarea" id="ans-ta"
       placeholder="${placeholder}" oninput="textChanged(this)"></textarea>
-      <div class="char-hint" id="char-hint">${state.language==='en'?'Write 10+ characters to finish!':'10文字以上書くと完成！'}</div>
+      <div class="char-hint" id="char-hint">${lt('charHint')||'10文字以上書くと完成！'}</div>
       <div class="mic-btn-wrap${hasSR?'':' no-support'}${isNonReader?' non-reader':''}">
         <button class="mic-btn" id="voice-mic-btn" onclick="startVoiceInput()">${micLabel}</button>
       </div>`;
@@ -4484,14 +4662,16 @@ function showResumePanel(){
 
   const sessions = parseInt(localStorage.getItem(SESSION_KEY)||'0', 10);
   const lang = save.language || 'ja';
-  const isEn = lang === 'en';
+  const isJa = lang === 'ja';
   const timeStr = getRelativeTime(save.ts, lang);
+  // use saved language for resume panel strings
+  const rt = TEXTS[lang] || TEXTS.en;
 
   const zoneObj = ZONES.find(z=>z.id===save.zone)
     || ZONES[Math.min(Math.floor((save.depth||0)/3), ZONES.length-1)];
   const zoneName = zoneObj
-    ? (isEn && zoneObj.nameEn ? zoneObj.nameEn : zoneObj.name)
-    : (isEn?'Unknown Zone':'不明なエリア');
+    ? (zoneObj.name[lang] || zoneObj.name.en || zoneObj.name.ja || zoneObj.name)
+    : (isJa?'不明なエリア':'Unknown Zone');
   const zoneEm = zoneObj ? (zoneObj.em||'🗺️') : '🗺️';
 
   const photoHtml = save.photoBase64
@@ -4501,26 +4681,26 @@ function showResumePanel(){
   const rawDesc = save.photoDescription || '';
   const descText = rawDesc
     ? rawDesc.slice(0,42)+(rawDesc.length>42?'…':'')
-    : (isEn?'(no photo description)':'（説明なし）');
+    : (isJa?'（説明なし）':'(no photo description)');
 
   const panel = document.createElement('div');
   panel.id = 'resume-panel';
   panel.className = 'resume-panel';
   panel.innerHTML =
-    `<div class="resume-badge">${isEn?'⚔️ ADVENTURE SAVED':'⚔️ 冒険データあり'}</div>`+
+    `<div class="resume-badge">${rt.resumeSaved||'⚔️ 冒険データあり'}</div>`+
     `<div class="resume-row">${photoHtml}<div class="resume-info">`+
       `<div class="resume-zone">${zoneEm} ${zoneName}</div>`+
       `<div class="resume-desc">${descText}</div>`+
     `</div></div>`+
     `<div class="resume-stats">`+
-      `<div class="resume-stat">🎯 ${isEn?'Depth':'深度'} <b>${save.depth||0}</b></div>`+
+      `<div class="resume-stat">🎯 ${isJa?'深度':'Depth'} <b>${save.depth||0}</b></div>`+
       `<div class="resume-stat">⚡ XP <b>${save.xp||0}</b></div>`+
       `<div class="resume-stat">🕐 <b>${timeStr}</b></div>`+
-      (sessions>0?`<div class="resume-stat">🗺️ <b>${sessions}${isEn?' sessions':'回目'}</b></div>`:'')+
+      (sessions>0?`<div class="resume-stat">🗺️ <b>${sessions}${isJa?'回目':' sessions'}</b></div>`:'')+
     `</div>`+
     `<div class="resume-actions">`+
-      `<button class="resume-btn-continue" onclick="resumeAdventure()">⚔️ ${isEn?'Continue Adventure':'つづきから冒険する'}</button>`+
-      `<button class="resume-btn-new" onclick="newAdventureFromSave()">📷 ${isEn?'New Photo (keep progress)':'新しい写真で冒険する（進行継続）'}</button>`+
+      `<button class="resume-btn-continue" onclick="resumeAdventure()">${rt.resumeContinue||'⚔️ つづきから冒険する'}</button>`+
+      `<button class="resume-btn-new" onclick="newAdventureFromSave()">${rt.resumeNew||'📷 新しい写真で冒険する（進行継続）'}</button>`+
     `</div>`;
 
   topCta.insertBefore(panel, topCta.firstChild);
@@ -4600,10 +4780,22 @@ function updateTTSBtn(){
   if(!btn) return;
   btn.textContent = ttsEnabled ? '🔊' : '🔇';
   btn.classList.toggle('on', ttsEnabled);
-  const la = state.language === 'en';
+  const isJa = state.language === 'ja';
   btn.title = ttsEnabled
-    ? (la ? 'Read Aloud ON (tap to OFF)' : '読み上げ ON（タップでOFF）')
-    : (la ? 'Read Aloud OFF (tap to ON)' : '読み上げ OFF（タップでON）');
+    ? (isJa ? '読み上げ ON（タップでOFF）' : 'Read Aloud ON (tap to OFF)')
+    : (isJa ? '読み上げ OFF（タップでON）' : 'Read Aloud OFF (tap to ON)');
+}
+
+// language → BCP-47 TTS locale
+function getTTSLang(){
+  const map = {ja:'ja-JP',en:'en-US',zh:'zh-CN',ko:'ko-KR',pt:'pt-BR',es:'es-ES',vi:'vi-VN',tl:'fil-PH'};
+  return map[state.language] || 'ja-JP';
+}
+
+// localised short string from TEXTS (falls back to EN then JA)
+function lt(key){
+  const t = TEXTS[state.language];
+  return (t && t[key]) || (TEXTS.en[key]) || '';
 }
 
 function toggleTTS(){
@@ -4613,10 +4805,7 @@ function toggleTTS(){
   if(!ttsEnabled){
     stopSpeech();
   } else {
-    const msg = state.language==='en'
-      ? '🔊 Read Aloud ON! Tap any text to hear it'
-      : '🔊 読み上げON！テキストをタップすると読み上げるよ';
-    showToast(msg);
+    showToast(lt('ttsOn') || '🔊 読み上げON！テキストをタップすると読み上げるよ');
   }
 }
 
@@ -4627,7 +4816,7 @@ function speak(text, el){
     stopSpeech(); return;
   }
   stopSpeech();
-  const lang = (state.language === 'en') ? 'en-US' : 'ja-JP';
+  const lang = getTTSLang();
   const utter = new SpeechSynthesisUtterance(text);
   utter.lang = lang;
   // Slower rate for younger kids
@@ -4670,10 +4859,8 @@ function startVoiceInput(){
 
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if(!SR){
-    const msg = state.language==='en'
-      ? 'Voice input is not supported in this browser'
-      : 'このブラウザは音声入力に未対応です';
-    showToast(msg); return;
+    showToast(state.language==='ja' ? 'このブラウザは音声入力に未対応です' : 'Voice input is not supported in this browser');
+    return;
   }
 
   // If already recording, stop
@@ -4682,17 +4869,16 @@ function startVoiceInput(){
     return;
   }
 
-  const lang = (state.language === 'en') ? 'en-US' : 'ja-JP';
   const rec = new SR();
-  rec.lang = lang;
+  rec.lang = getTTSLang();
   rec.interimResults = true;
   rec.maxAlternatives = 1;
   rec.continuous = false;
   _voiceRec = rec;
   _voiceActive = true;
 
-  const recLabel = state.language==='en' ? '🔴 Speak now…' : '🔴 はなしてね…';
-  const idleLabel = state.language==='en' ? '🎙️ Speak' : '🎙️ はなす';
+  const recLabel = lt('micActive') || '🔴 はなしてね…';
+  const idleLabel = lt('micBtn') || '🎙️ はなす';
   if(btn){ btn.classList.add('recording'); btn.textContent = recLabel; }
 
   rec.onresult = e=>{
@@ -4714,7 +4900,7 @@ function startVoiceInput(){
     _voiceActive = false; _voiceRec = null;
     if(btn){ btn.classList.remove('recording'); btn.textContent = idleLabel; }
     if(e.error && e.error !== 'aborted' && e.error !== 'no-speech'){
-      showToast(state.language==='en' ? 'Voice recognition error' : '音声認識でエラーが起きました');
+      showToast(lt('voiceErr') || '音声認識でエラーが起きました');
     }
   };
 

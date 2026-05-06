@@ -1206,7 +1206,7 @@ body::before{
     <div class="top-logo">🧭</div>
   </div>
   <div class="top-title">TOMORI</div>
-  <div class="top-tagline">
+  <div class="top-tagline speakable">
     <b>写真</b> が冒険の扉。<br>
     今日は何を<b>探究</b>する？
   </div>
@@ -1225,8 +1225,8 @@ body::before{
 <!-- ===== PIN OVERLAY ===== -->
 <div id="pin-overlay">
   <div class="pin-badge">👩‍🏫 TEACHER MODE</div>
-  <div class="pin-title" id="pin-title">先生・支援者モード</div>
-  <div class="pin-sub" id="pin-sub">パスコードを入力してください</div>
+  <div class="pin-title speakable" id="pin-title">先生・支援者モード</div>
+  <div class="pin-sub speakable" id="pin-sub">パスコードを入力してください</div>
   <div class="pin-error" id="pin-error"></div>
   <div class="pin-dots">
     <div class="pin-dot" id="pd0"></div>
@@ -1263,34 +1263,34 @@ body::before{
     <!-- ニックネーム -->
     <div class="teacher-nick">
       <div class="teacher-nick-icon">🧒</div>
-      <div class="teacher-nick-name" id="teacher-nick-name">なまえなし</div>
+      <div class="teacher-nick-name speakable" id="teacher-nick-name">なまえなし</div>
       <button class="teacher-nick-edit" onclick="editNickname()">✏️ 変更</button>
     </div>
 
     <!-- ① 今日の気分 -->
     <div class="tsec">
-      <div class="tsec-label">😊 最近の気分</div>
+      <div class="tsec-label speakable">😊 最近の気分</div>
       <div class="tsec-text" id="teacher-mood-text">データがありません</div>
       <div class="teacher-mood-row" id="teacher-mood-row"></div>
     </div>
 
     <!-- ② 思考の傾向 -->
     <div class="tsec">
-      <div class="tsec-label">🧠 考え方のくせ</div>
+      <div class="tsec-label speakable">🧠 考え方のくせ</div>
       <div class="tsec-text" id="teacher-thinking-text">データがありません</div>
       <div class="tsec-tags" id="teacher-thinking-tags"></div>
     </div>
 
     <!-- ③ 興味の傾向 -->
     <div class="tsec">
-      <div class="tsec-label">🔍 きょうみのかたむき</div>
+      <div class="tsec-label speakable">🔍 きょうみのかたむき</div>
       <div class="tsec-text" id="teacher-interest-text">7回の探究完了後に表示されます</div>
       <div class="tsec-tags" id="teacher-interest-tags"></div>
     </div>
 
     <!-- ④ 変化の観察（AI） -->
     <div class="tsec">
-      <div class="tsec-label">📈 最近の変化</div>
+      <div class="tsec-label speakable">📈 最近の変化</div>
       <div id="teacher-change-content">
         <div class="teacher-loading">
           <div class="teacher-spinner"></div>
@@ -1301,7 +1301,7 @@ body::before{
 
     <!-- ⑤ 関わりのヒント（AI） -->
     <div class="tsec">
-      <div class="tsec-label">💡 関わりのヒント</div>
+      <div class="tsec-label speakable">💡 関わりのヒント</div>
       <div id="teacher-hints-content">
         <div class="teacher-loading">
           <div class="teacher-spinner"></div>
@@ -1311,7 +1311,7 @@ body::before{
     </div>
 
     <!-- プライバシー注記 -->
-    <div class="teacher-privacy-note">
+    <div class="teacher-privacy-note speakable">
       🔒 すべてのデータはこの端末のみに保存されています<br>
       評価ではなく、理解と支援のための記録です
     </div>
@@ -1329,7 +1329,7 @@ body::before{
   <div class="profile-bar">
     <button class="hdr-back" onclick="goTo('top')">←</button>
     <div style="flex:1">
-      <div class="setup-step" id="profile-step-label" style="margin-bottom:0">STEP 1 — 年齢を選ぼう</div>
+      <div class="setup-step speakable" id="profile-step-label" style="margin-bottom:0">STEP 1 — 年齢を選ぼう</div>
     </div>
     <div class="lang-picker">
       <button class="lang-btn sel" id="lb-ja" onclick="selectLanguage('ja',this)">🇯🇵JP</button>
@@ -1343,8 +1343,8 @@ body::before{
     </div>
   </div>
   <div class="profile-hero">
-    <div class="profile-title">きみは<br>何年生？</div>
-    <div class="profile-sub">AIがきみにぴったりの言葉で<br>話しかけてくれるよ🌟</div>
+    <div class="profile-title speakable">きみは<br>何年生？</div>
+    <div class="profile-sub speakable">AIがきみにぴったりの言葉で<br>話しかけてくれるよ🌟</div>
   </div>
   <div class="age-grid" id="age-grid"></div>
   <div class="setup-btn-area">
@@ -1361,25 +1361,25 @@ body::before{
       <button class="hdr-back" onclick="goTo('profile')">←</button>
       <div class="setup-step" style="margin-bottom:0">STEP 2 — 探険者タイプを選ぼう</div>
     </div>
-    <div class="setup-title">きみはどんな<br>冒険者？</div>
-    <div class="setup-sub">1回だけ選ぶよ。あとで変えられるよ！</div>
+    <div class="setup-title speakable">きみはどんな<br>冒険者？</div>
+    <div class="setup-sub speakable">1回だけ選ぶよ。あとで変えられるよ！</div>
   </div>
   <div class="explorer-list" id="explorer-list"></div>
 
   <div class="mood-section" id="mood-section">
-    <div class="mood-title">✨ 今日の気分は？</div>
+    <div class="mood-title speakable">✨ 今日の気分は？</div>
     <div class="mood-row">
       <div class="mood-card" onclick="selectMood('hot',this)">
         <div class="mood-em">🔥</div>
-        <div class="mood-lbl">めちゃ<br>元気！</div>
+        <div class="mood-lbl speakable">めちゃ<br>元気！</div>
       </div>
       <div class="mood-card" onclick="selectMood('ok',this)">
         <div class="mood-em">😊</div>
-        <div class="mood-lbl">ふつう</div>
+        <div class="mood-lbl speakable">ふつう</div>
       </div>
       <div class="mood-card" onclick="selectMood('tired',this)">
         <div class="mood-em">😴</div>
-        <div class="mood-lbl">ちょっと<br>つかれた</div>
+        <div class="mood-lbl speakable">ちょっと<br>つかれた</div>
       </div>
     </div>
   </div>
@@ -1394,17 +1394,17 @@ body::before{
 <!-- ===== SCREEN 3: PHOTO ===== -->
 <div class="screen" id="screen-photo">
   <div class="photo-hdr">
-    <div class="photo-hdr-title">📸 冒険の起点</div>
-    <div class="photo-hdr-sub">気になるものを撮ろう！何でもOK</div>
+    <div class="photo-hdr-title speakable">📸 冒険の起点</div>
+    <div class="photo-hdr-sub speakable">気になるものを撮ろう！何でもOK</div>
   </div>
 
   <div class="camera-hero" id="cam-hero">
     <div class="cam-ring">
       <div class="cam-btn" onclick="document.getElementById('file-input').click()">📷</div>
     </div>
-    <div class="cam-label">写真をとろう</div>
-    <div class="cam-sub">タップして撮影・選択</div>
-    <div class="cam-alt" onclick="document.getElementById('file-input').click()">📁 ライブラリから選ぶ</div>
+    <div class="cam-label speakable">写真をとろう</div>
+    <div class="cam-sub speakable">タップして撮影・選択</div>
+    <div class="cam-alt speakable" onclick="document.getElementById('file-input').click()">📁 ライブラリから選ぶ</div>
   </div>
 
   <div class="preview-state" id="preview-state">
@@ -1416,11 +1416,11 @@ body::before{
 
   <!-- デモ用プリセット -->
   <div class="preset-section">
-    <div class="preset-label">📌 デモ用サンプル（写真なしでも遊べる）</div>
+    <div class="preset-label speakable">📌 デモ用サンプル（写真なしでも遊べる）</div>
     <div class="preset-cards">
-      <div class="preset-card" onclick="usePreset(0)">🌿<div>自然</div></div>
-      <div class="preset-card" onclick="usePreset(1)">🏙️<div>街</div></div>
-      <div class="preset-card" onclick="usePreset(2)">🌊<div>水辺</div></div>
+      <div class="preset-card speakable" onclick="usePreset(0)">🌿<div>自然</div></div>
+      <div class="preset-card speakable" onclick="usePreset(1)">🏙️<div>街</div></div>
+      <div class="preset-card speakable" onclick="usePreset(2)">🌊<div>水辺</div></div>
     </div>
   </div>
 
@@ -1435,7 +1435,7 @@ body::before{
 <div class="screen" id="screen-photo-ai">
   <div class="setup-header">
     <button class="hdr-back" onclick="goTo('photo')">←</button>
-    <div class="hdr-title">✨ AIミッション生成</div>
+    <div class="hdr-title speakable">✨ AIミッション生成</div>
   </div>
   <div class="screen-photo-ai-body">
     <!-- Photo preview -->
@@ -1444,13 +1444,13 @@ body::before{
       <div class="ai-preview-placeholder" id="ai-preview-placeholder">📸</div>
     </div>
     <!-- Vision badge (写真あり時) -->
-    <div class="ai-vision-badge" id="ai-vision-badge" style="display:none">
+    <div class="ai-vision-badge speakable" id="ai-vision-badge" style="display:none">
       👁️ AIが写真を直接見てミッションを生成します
     </div>
     <!-- Description input -->
     <div class="ai-desc-section">
-      <div class="ai-desc-label" id="ai-desc-label">📝 写真に何が写っている？</div>
-      <div class="ai-desc-hint" id="ai-desc-hint">雰囲気・色・形・連想したことを自由に書いてみよう</div>
+      <div class="ai-desc-label speakable" id="ai-desc-label">📝 写真に何が写っている？</div>
+      <div class="ai-desc-hint speakable" id="ai-desc-hint">雰囲気・色・形・連想したことを自由に書いてみよう</div>
       <textarea class="ai-desc-textarea" id="ai-desc-input" rows="3"
         placeholder="例：古い木の橋。緑のコケがついていて川の上にかかっている。霧っぽくて神秘的な感じ"
         oninput="aiDescChanged()"></textarea>
@@ -1464,7 +1464,7 @@ body::before{
     <!-- Loading state -->
     <div class="ai-loading" id="ai-loading" style="display:none">
       <div class="ai-loading-orb"></div>
-      <div class="ai-loading-text" id="ai-loading-text">AIがミッションを考えています…<br>少し待ってね ☕</div>
+      <div class="ai-loading-text speakable" id="ai-loading-text">AIがミッションを考えています…<br>少し待ってね ☕</div>
     </div>
     <!-- Skip -->
     <button class="ai-skip-btn" onclick="skipAIAndStart()">スキップ（通常クエストで遊ぶ）</button>
@@ -1488,7 +1488,7 @@ body::before{
   <div class="map-photo-hero">
     <img id="map-photo-img" src="" alt="">
     <div class="map-photo-overlay"></div>
-    <div class="map-photo-cat" id="map-cat-badge">📷 探索中</div>
+    <div class="map-photo-cat speakable" id="map-cat-badge">📷 探索中</div>
     <div class="map-photo-chg" onclick="document.getElementById('file-input').click()">
       📷 写真を変える
     </div>
@@ -1496,8 +1496,8 @@ body::before{
 
   <!-- Quest feed -->
   <div class="map-sec-head">
-    <div class="map-sec-title">⚔️ クエストを選ぼう</div>
-    <div class="map-sec-sub" id="map-depth-label">深度 0</div>
+    <div class="map-sec-title speakable">⚔️ クエストを選ぼう</div>
+    <div class="map-sec-sub speakable" id="map-depth-label">深度 0</div>
   </div>
   <div class="mission-feed" id="map-quest-feed"></div>
 
@@ -1511,7 +1511,7 @@ body::before{
   <div class="mbar">
     <button class="mbar-back" onclick="goTo('map')">‹</button>
     <div class="mbar-type" id="mbar-type-pill"></div>
-    <div class="mbar-title" id="mbar-title"></div>
+    <div class="mbar-title speakable" id="mbar-title"></div>
   </div>
 
   <div class="mission-hero" id="mission-hero-vis">
@@ -1539,14 +1539,14 @@ body::before{
 <div class="screen" id="screen-complete">
   <div class="complete-hero">
     <div class="complete-burst" id="complete-burst"></div>
-    <div class="complete-label" id="complete-label">クエスト完了！</div>
+    <div class="complete-label speakable" id="complete-label">クエスト完了！</div>
     <div class="complete-title speakable" id="complete-title">すごい！</div>
     <div class="complete-subtitle speakable" id="complete-subtitle"></div>
   </div>
 
   <div class="complete-companion">
     <div class="complete-svg" id="complete-companion-svg"></div>
-    <div class="complete-cname" id="complete-cname"></div>
+    <div class="complete-cname speakable" id="complete-cname"></div>
   </div>
   <div class="complete-msg speakable" id="complete-msg"></div>
 
@@ -1592,8 +1592,8 @@ body::before{
 
     <!-- ヘッダー (0.3s) -->
     <div class="journey-header">
-      <div class="journey-badge-new">✨ 7かいのたんきゅうきろく</div>
-      <div class="journey-title-new">きみの<br><em>かんがえのたび</em></div>
+      <div class="journey-badge-new speakable">✨ 7かいのたんきゅうきろく</div>
+      <div class="journey-title-new speakable">きみの<br><em>かんがえのたび</em></div>
     </div>
 
     <!-- ローディング -->
@@ -1608,14 +1608,14 @@ body::before{
       <!-- カード1: 思考の変化 (1.0s) -->
       <div class="jcard" style="animation-delay:1.0s">
         <div class="jcard-icon">🔄</div>
-        <div class="jcard-label">かんがえのへんか</div>
+        <div class="jcard-label speakable">かんがえのへんか</div>
         <div class="jcard-text speakable" id="journey-thinking"></div>
       </div>
 
       <!-- カード2: 興味の傾向 (1.7s) -->
       <div class="jcard" style="animation-delay:1.7s">
         <div class="jcard-icon">🔍</div>
-        <div class="jcard-label">すきなもの・きょうみ</div>
+        <div class="jcard-label speakable">すきなもの・きょうみ</div>
         <div class="jcard-text speakable" id="journey-interest"></div>
         <div class="journey-interest-tags" id="journey-interest-tags"></div>
       </div>
@@ -1626,11 +1626,11 @@ body::before{
         <div class="jcompare-rows">
           <div class="jcompare-past" style="animation-delay:2.7s">
             <div class="jctag jctag-past">さいしょのころ</div>
-            <div id="journey-past-example"></div>
+            <div class="speakable" id="journey-past-example"></div>
           </div>
           <div class="jcompare-now" style="animation-delay:3.0s">
             <div class="jctag jctag-now">さいきん</div>
-            <div id="journey-now-example"></div>
+            <div class="speakable" id="journey-now-example"></div>
           </div>
         </div>
       </div>
@@ -1650,7 +1650,7 @@ body::before{
 
     <!-- ボタン -->
     <div class="jbtn-wrap" id="journey-btn-wrap" style="animation-delay:4.2s;display:none">
-      <button class="journey-btn-new" onclick="closeJourneyOverlay()">
+      <button class="journey-btn-new speakable" onclick="closeJourneyOverlay()">
         つぎのぼうけんへ →
       </button>
     </div>
@@ -1662,8 +1662,8 @@ body::before{
 <div class="screen" id="screen-folder">
   <div class="folder-bar">
     <button class="folder-back-btn" onclick="goTo('top')">‹</button>
-    <div class="folder-bar-title">📚 雑学フォルダ</div>
-    <div class="folder-bar-count" id="folder-bar-count">0件</div>
+    <div class="folder-bar-title speakable">📚 雑学フォルダ</div>
+    <div class="folder-bar-count speakable" id="folder-bar-count">0件</div>
   </div>
   <div id="folder-content"></div>
 </div>
@@ -1717,25 +1717,25 @@ body::before{
   <div class="zarr-bg-glow"></div>
   <div class="zarr-particles" id="zarr-particles"></div>
   <div class="zarr-content">
-    <div class="zarr-badge">🎉 新エリア到着！</div>
+    <div class="zarr-badge speakable">🎉 新エリア到着！</div>
     <div class="zarr-em" id="zarr-em"></div>
-    <div class="zarr-zone-name" id="zarr-zone-name"></div>
-    <div class="zarr-arrived" id="zarr-arrived"></div>
+    <div class="zarr-zone-name speakable" id="zarr-zone-name"></div>
+    <div class="zarr-arrived speakable" id="zarr-arrived"></div>
     <div class="zarr-decos" id="zarr-decos"></div>
     <div class="zarr-photo-card" id="zarr-photo-card" style="display:none">
-      <div class="zarr-photo-prompt" id="zarr-photo-prompt"></div>
+      <div class="zarr-photo-prompt speakable" id="zarr-photo-prompt"></div>
       <img class="zarr-photo-preview-img" id="zarr-photo-preview-img" src="" alt="">
       <div class="zarr-photo-upload" onclick="document.getElementById('zone-file-input').click()">
         <div class="zarr-photo-upload-em">📸</div>
-        <div class="zarr-photo-upload-text">写真を選ぶ</div>
-        <div class="zarr-photo-upload-sub">タップしてカメラ・ライブラリから選択</div>
+        <div class="zarr-photo-upload-text speakable">写真を選ぶ</div>
+        <div class="zarr-photo-upload-sub speakable">タップしてカメラ・ライブラリから選択</div>
       </div>
     </div>
     <div class="zarr-btn-row">
       <button class="zarr-continue-btn" id="zarr-continue-btn" onclick="continueFromZoneArrival()">
         🚀 冒険を続ける！
       </button>
-      <div class="zarr-skip-link" id="zarr-skip-link" onclick="continueFromZoneArrival()" style="display:none">
+      <div class="zarr-skip-link speakable" id="zarr-skip-link" onclick="continueFromZoneArrival()" style="display:none">
         写真なしで進む
       </div>
     </div>
@@ -2506,13 +2506,16 @@ function buildProfile(){
   const grid = document.getElementById('age-grid');
   if(!grid) return;
   const lang = state.language || 'ja';
-  grid.innerHTML = AGES.map(a=>`
-    <div class="age-card" id="age-${a.key}" onclick="selectAge('${a.key}',this)">
+  grid.innerHTML = AGES.map(a=>{
+    const nm=a.name[lang]||a.name.ja, sb=a.sub[lang]||a.sub.ja;
+    const sp=`${nm}。${sb}`.replace(/"/g,'&quot;');
+    return `<div class="age-card speakable" id="age-${a.key}" data-speak="${sp}" onclick="selectAge('${a.key}',this)">
       <div class="age-icon">${a.icon}</div>
-      <div class="age-name">${a.name[lang]||a.name.ja}</div>
-      <div class="age-sub">${a.sub[lang]||a.sub.ja}</div>
+      <div class="age-name">${nm}</div>
+      <div class="age-sub">${sb}</div>
       <div class="age-tick">✓</div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   if(state.age){
     const el = document.getElementById('age-'+state.age);
     if(el){ el.classList.add('sel'); document.getElementById('profile-next-btn').disabled=false; }
@@ -2537,15 +2540,18 @@ function finishProfile(){
 function buildSetup(){
   const list = document.getElementById('explorer-list');
   const lang = state.language || 'ja';
-  list.innerHTML = EXPLORERS.map(e=>`
-    <div class="exp-card" id="exp-${e.key}" onclick="selectExplorer('${e.key}',this)">
+  list.innerHTML = EXPLORERS.map(e=>{
+    const nm=e.name[lang]||e.name.ja, ds=e.desc[lang]||e.desc.ja;
+    const sp=`${nm}。${ds}`.replace(/"/g,'&quot;');
+    return `<div class="exp-card speakable" id="exp-${e.key}" data-speak="${sp}" onclick="selectExplorer('${e.key}',this)">
       <div class="exp-icon">${e.icon}</div>
       <div class="exp-text">
-        <div class="exp-name">${e.name[lang]||e.name.ja}</div>
-        <div class="exp-desc">${e.desc[lang]||e.desc.ja}</div>
+        <div class="exp-name">${nm}</div>
+        <div class="exp-desc">${ds}</div>
       </div>
       <div class="exp-tick">✓</div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   // pre-select if returning
   if(state.trait){
     const el=document.getElementById('exp-'+state.trait);

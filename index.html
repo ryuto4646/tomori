@@ -4391,8 +4391,9 @@ function _pinSubmit(){
       _pinBuf = ''; _updatePinDots();
     }
   } else if(_pinMode === 'set1'){
-    _pinTemp = _pinBuf; _pinBuf = '';
+    const _saved = _pinBuf;   // openPinOverlay が _pinTemp をリセットする前に退避
     openPinOverlay('set2');
+    _pinTemp = _saved;        // 退避した値を改めてセット
   } else if(_pinMode === 'set2'){
     if(_pinBuf === _pinTemp){
       localStorage.setItem('tomori_teacher_pin', _pinBuf);

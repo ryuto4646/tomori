@@ -1540,8 +1540,8 @@ body::before{
   <div class="complete-hero">
     <div class="complete-burst" id="complete-burst"></div>
     <div class="complete-label" id="complete-label">クエスト完了！</div>
-    <div class="complete-title" id="complete-title">すごい！</div>
-    <div class="complete-subtitle" id="complete-subtitle"></div>
+    <div class="complete-title speakable" id="complete-title">すごい！</div>
+    <div class="complete-subtitle speakable" id="complete-subtitle"></div>
   </div>
 
   <div class="complete-companion">
@@ -1554,12 +1554,12 @@ body::before{
   <div id="trivia-card-wrap"></div>
 
   <div class="gains-row">
-    <div class="gain-blk">
+    <div class="gain-blk speakable" id="gain-blk-depth">
       <div class="gain-lbl">探索深度</div>
       <div class="gain-val" id="gain-depth">0</div>
       <div class="gain-sub" id="gain-depth-sub">深度アップ！</div>
     </div>
-    <div class="gain-blk">
+    <div class="gain-blk speakable" id="gain-blk-xp">
       <div class="gain-lbl">獲得ポイント</div>
       <div class="gain-val" id="gain-xp">+0</div>
       <div class="gain-sub">探索ポイント</div>
@@ -1677,8 +1677,8 @@ body::before{
 
     <!-- HUD top-left (XP + depth) -->
     <div class="village-hud">
-      <div class="village-hud-xp" id="wmap-xp">⭐ 0</div>
-      <div class="village-hud-depth" id="wmap-depth">深度 0</div>
+      <div class="village-hud-xp speakable" id="wmap-xp">⭐ 0</div>
+      <div class="village-hud-depth speakable" id="wmap-depth">深度 0</div>
     </div>
 
     <!-- CENTER: uploaded photo (main focus) -->
@@ -1691,8 +1691,8 @@ body::before{
 
     <!-- Bottom: location identity + enter -->
     <div class="village-bottom">
-      <div class="village-name" id="village-name">はじまりの村</div>
-      <div class="village-sub" id="village-sub">▸ ここから冒険が始まる</div>
+      <div class="village-name speakable" id="village-name">はじまりの村</div>
+      <div class="village-sub speakable" id="village-sub">▸ ここから冒険が始まる</div>
       <div class="village-progress" id="village-progress"></div>
       <button class="village-enter-btn" onclick="enterCurrentZone()">
         🚶 冒険に出る！
@@ -2986,10 +2986,12 @@ function questCardHTML(q,i,ctx){
   const stars='★'.repeat(q.dm+1)+'☆'.repeat(Math.max(0,3-q.dm-1));
   const aiBadge=q.aiGenerated?`<span class="qcard-ai-badge">✨ AI</span>`:'';
   const aiCls=q.aiGenerated?' ai-quest':'';
+  // data-speak: title + prompt for TTS (attribute-safe encoding)
+  const speakText=(q.title+(q.prompt?'。'+q.prompt:'')).replace(/&/g,'&amp;').replace(/"/g,'&quot;');
   return `<div class="qcard qt-${q.type}${aiCls} new" style="animation-delay:${i*70}ms"
     onclick="${ctx==='map'?`openQuest('${q.id}')`:`openQuestFromComplete('${q.id}')`}">
     <div class="qcard-vis"><div class="qcard-em">${q.em}</div></div>
-    <div class="qcard-info">
+    <div class="qcard-info speakable" data-speak="${speakText}">
       <div class="qcard-badge">${q.fl}${aiBadge}</div>
       <div class="qcard-title">${q.title}</div>
       ${q.prompt?`<div class="qcard-prompt">${q.prompt}</div>`:''}
@@ -3205,8 +3207,14 @@ function submitAnswer(){
 
   // gains
   document.getElementById('gain-depth').textContent=state.depth;
-  document.getElementById('gain-depth-sub').textContent=milestone||`深度 ${state.depth}`;
+  const gainDepthSub=milestone||`深度 ${state.depth}`;
+  document.getElementById('gain-depth-sub').textContent=gainDepthSub;
   document.getElementById('gain-xp').textContent=`+${q.xp}`;
+  // data-speak for gain blocks
+  const gdBlk=document.getElementById('gain-blk-depth');
+  if(gdBlk) gdBlk.setAttribute('data-speak',`探索深度 ${state.depth}。${gainDepthSub}`);
+  const gxBlk=document.getElementById('gain-blk-xp');
+  if(gxBlk) gxBlk.setAttribute('data-speak',`獲得ポイント プラス${q.xp}`);
 
   // trivia card — pick from all categories randomly
   const triviaKeys=Object.keys(TRIVIA_DB);
@@ -3423,7 +3431,7 @@ function buildFolderScreen(){
           </div>
           <button class="fi-del" onclick="deleteFolderItem('${t.id}',this)" title="削除">×</button>
         </div>
-        <div class="fi-body"><div class="fi-fact">${t.fact}</div></div>
+        <div class="fi-body"><div class="fi-fact speakable">${t.fact}</div></div>
       </div>`;
     }).join('')}
   </div>`;
@@ -4837,13 +4845,26 @@ function stopSpeech(){
 }
 
 // Delegated click listener: any .speakable tapped → read aloud
+// Capture phase so we intercept before onclick handlers on parent elements.
+// For elements that are ONLY speakable (not interactive buttons) we stop
+// propagation so tapping a quest-card info area reads without also opening it.
+// Choice buttons and AI-suggestion buttons keep their onclick behavior because
+// they are the click target themselves (no parent onClick to block).
 document.addEventListener('click', function(e){
   if(!ttsEnabled) return;
   const el = e.target.closest('.speakable');
   if(!el) return;
   const text = el.getAttribute('data-speak') || el.innerText.trim();
-  if(text) speak(text, el);
-}, false);
+  if(!text) return;
+
+  // If the speakable element itself is a button/link, let onclick also fire.
+  // Otherwise (e.g. qcard-info, gain-blk, zone name) block navigation.
+  const tag = el.tagName;
+  const isInteractive = tag === 'BUTTON' || tag === 'A' || el.hasAttribute('onclick');
+  if(!isInteractive) e.stopPropagation();
+
+  speak(text, el);
+}, true); // capture phase
 
 // (stopSpeech is called inside goTo — see the goTo function definition)
 

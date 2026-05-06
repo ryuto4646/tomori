@@ -579,14 +579,19 @@ body::before{
 @keyframes jSlideLeft{to{opacity:1;transform:translateX(0)}}
 
 /* ── LANGUAGE PICKER ── */
-.lang-picker{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;flex-shrink:0;width:148px}
-.lang-btn{padding:4px 2px;border-radius:7px;font-size:12px;line-height:1.2;
-  background:rgba(0,15,30,.65);border:1px solid var(--border);
-  cursor:pointer;font-family:inherit;transition:all .18s;color:var(--text-dim);
-  text-align:center;white-space:nowrap}
-.lang-btn.sel{border-color:var(--cyan);background:rgba(0,212,255,.14);
-  color:#fff;box-shadow:var(--glow-sm)}
-.lang-btn:active{transform:scale(.93)}
+.lang-picker{flex-shrink:0}
+.lang-select{
+  appearance:none;-webkit-appearance:none;
+  background:rgba(0,15,30,.82) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2300d4ff'/%3E%3C/svg%3E") no-repeat right 8px center;
+  border:1.5px solid var(--border);border-radius:9px;
+  color:var(--text);font-size:13px;font-family:inherit;
+  padding:6px 28px 6px 10px;cursor:pointer;
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  transition:border-color .18s,box-shadow .18s;
+  outline:none;min-width:110px}
+.lang-select:focus,.lang-select:hover{
+  border-color:var(--cyan);box-shadow:var(--glow-sm)}
+.lang-select option{background:#020d18;color:var(--text)}
 
 /* ── TEACHER MODE / PIN OVERLAY ── */
 /* Teacher entry button (top screen) */
@@ -1332,14 +1337,16 @@ body::before{
       <div class="setup-step speakable" id="profile-step-label" style="margin-bottom:0">STEP 1 — 年齢を選ぼう</div>
     </div>
     <div class="lang-picker">
-      <button class="lang-btn sel" id="lb-ja" onclick="selectLanguage('ja',this)">🇯🇵JP</button>
-      <button class="lang-btn"     id="lb-en" onclick="selectLanguage('en',this)">🇬🇧EN</button>
-      <button class="lang-btn"     id="lb-zh" onclick="selectLanguage('zh',this)">🇨🇳ZH</button>
-      <button class="lang-btn"     id="lb-ko" onclick="selectLanguage('ko',this)">🇰🇷KO</button>
-      <button class="lang-btn"     id="lb-pt" onclick="selectLanguage('pt',this)">🇧🇷PT</button>
-      <button class="lang-btn"     id="lb-es" onclick="selectLanguage('es',this)">🇪🇸ES</button>
-      <button class="lang-btn"     id="lb-vi" onclick="selectLanguage('vi',this)">🇻🇳VI</button>
-      <button class="lang-btn"     id="lb-tl" onclick="selectLanguage('tl',this)">🇵🇭TL</button>
+      <select class="lang-select" id="lang-select" onchange="selectLanguage(this.value)">
+        <option value="ja">🇯🇵 日本語</option>
+        <option value="en">🇬🇧 English</option>
+        <option value="zh">🇨🇳 中文</option>
+        <option value="ko">🇰🇷 한국어</option>
+        <option value="pt">🇧🇷 Português</option>
+        <option value="es">🇪🇸 Español</option>
+        <option value="vi">🇻🇳 Tiếng Việt</option>
+        <option value="tl">🇵🇭 Filipino</option>
+      </select>
     </div>
   </div>
   <div class="profile-hero">
@@ -2008,11 +2015,9 @@ const MOOD_LABELS = {
 };
 
 // 言語を選択してUIを更新
-function selectLanguage(lang, el){
+function selectLanguage(lang){
   state.language = lang;
   localStorage.setItem('tomori_language', lang);
-  document.querySelectorAll('.lang-btn').forEach(b=>b.classList.remove('sel'));
-  if(el) el.classList.add('sel');
   applyLanguage();
 }
 
@@ -2022,10 +2027,9 @@ function applyLanguage(){
   const t = TEXTS[lang] || TEXTS.ja;
   const ml = MOOD_LABELS[lang] || MOOD_LABELS.ja;
 
-  // ランゲージボタンの選択状態
-  document.querySelectorAll('.lang-btn').forEach(b=>b.classList.remove('sel'));
-  const activeLbEl = document.getElementById('lb-'+lang);
-  if(activeLbEl) activeLbEl.classList.add('sel');
+  // プルダウン選択状態を同期
+  const sel = document.getElementById('lang-select');
+  if(sel) sel.value = lang;
 
   // TOP画面
   const topTagEl = document.querySelector('.top-tagline');

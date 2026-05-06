@@ -1134,6 +1134,59 @@ body::before{
 .non-reader .mic-btn{font-size:19px;padding:18px;border-radius:14px;
   border-width:2px;margin-top:14px;
   box-shadow:0 0 20px rgba(0,212,255,.1)}
+
+/* ── AUTOSAVE RESUME PANEL ── */
+.resume-panel{
+  background:rgba(0,12,24,.92);
+  border:1.5px solid rgba(0,212,255,.28);
+  border-radius:16px;padding:18px 16px 16px;margin-bottom:14px;
+  animation:resumeIn .45s cubic-bezier(.22,1,.36,1) both;
+  position:relative;overflow:hidden}
+.resume-panel::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(0,212,255,.05) 0%,transparent 60%);
+  pointer-events:none}
+@keyframes resumeIn{
+  from{opacity:0;transform:translateY(18px) scale(.97)}
+  to{opacity:1;transform:none}}
+.resume-badge{
+  display:inline-block;font-size:10px;font-weight:700;
+  letter-spacing:.1em;color:var(--cyan);
+  border:1px solid rgba(0,212,255,.4);border-radius:4px;
+  padding:2px 7px;margin-bottom:10px;text-transform:uppercase}
+.resume-row{display:flex;gap:12px;align-items:flex-start;margin-bottom:12px}
+.resume-photo{
+  width:60px;height:60px;border-radius:10px;object-fit:cover;flex-shrink:0;
+  border:1.5px solid rgba(0,212,255,.28)}
+.resume-photo-placeholder{
+  width:60px;height:60px;border-radius:10px;flex-shrink:0;
+  background:rgba(0,212,255,.08);border:1.5px solid rgba(0,212,255,.15);
+  display:flex;align-items:center;justify-content:center;font-size:26px}
+.resume-info{flex:1;min-width:0}
+.resume-zone{font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px}
+.resume-desc{font-size:12px;color:var(--text-dim);line-height:1.4;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.resume-stats{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.resume-stat{
+  display:flex;align-items:center;gap:4px;
+  background:rgba(0,212,255,.07);border:1px solid rgba(0,212,255,.15);
+  border-radius:8px;padding:5px 10px;font-size:12px;color:var(--text-dim)}
+.resume-stat b{color:var(--cyan);font-size:13px}
+.resume-actions{display:flex;flex-direction:column;gap:8px}
+.resume-btn-continue{
+  width:100%;padding:14px;border-radius:12px;cursor:pointer;
+  background:linear-gradient(135deg,rgba(0,212,255,.2),rgba(0,212,255,.1));
+  border:1.5px solid rgba(0,212,255,.45);
+  color:var(--cyan);font-size:15px;font-weight:700;
+  font-family:inherit;letter-spacing:.03em;
+  transition:all .2s;-webkit-tap-highlight-color:transparent}
+.resume-btn-continue:active{transform:scale(.97);opacity:.9}
+.resume-btn-new{
+  width:100%;padding:11px;border-radius:10px;cursor:pointer;
+  background:transparent;border:1px solid rgba(208,238,255,.18);
+  color:var(--text-dim);font-size:13px;font-family:inherit;
+  transition:all .2s;-webkit-tap-highlight-color:transparent}
+.resume-btn-new:active{opacity:.65}
 </style>
 </head>
 <body>
@@ -1157,7 +1210,7 @@ body::before{
     今日は何を<b>探究</b>する？
   </div>
   <div class="top-cta">
-    <button class="btn btn-primary" onclick="goTo('profile')">⚔️ 冒険をはじめる</button>
+    <button class="btn btn-primary" id="start-main-btn" onclick="goTo('profile')">⚔️ 冒険をはじめる</button>
     <div class="top-folder-btn" id="top-folder-btn" onclick="openFolder()">
       📚 雑学フォルダ
       <span class="top-folder-badge" id="top-folder-badge">0</span>
@@ -2693,6 +2746,7 @@ function spawnZarrParticles(){
 function continueFromZoneArrival(){
   state.pendingZoneIdx=null;
   buildWorldMap();
+  saveGameState();
   goTo('worldmap');
 }
 
@@ -2981,6 +3035,7 @@ function submitAnswer(){
   const trivia=pickTrivia(triviaKeys[Math.floor(Math.random()*triviaKeys.length)]);
   renderTriviaCard(trivia);
 
+  saveGameState();
   goTo('complete');
   spawnBurst();
   updateHUD();
@@ -3565,6 +3620,8 @@ async function generateAIMissions(){
     if(state.photoUrl){
       const enc=await resizePhotoForVision(state.photoUrl);
       photoBase64=enc.base64;photoMimeType=enc.mimeType;
+      // persist compressed copy for autosave
+      state.photoBase64='data:image/jpeg;base64,'+enc.base64;
     }
 
     const res=await fetch(`${TOMORI_API_URL}/generate`,{
@@ -3607,6 +3664,11 @@ async function generateAIMissions(){
         completionHint:m.completionHint||'おもしろい発想だ！',
       };
     });
+
+    // increment session count & autosave
+    const sc = parseInt(localStorage.getItem(SESSION_KEY)||'0', 10) + 1;
+    localStorage.setItem(SESSION_KEY, sc);
+    saveGameState();
 
     refreshMap();buildWorldMap();goTo('worldmap');
 
@@ -4321,6 +4383,7 @@ function confirmResetData(){
     _resetStep = 0;
     ['tomori_history','tomori_completion_count','tomori_interest_tags','tomori_mood_history']
       .forEach(k=>localStorage.removeItem(k));
+    clearGameState();
     closeTeacherMode();
     if(btn) btn.textContent = '🗑️ 探究データをリセットする';
   }
@@ -4333,6 +4396,197 @@ function getRecentAnswersForAI(){
     answer: h.answer,
     missionTitle: h.missionTitle,
   }));
+}
+
+// =============================================
+// AUTOSAVE — localStorage persistence
+// =============================================
+const SAVE_VERSION = 2;
+const SAVE_KEY = 'tomori_save_data';
+const SESSION_KEY = 'tomori_session_count';
+
+function saveGameState(){
+  try{
+    const data = {
+      version: SAVE_VERSION,
+      ts: Date.now(),
+      zone: getCurrentZoneId(),
+      depth: state.depth,
+      xp: state.xp,
+      completedIds: state.completedIds.slice(-50),
+      photoBase64: state.photoBase64 || null,
+      photoDescription: state.photoDescription || '',
+      category: state.category || 'mystery',
+      mood: state.mood || 'ok',
+      lastAnswer: state.lastAnswer || null,
+      age: state.age || null,
+      trait: state.trait || null,
+      language: state.language || 'ja',
+      aiQuests: (state.aiQuests||[]).slice(0,5).map(q=>({
+        id:q.id, type:q.type, title:q.title, em:q.em,
+        prompt:q.prompt, ans:q.ans, ch:q.ch||null,
+        xp:q.xp, aiGenerated:q.aiGenerated||false,
+        completionHint:q.completionHint||null,
+      })),
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+  }catch(e){/* quota exceeded — ignore */}
+}
+
+function loadGameState(){
+  try{
+    const raw = localStorage.getItem(SAVE_KEY);
+    if(!raw) return null;
+    const data = JSON.parse(raw);
+    if(!data || (data.version||0) < SAVE_VERSION) return null;
+    return data;
+  }catch(e){ return null; }
+}
+
+function clearGameState(){
+  localStorage.removeItem(SAVE_KEY);
+  localStorage.removeItem(SESSION_KEY);
+}
+
+function getCurrentZoneId(){
+  const idx = Math.min(Math.floor(state.depth/3), ZONES.length-1);
+  return ZONES[idx] ? ZONES[idx].id : (ZONES[0]||{}).id;
+}
+
+function getRelativeTime(ts, lang){
+  const diff = Date.now() - ts;
+  const m = Math.floor(diff/60000);
+  const h = Math.floor(m/60);
+  const d = Math.floor(h/24);
+  if(lang==='en'){
+    if(d>0) return d===1?'yesterday':`${d} days ago`;
+    if(h>0) return `${h}h ago`;
+    if(m>0) return `${m}min ago`;
+    return 'just now';
+  }
+  if(d>0) return d===1?'昨日':`${d}日前`;
+  if(h>0) return `${h}時間前`;
+  if(m>0) return `${m}分前`;
+  return 'たった今';
+}
+
+function showResumePanel(){
+  const save = loadGameState();
+  if(!save) return;
+
+  const startBtn = document.getElementById('start-main-btn');
+  const topCta = document.querySelector('.top-cta');
+  if(!topCta) return;
+
+  // Remove stale panel if any
+  const old = document.getElementById('resume-panel');
+  if(old) old.remove();
+
+  const sessions = parseInt(localStorage.getItem(SESSION_KEY)||'0', 10);
+  const lang = save.language || 'ja';
+  const isEn = lang === 'en';
+  const timeStr = getRelativeTime(save.ts, lang);
+
+  const zoneObj = ZONES.find(z=>z.id===save.zone)
+    || ZONES[Math.min(Math.floor((save.depth||0)/3), ZONES.length-1)];
+  const zoneName = zoneObj
+    ? (isEn && zoneObj.nameEn ? zoneObj.nameEn : zoneObj.name)
+    : (isEn?'Unknown Zone':'不明なエリア');
+  const zoneEm = zoneObj ? (zoneObj.em||'🗺️') : '🗺️';
+
+  const photoHtml = save.photoBase64
+    ? `<img class="resume-photo" src="${save.photoBase64}" alt="">`
+    : `<div class="resume-photo-placeholder">${zoneEm}</div>`;
+
+  const rawDesc = save.photoDescription || '';
+  const descText = rawDesc
+    ? rawDesc.slice(0,42)+(rawDesc.length>42?'…':'')
+    : (isEn?'(no photo description)':'（説明なし）');
+
+  const panel = document.createElement('div');
+  panel.id = 'resume-panel';
+  panel.className = 'resume-panel';
+  panel.innerHTML =
+    `<div class="resume-badge">${isEn?'⚔️ ADVENTURE SAVED':'⚔️ 冒険データあり'}</div>`+
+    `<div class="resume-row">${photoHtml}<div class="resume-info">`+
+      `<div class="resume-zone">${zoneEm} ${zoneName}</div>`+
+      `<div class="resume-desc">${descText}</div>`+
+    `</div></div>`+
+    `<div class="resume-stats">`+
+      `<div class="resume-stat">🎯 ${isEn?'Depth':'深度'} <b>${save.depth||0}</b></div>`+
+      `<div class="resume-stat">⚡ XP <b>${save.xp||0}</b></div>`+
+      `<div class="resume-stat">🕐 <b>${timeStr}</b></div>`+
+      (sessions>0?`<div class="resume-stat">🗺️ <b>${sessions}${isEn?' sessions':'回目'}</b></div>`:'')+
+    `</div>`+
+    `<div class="resume-actions">`+
+      `<button class="resume-btn-continue" onclick="resumeAdventure()">⚔️ ${isEn?'Continue Adventure':'つづきから冒険する'}</button>`+
+      `<button class="resume-btn-new" onclick="newAdventureFromSave()">📷 ${isEn?'New Photo (keep progress)':'新しい写真で冒険する（進行継続）'}</button>`+
+    `</div>`;
+
+  topCta.insertBefore(panel, topCta.firstChild);
+  if(startBtn) startBtn.style.display = 'none';
+}
+
+function resumeAdventure(){
+  const save = loadGameState();
+  if(!save){ goTo('profile'); return; }
+
+  state.depth          = save.depth || 0;
+  state.xp             = save.xp || 0;
+  state.completedIds   = Array.isArray(save.completedIds) ? save.completedIds : [];
+  state.photoDescription = save.photoDescription || '';
+  state.category       = save.category || 'mystery';
+  state.mood           = save.mood || 'ok';
+  state.lastAnswer     = save.lastAnswer || null;
+  state.photoBase64    = save.photoBase64 || null;
+  state.photoUrl       = save.photoBase64 || null;
+  if(!state.age   && save.age)   state.age   = save.age;
+  if(!state.trait && save.trait) state.trait = save.trait;
+  if(save.language) state.language = save.language;
+
+  if(Array.isArray(save.aiQuests) && save.aiQuests.length){
+    state.aiQuests = save.aiQuests.map(q=>({
+      ...q,
+      tw:{short_attention:1,non_reader:1,deep_thinker:1,story_style:1,survival_like:1},
+      fl:'✨ AI生成', dm:0,
+    }));
+  }
+
+  state.setupDone = true;
+  applyLanguage();
+  buildWorldMap();
+  refreshMap();
+  goTo('worldmap');
+}
+
+function newAdventureFromSave(){
+  const save = loadGameState();
+  if(!save){ goTo('profile'); return; }
+
+  state.depth          = save.depth || 0;
+  state.xp             = save.xp || 0;
+  state.completedIds   = Array.isArray(save.completedIds) ? save.completedIds : [];
+  state.category       = save.category || 'mystery';
+  state.mood           = save.mood || 'ok';
+  if(!state.age   && save.age)   state.age   = save.age;
+  if(!state.trait && save.trait) state.trait = save.trait;
+  if(save.language) state.language = save.language;
+
+  // clear photo context for fresh capture
+  state.photoUrl        = null;
+  state.photoBase64     = null;
+  state.photoDescription = '';
+  state.lastAnswer      = null;
+  state.aiQuests        = [];
+  state.setupDone       = true;
+
+  const panel = document.getElementById('resume-panel');
+  if(panel) panel.remove();
+  const startBtn = document.getElementById('start-main-btn');
+  if(startBtn) startBtn.style.display = '';
+
+  applyLanguage();
+  goTo('photo');
 }
 
 // =============================================
@@ -4491,6 +4745,7 @@ buildStars();
 applyLanguage();  // buildProfile + buildSetup も内部で呼ばれる
 refreshTopFolderBtn();
 updateTTSBtn();   // TTS toggle initial state
+showResumePanel(); // autosave resume card
 </script>
 </body>
 </html>

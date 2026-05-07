@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1920">
+<title>おねだりモード スライド</title>
+<style>@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');</style>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1920px;height:1080px;overflow:hidden;background:#000}
+
+.slide{
+  width:1920px;height:1080px;position:relative;overflow:hidden;
+  font-family:'Noto Sans JP','Meiryo','Yu Gothic',sans-serif;
+  background:radial-gradient(ellipse 120% 80% at 60% 40%,#062535 0%,#020d18 45%,#010810 100%);
+}
+
+/* ── 背景パーティクル・グロー ── */
+.glow1{position:absolute;width:700px;height:700px;border-radius:50%;
+  background:radial-gradient(circle,rgba(0,212,255,0.12) 0%,transparent 70%);
+  top:-100px;right:120px;pointer-events:none}
+.glow2{position:absolute;width:500px;height:500px;border-radius:50%;
+  background:radial-gradient(circle,rgba(155,93,255,0.1) 0%,transparent 70%);
+  bottom:-80px;left:80px;pointer-events:none}
+.glow3{position:absolute;width:300px;height:300px;border-radius:50%;
+  background:radial-gradient(circle,rgba(0,255,200,0.07) 0%,transparent 70%);
+  top:300px;left:500px;pointer-events:none}
+
+/* ── 背景ドット ── */
+.dots{position:absolute;inset:0;
+  background-image:radial-gradient(circle,rgba(0,212,255,0.18) 1px,transparent 1px);
+  background-size:48px 48px;opacity:0.25;pointer-events:none}
+
+/* ── 上部バッジ ── */
+.badge-wrap{position:absolute;top:56px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:16px}
+.badge{
+  padding:8px 28px;border-radius:40px;
+  background:rgba(0,212,255,0.12);border:1.5px solid rgba(0,212,255,0.4);
+  font-size:20px;font-weight:700;color:rgba(0,212,255,0.9);letter-spacing:.2em;
+  text-shadow:0 0 12px rgba(0,212,255,0.5)}
+
+/* ── メインタイトル ── */
+.main-title{
+  position:absolute;top:108px;width:100%;text-align:center;
+  font-size:72px;font-weight:900;color:#ffffff;letter-spacing:.04em;
+  text-shadow:0 2px 30px rgba(0,0,0,0.8),0 0 60px rgba(0,212,255,0.15);
+  line-height:1.15}
+.main-title em{
+  font-style:normal;color:#00d4ff;
+  text-shadow:0 0 30px rgba(0,212,255,0.7),0 0 60px rgba(0,212,255,0.3)}
+
+.sub-title{
+  position:absolute;top:254px;width:100%;text-align:center;
+  font-size:28px;font-weight:400;color:rgba(200,235,255,0.7);letter-spacing:.06em;
+  text-shadow:0 2px 16px rgba(0,0,0,0.9)}
+
+/* ── フローカード ── */
+.flow-wrap{
+  position:absolute;top:320px;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;gap:0;width:1480px}
+
+.flow-card{
+  flex:1;
+  background:rgba(0,18,36,0.82);
+  border:1.5px solid rgba(0,212,255,0.22);
+  border-radius:28px;
+  padding:44px 40px 40px;
+  position:relative;
+  backdrop-filter:blur(16px);
+  box-shadow:0 8px 48px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.06)}
+
+.flow-card:nth-child(1){border-color:rgba(0,212,255,0.3)}
+.flow-card:nth-child(3){border-color:rgba(155,93,255,0.3);background:rgba(12,5,28,0.82)}
+.flow-card:nth-child(5){border-color:rgba(0,255,136,0.3);background:rgba(0,18,12,0.82)}
+
+.card-step{
+  position:absolute;top:-18px;left:36px;
+  padding:4px 20px;border-radius:20px;
+  font-size:14px;font-weight:900;letter-spacing:.18em;text-transform:uppercase}
+.flow-card:nth-child(1) .card-step{background:rgba(0,212,255,0.15);border:1px solid rgba(0,212,255,0.4);color:#00d4ff}
+.flow-card:nth-child(3) .card-step{background:rgba(155,93,255,0.15);border:1px solid rgba(155,93,255,0.4);color:#c084fc}
+.flow-card:nth-child(5) .card-step{background:rgba(0,255,136,0.15);border:1px solid rgba(0,255,136,0.4);color:#00ff88}
+
+.card-em{font-size:72px;line-height:1;margin-bottom:16px;display:block;
+  filter:drop-shadow(0 0 12px rgba(255,255,255,0.2))}
+.card-title{font-size:30px;font-weight:900;color:#ffffff;margin-bottom:12px;letter-spacing:.03em;
+  text-shadow:0 2px 12px rgba(0,0,0,0.8)}
+.card-desc{font-size:19px;color:rgba(190,220,255,0.8);line-height:1.7;letter-spacing:.02em}
+.card-tag{
+  display:inline-block;margin-top:18px;padding:7px 20px;border-radius:20px;
+  font-size:15px;font-weight:700;letter-spacing:.08em}
+.flow-card:nth-child(1) .card-tag{background:rgba(0,212,255,0.1);color:#00d4ff;border:1px solid rgba(0,212,255,0.3)}
+.flow-card:nth-child(3) .card-tag{background:rgba(155,93,255,0.1);color:#c084fc;border:1px solid rgba(155,93,255,0.3)}
+.flow-card:nth-child(5) .card-tag{background:rgba(0,255,136,0.1);color:#00ff88;border:1px solid rgba(0,255,136,0.3)}
+
+/* ── 矢印 ── */
+.arrow-wrap{
+  width:100px;flex-shrink:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+.arrow-line{width:56px;height:2px;background:linear-gradient(90deg,rgba(0,212,255,0.3),rgba(0,212,255,0.8));
+  position:relative}
+.arrow-line::after{content:'▶';position:absolute;right:-12px;top:-9px;font-size:18px;color:rgba(0,212,255,0.8)}
+.arrow-label{font-size:13px;color:rgba(0,212,255,0.5);letter-spacing:.1em;font-weight:700;white-space:nowrap}
+
+/* ── ボトム ── */
+.bottom-bar{
+  position:absolute;bottom:0;left:0;right:0;height:100px;
+  display:flex;align-items:center;justify-content:center;gap:80px;
+  background:linear-gradient(0deg,rgba(0,4,14,0.95) 0%,transparent 100%);
+  padding:0 120px}
+.bottom-pill{
+  display:flex;align-items:center;gap:14px;
+  background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
+  border-radius:40px;padding:12px 28px}
+.bottom-pill-em{font-size:24px}
+.bottom-pill-text{font-size:19px;color:rgba(200,225,255,0.65);font-weight:400;letter-spacing:.04em}
+.bottom-pill-text b{color:rgba(200,225,255,0.9);font-weight:700}
+
+/* ── 右端の装飾スマホ風モックアップ ── */
+.mock-wrap{position:absolute;right:40px;top:200px;opacity:0.22;
+  width:240px;height:480px;border-radius:36px;
+  border:2px solid rgba(0,212,255,0.4);
+  background:linear-gradient(180deg,rgba(0,20,40,0.8),rgba(0,5,15,0.8));
+  overflow:hidden}
+.mock-inner{padding:24px 16px}
+.mock-bar{height:8px;background:rgba(0,212,255,0.3);border-radius:4px;margin-bottom:12px}
+.mock-bar2{height:8px;background:rgba(255,255,255,0.1);border-radius:4px;width:70%;margin-bottom:20px}
+.mock-em{font-size:48px;text-align:center;display:block;margin:16px 0}
+.mock-btn{width:100%;height:40px;border-radius:12px;background:linear-gradient(135deg,rgba(255,0,0,0.6),rgba(180,0,0,0.6));margin-top:16px}
+</style>
+</head>
+<body>
+<div class="slide">
+
+  <!-- 背景エフェクト -->
+  <div class="dots"></div>
+  <div class="glow1"></div>
+  <div class="glow2"></div>
+  <div class="glow3"></div>
+
+  <!-- 右端装飾モックアップ（薄く） -->
+  <div class="mock-wrap">
+    <div class="mock-inner">
+      <div class="mock-bar"></div>
+      <div class="mock-bar2"></div>
+      <span class="mock-em">📺</span>
+      <div class="mock-bar"></div>
+      <div class="mock-bar2"></div>
+      <div class="mock-btn"></div>
+    </div>
+  </div>
+
+  <!-- バッジ -->
+  <div class="badge-wrap">
+    <div class="badge">保護者連携機能</div>
+  </div>
+
+  <!-- タイトル -->
+  <div class="main-title">ゲームで稼いで、<em>おねだり</em>しよう</div>
+  <div class="sub-title">YouTube視聴時間を「子ども自身が獲得する」仕組み</div>
+
+  <!-- フロー -->
+  <div class="flow-wrap">
+
+    <!-- STEP 1 -->
+    <div class="flow-card">
+      <div class="card-step">STEP 1 — 子ども</div>
+      <span class="card-em">🎮</span>
+      <div class="card-title">ミニゲームをクリア</div>
+      <div class="card-desc">
+        コインをためて<br>
+        ミニゲームに挑戦。<br>
+        スコアに応じて宝箱が出現。
+      </div>
+      <div class="card-tag">🎟️ チケット獲得 ＝ YouTube +10分</div>
+    </div>
+
+    <!-- 矢印1 -->
+    <div class="arrow-wrap">
+      <div class="arrow-line"></div>
+      <div class="arrow-label">おねだり</div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="flow-card">
+      <div class="card-step">STEP 2 — 子ども</div>
+      <span class="card-em">📣</span>
+      <div class="card-title">「おねだりする！」</div>
+      <div class="card-desc">
+        チケット枚数を確認して<br>
+        ボタン一発で保護者へ通知。<br>
+        何分延びるか一目でわかる。
+      </div>
+      <div class="card-tag">📲 保護者の先生モードに通知</div>
+    </div>
+
+    <!-- 矢印2 -->
+    <div class="arrow-wrap">
+      <div class="arrow-line"></div>
+      <div class="arrow-label">承認</div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="flow-card">
+      <div class="card-step">STEP 3 — 保護者</div>
+      <span class="card-em">✅</span>
+      <div class="card-title">保護者が確認・承認</div>
+      <div class="card-desc">
+        先生モードでチケット枚数と<br>
+        おねだりリクエストを確認。<br>
+        承認ボタンで使用済みに。
+      </div>
+      <div class="card-tag">🔒 PIN保護された保護者専用画面</div>
+    </div>
+
+  </div>
+
+  <!-- ボトム -->
+  <div class="bottom-bar">
+    <div class="bottom-pill">
+      <span class="bottom-pill-em">🎟️</span>
+      <div class="bottom-pill-text">チケット<b>1枚</b> ＝ YouTube <b>+10分</b></div>
+    </div>
+    <div class="bottom-pill">
+      <span class="bottom-pill-em">🏆</span>
+      <div class="bottom-pill-text"><b>自分で稼いだ</b>時間だから、納得して使える</div>
+    </div>
+    <div class="bottom-pill">
+      <span class="bottom-pill-em">🔒</span>
+      <div class="bottom-pill-text">保護者が<b>最終承認</b>するので安心</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

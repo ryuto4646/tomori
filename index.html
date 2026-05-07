@@ -480,6 +480,204 @@ body::before{
 .zone-advance-sub{font-size:10px;color:rgba(255,220,120,.55);text-align:center;
   margin-top:6px;letter-spacing:.06em}
 
+/* ══════════════════════════════════════════
+   REWARD SYSTEM — Gacha / Inventory / Minigame / Treasure / YouTube
+   ══════════════════════════════════════════ */
+
+/* ── Coin meter (HUD下・complete画面) ── */
+.coin-bar-wrap{display:flex;align-items:center;gap:8px;padding:10px 20px 0;margin-top:4px}
+.coin-bar-label{font-size:11px;color:var(--gold);font-weight:900;white-space:nowrap;letter-spacing:.04em}
+.coin-bar-track{flex:1;height:8px;background:rgba(255,215,0,.12);border-radius:4px;overflow:hidden;border:1px solid rgba(255,215,0,.2)}
+.coin-bar-fill{height:100%;background:linear-gradient(90deg,#ffd700,#ff8c00);border-radius:4px;transition:width .6s cubic-bezier(.22,1,.36,1);box-shadow:0 0 6px rgba(255,215,0,.5)}
+.coin-bar-count{font-size:11px;color:var(--gold);font-weight:900;white-space:nowrap}
+.minigame-ready-btn{
+  width:calc(100% - 40px);margin:8px 20px 0;padding:13px;border-radius:14px;cursor:pointer;
+  font-family:inherit;font-size:14px;font-weight:900;color:#000;
+  background:linear-gradient(135deg,#ffd700,#ff8c00);border:none;
+  box-shadow:0 0 24px rgba(255,180,0,.5);animation:zoneGlow 1.8s ease-in-out infinite;
+  letter-spacing:.04em}
+
+/* ── Gacha ticket badge (complete画面) ── */
+.gacha-ticket-wrap{margin:12px 20px 0;animation:cardIn .4s cubic-bezier(.22,1,.36,1) both}
+.gacha-ticket-btn{
+  width:100%;padding:14px 16px;border-radius:14px;cursor:pointer;font-family:inherit;
+  background:linear-gradient(135deg,rgba(155,93,255,.25),rgba(0,212,255,.15));
+  border:2px solid rgba(155,93,255,.6);color:#fff;font-size:15px;font-weight:900;
+  letter-spacing:.04em;text-shadow:0 1px 8px rgba(0,0,0,.9);
+  box-shadow:0 0 28px rgba(155,93,255,.3);display:flex;align-items:center;justify-content:center;gap:8px}
+.gacha-ticket-btn span.badge{
+  background:rgba(155,93,255,.4);border:1px solid rgba(155,93,255,.7);
+  border-radius:20px;padding:2px 10px;font-size:13px}
+
+/* ── Gacha overlay ── */
+#gacha-overlay{
+  position:fixed;inset:0;z-index:9500;display:none;
+  flex-direction:column;align-items:center;justify-content:center;
+  background:rgba(0,2,10,.92);backdrop-filter:blur(14px)}
+#gacha-overlay.open{display:flex}
+.gacha-stage{display:flex;flex-direction:column;align-items:center;gap:20px;padding:30px 24px;width:100%;max-width:380px}
+.gacha-title{font-size:13px;letter-spacing:.24em;color:var(--cyan);text-transform:uppercase;font-weight:900}
+.gacha-card{
+  width:200px;height:200px;border-radius:24px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:10px;cursor:pointer;
+  background:linear-gradient(135deg,rgba(30,10,60,.9),rgba(0,20,40,.9));
+  border:2px solid rgba(155,93,255,.5);
+  box-shadow:0 0 40px rgba(155,93,255,.3);
+  transition:transform .2s;position:relative;overflow:hidden}
+.gacha-card.spinning{animation:gachaSpin 0.8s ease-out forwards}
+.gacha-card.revealed{animation:gachaReveal .5s cubic-bezier(.22,1,.36,1) forwards}
+@keyframes gachaSpin{0%{transform:rotateY(0)}50%{transform:rotateY(90deg)}100%{transform:rotateY(0)}}
+@keyframes gachaReveal{0%{transform:scale(.6);opacity:0}100%{transform:scale(1);opacity:1}}
+.gacha-card-em{font-size:72px;line-height:1;filter:drop-shadow(0 0 12px rgba(255,255,255,.4))}
+.gacha-card-name{font-size:15px;font-weight:900;color:#fff;letter-spacing:.06em}
+.gacha-card-rarity{font-size:11px;letter-spacing:.16em;font-weight:900;text-transform:uppercase}
+.gacha-card-rarity.common{color:rgba(200,220,255,.7)}
+.gacha-card-rarity.rare{color:#00d4ff}
+.gacha-card-rarity.epic{color:#c084fc;text-shadow:0 0 8px rgba(192,132,252,.7)}
+.gacha-shine{position:absolute;inset:0;background:linear-gradient(135deg,transparent 40%,rgba(255,255,255,.08) 50%,transparent 60%);opacity:0;animation:gacha-shine-anim 1.5s ease .4s forwards}
+@keyframes gacha-shine-anim{0%{opacity:0;background-position:-200%}50%{opacity:1}100%{opacity:0;background-position:200%}}
+.gacha-tap-hint{font-size:12px;color:rgba(200,220,255,.5);letter-spacing:.08em;animation:pulse 1.5s ease-in-out infinite}
+.gacha-close-btn{margin-top:8px;padding:12px 32px;border-radius:12px;cursor:pointer;font-family:inherit;
+  font-size:14px;font-weight:900;background:rgba(0,212,255,.15);border:1.5px solid var(--cyan);
+  color:var(--cyan);display:none}
+
+/* ── Inventory overlay ── */
+#inventory-overlay{
+  position:fixed;inset:0;z-index:9400;display:none;
+  flex-direction:column;background:rgba(0,4,14,.96);backdrop-filter:blur(12px);overflow-y:auto}
+#inventory-overlay.open{display:flex}
+.inv-bar{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border)}
+.inv-title{font-size:15px;font-weight:900;color:var(--text);flex:1;letter-spacing:.04em}
+.inv-close{background:none;border:none;color:var(--text-dim);font-size:22px;cursor:pointer;padding:4px 8px}
+.inv-equip-hint{font-size:12px;color:var(--text-dim);padding:10px 20px 4px}
+.inv-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:12px 20px 24px}
+.inv-item{
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  padding:14px 8px;border-radius:14px;cursor:pointer;
+  background:rgba(0,15,30,.82);border:1.5px solid var(--border);
+  transition:all .2s;position:relative}
+.inv-item.equipped{border-color:var(--cyan);background:rgba(0,212,255,.1);box-shadow:var(--glow-md)}
+.inv-item:active{transform:scale(.94)}
+.inv-item-em{font-size:36px;line-height:1}
+.inv-item-name{font-size:10px;color:var(--text);font-weight:700;text-align:center;letter-spacing:.04em}
+.inv-item-count{font-size:10px;color:var(--text-dim);position:absolute;top:5px;right:8px}
+.inv-item-rarity{font-size:9px;font-weight:900;letter-spacing:.12em;text-transform:uppercase}
+.inv-item-rarity.common{color:rgba(200,220,255,.5)}
+.inv-item-rarity.rare{color:var(--cyan)}
+.inv-item-rarity.epic{color:#c084fc}
+.inv-coin-hint{
+  margin:0 20px 16px;padding:12px 16px;border-radius:12px;
+  background:rgba(255,215,0,.08);border:1px solid rgba(255,215,0,.2);
+  font-size:12px;color:var(--gold);text-align:center;font-weight:700}
+.inv-empty{padding:40px 20px;text-align:center;color:var(--text-dim);font-size:14px}
+
+/* ── Mission equipped item badge ── */
+.equipped-badge{
+  display:none;margin:6px 20px 0;padding:8px 14px;border-radius:10px;
+  background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.25);
+  font-size:12px;color:var(--cyan);font-weight:700;
+  display:flex;align-items:center;gap:8px;cursor:pointer}
+.equipped-badge.show{display:flex}
+.equipped-badge-coin{font-size:11px;color:var(--gold);font-weight:900;margin-left:auto}
+
+/* ── Minigame overlay ── */
+#minigame-overlay{
+  position:fixed;inset:0;z-index:9600;display:none;
+  flex-direction:column;align-items:center;
+  background:rgba(0,4,14,.97);overflow-y:auto;padding-bottom:40px}
+#minigame-overlay.open{display:flex}
+.mg-header{width:100%;padding:16px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border)}
+.mg-title{font-size:16px;font-weight:900;color:var(--text);flex:1}
+.mg-timer{font-size:22px;font-weight:900;color:var(--cyan);min-width:36px;text-align:right}
+.mg-body{width:100%;max-width:400px;padding:20px}
+.mg-score-wrap{display:flex;justify-content:center;gap:20px;padding:12px 0 16px}
+.mg-score-star{font-size:24px;opacity:.3;transition:all .3s}
+.mg-score-star.lit{opacity:1;animation:starPop .3s cubic-bezier(.22,1,.36,1)}
+@keyframes starPop{0%{transform:scale(.5)}100%{transform:scale(1)}}
+
+/* OX クイズ */
+.ox-question{font-size:18px;font-weight:900;color:var(--text);text-align:center;line-height:1.6;margin-bottom:24px;min-height:64px}
+.ox-choices{display:flex;gap:16px}
+.ox-btn{
+  flex:1;padding:22px 8px;border-radius:16px;font-size:32px;cursor:pointer;
+  font-family:inherit;border:2px solid var(--border);background:rgba(0,15,30,.82);
+  transition:all .18s;color:var(--text)}
+.ox-btn.correct{background:rgba(0,255,136,.15);border-color:#00ff88;box-shadow:0 0 20px rgba(0,255,136,.3)}
+.ox-btn.wrong{background:rgba(255,80,80,.15);border-color:#ff5050;box-shadow:0 0 20px rgba(255,80,80,.3)}
+.ox-btn:active{transform:scale(.94)}
+.mg-result{text-align:center;padding:20px 0}
+.mg-result-em{font-size:56px;margin-bottom:12px}
+.mg-result-title{font-size:22px;font-weight:900;color:var(--text);margin-bottom:6px}
+.mg-result-sub{font-size:13px;color:var(--text-dim);margin-bottom:20px}
+.mg-result-boxes{display:flex;justify-content:center;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.mg-result-box{font-size:40px;animation:cardIn .4s cubic-bezier(.22,1,.36,1) both}
+
+/* ── Treasure overlay ── */
+#treasure-overlay{
+  position:fixed;inset:0;z-index:9700;display:none;
+  flex-direction:column;align-items:center;justify-content:center;
+  background:rgba(0,4,14,.94);backdrop-filter:blur(14px)}
+#treasure-overlay.open{display:flex}
+.tr-stage{display:flex;flex-direction:column;align-items:center;gap:20px;padding:30px 24px;width:100%;max-width:380px}
+.tr-title{font-size:13px;letter-spacing:.2em;color:var(--gold);text-transform:uppercase;font-weight:900}
+.tr-boxes{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin:10px 0}
+.tr-box{
+  font-size:52px;cursor:pointer;transition:transform .2s;
+  animation:float 2s ease-in-out infinite;filter:drop-shadow(0 0 12px rgba(255,215,0,.4))}
+.tr-box:active{transform:scale(.9)}
+.tr-box.opened{animation:boxBurst .4s ease forwards}
+@keyframes boxBurst{0%{transform:scale(1)}40%{transform:scale(1.4)}100%{transform:scale(0);opacity:0}}
+.tr-multiplier-ask{
+  margin:0 0 10px;padding:14px 18px;border-radius:14px;width:100%;
+  background:rgba(255,215,0,.1);border:1.5px solid rgba(255,215,0,.4);
+  font-size:13px;color:var(--gold);font-weight:700;text-align:center}
+.tr-mult-btns{display:flex;gap:10px;width:100%}
+.tr-mult-yes{flex:2;padding:12px;border-radius:12px;cursor:pointer;font-family:inherit;
+  font-size:13px;font-weight:900;background:rgba(255,215,0,.2);border:1.5px solid rgba(255,215,0,.6);color:var(--gold)}
+.tr-mult-no{flex:1;padding:12px;border-radius:12px;cursor:pointer;font-family:inherit;
+  font-size:13px;font-weight:700;background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--text-dim)}
+.tr-reward{display:flex;flex-direction:column;align-items:center;gap:8px}
+.tr-reward-em{font-size:64px;animation:gachaReveal .5s cubic-bezier(.22,1,.36,1) both}
+.tr-reward-title{font-size:18px;font-weight:900;color:var(--gold);text-align:center}
+.tr-reward-sub{font-size:12px;color:var(--text-dim);text-align:center}
+.tr-done-btn{margin-top:12px;padding:12px 36px;border-radius:12px;cursor:pointer;font-family:inherit;
+  font-size:14px;font-weight:900;background:rgba(255,215,0,.2);border:1.5px solid rgba(255,215,0,.5);color:var(--gold)}
+
+/* ── YouTube チケット おねだりオーバーレイ ── */
+#yt-request-overlay{
+  position:fixed;inset:0;z-index:9800;display:none;
+  flex-direction:column;align-items:center;justify-content:center;
+  background:rgba(0,4,14,.94);backdrop-filter:blur(14px)}
+#yt-request-overlay.open{display:flex}
+.yt-stage{display:flex;flex-direction:column;align-items:center;gap:16px;padding:30px 24px;width:100%;max-width:360px;text-align:center}
+.yt-em{font-size:64px}
+.yt-title{font-size:20px;font-weight:900;color:var(--text)}
+.yt-sub{font-size:13px;color:var(--text-dim);line-height:1.7}
+.yt-count{font-size:36px;font-weight:900;color:var(--gold);letter-spacing:.04em}
+.yt-request-btn{
+  width:100%;padding:16px;border-radius:14px;cursor:pointer;font-family:inherit;
+  font-size:15px;font-weight:900;color:#000;
+  background:linear-gradient(135deg,#ff0000,#cc0000);border:none;
+  box-shadow:0 0 24px rgba(255,0,0,.3);letter-spacing:.04em}
+.yt-close-btn{background:none;border:none;color:var(--text-dim);font-size:13px;cursor:pointer;padding:6px;text-decoration:underline}
+
+/* ── Teacher mode: YouTube tickets section ── */
+.tsec-yt{background:rgba(255,0,0,.07);border:1px solid rgba(255,0,0,.2)}
+.tsec-yt .tsec-label{color:#ff6b6b}
+.tsec-yt-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.tsec-yt-count{font-size:32px;font-weight:900;color:#ff4444;text-shadow:0 0 10px rgba(255,0,0,.3)}
+.tsec-yt-info{font-size:12px;color:var(--text-dim);line-height:1.6}
+.tsec-yt-approve-btn{
+  width:100%;margin-top:10px;padding:12px;border-radius:12px;cursor:pointer;
+  font-family:inherit;font-size:14px;font-weight:900;
+  background:rgba(255,80,80,.15);border:1.5px solid rgba(255,80,80,.4);color:#ff6b6b}
+
+/* ── Coin badge in worldmap HUD ── */
+.wmap-coin-badge{
+  font-size:11px;font-weight:900;color:var(--gold);
+  background:rgba(255,215,0,.12);border:1px solid rgba(255,215,0,.25);
+  border-radius:20px;padding:4px 10px;letter-spacing:.04em}
+
 /* ── JOURNEY OVERLAY (fixed・blur演出) ── */
 #journey-overlay{
   position:fixed;inset:0;z-index:9999;
@@ -1357,6 +1555,21 @@ body::before{
       </div>
     </div>
 
+    <!-- ⑥ YouTubeチケット -->
+    <div class="tsec tsec-yt">
+      <div class="tsec-label speakable">📺 YouTubeチケット</div>
+      <div class="tsec-yt-row">
+        <div class="tsec-yt-count" id="teacher-yt-count">0枚</div>
+        <div class="tsec-yt-info">チケット1枚 = 10分<br>子どもが「おねだり」すると通知されます</div>
+      </div>
+      <div id="teacher-yt-request" style="display:none">
+        <div style="font-size:13px;color:#ff6b6b;font-weight:900;margin:8px 0 6px">📣 おねだりがきています！</div>
+      </div>
+      <button class="tsec-yt-approve-btn" id="teacher-yt-approve-btn" onclick="approveYTTickets()" style="display:none">
+        ✅ チケットを承認する
+      </button>
+    </div>
+
     <!-- プライバシー注記 -->
     <div class="teacher-privacy-note speakable">
       🔒 すべてのデータはこの端末のみに保存されています<br>
@@ -1577,6 +1790,11 @@ body::before{
     <div class="mission-prompt speakable" id="mission-prompt"></div>
     <div id="answer-area"></div>
   </div>
+  <div class="equipped-badge" id="equipped-badge" onclick="openInventory()">
+    <span id="equipped-badge-em">🎒</span>
+    <span id="equipped-badge-name">アイテム装備中</span>
+    <span class="equipped-badge-coin" id="equipped-badge-coin">+0🪙</span>
+  </div>
   <div class="mission-submit-area">
     <button class="btn btn-success" id="mission-submit-btn" onclick="submitAnswer()" disabled>
       ✅ こたえる
@@ -1623,6 +1841,17 @@ body::before{
   <div id="complete-evolution"></div>
   <!-- 7回ジャーニートリガー（動的） -->
   <div id="complete-journey-trigger"></div>
+
+  <!-- ガチャチケット獲得バッジ（動的） -->
+  <div id="gacha-ticket-wrap"></div>
+
+  <!-- スペシャルコインメーター -->
+  <div class="coin-bar-wrap" id="complete-coin-wrap">
+    <div class="coin-bar-label">🪙 コイン</div>
+    <div class="coin-bar-track"><div class="coin-bar-fill" id="complete-coin-fill" style="width:0%"></div></div>
+    <div class="coin-bar-count" id="complete-coin-count">0/30</div>
+  </div>
+  <div id="complete-minigame-wrap" style="padding:0 20px;margin-top:6px"></div>
 
   <!-- ゾーン進出ボタン（動的） -->
   <div id="zone-advance-wrap"></div>
@@ -1796,6 +2025,78 @@ body::before{
 
 </div><!-- /#app -->
 
+<!-- ===== GACHA OVERLAY ===== -->
+<div id="gacha-overlay">
+  <div class="gacha-stage">
+    <div class="gacha-title">🎴 ガチャ</div>
+    <div class="gacha-card" id="gacha-card" onclick="pullGacha()">
+      <div class="gacha-shine"></div>
+      <div class="gacha-card-em" id="gacha-card-em">🎴</div>
+      <div class="gacha-card-name" id="gacha-card-name">タップして引く</div>
+      <div class="gacha-card-rarity" id="gacha-card-rarity"></div>
+    </div>
+    <div class="gacha-tap-hint" id="gacha-tap-hint">タップして引く！</div>
+    <button class="gacha-close-btn" id="gacha-close-btn" onclick="closeGacha()">インベントリへ →</button>
+  </div>
+</div>
+
+<!-- ===== INVENTORY OVERLAY ===== -->
+<div id="inventory-overlay">
+  <div class="inv-bar">
+    <div class="inv-title">🎒 アイテムボックス</div>
+    <button class="inv-close" onclick="closeInventory()">✕</button>
+  </div>
+  <div class="inv-equip-hint">アイテムを選んでミッションに持っていこう！使うとスペシャルコインがたまるよ🪙</div>
+  <div class="coin-bar-wrap">
+    <div class="coin-bar-label">🪙 コイン</div>
+    <div class="coin-bar-track"><div class="coin-bar-fill" id="inv-coin-fill" style="width:0%"></div></div>
+    <div class="coin-bar-count" id="inv-coin-count">0/30</div>
+  </div>
+  <div id="inv-minigame-wrap" style="padding:0 20px;margin-top:10px"></div>
+  <div class="inv-grid" id="inv-grid"></div>
+</div>
+
+<!-- ===== MINIGAME OVERLAY ===== -->
+<div id="minigame-overlay">
+  <div class="mg-header">
+    <div class="mg-title" id="mg-title">🎮 ミニゲーム</div>
+    <div class="mg-timer" id="mg-timer">15</div>
+  </div>
+  <div class="mg-body">
+    <div class="mg-score-wrap" id="mg-score-wrap">
+      <div class="mg-score-star" id="ms0">⭐</div>
+      <div class="mg-score-star" id="ms1">⭐</div>
+      <div class="mg-score-star" id="ms2">⭐</div>
+      <div class="mg-score-star" id="ms3">⭐</div>
+      <div class="mg-score-star" id="ms4">⭐</div>
+    </div>
+    <div id="mg-game-area"></div>
+  </div>
+</div>
+
+<!-- ===== TREASURE OVERLAY ===== -->
+<div id="treasure-overlay">
+  <div class="tr-stage">
+    <div class="tr-title">🎁 宝箱</div>
+    <div id="tr-multiplier-wrap"></div>
+    <div class="tr-boxes" id="tr-boxes"></div>
+    <div class="tr-reward" id="tr-reward" style="display:none"></div>
+    <button class="tr-done-btn" id="tr-done-btn" onclick="closeTreasure()" style="display:none">OK！</button>
+  </div>
+</div>
+
+<!-- ===== YOUTUBE REQUEST OVERLAY ===== -->
+<div id="yt-request-overlay">
+  <div class="yt-stage">
+    <div class="yt-em">📺</div>
+    <div class="yt-title">YouTube時間をのばそう！</div>
+    <div class="yt-count" id="yt-ticket-count">0枚</div>
+    <div class="yt-sub">チケット1枚 = 10分延長<br>おうちの人に見せておねだりしよう！</div>
+    <button class="yt-request-btn" onclick="sendYTRequest()">📣 おねだりする！</button>
+    <button class="yt-close-btn" onclick="closeYTRequest()">とじる</button>
+  </div>
+</div>
+
 <!-- TTS floating toggle -->
 <button id="tts-btn" onclick="toggleTTS()" aria-label="読み上げのON/OFF">🔇</button>
 
@@ -1829,6 +2130,14 @@ const state = {
   lastAnswer: null,      // passed back to AI for next generation
   photoBase64: null,     // resized photo for Vision API
   photoMimeType: null,
+  // ─── REWARD SYSTEM ───
+  gachaTickets: 0,       // 未使用のガチャチケット枚数
+  inventory: [],         // [{itemId, count}]
+  equippedItem: null,    // 次のミッションに持っていくアイテムID
+  specialCoins: 0,       // スペシャルコイン
+  treasureBoxes: 0,      // 開封待ち宝箱数
+  boxMultiplierItems: 0, // 宝箱増量アイテム枚数
+  youtubeTickets: 0,     // YouTubeチケット（10分/枚）
 };
 
 // =============================================
@@ -3090,6 +3399,7 @@ function openQuest(id){
   state.choiceSelected=null;
   renderMission(q);
   goTo('mission');
+  updateEquippedBadge(); // アイテムバッジを更新
 }
 function openQuestFromComplete(id){openQuest(id);}
 
@@ -3294,11 +3604,20 @@ function submitAnswer(){
   const trivia=pickTrivia(triviaKeys[Math.floor(Math.random()*triviaKeys.length)]);
   renderTriviaCard(trivia);
 
+  // ── REWARD: アイテム消費 → コイン付与 ──
+  const coinBonus = consumeEquippedItem();
+  if(coinBonus>0) setTimeout(()=>showToast(`🪙 +${coinBonus} スペシャルコイン！`),400);
+  // clear previous gacha-ticket-wrap before navigation
+  const _gtw=document.getElementById('gacha-ticket-wrap');
+  if(_gtw) _gtw.innerHTML='';
+  updateEquippedBadge();
+
   saveGameState();
   goTo('complete');
   spawnBurst();
   updateHUD();
   refreshTopFolderBtn();
+  setTimeout(()=>{ awardGachaTicket(); updateCoinMeter(); },300);
 
   if(milestone){
     setTimeout(()=>showToast(milestone),600);
@@ -4502,6 +4821,7 @@ function _openTeacherDashboard(){
   _buildTeacherDashboard();
   const ov = document.getElementById('teacher-overlay');
   ov.style.display = 'flex';
+  refreshTeacherYT(); // YouTubeチケット数を同期
 }
 
 function closeTeacherMode(){
@@ -4668,6 +4988,459 @@ function getRecentAnswersForAI(){
 }
 
 // =============================================
+// REWARD SYSTEM — Gacha / Inventory / Coins / Minigame / Treasure
+// =============================================
+
+const GACHA_ITEMS = [
+  // ── COMMON ──────────────────────────────
+  {id:'notebook', name:{ja:'ノート',    en:'Notebook'},  emoji:'📓', rarity:'common', coinBonus:3},
+  {id:'pencil',   name:{ja:'えんぴつ',  en:'Pencil'},    emoji:'✏️', rarity:'common', coinBonus:3},
+  {id:'ruler',    name:{ja:'じょうぎ',  en:'Ruler'},     emoji:'📏', rarity:'common', coinBonus:3},
+  {id:'eraser',   name:{ja:'けしごむ',  en:'Eraser'},    emoji:'🧹', rarity:'common', coinBonus:3},
+  // ── RARE ────────────────────────────────
+  {id:'magnify',  name:{ja:'虫めがね',  en:'Magnifier'}, emoji:'🔍', rarity:'rare',   coinBonus:5},
+  {id:'map',      name:{ja:'ちず',      en:'Map'},       emoji:'🗺️', rarity:'rare',   coinBonus:5},
+  {id:'car',      name:{ja:'くるま',    en:'Car'},       emoji:'🚗', rarity:'rare',   coinBonus:5},
+  {id:'train',    name:{ja:'でんしゃ',  en:'Train'},     emoji:'🚂', rarity:'rare',   coinBonus:5},
+  // ── EPIC ────────────────────────────────
+  {id:'airplane', name:{ja:'ひこうき',  en:'Airplane'},  emoji:'✈️', rarity:'epic',   coinBonus:10},
+  {id:'telescope',name:{ja:'ぼうえんきょう',en:'Telescope'},emoji:'🔭',rarity:'epic',  coinBonus:10},
+  {id:'compass',  name:{ja:'コンパス',  en:'Compass'},   emoji:'🧭', rarity:'epic',   coinBonus:10},
+  {id:'globe',    name:{ja:'地球儀',    en:'Globe'},     emoji:'🌏', rarity:'epic',   coinBonus:10},
+];
+
+const COIN_THRESHOLD = 30;
+
+// OXクイズ問題集（年齢別）
+const OX_QUESTIONS = {
+  grade_1_2:[
+    {q:'太陽は東からのぼる',a:true},
+    {q:'魚は空を飛べる',a:false},
+    {q:'りんごは赤い',a:true},
+    {q:'犬はニャーと鳴く',a:false},
+    {q:'雪は白い',a:true},
+    {q:'バナナは青い',a:false},
+    {q:'月は夜に見える',a:true},
+    {q:'魚は水の中にすむ',a:true},
+  ],
+  grade_3_4:[
+    {q:'地球は丸い形をしている',a:true},
+    {q:'光より音の方が速い',a:false},
+    {q:'植物は光を使って栄養を作る',a:true},
+    {q:'人間の骨は200本以上ある',a:true},
+    {q:'南極より北極の方が寒い',a:false},
+    {q:'蝶は昆虫のなかまである',a:true},
+    {q:'水は0度で沸騰する',a:false},
+    {q:'木星は太陽系で一番大きな惑星',a:true},
+  ],
+  grade_5_6:[
+    {q:'地球の表面の約70%は海で覆われている',a:true},
+    {q:'DNAは細胞の設計図と呼ばれる',a:true},
+    {q:'音は真空の中でも伝わる',a:false},
+    {q:'電気は光速と同じ速さで流れる',a:false},
+    {q:'人間の脳は使われていない部分が90%ある',a:false},
+    {q:'南半球では台風は時計回りに回転する',a:true},
+    {q:'ダイヤモンドは炭素でできている',a:true},
+    {q:'光合成では酸素が吸収される',a:false},
+  ],
+  junior_high:[
+    {q:'光の速さは秒速約30万キロメートルである',a:true},
+    {q:'相対性理論はニュートンが発見した',a:false},
+    {q:'ウイルスは細菌よりも小さい',a:true},
+    {q:'量子力学では粒子の位置と速度を同時に正確に測定できる',a:false},
+    {q:'人間のゲノムは約30億の塩基対からなる',a:true},
+    {q:'プラスチックは天然素材から作られる',a:false},
+    {q:'ブラックホールからは光も脱出できない',a:true},
+    {q:'窒素は空気の約21%を占める',a:false},
+  ],
+};
+
+// ── ガチャ ──────────────────────────────────────────────────────────────────
+function getGachaRarityTable(){
+  const d = state.depth||0;
+  if(d>=15) return [{r:'epic',w:45},{r:'rare',w:35},{r:'common',w:20}];
+  if(d>=9)  return [{r:'epic',w:30},{r:'rare',w:40},{r:'common',w:30}];
+  if(d>=4)  return [{r:'epic',w:15},{r:'rare',w:35},{r:'common',w:50}];
+  return        [{r:'epic',w:5}, {r:'rare',w:25},{r:'common',w:70}];
+}
+function rollGachaItem(){
+  const table = getGachaRarityTable();
+  const total = table.reduce((s,t)=>s+t.w,0);
+  let rand = Math.random()*total;
+  let rarity = 'common';
+  for(const t of table){ rand-=t.w; if(rand<=0){rarity=t.r;break;} }
+  const pool = GACHA_ITEMS.filter(i=>i.rarity===rarity);
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+function openGacha(){
+  if(state.gachaTickets<=0) return;
+  const overlay = document.getElementById('gacha-overlay');
+  overlay.classList.add('open');
+  // reset card
+  const card = document.getElementById('gacha-card');
+  card.onclick = pullGacha;
+  document.getElementById('gacha-card-em').textContent='🎴';
+  document.getElementById('gacha-card-name').textContent='タップして引く！';
+  document.getElementById('gacha-card-rarity').textContent='';
+  document.getElementById('gacha-tap-hint').style.display='';
+  document.getElementById('gacha-close-btn').style.display='none';
+  card.className='gacha-card';
+}
+function pullGacha(){
+  if(state.gachaTickets<=0) return;
+  state.gachaTickets--;
+  const item = rollGachaItem();
+  const card = document.getElementById('gacha-card');
+  card.classList.add('spinning');
+  setTimeout(()=>{
+    card.classList.remove('spinning');
+    card.classList.add('revealed');
+    const rarityLabels={common:'コモン',rare:'レア',epic:'エピック'};
+    document.getElementById('gacha-card-em').textContent=item.emoji;
+    document.getElementById('gacha-card-name').textContent=item.name[state.language]||item.name.ja;
+    document.getElementById('gacha-card-rarity').textContent=rarityLabels[item.rarity]||item.rarity;
+    document.getElementById('gacha-card-rarity').className='gacha-card-rarity '+item.rarity;
+    document.getElementById('gacha-tap-hint').style.display='none';
+    document.getElementById('gacha-close-btn').style.display='';
+    card.onclick=null;
+    // add to inventory
+    const inv = state.inventory;
+    const exist = inv.find(x=>x.itemId===item.id);
+    if(exist) exist.count++;
+    else inv.push({itemId:item.id, count:1});
+    saveGameState();
+    // show coin bonus hint
+    const hint = document.createElement('div');
+    hint.style.cssText='font-size:11px;color:var(--gold);text-align:center;margin-top:4px;animation:fadeIn .4s';
+    hint.textContent=`インベントリに追加！ミッションで使うと +${item.coinBonus}🪙`;
+    document.querySelector('.gacha-stage').appendChild(hint);
+  },800);
+}
+function closeGacha(){
+  document.getElementById('gacha-overlay').classList.remove('open');
+  openInventory();
+}
+
+// ── インベントリ ────────────────────────────────────────────────────────────
+function openInventory(){
+  renderInventory();
+  document.getElementById('inventory-overlay').classList.add('open');
+}
+function closeInventory(){
+  document.getElementById('inventory-overlay').classList.remove('open');
+}
+function renderInventory(){
+  const grid = document.getElementById('inv-grid');
+  const inv = state.inventory||[];
+  const lang = state.language||'ja';
+  if(inv.length===0){
+    grid.innerHTML='<div class="inv-empty">まだアイテムがないよ！<br>ミッションをこなしてガチャを引こう🎴</div>';
+  } else {
+    grid.innerHTML = inv.map(({itemId,count})=>{
+      const item = GACHA_ITEMS.find(i=>i.id===itemId);
+      if(!item) return '';
+      const isEquipped = state.equippedItem===itemId;
+      const name = item.name[lang]||item.name.ja;
+      const rarityLabel={common:'コモン',rare:'レア',epic:'エピック'}[item.rarity]||'';
+      return `<div class="inv-item${isEquipped?' equipped':''}" onclick="equipItem('${itemId}')">
+        <div class="inv-item-count">×${count}</div>
+        <div class="inv-item-em">${item.emoji}</div>
+        <div class="inv-item-name">${name}</div>
+        <div class="inv-item-rarity ${item.rarity}">+${item.coinBonus}🪙 ${rarityLabel}</div>
+      </div>`;
+    }).join('');
+  }
+  // coin bar
+  const pct = Math.min((state.specialCoins||0)/COIN_THRESHOLD*100,100);
+  const fill = document.getElementById('inv-coin-fill');
+  if(fill) fill.style.width=pct+'%';
+  const cnt = document.getElementById('inv-coin-count');
+  if(cnt) cnt.textContent=`${state.specialCoins||0}/${COIN_THRESHOLD}`;
+  // minigame button
+  const wrap = document.getElementById('inv-minigame-wrap');
+  if(wrap){
+    if((state.specialCoins||0)>=COIN_THRESHOLD){
+      wrap.innerHTML=`<button class="minigame-ready-btn" onclick="closeInventory();openMinigame()">🎮 ミニゲームに挑戦！（コイン${COIN_THRESHOLD}枚たまった！）</button>`;
+    } else { wrap.innerHTML=''; }
+  }
+  // coin hint
+  const hint = document.getElementById('inv-coin-hint');
+  if(!hint){
+    const h=document.createElement('div');h.className='inv-coin-hint';h.id='inv-coin-hint';
+    h.textContent=`アイテムを使ってミッション回答するとコインがたまるよ！${COIN_THRESHOLD}枚でミニゲーム解放🎮`;
+    grid.parentNode.insertBefore(h,grid);
+  }
+}
+function equipItem(itemId){
+  if(state.equippedItem===itemId){
+    state.equippedItem=null; // 外す
+  } else {
+    state.equippedItem=itemId;
+  }
+  saveGameState();
+  renderInventory();
+  updateEquippedBadge();
+}
+function updateEquippedBadge(){
+  const badge = document.getElementById('equipped-badge');
+  if(!badge) return;
+  if(state.equippedItem){
+    const item = GACHA_ITEMS.find(i=>i.id===state.equippedItem);
+    if(item){
+      const lang = state.language||'ja';
+      badge.classList.add('show');
+      document.getElementById('equipped-badge-em').textContent=item.emoji;
+      document.getElementById('equipped-badge-name').textContent=(item.name[lang]||item.name.ja)+' 装備中';
+      document.getElementById('equipped-badge-coin').textContent=`+${item.coinBonus}🪙`;
+    }
+  } else {
+    badge.classList.remove('show');
+  }
+}
+
+// ── コイン消費・ミニゲーム ───────────────────────────────────────────────────
+let _mgScore=0, _mgQ=0, _mgQList=[], _mgTimerID=null, _mgTimeLeft=0;
+function openMinigame(){
+  const age = state.age||'grade_5_6';
+  const qPool = OX_QUESTIONS[age]||OX_QUESTIONS.grade_5_6;
+  _mgQList = shuffle([...qPool]).slice(0,5);
+  _mgScore=0; _mgQ=0;
+  document.getElementById('minigame-overlay').classList.add('open');
+  document.getElementById('mg-title').textContent='🎮 OXクイズ';
+  for(let i=0;i<5;i++){
+    const s=document.getElementById('ms'+i);
+    if(s) s.classList.remove('lit');
+  }
+  showMGQuestion();
+}
+function showMGQuestion(){
+  if(_mgQ>=_mgQList.length){ endMinigame(); return; }
+  const q = _mgQList[_mgQ];
+  _mgTimeLeft = 15;
+  document.getElementById('mg-timer').textContent=_mgTimeLeft;
+  document.getElementById('mg-game-area').innerHTML=`
+    <div class="ox-question">${q.q}</div>
+    <div class="ox-choices">
+      <button class="ox-btn" onclick="answerOX(true)">⭕</button>
+      <button class="ox-btn" onclick="answerOX(false)">❌</button>
+    </div>`;
+  clearInterval(_mgTimerID);
+  _mgTimerID=setInterval(()=>{
+    _mgTimeLeft--;
+    const t=document.getElementById('mg-timer');
+    if(t) t.textContent=_mgTimeLeft;
+    if(_mgTimeLeft<=0){ clearInterval(_mgTimerID); answerOX(null); }
+  },1000);
+}
+function answerOX(ans){
+  clearInterval(_mgTimerID);
+  const q=_mgQList[_mgQ];
+  const correct=ans===q.a;
+  if(correct) _mgScore++;
+  const btns=document.querySelectorAll('.ox-btn');
+  btns.forEach(b=>{
+    if(b.textContent==='⭕') b.classList.toggle('correct',q.a===true);
+    if(b.textContent==='❌') b.classList.toggle('correct',q.a===false);
+    if(b.textContent==='⭕'&&ans===true&&!correct) b.classList.add('wrong');
+    if(b.textContent==='❌'&&ans===false&&!correct) b.classList.add('wrong');
+  });
+  const star=document.getElementById('ms'+_mgQ);
+  if(star&&correct) star.classList.add('lit');
+  _mgQ++;
+  setTimeout(showMGQuestion,900);
+}
+function endMinigame(){
+  clearInterval(_mgTimerID);
+  document.getElementById('minigame-overlay').classList.remove('open');
+  // consume coins
+  state.specialCoins = Math.max(0,(state.specialCoins||0)-COIN_THRESHOLD);
+  // calculate boxes
+  let boxes = _mgScore<=2?1:_mgScore===3?1:_mgScore===4?2:3;
+  state.treasureBoxes = (state.treasureBoxes||0) + boxes;
+  saveGameState();
+  updateCoinMeter();
+  openTreasure();
+}
+function shuffle(arr){ for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}return arr; }
+
+// ── 宝箱 ────────────────────────────────────────────────────────────────────
+function openTreasure(){
+  const overlay=document.getElementById('treasure-overlay');
+  overlay.classList.add('open');
+  renderTreasureBoxes();
+}
+function renderTreasureBoxes(){
+  const boxes=document.getElementById('tr-boxes');
+  const reward=document.getElementById('tr-reward');
+  const doneBtn=document.getElementById('tr-done-btn');
+  reward.style.display='none';
+  doneBtn.style.display='none';
+  const count=state.treasureBoxes||0;
+  if(count===0){ doneBtn.style.display=''; return; }
+  // multiplier ask
+  const mwrap=document.getElementById('tr-multiplier-wrap');
+  if((state.boxMultiplierItems||0)>0){
+    mwrap.innerHTML=`<div class="tr-multiplier-ask">
+      🎁 宝箱増量アイテムを持っています！（${state.boxMultiplierItems}個）<br>使いますか？</div>
+      <div class="tr-mult-btns">
+        <button class="tr-mult-yes" onclick="useMultiplier()">使う（宝箱+${Math.min(state.boxMultiplierItems,3)}個）</button>
+        <button class="tr-mult-no" onclick="renderTreasureBoxes2()">使わない</button>
+      </div>`;
+  } else { mwrap.innerHTML=''; renderTreasureBoxes2(); }
+}
+function useMultiplier(){
+  const used=Math.min(state.boxMultiplierItems||0,3);
+  state.boxMultiplierItems=Math.max(0,(state.boxMultiplierItems||0)-used);
+  state.treasureBoxes=(state.treasureBoxes||0)+used;
+  document.getElementById('tr-multiplier-wrap').innerHTML='';
+  saveGameState();
+  renderTreasureBoxes2();
+}
+function renderTreasureBoxes2(){
+  document.getElementById('tr-multiplier-wrap').innerHTML='';
+  const count=state.treasureBoxes||0;
+  const boxes=document.getElementById('tr-boxes');
+  boxes.innerHTML='';
+  for(let i=0;i<count;i++){
+    const d=document.createElement('div');
+    d.className='tr-box'; d.textContent='📦';
+    d.style.animationDelay=(i*0.15)+'s';
+    d.dataset.idx=i;
+    d.onclick=()=>openOneBox(d);
+    boxes.appendChild(d);
+  }
+}
+function openOneBox(el){
+  el.onclick=null;
+  el.classList.add('opened');
+  state.treasureBoxes=Math.max(0,(state.treasureBoxes||0)-1);
+  // determine reward: 80% YouTube ticket, 20% box multiplier
+  const reward=Math.random()<0.8?'youtube':'multiplier';
+  let em='', title='', sub='';
+  if(reward==='youtube'){
+    state.youtubeTickets=(state.youtubeTickets||0)+1;
+    em='🎟️'; title='YouTube +10分チケット！'; sub='おうちの人に見せておねだりしよう♪';
+  } else {
+    state.boxMultiplierItems=(state.boxMultiplierItems||0)+1;
+    em='🎁'; title='宝箱増量アイテムGET！'; sub='宝箱を開けるときに使えるよ！';
+  }
+  saveGameState();
+  refreshTeacherYT();
+  setTimeout(()=>{
+    const rw=document.getElementById('tr-reward');
+    rw.style.display='flex';
+    rw.innerHTML=`<div class="tr-reward-em">${em}</div>
+      <div class="tr-reward-title">${title}</div>
+      <div class="tr-reward-sub">${sub}</div>`;
+    // check if more boxes
+    if((state.treasureBoxes||0)>0){
+      setTimeout(()=>{ rw.style.display='none'; },1200);
+    } else {
+      document.getElementById('tr-done-btn').style.display='';
+      // show YT request button if has tickets
+      if(state.youtubeTickets>0&&reward==='youtube'){
+        const btn=document.createElement('button');
+        btn.className='yt-request-btn';btn.style.cssText='margin-top:8px;width:100%;border-radius:12px;padding:12px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:900;background:linear-gradient(135deg,#ff0000,#cc0000);border:none;color:#fff;box-shadow:0 0 16px rgba(255,0,0,.3)';
+        btn.textContent=`📺 YouTubeチケット ${state.youtubeTickets}枚 → おねだりする！`;
+        btn.onclick=()=>{closeTreasure();openYTRequest();};
+        document.querySelector('.tr-stage').appendChild(btn);
+      }
+    }
+  },500);
+}
+function closeTreasure(){
+  document.getElementById('treasure-overlay').classList.remove('open');
+  // clean up any added buttons
+  document.querySelectorAll('.tr-stage .yt-request-btn').forEach(b=>b.remove());
+}
+
+// ── YouTube おねだり ──────────────────────────────────────────────────────────
+function openYTRequest(){
+  document.getElementById('yt-ticket-count').textContent=`${state.youtubeTickets||0}枚`;
+  document.getElementById('yt-request-overlay').classList.add('open');
+}
+function closeYTRequest(){ document.getElementById('yt-request-overlay').classList.remove('open'); }
+function sendYTRequest(){
+  localStorage.setItem('tomori_yt_request','1');
+  closeYTRequest();
+  showToast('📣 おねだりを送ったよ！おうちの人に見せてね♪');
+  refreshTeacherYT();
+}
+
+// ── 先生モード YouTube 表示 ──────────────────────────────────────────────────
+function refreshTeacherYT(){
+  const cnt=document.getElementById('teacher-yt-count');
+  if(cnt) cnt.textContent=`${state.youtubeTickets||0}枚`;
+  const req=document.getElementById('teacher-yt-request');
+  const approveBtn=document.getElementById('teacher-yt-approve-btn');
+  const hasRequest=localStorage.getItem('tomori_yt_request')==='1';
+  if(req) req.style.display=hasRequest?'':'none';
+  if(approveBtn) approveBtn.style.display=(hasRequest&&(state.youtubeTickets||0)>0)?'':'none';
+}
+function approveYTTickets(){
+  const used = state.youtubeTickets||0;
+  state.youtubeTickets=0;
+  localStorage.removeItem('tomori_yt_request');
+  saveGameState();
+  refreshTeacherYT();
+  showToast(`✅ ${used}枚（${used*10}分）を承認しました！`);
+}
+
+// ── コインメーター更新 ───────────────────────────────────────────────────────
+function updateCoinMeter(){
+  const coins=state.specialCoins||0;
+  const pct=Math.min(coins/COIN_THRESHOLD*100,100);
+  ['complete-coin-fill','inv-coin-fill'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.style.width=pct+'%';
+  });
+  ['complete-coin-count','inv-coin-count'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.textContent=`${coins}/${COIN_THRESHOLD}`;
+  });
+  // minigame ready button in complete screen
+  const w=document.getElementById('complete-minigame-wrap');
+  if(w){
+    if(coins>=COIN_THRESHOLD){
+      w.innerHTML=`<button class="minigame-ready-btn" onclick="openMinigame()">🎮 コイン${COIN_THRESHOLD}枚たまった！ミニゲームに挑戦！</button>`;
+    } else { w.innerHTML=''; }
+  }
+}
+
+// ── ガチャチケット獲得（submitAnswer から呼ぶ） ──────────────────────────────
+function awardGachaTicket(){
+  state.gachaTickets=(state.gachaTickets||0)+1;
+  const wrap=document.getElementById('gacha-ticket-wrap');
+  if(!wrap) return;
+  const count=state.gachaTickets;
+  wrap.innerHTML=`<div class="gacha-ticket-wrap">
+    <button class="gacha-ticket-btn" onclick="openGacha()">
+      🎴 ガチャチケット獲得！
+      <span class="badge">${count}枚</span>
+    </button>
+  </div>`;
+}
+
+// ── アイテム使用（submitAnswer 内で呼ぶ） ────────────────────────────────────
+function consumeEquippedItem(){
+  if(!state.equippedItem) return 0;
+  const item=GACHA_ITEMS.find(i=>i.id===state.equippedItem);
+  if(!item) return 0;
+  const inv=state.inventory||[];
+  const slot=inv.find(x=>x.itemId===state.equippedItem);
+  if(!slot||slot.count<=0) return 0;
+  slot.count--;
+  if(slot.count===0) state.inventory=inv.filter(x=>x.count>0);
+  const bonus=item.coinBonus;
+  state.specialCoins=(state.specialCoins||0)+bonus;
+  state.equippedItem=null;
+  return bonus;
+}
+
+// ── 先生モード起動時に呼ぶ ──────────────────────────────────────────────────
+const _origOpenTeacher = typeof openTeacherMode==='function' ? openTeacherMode : null;
+
+// =============================================
 // AUTOSAVE — localStorage persistence
 // =============================================
 const SAVE_VERSION = 2;
@@ -4691,6 +5464,13 @@ function saveGameState(){
       age: state.age || null,
       trait: state.trait || null,
       language: state.language || 'ja',
+      gachaTickets: state.gachaTickets||0,
+      inventory: state.inventory||[],
+      equippedItem: state.equippedItem||null,
+      specialCoins: state.specialCoins||0,
+      treasureBoxes: state.treasureBoxes||0,
+      boxMultiplierItems: state.boxMultiplierItems||0,
+      youtubeTickets: state.youtubeTickets||0,
       aiQuests: (state.aiQuests||[]).slice(0,5).map(q=>({
         id:q.id, type:q.type, title:q.title, em:q.em,
         prompt:q.prompt, ans:q.ans, ch:q.ch||null,
@@ -4823,6 +5603,13 @@ function resumeAdventure(){
     }));
   }
 
+  state.gachaTickets      = save.gachaTickets||0;
+  state.inventory         = Array.isArray(save.inventory)?save.inventory:[];
+  state.equippedItem      = save.equippedItem||null;
+  state.specialCoins      = save.specialCoins||0;
+  state.treasureBoxes     = save.treasureBoxes||0;
+  state.boxMultiplierItems= save.boxMultiplierItems||0;
+  state.youtubeTickets    = save.youtubeTickets||0;
   state.setupDone = true;
   applyLanguage();
   buildWorldMap();

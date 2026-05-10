@@ -3824,8 +3824,12 @@ function submitAnswer(){
   refreshTopFolderBtn();
   const _isDemoFinale = DEMO_MODE && state.depth >= DEMO_MISSION_LIMIT;
   setTimeout(()=>{
-    if(_isDemoFinale){ showDemoFinaleButton(); }
-    else { awardGachaTicket(); }
+    if(_isDemoFinale){
+      showDemoFinaleButton();
+    } else {
+      // デモモードではミッション1回目のみガチャチケット付与
+      if(!DEMO_MODE || state.depth === 1) awardGachaTicket();
+    }
     updateCoinMeter();
   }, 300);
   // Item tutorial: show on first mission
@@ -5229,7 +5233,7 @@ const COIN_THRESHOLD = 30;
 
 // ─── DEMO MODE ──────────────────────────────────────────────────────────────
 const DEMO_MODE = true;
-const DEMO_MISSION_LIMIT = 7;
+const DEMO_MISSION_LIMIT = 5;
 // ★ アンケートURLをここに貼り付けてください（Google フォームの「回答用URL」）
 const SURVEY_URL = '';
 // デモ開始時に付与するアイテム (合計コイン: 5+5+10+10=30 = COIN_THRESHOLD ちょうど)
@@ -5935,42 +5939,55 @@ function openDemoTreasure(btn){
   setTimeout(()=>{ area.scrollIntoView({behavior:'smooth',block:'nearest'}); }, 400);
 }
 
-/** デモリセット：状態を初期化してスタート画面へ */
+/** デモリセット：すべての履歴・状態を初期化してスタート画面へ */
 function resetForDemo(){
   document.getElementById('demo-end-overlay').classList.remove('open');
-  // Reset all state
-  state.trait          = null;
-  state.mood           = 'ok';
-  state.age            = null;
-  state.photoUrl       = null;
-  state.category       = 'mystery';
-  state.depth          = 0;
-  state.xp             = 0;
-  state.setupDone      = false;
-  state.currentQuest   = null;
-  state.completedIds   = [];
-  state.answer         = null;
-  state.choiceSelected = null;
-  state.zonePhotos     = {};
-  state.zoneCategories = {};
-  state.pendingZoneIdx = null;
-  state.aiQuests       = [];
-  state.photoDescription = '';
-  state.lastAnswer     = null;
-  state.photoBase64    = null;
-  state.photoMimeType  = null;
-  state.gachaTickets   = 0;
-  state.inventory      = [];
-  state.equippedItem   = null;
-  state.specialCoins   = 0;
-  state.treasureBoxes  = 0;
-  state.boxMultiplierItems = 0;
-  // Keep youtube tickets and school tickets (reward of the demo)
-  // Reset demo tutorial so it shows again next playthrough
-  localStorage.removeItem('tomori_demo_tutorial_shown');
+
+  // ── 全ステート完全リセット ─────────────────────────
+  state.trait             = null;
+  state.mood              = 'ok';
+  state.age               = null;
+  state.language          = 'ja';
+  state.photoUrl          = null;
+  state.category          = 'mystery';
+  state.depth             = 0;
+  state.xp                = 0;
+  state.setupDone         = false;
+  state.currentQuest      = null;
+  state.completedIds      = [];
+  state.answer            = null;
+  state.choiceSelected    = null;
+  state.zonePhotos        = {};
+  state.zoneCategories    = {};
+  state.pendingZoneIdx    = null;
+  state.aiQuests          = [];
+  state.photoDescription  = '';
+  state.lastAnswer        = null;
+  state.photoBase64       = null;
+  state.photoMimeType     = null;
+  state.gachaTickets      = 0;
+  state.inventory         = [];
+  state.equippedItem      = null;
+  state.specialCoins      = 0;
+  state.treasureBoxes     = 0;
+  state.boxMultiplierItems= 0;
+  state.youtubeTickets    = 0;
+  state.schoolTickets     = {};
+
+  // ── localStorage 完全クリア ────────────────────────
   localStorage.removeItem('tomori_save');
+  localStorage.removeItem('tomori_demo_tutorial_shown');
+  localStorage.removeItem('tomori_yt_request');
+  localStorage.removeItem('tomori_school_request');
+
+  // ── UI リセット ────────────────────────────────────
+  // リジュームパネルを非表示・スタートボタンを再表示
+  const resumePanel = document.getElementById('resume-panel');
+  if(resumePanel) resumePanel.remove();
+  const startBtn = document.getElementById('start-main-btn');
+  if(startBtn) startBtn.style.display = '';
+
   goTo('top');
-  showToast('🔄 リセットしたよ！またあそんでね 👋');
 }
 
 // ── 先生モード起動時に呼ぶ ──────────────────────────────────────────────────

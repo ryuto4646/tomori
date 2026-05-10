@@ -654,12 +654,23 @@ body::before{
 .demo-ticket-em{font-size:52px;display:block;margin-bottom:8px}
 .demo-ticket-title{font-size:18px;font-weight:900;color:#fff;margin-bottom:4px}
 .demo-ticket-sub{font-size:12px;color:var(--text-dim);line-height:1.6}
+.demo-survey-btn{
+  display:block;width:100%;padding:14px 16px;border-radius:16px;cursor:pointer;
+  font-family:inherit;font-size:14px;font-weight:900;margin-top:12px;text-align:center;
+  background:linear-gradient(135deg,rgba(0,200,80,.22),rgba(0,160,60,.14));
+  border:2px solid rgba(0,220,100,.55);color:#00ee77;text-decoration:none;
+  box-shadow:0 0 20px rgba(0,200,80,.18);transition:all .2s;
+  animation:surveyPulse 2s ease-in-out infinite alternate}
+@keyframes surveyPulse{
+  0%{box-shadow:0 0 12px rgba(0,200,80,.15)}
+  100%{box-shadow:0 0 28px rgba(0,200,80,.45)}}
+.demo-survey-btn:active{transform:scale(.97)}
 .demo-replay-btn{
-  width:100%;padding:16px;border-radius:16px;cursor:pointer;font-family:inherit;
-  font-size:16px;font-weight:900;margin-top:16px;
-  background:linear-gradient(135deg,rgba(0,212,255,.2),rgba(0,212,255,.1));
-  border:2px solid rgba(0,212,255,.5);color:var(--cyan);
-  box-shadow:0 0 20px rgba(0,212,255,.15);transition:all .2s}
+  width:100%;padding:14px;border-radius:16px;cursor:pointer;font-family:inherit;
+  font-size:14px;font-weight:900;margin-top:10px;
+  background:linear-gradient(135deg,rgba(0,212,255,.15),rgba(0,212,255,.08));
+  border:1.5px solid rgba(0,212,255,.4);color:var(--cyan);
+  box-shadow:0 0 16px rgba(0,212,255,.1);transition:all .2s}
 .demo-replay-btn:active{transform:scale(.97)}
 /* Finale button on complete screen */
 .demo-finale-btn{
@@ -5219,6 +5230,8 @@ const COIN_THRESHOLD = 30;
 // ─── DEMO MODE ──────────────────────────────────────────────────────────────
 const DEMO_MODE = true;
 const DEMO_MISSION_LIMIT = 7;
+// ★ アンケートURLをここに貼り付けてください（Google フォームの「回答用URL」）
+const SURVEY_URL = '';
 // デモ開始時に付与するアイテム (合計コイン: 5+5+10+10=30 = COIN_THRESHOLD ちょうど)
 const DEMO_START_ITEMS = [
   {itemId:'magnify',   count:2},  // rare +5 each
@@ -5896,6 +5909,12 @@ function openDemoTreasure(btn){
   refreshTeacherYT();
   const area = document.getElementById('demo-ticket-area');
   if(!area) return;
+  const surveyBtn = SURVEY_URL
+    ? `<a class="demo-survey-btn" href="${SURVEY_URL}" target="_blank" rel="noopener">
+        📝 体験アンケートに答える（約3分）
+        <span style="font-size:11px;display:block;opacity:.7;margin-top:2px">ご意見が開発の力になります！</span>
+       </a>`
+    : '';
   area.innerHTML=`
     <div class="demo-ticket-reveal">
       <span class="demo-ticket-em">🎟️</span>
@@ -5905,13 +5924,15 @@ function openDemoTreasure(btn){
         保護者モードから承認できます
       </div>
     </div>
+    ${surveyBtn}
     <button class="demo-replay-btn" onclick="resetForDemo()">
       🔄 もう一度あそぶ！
     </button>
   `;
   if(typeof speak==='function') speak('YouTubeじゅっぷんえんちょうチケットゲット！');
-  // Confetti burst
   if(typeof spawnBurst==='function') spawnBurst();
+  // アンケートボタンが見えるようにスクロール
+  setTimeout(()=>{ area.scrollIntoView({behavior:'smooth',block:'nearest'}); }, 400);
 }
 
 /** デモリセット：状態を初期化してスタート画面へ */

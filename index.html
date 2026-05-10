@@ -610,15 +610,15 @@ body::before{
   width:100%;max-width:400px;
   background:radial-gradient(ellipse 100% 80% at 50% 20%,rgba(0,30,60,.95),rgba(0,5,15,.98));
   border:2px solid rgba(255,200,40,.4);border-radius:28px;
-  padding:36px 24px 28px;text-align:center;position:relative;overflow:hidden}
+  padding:22px 20px 24px;text-align:center;position:relative;overflow:hidden}
 .demo-end-stage::before{
   content:'';position:absolute;inset:0;
   background:radial-gradient(ellipse 80% 40% at 50% 0%,rgba(255,200,40,.08),transparent 60%);
   pointer-events:none}
 .demo-end-sparkle{font-size:26px;letter-spacing:8px;margin-bottom:4px;opacity:.8}
 /* Monster container */
-.demo-evo-wrap{position:relative;display:inline-block;margin:12px 0}
-.demo-evo-svg{width:130px;height:130px;
+.demo-evo-wrap{position:relative;display:inline-block;margin:6px 0}
+.demo-evo-svg{width:100px;height:100px;
   filter:drop-shadow(0 0 20px rgba(255,215,0,.55)) drop-shadow(0 0 6px rgba(255,180,0,.4));
   animation:demoEvoFloat 2.2s ease-in-out infinite alternate}
 @keyframes demoEvoFloat{
@@ -631,13 +631,13 @@ body::before{
   box-shadow:0 2px 8px rgba(255,150,0,.5);animation:badgePop .5s .3s cubic-bezier(.22,1,.36,1) both}
 @keyframes badgePop{0%{transform:scale(0)}100%{transform:scale(1)}}
 .demo-end-title{
-  font-size:24px;font-weight:900;color:#fff;margin:12px 0 6px;
+  font-size:22px;font-weight:900;color:#fff;margin:8px 0 4px;
   text-shadow:0 0 24px rgba(255,215,0,.45)}
-.demo-end-sub{font-size:13px;color:var(--text-dim);line-height:1.7;margin-bottom:4px}
+.demo-end-sub{font-size:12px;color:var(--text-dim);line-height:1.6;margin-bottom:4px}
 .demo-monster-msg{
   background:rgba(0,212,255,.07);border:1px solid rgba(0,212,255,.2);
-  border-radius:0 14px 14px 14px;padding:12px 16px;margin:10px 0 16px;
-  font-size:14px;font-weight:700;color:var(--text);line-height:1.7;text-align:left}
+  border-radius:0 14px 14px 14px;padding:10px 14px;margin:8px 0 8px;
+  font-size:13px;font-weight:700;color:var(--text);line-height:1.65;text-align:left}
 /* treasure in demo ending */
 .demo-box-btn{
   font-size:60px;background:none;border:none;cursor:pointer;
@@ -5854,33 +5854,34 @@ function openDemoEnding(){
   const stage   = document.getElementById('demo-end-stage');
   if(!overlay||!stage) return;
   overlay.classList.add('open');
-  // Render evolution phase
+  overlay.scrollTop = 0;
   const cat  = state.category||'mystery';
   const info = MONSTER_INFO[cat]||MONSTER_INFO.mystery;
   const svgContent = MONSTER_SVG[cat]||MONSTER_SVG.mystery;
   stage.innerHTML = `
-    <div class="demo-end-sparkle">✨🌟✨🌟✨</div>
+    <div style="font-size:20px;letter-spacing:6px;margin-bottom:6px;opacity:.8">✨🌟✨🌟✨</div>
     <div class="demo-evo-wrap">
       <div class="demo-evo-svg">${svgContent}</div>
       <div class="demo-evo-badge">✨ 進化！</div>
     </div>
     <div class="demo-end-title">🎉 ${DEMO_MISSION_LIMIT}ミッション制覇！</div>
-    <div class="demo-end-sub">
-      すごい探究者だ！<br>
-      ${info.name}も進化したよ！
-    </div>
     <div class="demo-monster-msg">
       「${DEMO_MISSION_LIMIT}つのミッション、一緒にがんばったね！<br>
       また一緒に冒険しよう！🌟」<br>
       <span style="font-size:11px;opacity:.6">— ${info.name}</span>
     </div>
-    <div style="margin-top:8px;font-size:13px;color:var(--gold);font-weight:700;margin-bottom:8px">
+    <div style="font-size:12px;color:var(--gold);font-weight:700;margin:10px 0 4px">
       🎁 特別な宝箱がひらける！
     </div>
-    <button class="demo-box-btn" onclick="openDemoTreasure(this)" aria-label="宝箱をひらく">📦</button>
-    <div class="demo-box-hint">タップして宝箱をひらこう！</div>
+    <button class="demo-box-btn" id="demo-box-btn" onclick="openDemoTreasure(this)" aria-label="宝箱をひらく">📦</button>
+    <div class="demo-box-hint" id="demo-box-hint">タップして宝箱をひらこう！</div>
     <div id="demo-ticket-area"></div>
   `;
+  // 宝箱ボタンが見えるようにスクロール
+  setTimeout(()=>{
+    const btn = document.getElementById('demo-box-btn');
+    if(btn) btn.scrollIntoView({behavior:'smooth', block:'center'});
+  }, 300);
   if(typeof speak==='function') speak(`${DEMO_MISSION_LIMIT}ミッション制覇！すごい！`);
 }
 

@@ -580,6 +580,21 @@ body::before{
 .equipped-badge.show{display:flex}
 .equipped-badge-coin{font-size:11px;color:var(--gold);font-weight:900;margin-left:auto}
 
+/* ── Demo expired screen ── */
+#demo-expired-overlay{
+  position:fixed;inset:0;z-index:99999;display:none;
+  flex-direction:column;align-items:center;justify-content:center;
+  background:rgba(0,2,10,.98);padding:32px 20px;text-align:center}
+#demo-expired-overlay.show{display:flex}
+.expired-icon{font-size:72px;margin-bottom:16px;
+  filter:drop-shadow(0 0 24px rgba(255,80,80,.4))}
+.expired-title{font-size:22px;font-weight:900;color:#fff;margin-bottom:10px}
+.expired-sub{font-size:14px;color:rgba(200,220,255,.7);line-height:1.8;margin-bottom:24px}
+.expired-expid{
+  font-size:11px;color:rgba(255,255,255,.3);
+  background:rgba(255,255,255,.05);border-radius:8px;
+  padding:6px 14px;letter-spacing:.1em;margin-top:8px}
+
 /* ── Demo item tutorial popup ── */
 #demo-item-tutorial{
   position:fixed;bottom:86px;left:50%;
@@ -2273,6 +2288,20 @@ body::before{
   <div class="yt-stage" id="yt-stage-content">
     <!-- JS で動的に描画 -->
   </div>
+</div>
+
+<!-- DEMO EXPIRED SCREEN -->
+<div id="demo-expired-overlay">
+  <div class="expired-icon">🔒</div>
+  <div class="expired-title">このデモは終了しました</div>
+  <div class="expired-sub">
+    ご体験いただきありがとうございました！<br>
+    正式リリースの情報は近日公開予定です。<br><br>
+    <span style="font-size:13px;color:rgba(0,212,255,.8)">
+      お問い合わせ・続報のご希望は<br>開発チームまでご連絡ください
+    </span>
+  </div>
+  <div class="expired-expid" id="expired-expid"></div>
 </div>
 
 <!-- DEMO ITEM TUTORIAL POPUP -->
@@ -5234,6 +5263,15 @@ const COIN_THRESHOLD = 30;
 // ─── DEMO MODE ──────────────────────────────────────────────────────────────
 const DEMO_MODE = true;
 const DEMO_MISSION_LIMIT = 3;
+
+// ── 実験ID・期限 (URLパラメーターで上書き可能) ──────────────────────────────
+// 使い方: ?exp=edix2025&expires=2025-05-23
+(function initDemoParams(){
+  const p = new URLSearchParams(window.location.search);
+  window.DEMO_EXP_ID      = p.get('exp')     || '';        // 実験ID
+  window.DEMO_EXPIRY_DATE = p.get('expires') || '';        // 期限 YYYY-MM-DD
+})();
+
 // ★ アンケートURLをここに貼り付けてください（Google フォームの「回答用URL」）
 const SURVEY_URL = '';
 // デモ開始時に付与するアイテム (合計コイン: 5+5+10+10=30 = COIN_THRESHOLD ちょうど)
@@ -5803,6 +5841,39 @@ function consumeEquippedItem(){
 // DEMO MODE FUNCTIONS
 // ══════════════════════════════════════════════════════════════════════════════
 
+/** 期限チェック：期限切れなら専用画面を表示して操作をブロック */
+function checkDemoExpiry(){
+  const expiry = window.DEMO_EXPIRY_DATE;
+  if(!expiry) return false; // 期限なし = 有効
+  // expires=2025-05-23 → その日の23:59:59まで有効
+  const expiryEnd = new Date(expiry + 'T23:59:59');
+  if(isNaN(expiryEnd.getTime())) return false;
+  if(new Date() <= expiryEnd) return false; // まだ有効
+
+  // 期限切れ → 表示
+  const overlay = document.getElementById('demo-expired-overlay');
+  if(overlay) overlay.classList.add('show');
+  const expid = document.getElementById('expired-expid');
+  if(expid){
+    const parts = [];
+    if(window.DEMO_EXP_ID)      parts.push(`実験ID: ${window.DEMO_EXP_ID}`);
+    if(window.DEMO_EXPIRY_DATE) parts.push(`期限: ${window.DEMO_EXPIRY_DATE}`);
+    expid.textContent = parts.join('　|　');
+  }
+  return true; // 期限切れ
+}
+
+/** アンケートURLに実験IDを付与して返す */
+function getSurveyUrl(){
+  if(!SURVEY_URL) return '';
+  const expId = window.DEMO_EXP_ID;
+  if(!expId) return SURVEY_URL;
+  // Google FormsのURLにusp=pp_urlパラメーター経由でentry.xxxを付与する代わり、
+  // 末尾に ?exp=xxx を追加（Tally等でも有効）
+  const sep = SURVEY_URL.includes('?') ? '&' : '?';
+  return `${SURVEY_URL}${sep}exp=${encodeURIComponent(expId)}`;
+}
+
 /** デモ開始アイテムを付与（インベントリが空のときだけ） */
 function injectDemoStartItems(){
   if(!DEMO_MODE) return;
@@ -5913,8 +5984,9 @@ function openDemoTreasure(btn){
   refreshTeacherYT();
   const area = document.getElementById('demo-ticket-area');
   if(!area) return;
-  const surveyBtn = SURVEY_URL
-    ? `<a class="demo-survey-btn" href="${SURVEY_URL}" target="_blank" rel="noopener">
+  const surveyHref = getSurveyUrl();
+  const surveyBtn = surveyHref
+    ? `<a class="demo-survey-btn" href="${surveyHref}" target="_blank" rel="noopener">
         📝 体験アンケートに答える（約3分）
         <span style="font-size:11px;display:block;opacity:.7;margin-top:2px">ご意見が開発の力になります！</span>
        </a>`
@@ -6393,7 +6465,9 @@ buildStars();
 applyLanguage();  // buildProfile + buildSetup も内部で呼ばれる
 refreshTopFolderBtn();
 updateTTSBtn();   // TTS toggle initial state
-showResumePanel(); // autosave resume card
+if(!checkDemoExpiry()){
+  showResumePanel(); // 期限内のみ resume card を表示
+}
 </script>
 </body>
 </html>

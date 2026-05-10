@@ -580,6 +580,109 @@ body::before{
 .equipped-badge.show{display:flex}
 .equipped-badge-coin{font-size:11px;color:var(--gold);font-weight:900;margin-left:auto}
 
+/* ── Demo item tutorial popup ── */
+#demo-item-tutorial{
+  position:fixed;bottom:86px;left:50%;
+  transform:translateX(-50%) translateY(16px);
+  z-index:9500;opacity:0;transition:all .45s cubic-bezier(.22,1,.36,1);
+  pointer-events:none;width:calc(100% - 32px);max-width:380px}
+#demo-item-tutorial.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+.demo-tutorial-card{
+  background:rgba(0,18,36,.94);border:1.5px solid rgba(255,215,0,.5);
+  border-radius:16px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px;
+  box-shadow:0 4px 32px rgba(0,0,0,.7),0 0 24px rgba(255,215,0,.12)}
+.demo-tutorial-icon{font-size:28px;flex-shrink:0;line-height:1;margin-top:2px}
+.demo-tutorial-body{flex:1}
+.demo-tutorial-title{font-size:13px;font-weight:900;color:var(--gold);margin-bottom:4px}
+.demo-tutorial-desc{font-size:12px;color:var(--text-dim);line-height:1.6}
+.demo-tutorial-close{
+  background:none;border:1px solid rgba(255,215,0,.4);border-radius:8px;
+  color:var(--gold);font-size:11px;font-weight:700;padding:4px 10px;
+  cursor:pointer;margin-top:8px;font-family:inherit}
+
+/* ── Demo ending overlay ── */
+#demo-end-overlay{
+  position:fixed;inset:0;z-index:9800;display:none;
+  flex-direction:column;align-items:center;justify-content:center;
+  background:rgba(0,2,10,.97);overflow-y:auto;padding:32px 16px}
+#demo-end-overlay.open{display:flex}
+.demo-end-stage{
+  width:100%;max-width:400px;
+  background:radial-gradient(ellipse 100% 80% at 50% 20%,rgba(0,30,60,.95),rgba(0,5,15,.98));
+  border:2px solid rgba(255,200,40,.4);border-radius:28px;
+  padding:36px 24px 28px;text-align:center;position:relative;overflow:hidden}
+.demo-end-stage::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 80% 40% at 50% 0%,rgba(255,200,40,.08),transparent 60%);
+  pointer-events:none}
+.demo-end-sparkle{font-size:26px;letter-spacing:8px;margin-bottom:4px;opacity:.8}
+/* Monster container */
+.demo-evo-wrap{position:relative;display:inline-block;margin:12px 0}
+.demo-evo-svg{width:130px;height:130px;
+  filter:drop-shadow(0 0 20px rgba(255,215,0,.55)) drop-shadow(0 0 6px rgba(255,180,0,.4));
+  animation:demoEvoFloat 2.2s ease-in-out infinite alternate}
+@keyframes demoEvoFloat{
+  0%{transform:translateY(0) scale(1)}100%{transform:translateY(-8px) scale(1.04)}}
+.demo-evo-badge{
+  position:absolute;top:-10px;right:-10px;
+  background:linear-gradient(135deg,#ffd700,#ff8c00);
+  color:#000;font-size:11px;font-weight:900;
+  padding:3px 10px;border-radius:20px;letter-spacing:.06em;
+  box-shadow:0 2px 8px rgba(255,150,0,.5);animation:badgePop .5s .3s cubic-bezier(.22,1,.36,1) both}
+@keyframes badgePop{0%{transform:scale(0)}100%{transform:scale(1)}}
+.demo-end-title{
+  font-size:24px;font-weight:900;color:#fff;margin:12px 0 6px;
+  text-shadow:0 0 24px rgba(255,215,0,.45)}
+.demo-end-sub{font-size:13px;color:var(--text-dim);line-height:1.7;margin-bottom:4px}
+.demo-monster-msg{
+  background:rgba(0,212,255,.07);border:1px solid rgba(0,212,255,.2);
+  border-radius:0 14px 14px 14px;padding:12px 16px;margin:10px 0 16px;
+  font-size:14px;font-weight:700;color:var(--text);line-height:1.7;text-align:left}
+/* treasure in demo ending */
+.demo-box-btn{
+  font-size:60px;background:none;border:none;cursor:pointer;
+  animation:boxPulse 1s ease-in-out infinite alternate;display:block;margin:0 auto}
+@keyframes boxPulse{
+  0%{transform:scale(1);filter:drop-shadow(0 0 8px rgba(255,215,0,.4))}
+  100%{transform:scale(1.1);filter:drop-shadow(0 0 24px rgba(255,215,0,.9))}}
+.demo-box-hint{font-size:12px;color:var(--text-dim);margin-top:4px;letter-spacing:.06em}
+.demo-ticket-reveal{
+  animation:ticketIn .6s cubic-bezier(.22,1,.36,1);
+  background:rgba(255,0,0,.08);border:2px solid rgba(255,60,60,.4);
+  border-radius:18px;padding:22px 16px;margin:8px 0}
+@keyframes ticketIn{0%{transform:scale(.6) rotate(-8deg);opacity:0}100%{transform:scale(1) rotate(0);opacity:1}}
+.demo-ticket-em{font-size:52px;display:block;margin-bottom:8px}
+.demo-ticket-title{font-size:18px;font-weight:900;color:#fff;margin-bottom:4px}
+.demo-ticket-sub{font-size:12px;color:var(--text-dim);line-height:1.6}
+.demo-replay-btn{
+  width:100%;padding:16px;border-radius:16px;cursor:pointer;font-family:inherit;
+  font-size:16px;font-weight:900;margin-top:16px;
+  background:linear-gradient(135deg,rgba(0,212,255,.2),rgba(0,212,255,.1));
+  border:2px solid rgba(0,212,255,.5);color:var(--cyan);
+  box-shadow:0 0 20px rgba(0,212,255,.15);transition:all .2s}
+.demo-replay-btn:active{transform:scale(.97)}
+/* Finale button on complete screen */
+.demo-finale-btn{
+  width:calc(100% - 40px);margin:14px 20px 0;display:block;
+  padding:18px 16px;border-radius:18px;cursor:pointer;font-family:inherit;
+  font-size:15px;font-weight:900;text-align:center;
+  background:linear-gradient(135deg,rgba(255,200,40,.22),rgba(255,130,20,.16));
+  border:2px solid rgba(255,200,40,.65);color:#ffd700;
+  box-shadow:0 0 28px rgba(255,200,40,.25),inset 0 1px 0 rgba(255,255,255,.08);
+  animation:demoFinaleGlow 1.4s ease-in-out infinite alternate}
+@keyframes demoFinaleGlow{
+  0%{box-shadow:0 0 16px rgba(255,200,40,.2)}
+  100%{box-shadow:0 0 36px rgba(255,200,40,.55),0 0 8px rgba(255,200,40,.4)}}
+/* demo progress bar on worldmap */
+.demo-progress-bar{
+  background:rgba(0,15,30,.8);border:1px solid rgba(255,200,40,.3);
+  border-radius:10px;padding:8px 16px;margin:8px 16px;
+  display:flex;align-items:center;gap:10px}
+.demo-progress-label{font-size:12px;color:var(--gold);font-weight:700;white-space:nowrap}
+.demo-progress-track{flex:1;height:8px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden}
+.demo-progress-fill{height:100%;background:linear-gradient(90deg,var(--gold),#ff8c00);
+  border-radius:4px;transition:width .6s cubic-bezier(.22,1,.36,1)}
+
 /* ── Minigame overlay ── */
 #minigame-overlay{
   position:fixed;inset:0;z-index:9600;display:none;
@@ -671,6 +774,56 @@ body::before{
   width:100%;margin-top:10px;padding:12px;border-radius:12px;cursor:pointer;
   font-family:inherit;font-size:14px;font-weight:900;
   background:rgba(255,80,80,.15);border:1.5px solid rgba(255,80,80,.4);color:#ff6b6b}
+
+/* ── モード切替トグル ── */
+.mode-toggle-wrap{display:flex;gap:8px;padding:14px 20px 10px}
+.mode-toggle-btn{
+  flex:1;padding:10px;border-radius:12px;cursor:pointer;font-family:inherit;
+  font-size:13px;font-weight:900;letter-spacing:.04em;transition:all .2s;border:1.5px solid var(--border);
+  background:rgba(0,15,30,.6);color:var(--text-dim)}
+.mode-toggle-btn.active-home{
+  background:rgba(0,212,255,.15);border-color:var(--cyan);color:var(--cyan);
+  box-shadow:0 0 12px rgba(0,212,255,.2)}
+.mode-toggle-btn.active-school{
+  background:rgba(80,200,80,.15);border-color:#4ade80;color:#4ade80;
+  box-shadow:0 0 12px rgba(74,222,128,.2)}
+
+/* ── 学校チケット（先生モード） ── */
+.tsec-school{background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.2)}
+.tsec-school .tsec-label{color:#4ade80}
+.school-ticket-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.school-ticket-row{
+  display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;
+  background:rgba(0,15,30,.6);border:1px solid var(--border)}
+.school-ticket-em{font-size:22px;flex-shrink:0}
+.school-ticket-info{flex:1;min-width:0}
+.school-ticket-name{font-size:11px;color:var(--text);font-weight:700;line-height:1.3}
+.school-ticket-count{font-size:18px;font-weight:900;color:#4ade80;margin-left:auto;flex-shrink:0}
+.school-ticket-toggle{
+  width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:13px;
+  border:1px solid var(--border);background:rgba(255,255,255,.05);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s}
+.school-ticket-toggle.on{background:rgba(74,222,128,.2);border-color:#4ade80;color:#4ade80}
+.school-ticket-toggle.off{color:var(--text-dim)}
+.tsec-school-request{font-size:13px;color:#4ade80;font-weight:900;margin:8px 0 4px}
+.tsec-school-approve-btn{
+  width:100%;margin-top:8px;padding:12px;border-radius:12px;cursor:pointer;
+  font-family:inherit;font-size:14px;font-weight:900;
+  background:rgba(74,222,128,.15);border:1.5px solid rgba(74,222,128,.4);color:#4ade80}
+
+/* ── おねだりオーバーレイ（学校チケット表示） ── */
+.school-tickets-list{width:100%;display:flex;flex-direction:column;gap:8px;margin:8px 0}
+.school-ticket-item{
+  display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:12px;
+  background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.2)}
+.school-ticket-item-em{font-size:28px}
+.school-ticket-item-name{font-size:13px;color:var(--text);font-weight:700;flex:1}
+.school-ticket-item-cnt{font-size:18px;font-weight:900;color:#4ade80}
+.school-request-btn{
+  width:100%;padding:16px;border-radius:14px;cursor:pointer;font-family:inherit;
+  font-size:15px;font-weight:900;color:#000;
+  background:linear-gradient(135deg,#4ade80,#16a34a);border:none;
+  box-shadow:0 0 24px rgba(74,222,128,.3);letter-spacing:.04em}
 
 /* ── Coin badge in worldmap HUD ── */
 .wmap-coin-badge{
@@ -1555,8 +1708,14 @@ body::before{
       </div>
     </div>
 
-    <!-- ⑥ YouTubeチケット -->
-    <div class="tsec tsec-yt">
+    <!-- モード切替 -->
+    <div class="mode-toggle-wrap">
+      <button class="mode-toggle-btn" id="mode-btn-home" onclick="setRewardMode('home')">🏠 おうちモード</button>
+      <button class="mode-toggle-btn" id="mode-btn-school" onclick="setRewardMode('school')">🏫 学校モード</button>
+    </div>
+
+    <!-- ⑥a おうちモード: YouTubeチケット -->
+    <div class="tsec tsec-yt" id="tsec-home-mode">
       <div class="tsec-label speakable">📺 YouTubeチケット</div>
       <div class="tsec-yt-row">
         <div class="tsec-yt-count" id="teacher-yt-count">0枚</div>
@@ -1567,6 +1726,19 @@ body::before{
       </div>
       <button class="tsec-yt-approve-btn" id="teacher-yt-approve-btn" onclick="approveYTTickets()" style="display:none">
         ✅ チケットを承認する
+      </button>
+    </div>
+
+    <!-- ⑥b 学校モード: 学校チケット -->
+    <div class="tsec tsec-school" id="tsec-school-mode" style="display:none">
+      <div class="tsec-label speakable">🏫 学校たのしいチケット</div>
+      <div style="font-size:12px;color:var(--text-dim);margin-bottom:4px">✅ 使用するチケットを選んでください</div>
+      <div class="school-ticket-grid" id="teacher-school-ticket-grid"></div>
+      <div id="teacher-school-request" style="display:none">
+        <div class="tsec-school-request">📣 先生へのおねだりが届いています！</div>
+      </div>
+      <button class="tsec-school-approve-btn" id="teacher-school-approve-btn" onclick="approveSchoolTickets()" style="display:none">
+        ✅ チケットを手渡しする
       </button>
     </div>
 
@@ -2085,15 +2257,32 @@ body::before{
   </div>
 </div>
 
-<!-- ===== YOUTUBE REQUEST OVERLAY ===== -->
+<!-- ===== おねだりオーバーレイ（home/school 共通・動的） ===== -->
 <div id="yt-request-overlay">
-  <div class="yt-stage">
-    <div class="yt-em">📺</div>
-    <div class="yt-title">YouTube時間をのばそう！</div>
-    <div class="yt-count" id="yt-ticket-count">0枚</div>
-    <div class="yt-sub">チケット1枚 = 10分延長<br>おうちの人に見せておねだりしよう！</div>
-    <button class="yt-request-btn" onclick="sendYTRequest()">📣 おねだりする！</button>
-    <button class="yt-close-btn" onclick="closeYTRequest()">とじる</button>
+  <div class="yt-stage" id="yt-stage-content">
+    <!-- JS で動的に描画 -->
+  </div>
+</div>
+
+<!-- DEMO ITEM TUTORIAL POPUP -->
+<div id="demo-item-tutorial">
+  <div class="demo-tutorial-card">
+    <div class="demo-tutorial-icon">🎒</div>
+    <div class="demo-tutorial-body">
+      <div class="demo-tutorial-title">アイテムを使ってコインをためよう！</div>
+      <div class="demo-tutorial-desc">
+        インベントリ（🎒）でアイテムをセット → ミッションをクリアすると<b style="color:var(--gold)">🪙スペシャルコイン</b>がもらえるよ！<br>
+        コインがたまったら<b style="color:var(--cyan)">ミニゲームで宝箱</b>をゲット！
+      </div>
+      <button class="demo-tutorial-close" onclick="dismissDemoTutorial()">わかった！</button>
+    </div>
+  </div>
+</div>
+
+<!-- DEMO ENDING OVERLAY -->
+<div id="demo-end-overlay">
+  <div class="demo-end-stage" id="demo-end-stage">
+    <!-- JS で動的に描画 -->
   </div>
 </div>
 
@@ -2138,6 +2327,9 @@ const state = {
   treasureBoxes: 0,      // 開封待ち宝箱数
   boxMultiplierItems: 0, // 宝箱増量アイテム枚数
   youtubeTickets: 0,     // YouTubeチケット（10分/枚）
+  rewardMode: 'home',    // 'home' | 'school'
+  schoolTickets: {},     // {ticketId: count}
+  enabledSchoolTickets: ['lunch','seat','recess'], // 先生が有効にしたチケット種別
 };
 
 // =============================================
@@ -2963,7 +3155,8 @@ function updateSetupBtn(){
 }
 function finishSetup(){
   state.setupDone=true;
-  if(state.photoUrl){buildWorldMap();goTo('worldmap');}
+  injectDemoStartItems();
+  if(state.photoUrl){buildWorldMap();goTo('worldmap');updateDemoProgress();}
   else goTo('photo');
 }
 
@@ -3232,6 +3425,7 @@ function goToWorldMap(){
   updateZoneAtm();
   buildWorldMap();
   goTo('worldmap');
+  updateDemoProgress();
 }
 
 // Zone-specific atmospheric tint for background
@@ -3617,13 +3811,22 @@ function submitAnswer(){
   spawnBurst();
   updateHUD();
   refreshTopFolderBtn();
-  setTimeout(()=>{ awardGachaTicket(); updateCoinMeter(); },300);
+  const _isDemoFinale = DEMO_MODE && state.depth >= DEMO_MISSION_LIMIT;
+  setTimeout(()=>{
+    if(_isDemoFinale){ showDemoFinaleButton(); }
+    else { awardGachaTicket(); }
+    updateCoinMeter();
+  }, 300);
+  // Item tutorial: show on first mission
+  if(DEMO_MODE && state.depth === 1){
+    showDemoItemTutorial();
+  }
 
-  if(milestone){
+  if(milestone && !_isDemoFinale){
     setTimeout(()=>showToast(milestone),600);
   }
   // Zone transition — show special button instead of auto-navigating
-  if(newZoneI>prevZoneI&&newZoneI<ZONES.length){
+  if(!_isDemoFinale && newZoneI>prevZoneI&&newZoneI<ZONES.length){
     const zone=ZONES[newZoneI];
     const wrap=document.getElementById('zone-advance-wrap');
     if(wrap){
@@ -4269,7 +4472,9 @@ async function generateAIMissions(){
 
 function skipAIAndStart(){
   state.aiQuests=[];
+  injectDemoStartItems();
   refreshMap();buildWorldMap();goTo('worldmap');
+  updateDemoProgress();
 }
 
 // ─── デモ用プリセット ──────────────────────────────────────────────────────────
@@ -5011,6 +5216,16 @@ const GACHA_ITEMS = [
 
 const COIN_THRESHOLD = 30;
 
+// ─── DEMO MODE ──────────────────────────────────────────────────────────────
+const DEMO_MODE = true;
+const DEMO_MISSION_LIMIT = 7;
+// デモ開始時に付与するアイテム (合計コイン: 5+5+10+10=30 = COIN_THRESHOLD ちょうど)
+const DEMO_START_ITEMS = [
+  {itemId:'magnify',   count:2},  // rare +5 each
+  {itemId:'compass',   count:1},  // epic +10
+  {itemId:'telescope', count:1},  // epic +10
+];
+
 // OXクイズ問題集（年齢別）
 const OX_QUESTIONS = {
   grade_1_2:[
@@ -5314,10 +5529,20 @@ function openOneBox(el){
   el.onclick=null;
   el.classList.add('opened');
   state.treasureBoxes=Math.max(0,(state.treasureBoxes||0)-1);
-  // determine reward: 80% YouTube ticket, 20% box multiplier
-  const reward=Math.random()<0.8?'youtube':'multiplier';
+  const isSchool=(state.rewardMode||'home')==='school';
+  // determine reward: 80% main ticket, 20% box multiplier
+  const reward=Math.random()<0.8?(isSchool?'school':'youtube'):'multiplier';
   let em='', title='', sub='';
-  if(reward==='youtube'){
+  if(reward==='school'){
+    // pick a random enabled school ticket
+    const enabled=(state.enabledSchoolTickets&&state.enabledSchoolTickets.length>0)
+      ? state.enabledSchoolTickets : ['lunch','seat','recess'];
+    const ticketId=enabled[Math.floor(Math.random()*enabled.length)]||'lunch';
+    const ticketDef=SCHOOL_TICKETS.find(t=>t.id===ticketId)||SCHOOL_TICKETS[0];
+    if(!state.schoolTickets) state.schoolTickets={};
+    state.schoolTickets[ticketId]=(state.schoolTickets[ticketId]||0)+1;
+    em=ticketDef.emoji; title=ticketDef.name+'チケット！'; sub='先生に見せておねだりしよう♪';
+  } else if(reward==='youtube'){
     state.youtubeTickets=(state.youtubeTickets||0)+1;
     em='🎟️'; title='YouTube +10分チケット！'; sub='おうちの人に見せておねだりしよう♪';
   } else {
@@ -5337,10 +5562,21 @@ function openOneBox(el){
       setTimeout(()=>{ rw.style.display='none'; },1200);
     } else {
       document.getElementById('tr-done-btn').style.display='';
-      // show YT request button if has tickets
-      if(state.youtubeTickets>0&&reward==='youtube'){
+      // show request button after all boxes opened
+      if(reward==='school'){
+        const totalSchool=Object.values(state.schoolTickets||{}).reduce((a,b)=>a+b,0);
+        if(totalSchool>0){
+          const btn=document.createElement('button');
+          btn.className='yt-request-btn';
+          btn.style.cssText='margin-top:8px;width:100%;border-radius:12px;padding:12px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:900;background:linear-gradient(135deg,#00bb66,#008844);border:none;color:#fff;box-shadow:0 0 16px rgba(0,200,100,.3)';
+          btn.textContent=`🏫 学校チケット ${totalSchool}枚 → 先生におねだり！`;
+          btn.onclick=()=>{closeTreasure();openYTRequest();};
+          document.querySelector('.tr-stage').appendChild(btn);
+        }
+      } else if(reward==='youtube'&&(state.youtubeTickets||0)>0){
         const btn=document.createElement('button');
-        btn.className='yt-request-btn';btn.style.cssText='margin-top:8px;width:100%;border-radius:12px;padding:12px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:900;background:linear-gradient(135deg,#ff0000,#cc0000);border:none;color:#fff;box-shadow:0 0 16px rgba(255,0,0,.3)';
+        btn.className='yt-request-btn';
+        btn.style.cssText='margin-top:8px;width:100%;border-radius:12px;padding:12px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:900;background:linear-gradient(135deg,#ff0000,#cc0000);border:none;color:#fff;box-shadow:0 0 16px rgba(255,0,0,.3)';
         btn.textContent=`📺 YouTubeチケット ${state.youtubeTickets}枚 → おねだりする！`;
         btn.onclick=()=>{closeTreasure();openYTRequest();};
         document.querySelector('.tr-stage').appendChild(btn);
@@ -5354,17 +5590,126 @@ function closeTreasure(){
   document.querySelectorAll('.tr-stage .yt-request-btn').forEach(b=>b.remove());
 }
 
-// ── YouTube おねだり ──────────────────────────────────────────────────────────
+// ── 学校チケット定義 ──────────────────────────────────────────────────────────
+const SCHOOL_TICKETS = [
+  {id:'lunch',    emoji:'🍛', name:'給食おかわり優先'},
+  {id:'seat',     emoji:'🪑', name:'好きな席チケット'},
+  {id:'recess',   emoji:'🎮', name:'休み時間+5分'},
+  {id:'homework', emoji:'📚', name:'宿題パス1問'},
+  {id:'freetime', emoji:'🎨', name:'自由制作タイム'},
+  {id:'present',  emoji:'🌟', name:'発表免除チケット'},
+];
+
+// ── モード切替 ────────────────────────────────────────────────────────────────
+function setRewardMode(mode){
+  state.rewardMode = mode;
+  saveGameState();
+  refreshTeacherModeUI();
+}
+function refreshTeacherModeUI(){
+  const mode = state.rewardMode||'home';
+  const homeSection = document.getElementById('tsec-home-mode');
+  const schoolSection = document.getElementById('tsec-school-mode');
+  const homBtn = document.getElementById('mode-btn-home');
+  const schBtn = document.getElementById('mode-btn-school');
+  if(homeSection)  homeSection.style.display  = mode==='home'?'':'none';
+  if(schoolSection) schoolSection.style.display = mode==='school'?'':'none';
+  if(homBtn){ homBtn.className='mode-toggle-btn'+(mode==='home'?' active-home':''); }
+  if(schBtn){ schBtn.className='mode-toggle-btn'+(mode==='school'?' active-school':''); }
+  if(mode==='school') renderSchoolTicketGrid();
+  else                refreshTeacherYT();
+}
+
+// ── 学校チケット先生グリッド ──────────────────────────────────────────────────
+function renderSchoolTicketGrid(){
+  const grid = document.getElementById('teacher-school-ticket-grid');
+  if(!grid) return;
+  const enabled = state.enabledSchoolTickets||[];
+  const tickets = state.schoolTickets||{};
+  grid.innerHTML = SCHOOL_TICKETS.map(t=>{
+    const isOn = enabled.includes(t.id);
+    const cnt  = tickets[t.id]||0;
+    return `<div class="school-ticket-row">
+      <div class="school-ticket-em">${t.emoji}</div>
+      <div class="school-ticket-info">
+        <div class="school-ticket-name">${t.name}</div>
+      </div>
+      <div class="school-ticket-count">${cnt}枚</div>
+      <button class="school-ticket-toggle ${isOn?'on':'off'}" onclick="toggleSchoolTicket('${t.id}')">${isOn?'✓':'✗'}</button>
+    </div>`;
+  }).join('');
+  // request notification
+  const req = document.getElementById('teacher-school-request');
+  const approveBtn = document.getElementById('teacher-school-approve-btn');
+  const hasRequest = localStorage.getItem('tomori_school_request')==='1';
+  const hasAny = Object.values(state.schoolTickets||{}).some(v=>v>0);
+  if(req) req.style.display = hasRequest?'':'none';
+  if(approveBtn) approveBtn.style.display = (hasRequest&&hasAny)?'':'none';
+}
+function toggleSchoolTicket(id){
+  const enabled = state.enabledSchoolTickets||[];
+  const idx = enabled.indexOf(id);
+  if(idx>=0) enabled.splice(idx,1);
+  else       enabled.push(id);
+  state.enabledSchoolTickets = enabled;
+  saveGameState();
+  renderSchoolTicketGrid();
+}
+function approveSchoolTickets(){
+  state.schoolTickets = {};
+  localStorage.removeItem('tomori_school_request');
+  saveGameState();
+  renderSchoolTicketGrid();
+  showToast('✅ チケットを手渡ししました！');
+}
+
+// ── おねだりオーバーレイ（home/school 共通） ─────────────────────────────────
 function openYTRequest(){
-  document.getElementById('yt-ticket-count').textContent=`${state.youtubeTickets||0}枚`;
+  const stage = document.getElementById('yt-stage-content');
+  if(!stage) return;
+  const mode = state.rewardMode||'home';
+  if(mode==='school'){
+    const tickets = state.schoolTickets||{};
+    const items = SCHOOL_TICKETS.filter(t=>(tickets[t.id]||0)>0);
+    const listHtml = items.length
+      ? items.map(t=>`<div class="school-ticket-item">
+          <div class="school-ticket-item-em">${t.emoji}</div>
+          <div class="school-ticket-item-name">${t.name}</div>
+          <div class="school-ticket-item-cnt">${tickets[t.id]}枚</div>
+        </div>`).join('')
+      : '<div style="color:var(--text-dim);font-size:13px">チケットがまだないよ！</div>';
+    stage.innerHTML=`
+      <div class="yt-em">🏫</div>
+      <div class="yt-title">学校チケットを使おう！</div>
+      <div class="school-tickets-list">${listHtml}</div>
+      <div class="yt-sub">先生に見せておねだりしよう！</div>
+      ${items.length?`<button class="school-request-btn" onclick="sendYTRequest()">📣 先生におねだりする！</button>`:''}
+      <button class="yt-close-btn" onclick="closeYTRequest()">とじる</button>`;
+  } else {
+    stage.innerHTML=`
+      <div class="yt-em">📺</div>
+      <div class="yt-title">YouTube時間をのばそう！</div>
+      <div class="yt-count">${state.youtubeTickets||0}枚</div>
+      <div class="yt-sub">チケット1枚 = 10分延長<br>おうちの人に見せておねだりしよう！</div>
+      <button class="yt-request-btn" onclick="sendYTRequest()">📣 おねだりする！</button>
+      <button class="yt-close-btn" onclick="closeYTRequest()">とじる</button>`;
+  }
   document.getElementById('yt-request-overlay').classList.add('open');
 }
 function closeYTRequest(){ document.getElementById('yt-request-overlay').classList.remove('open'); }
 function sendYTRequest(){
-  localStorage.setItem('tomori_yt_request','1');
-  closeYTRequest();
-  showToast('📣 おねだりを送ったよ！おうちの人に見せてね♪');
-  refreshTeacherYT();
+  const mode = state.rewardMode||'home';
+  if(mode==='school'){
+    localStorage.setItem('tomori_school_request','1');
+    closeYTRequest();
+    showToast('📣 先生へ送ったよ！先生に見せてね♪');
+    renderSchoolTicketGrid();
+  } else {
+    localStorage.setItem('tomori_yt_request','1');
+    closeYTRequest();
+    showToast('📣 おねだりを送ったよ！おうちの人に見せてね♪');
+    refreshTeacherYT();
+  }
 }
 
 // ── 先生モード YouTube 表示 ──────────────────────────────────────────────────
@@ -5437,6 +5782,175 @@ function consumeEquippedItem(){
   return bonus;
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// DEMO MODE FUNCTIONS
+// ══════════════════════════════════════════════════════════════════════════════
+
+/** デモ開始アイテムを付与（インベントリが空のときだけ） */
+function injectDemoStartItems(){
+  if(!DEMO_MODE) return;
+  if((state.inventory||[]).length > 0) return; // already has items
+  state.inventory = DEMO_START_ITEMS.map(d=>({itemId:d.itemId, count:d.count}));
+  saveGameState();
+}
+
+/** アイテムの使い方チュートリアルを表示（初回のみ） */
+function showDemoItemTutorial(){
+  if(!DEMO_MODE) return;
+  if(localStorage.getItem('tomori_demo_tutorial_shown')) return;
+  const el = document.getElementById('demo-item-tutorial');
+  if(!el) return;
+  setTimeout(()=>{ el.classList.add('show'); }, 600);
+  // auto-hide after 8s
+  setTimeout(()=>dismissDemoTutorial(), 8000);
+}
+
+function dismissDemoTutorial(){
+  const el = document.getElementById('demo-item-tutorial');
+  if(el) el.classList.remove('show');
+  localStorage.setItem('tomori_demo_tutorial_shown','1');
+}
+
+/** デモ用プログレスバーをワールドマップに表示 */
+function updateDemoProgress(){
+  if(!DEMO_MODE) return;
+  const existing = document.getElementById('demo-wmap-progress');
+  const wmap = document.getElementById('screen-worldmap');
+  if(!wmap) return;
+  const d = state.depth||0;
+  const pct = Math.min(d/DEMO_MISSION_LIMIT*100, 100);
+  const html = `<div class="demo-progress-bar" id="demo-wmap-progress">
+    <div class="demo-progress-label">🎮 デモ ${d}/${DEMO_MISSION_LIMIT}</div>
+    <div class="demo-progress-track"><div class="demo-progress-fill" style="width:${pct}%"></div></div>
+  </div>`;
+  if(existing){ existing.outerHTML = html; }
+  else {
+    // insert after the vprog bar
+    const vprog = wmap.querySelector('.vprog-wrap') || wmap.querySelector('.wmap-header');
+    if(vprog){ vprog.insertAdjacentHTML('afterend', html); }
+    else { wmap.insertAdjacentHTML('afterbegin', html); }
+  }
+}
+
+/** ミッション7完了後のフィナーレボタンをcompleteスクリーンに表示 */
+function showDemoFinaleButton(){
+  const wrap = document.getElementById('gacha-ticket-wrap');
+  if(!wrap) return;
+  const cat = state.category||'mystery';
+  const info = MONSTER_INFO[cat]||MONSTER_INFO.mystery;
+  wrap.innerHTML=`<div style="padding:0 20px">
+    <button class="demo-finale-btn speakable"
+      data-speak="7つのミッションをクリア！フィナーレだよ！"
+      onclick="openDemoEnding()">
+      ✨ ${DEMO_MISSION_LIMIT}ミッション達成！<br>
+      <span style="font-size:13px;opacity:.85">${info.name}が待ってる！フィナーレを見よう 🎁</span>
+    </button>
+  </div>`;
+}
+
+/** デモエンディングオーバーレイを開く */
+function openDemoEnding(){
+  const overlay = document.getElementById('demo-end-overlay');
+  const stage   = document.getElementById('demo-end-stage');
+  if(!overlay||!stage) return;
+  overlay.classList.add('open');
+  // Render evolution phase
+  const cat  = state.category||'mystery';
+  const info = MONSTER_INFO[cat]||MONSTER_INFO.mystery;
+  const svgContent = MONSTER_SVG[cat]||MONSTER_SVG.mystery;
+  stage.innerHTML = `
+    <div class="demo-end-sparkle">✨🌟✨🌟✨</div>
+    <div class="demo-evo-wrap">
+      <div class="demo-evo-svg">${svgContent}</div>
+      <div class="demo-evo-badge">✨ 進化！</div>
+    </div>
+    <div class="demo-end-title">🎉 ${DEMO_MISSION_LIMIT}ミッション制覇！</div>
+    <div class="demo-end-sub">
+      すごい探究者だ！<br>
+      ${info.name}も進化したよ！
+    </div>
+    <div class="demo-monster-msg">
+      「${DEMO_MISSION_LIMIT}つのミッション、一緒にがんばったね！<br>
+      また一緒に冒険しよう！🌟」<br>
+      <span style="font-size:11px;opacity:.6">— ${info.name}</span>
+    </div>
+    <div style="margin-top:8px;font-size:13px;color:var(--gold);font-weight:700;margin-bottom:8px">
+      🎁 特別な宝箱がひらける！
+    </div>
+    <button class="demo-box-btn" onclick="openDemoTreasure(this)" aria-label="宝箱をひらく">📦</button>
+    <div class="demo-box-hint">タップして宝箱をひらこう！</div>
+    <div id="demo-ticket-area"></div>
+  `;
+  if(typeof speak==='function') speak(`${DEMO_MISSION_LIMIT}ミッション制覇！すごい！`);
+}
+
+/** デモ宝箱を開ける（guaranteed YouTube ticket） */
+function openDemoTreasure(btn){
+  btn.style.display='none';
+  const hint = btn.nextElementSibling;
+  if(hint) hint.style.display='none';
+  // Award YouTube ticket
+  state.youtubeTickets = (state.youtubeTickets||0)+1;
+  saveGameState();
+  refreshTeacherYT();
+  const area = document.getElementById('demo-ticket-area');
+  if(!area) return;
+  area.innerHTML=`
+    <div class="demo-ticket-reveal">
+      <span class="demo-ticket-em">🎟️</span>
+      <div class="demo-ticket-title">YouTube +10分チケット！</div>
+      <div class="demo-ticket-sub">
+        おうちの人に見せておねだりしよう♪<br>
+        保護者モードから承認できます
+      </div>
+    </div>
+    <button class="demo-replay-btn" onclick="resetForDemo()">
+      🔄 もう一度あそぶ！
+    </button>
+  `;
+  if(typeof speak==='function') speak('YouTubeじゅっぷんえんちょうチケットゲット！');
+  // Confetti burst
+  if(typeof spawnBurst==='function') spawnBurst();
+}
+
+/** デモリセット：状態を初期化してスタート画面へ */
+function resetForDemo(){
+  document.getElementById('demo-end-overlay').classList.remove('open');
+  // Reset all state
+  state.trait          = null;
+  state.mood           = 'ok';
+  state.age            = null;
+  state.photoUrl       = null;
+  state.category       = 'mystery';
+  state.depth          = 0;
+  state.xp             = 0;
+  state.setupDone      = false;
+  state.currentQuest   = null;
+  state.completedIds   = [];
+  state.answer         = null;
+  state.choiceSelected = null;
+  state.zonePhotos     = {};
+  state.zoneCategories = {};
+  state.pendingZoneIdx = null;
+  state.aiQuests       = [];
+  state.photoDescription = '';
+  state.lastAnswer     = null;
+  state.photoBase64    = null;
+  state.photoMimeType  = null;
+  state.gachaTickets   = 0;
+  state.inventory      = [];
+  state.equippedItem   = null;
+  state.specialCoins   = 0;
+  state.treasureBoxes  = 0;
+  state.boxMultiplierItems = 0;
+  // Keep youtube tickets and school tickets (reward of the demo)
+  // Reset demo tutorial so it shows again next playthrough
+  localStorage.removeItem('tomori_demo_tutorial_shown');
+  localStorage.removeItem('tomori_save');
+  goTo('top');
+  showToast('🔄 リセットしたよ！またあそんでね 👋');
+}
+
 // ── 先生モード起動時に呼ぶ ──────────────────────────────────────────────────
 const _origOpenTeacher = typeof openTeacherMode==='function' ? openTeacherMode : null;
 
@@ -5471,6 +5985,9 @@ function saveGameState(){
       treasureBoxes: state.treasureBoxes||0,
       boxMultiplierItems: state.boxMultiplierItems||0,
       youtubeTickets: state.youtubeTickets||0,
+      rewardMode: state.rewardMode||'home',
+      schoolTickets: state.schoolTickets||{},
+      enabledSchoolTickets: state.enabledSchoolTickets||['lunch','seat','recess'],
       aiQuests: (state.aiQuests||[]).slice(0,5).map(q=>({
         id:q.id, type:q.type, title:q.title, em:q.em,
         prompt:q.prompt, ans:q.ans, ch:q.ch||null,
@@ -5610,11 +6127,16 @@ function resumeAdventure(){
   state.treasureBoxes     = save.treasureBoxes||0;
   state.boxMultiplierItems= save.boxMultiplierItems||0;
   state.youtubeTickets    = save.youtubeTickets||0;
+  state.rewardMode        = save.rewardMode||'home';
+  state.schoolTickets     = save.schoolTickets||{};
+  state.enabledSchoolTickets = save.enabledSchoolTickets||['lunch','seat','recess'];
   state.setupDone = true;
+  injectDemoStartItems(); // デモ: アイテム未所持なら付与
   applyLanguage();
   buildWorldMap();
   refreshMap();
   goTo('worldmap');
+  updateDemoProgress();
 }
 
 function newAdventureFromSave(){

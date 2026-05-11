@@ -5920,18 +5920,31 @@ function updateDemoProgress(){
   }
 }
 
-/** ミッション7完了後のフィナーレボタンをcompleteスクリーンに表示 */
+/** フィナーレボタンをcompleteスクリーンに表示し、不要なUIを非表示 */
 function showDemoFinaleButton(){
   const wrap = document.getElementById('gacha-ticket-wrap');
   if(!wrap) return;
   const cat = state.category||'mystery';
   const info = MONSTER_INFO[cat]||MONSTER_INFO.mystery;
+
+  // ── 次ミッション提案・マップボタン・コインメーターを隠す ──
+  const aiWrap = document.getElementById('ai-suggest-wrap');
+  if(aiWrap) aiWrap.innerHTML = '';
+  const completeBtns = document.querySelector('#screen-complete .complete-btns');
+  if(completeBtns) completeBtns.style.display = 'none';
+  const coinWrap = document.getElementById('complete-coin-wrap');
+  if(coinWrap) coinWrap.style.display = 'none';
+  const mgWrap = document.getElementById('complete-minigame-wrap');
+  if(mgWrap) mgWrap.innerHTML = '';
+  const zoneWrap = document.getElementById('zone-advance-wrap');
+  if(zoneWrap) zoneWrap.innerHTML = '';
+
   wrap.innerHTML=`<div style="padding:0 20px">
     <button class="demo-finale-btn speakable"
-      data-speak="7つのミッションをクリア！フィナーレだよ！"
+      data-speak="${DEMO_MISSION_LIMIT}つのミッションをクリア！フィナーレだよ！"
       onclick="openDemoEnding()">
       ✨ ${DEMO_MISSION_LIMIT}ミッション達成！<br>
-      <span style="font-size:13px;opacity:.85">${info.name}が待ってる！フィナーレを見よう 🎁</span>
+      <span style="font-size:13px;opacity:.85">${info.name}が待ってる！宝箱をひらこう 🎁</span>
     </button>
   </div>`;
 }
@@ -5973,17 +5986,46 @@ function openDemoEnding(){
   if(typeof speak==='function') speak(`${DEMO_MISSION_LIMIT}ミッション制覇！すごい！`);
 }
 
-/** デモ宝箱を開ける（guaranteed YouTube ticket） */
+// ── デモ宝箱のランダムご褒美テーブル ─────────────────────────────────────────
+const DEMO_BOX_REWARDS = [
+  { em:'🎟️', title:'YouTube +10分チケット！',   sub:'おうちの人に見せておねだりしよう♪',     weight:3 },
+  { em:'🍩', title:'おやつ増量チケット！',        sub:'今日のおやつ、ちょっと多めにしてもらおう！', weight:2 },
+  { em:'🍜', title:'夕飯メニューリクエスト券！',  sub:'今夜のごはん、好きなものをリクエストしよう！', weight:2 },
+  { em:'📋', title:'お手伝い免除チケット！',      sub:'今日の家のお手伝い1回パス！',           weight:2 },
+  { em:'🛏️', title:'寝る時間+15分チケット！',   sub:'今夜だけ少し夜ふかしできるよ！',         weight:2 },
+  { em:'🎮', title:'ゲーム時間+30分チケット！',  sub:'今日のゲーム、ちょっと長めにしてもらおう！', weight:2 },
+  { em:'🍦', title:'デザート追加チケット！',      sub:'夕ごはんのあとにデザートをおねだりしよう♪', weight:2 },
+  { em:'🚿', title:'お風呂さぼりチケット！',      sub:'今日は頭を洗わなくてもいいかも！？',       weight:1 },
+];
+
+function pickDemoReward(){
+  const total = DEMO_BOX_REWARDS.reduce((s,r)=>s+r.weight, 0);
+  let r = Math.random() * total;
+  for(const reward of DEMO_BOX_REWARDS){
+    r -= reward.weight;
+    if(r <= 0) return reward;
+  }
+  return DEMO_BOX_REWARDS[0];
+}
+
+/** デモ宝箱を開ける（ランダムご褒美） */
 function openDemoTreasure(btn){
   btn.style.display='none';
   const hint = btn.nextElementSibling;
   if(hint) hint.style.display='none';
-  // Award YouTube ticket
-  state.youtubeTickets = (state.youtubeTickets||0)+1;
-  saveGameState();
-  refreshTeacherYT();
+
+  // ランダムご褒美を選ぶ
+  const reward = pickDemoReward();
+  // YouTube チケットなら state にも記録
+  if(reward.em === '🎟️'){
+    state.youtubeTickets = (state.youtubeTickets||0)+1;
+    saveGameState();
+    refreshTeacherYT();
+  }
+
   const area = document.getElementById('demo-ticket-area');
   if(!area) return;
+
   const surveyHref = getSurveyUrl();
   const surveyBtn = surveyHref
     ? `<a class="demo-survey-btn" href="${surveyHref}" target="_blank" rel="noopener">
@@ -5991,23 +6033,21 @@ function openDemoTreasure(btn){
         <span style="font-size:11px;display:block;opacity:.7;margin-top:2px">ご意見が開発の力になります！</span>
        </a>`
     : '';
+
   area.innerHTML=`
     <div class="demo-ticket-reveal">
-      <span class="demo-ticket-em">🎟️</span>
-      <div class="demo-ticket-title">YouTube +10分チケット！</div>
-      <div class="demo-ticket-sub">
-        おうちの人に見せておねだりしよう♪<br>
-        保護者モードから承認できます
-      </div>
+      <span class="demo-ticket-em">${reward.em}</span>
+      <div class="demo-ticket-title">${reward.title}</div>
+      <div class="demo-ticket-sub">${reward.sub}</div>
     </div>
     ${surveyBtn}
     <button class="demo-replay-btn" onclick="resetForDemo()">
       🔄 もう一度あそぶ！
     </button>
   `;
-  if(typeof speak==='function') speak('YouTubeじゅっぷんえんちょうチケットゲット！');
+
+  if(typeof speak==='function') speak(reward.title);
   if(typeof spawnBurst==='function') spawnBurst();
-  // アンケートボタンが見えるようにスクロール
   setTimeout(()=>{ area.scrollIntoView({behavior:'smooth',block:'nearest'}); }, 400);
 }
 

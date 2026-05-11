@@ -6052,14 +6052,37 @@ function resetForDemo(){
   localStorage.removeItem('tomori_yt_request');
   localStorage.removeItem('tomori_school_request');
 
-  // ── UI リセット ────────────────────────────────────
-  // リジュームパネルを非表示・スタートボタンを再表示
+  // ── UI 完全リセット ───────────────────────────────
+  // すべてのオーバーレイを強制クローズ
+  [
+    'demo-end-overlay','treasure-overlay','gacha-overlay',
+    'minigame-overlay','yt-request-overlay','teacher-overlay',
+    'demo-item-tutorial','demo-expired-overlay'
+  ].forEach(id => {
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.classList.remove('open','show');
+    el.style.display = 'none';            // 確実に非表示
+    setTimeout(()=>{ el.style.display=''; }, 50); // CSSクラスに戻す
+  });
+
+  // リジュームパネル削除・スタートボタン復元
   const resumePanel = document.getElementById('resume-panel');
   if(resumePanel) resumePanel.remove();
   const startBtn = document.getElementById('start-main-btn');
-  if(startBtn) startBtn.style.display = '';
+  if(startBtn){
+    startBtn.style.display   = '';
+    startBtn.disabled        = false;
+    startBtn.style.pointerEvents = '';
+  }
+
+  // HUD・バッジをリセット
+  updateHUD();
+  updateEquippedBadge();
+  updateCoinMeter();
 
   goTo('top');
+  window.scrollTo(0, 0);
 }
 
 // ── 先生モード起動時に呼ぶ ──────────────────────────────────────────────────

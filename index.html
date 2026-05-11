@@ -3770,8 +3770,15 @@ function submitAnswer(){
   // 継続価値：履歴保存 → 振り返り・進化コメント・ジャーニートリガー表示
   if(state.answer) saveAnswerHistory(state.answer, q);
   const completionN = getCompletionCount();
-  renderReflection(completionN);
-  renderJourneyTrigger(completionN);
+  const _isFinale = DEMO_MODE && state.depth >= DEMO_MISSION_LIMIT;
+  if(!_isFinale){
+    renderReflection(completionN);
+    renderJourneyTrigger(completionN);
+  } else {
+    // フィナーレ時は提案・振り返り・進化コメントをすべてクリア
+    ['complete-reflection','complete-evolution','complete-journey-trigger','ai-suggest-wrap']
+      .forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=''; });
+  }
 
   // フィードバック + 次のミッション候補（全クエスト対象）
   const pool=q.aiGenerated
@@ -3779,7 +3786,7 @@ function submitAnswer(){
     :(COMPLETION_MESSAGES[q.type]||['よくやった！']);
   const msgEl=document.getElementById('complete-msg');
   msgEl.textContent=pool[Math.floor(Math.random()*pool.length)];
-  renderAISuggestionsLoading();
+  if(!_isFinale) renderAISuggestionsLoading();
 
   if(state.lastAnswer){
     msgEl.innerHTML='<span style="opacity:.45;font-size:.85rem">✨ AIがあなたの答えを読んでいます…</span>';
@@ -3808,7 +3815,9 @@ function submitAnswer(){
           setTimeout(()=>{ titleEl.textContent=data.adventurerTitle; titleEl.style.opacity='1'; },300);
         }
       }
-      renderAISuggestions(q, data);
+      // フィナーレ時は次のミッション提案を描画しない
+      if(!_isFinale) renderAISuggestions(q, data);
+      else document.getElementById('ai-suggest-wrap').innerHTML='';
     })
     .catch(()=>{
       msgEl.textContent=pool[0];

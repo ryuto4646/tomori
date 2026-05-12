@@ -1015,10 +1015,55 @@ body::before{
   cursor:pointer;font-family:inherit;transition:all .12s}
 .pin-key:active{transform:scale(.92);background:rgba(155,93,255,.18);border-color:var(--purple)}
 .pin-key-empty{visibility:hidden;pointer-events:none}
-.pin-cancel{margin-top:22px;font-size:13px;color:var(--text-dim);cursor:pointer;
+.pin-cancel{margin-top:16px;font-size:13px;color:var(--text-dim);cursor:pointer;
   padding:8px 22px;border-radius:10px;border:1px solid var(--border);background:transparent;
   font-family:inherit;transition:all .18s}
 .pin-cancel:active{border-color:var(--cyan);color:var(--cyan)}
+.pin-forgot-link{margin-top:10px;font-size:12px;color:rgba(155,93,255,.8);cursor:pointer;
+  background:none;border:none;font-family:inherit;text-decoration:underline;padding:4px 8px}
+/* 秘密の質問オーバーレイ */
+#secret-q-overlay{
+  position:fixed;inset:0;z-index:10100;display:none;
+  flex-direction:column;align-items:center;justify-content:center;
+  background:rgba(0,2,10,.96);padding:24px 20px}
+#secret-q-overlay.open{display:flex}
+.sq-card{width:100%;max-width:380px;background:rgba(0,15,30,.95);
+  border:1.5px solid rgba(155,93,255,.35);border-radius:20px;padding:24px 20px;text-align:center}
+.sq-title{font-size:17px;font-weight:900;color:#fff;margin-bottom:6px}
+.sq-sub{font-size:12px;color:var(--text-dim);margin-bottom:18px;line-height:1.6}
+.sq-question{font-size:15px;font-weight:700;color:var(--cyan);
+  background:rgba(0,212,255,.07);border:1px solid rgba(0,212,255,.2);
+  border-radius:10px;padding:10px 14px;margin-bottom:14px}
+.sq-input{width:100%;padding:12px 14px;border-radius:12px;font-size:15px;
+  background:rgba(255,255,255,.06);border:1.5px solid rgba(155,93,255,.3);
+  color:#fff;font-family:inherit;outline:none;margin-bottom:8px}
+.sq-input:focus{border-color:rgba(155,93,255,.7)}
+.sq-error{font-size:12px;color:#ff6b6b;min-height:18px;margin-bottom:8px}
+.sq-btn{width:100%;padding:13px;border-radius:12px;cursor:pointer;font-family:inherit;
+  font-size:14px;font-weight:900;border:none;margin-top:4px;
+  background:linear-gradient(135deg,rgba(155,93,255,.85),rgba(100,50,200,.85));color:#fff}
+.sq-btn-primary{background:linear-gradient(135deg,rgba(155,93,255,.8),rgba(100,50,200,.8));color:#fff}
+.sq-btn-cancel{background:transparent;border:1px solid var(--border)!important;
+  color:var(--text-dim);margin-top:8px;border:none}
+.sq-select{width:100%;padding:11px 14px;border-radius:12px;font-size:13px;
+  background:rgba(255,255,255,.06);border:1.5px solid rgba(155,93,255,.3);
+  color:#fff;font-family:inherit;outline:none;margin-bottom:10px}
+.sq-select option{background:#0a0520;color:#fff}
+/* sq alias classes used by JS */
+.sq-q{font-size:15px;font-weight:700;color:var(--cyan);
+  background:rgba(0,212,255,.07);border:1px solid rgba(0,212,255,.2);
+  border-radius:12px;padding:12px 14px;margin-bottom:14px;text-align:left;line-height:1.5}
+.sq-label{font-size:12px;color:var(--text-dim);text-align:left;margin-bottom:6px;font-weight:700}
+.sq-err{font-size:12px;color:#ff6b6b;min-height:18px;margin-bottom:8px}
+.sq-cancel{width:100%;padding:11px;border-radius:12px;cursor:pointer;font-family:inherit;
+  font-size:13px;font-weight:700;background:transparent;
+  border:1px solid rgba(155,93,255,.3);color:rgba(200,180,255,.7);margin-top:8px}
+/* 先生モード設定セクション */
+.tsec-settings-btn{
+  width:100%;padding:11px;border-radius:12px;cursor:pointer;font-family:inherit;
+  font-size:13px;font-weight:700;background:rgba(155,93,255,.1);
+  border:1px solid rgba(155,93,255,.3);color:rgba(200,180,255,.9);
+  margin-bottom:8px;text-align:left;display:flex;align-items:center;gap:8px}
 .pin-badge{display:inline-block;font-size:9px;letter-spacing:.18em;
   background:rgba(155,93,255,.18);border:1px solid rgba(155,93,255,.35);
   color:#c084fc;padding:3px 10px;border-radius:20px;font-weight:700;margin-bottom:18px}
@@ -1673,6 +1718,14 @@ body::before{
     <button class="pin-key" onclick="pinBackspace()" style="font-size:18px">⌫</button>
   </div>
   <button class="pin-cancel" onclick="closePinOverlay()">キャンセル</button>
+  <button class="pin-forgot-link" id="pin-forgot-link" onclick="openForgotPin()" style="display:none">
+    🔑 パスコードを忘れた場合
+  </button>
+</div>
+
+<!-- ===== SECRET QUESTION OVERLAY ===== -->
+<div id="secret-q-overlay">
+  <div class="sq-card" id="sq-card"><!-- JS で描画 --></div>
 </div>
 
 <!-- ===== TEACHER OVERLAY ===== -->
@@ -1772,6 +1825,17 @@ body::before{
     <div class="teacher-privacy-note speakable">
       🔒 すべてのデータはこの端末のみに保存されています<br>
       評価ではなく、理解と支援のための記録です
+    </div>
+
+    <!-- セキュリティ設定 -->
+    <div class="tsec" style="margin-top:8px">
+      <div class="tsec-label">🔐 セキュリティ設定</div>
+      <button class="tsec-settings-btn" onclick="openChangePinFlow()">
+        🔑 パスコードを変更する
+      </button>
+      <button class="tsec-settings-btn" onclick="openSetSecretQ()">
+        ❓ 秘密の質問を設定・変更する
+      </button>
     </div>
 
     <!-- データリセット -->
@@ -3790,7 +3854,7 @@ function submitAnswer(){
 
   if(state.lastAnswer){
     msgEl.innerHTML='<span style="opacity:.45;font-size:.85rem">✨ AIがあなたの答えを読んでいます…</span>';
-    fetch(`${TOMORI_API_URL}/feedback`,{
+    fetchWithTimeout(`${TOMORI_API_URL}/feedback`,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
@@ -3803,7 +3867,7 @@ function submitAnswer(){
         language:state.language||'ja',
         depthLevel:state.depth||0,
       }),
-    })
+    }, 10000)
     .then(r=>r.json())
     .then(data=>{
       if(data.message) msgEl.textContent=data.message;
@@ -4467,7 +4531,7 @@ async function generateAIMissions(){
       state.photoBase64='data:image/jpeg;base64,'+enc.base64;
     }
 
-    const res=await fetch(`${TOMORI_API_URL}/generate`,{
+    const res=await fetchWithTimeout(`${TOMORI_API_URL}/generate`,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
@@ -4559,6 +4623,14 @@ function usePreset(i){
   const btn=document.getElementById('photo-next-btn');
   btn.disabled=false;
   btn.textContent=`🗺️「${p.name}」で冒険スタート！`;
+}
+
+// ─── fetch タイムアウトヘルパー（デモ同時接続対策） ──────────────────────────
+function fetchWithTimeout(url, opts, ms=10000){
+  const ctrl = new AbortController();
+  const timer = setTimeout(()=>ctrl.abort(), ms);
+  return fetch(url, {...opts, signal:ctrl.signal})
+    .finally(()=>clearTimeout(timer));
 }
 
 // ─── AI suggest: ローディング表示 ─────────────────────────────────────────────
@@ -4656,7 +4728,7 @@ async function generateAINextMission(completedQuest){
       photoBase64=enc.base64;photoMimeType=enc.mimeType;
     }
 
-    const res=await fetch(`${TOMORI_API_URL}/generate-next`,{
+    const res=await fetchWithTimeout(`${TOMORI_API_URL}/generate-next`,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
@@ -4909,7 +4981,7 @@ async function openJourneyScreen(){
   const { thinkingTags, interestTags } = getAccumulatedTags();
 
   try{
-    const res = await fetch(`${TOMORI_API_URL}/journey`,{
+    const res = await fetchWithTimeout(`${TOMORI_API_URL}/journey`,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
@@ -5012,13 +5084,21 @@ function openPinOverlay(mode){
   _updatePinDots();
   document.getElementById('pin-error').textContent = '';
   const titles = {
-    verify: ['先生・支援者モード',      'パスコードを入力してください'],
-    set1:   ['パスコードを設定してください', '4桁の数字を決めてください'],
-    set2:   ['もう一度入力してください',  '同じ数字を入力してください'],
+    verify:     ['先生・支援者モード',        'パスコードを入力してください'],
+    set1:       ['パスコードを設定してください', '4桁の数字を決めてください'],
+    set2:       ['もう一度入力してください',    '同じ数字を入力してください'],
+    change_old: ['パスコードを変更する',        '現在のパスコードを入力してください'],
+    change_new1:['新しいパスコード',            '新しい4桁の数字を決めてください'],
+    change_new2:['新しいパスコード（確認）',    '同じ数字をもう一度入力してください'],
+    forgot_new1:['新しいパスコードを設定',      '新しい4桁の数字を決めてください'],
+    forgot_new2:['新しいパスコード（確認）',    '同じ数字をもう一度入力してください'],
   };
   const [t, s] = titles[mode] || titles.verify;
   document.getElementById('pin-title').textContent = t;
   document.getElementById('pin-sub').textContent   = s;
+  // 「忘れた場合」リンクは verify モードのみ表示
+  const fl = document.getElementById('pin-forgot-link');
+  if(fl) fl.style.display = (mode==='verify' && localStorage.getItem('tomori_secret_q')) ? '' : 'none';
   document.getElementById('pin-overlay').style.display = 'flex';
 }
 
@@ -5071,7 +5151,158 @@ function _pinSubmit(){
       _pinBuf = ''; _pinTemp = ''; _updatePinDots();
       setTimeout(()=>openPinOverlay('set1'), 1600);
     }
+  } else if(_pinMode === 'change_old'){
+    if(_pinBuf === localStorage.getItem('tomori_teacher_pin')){
+      openPinOverlay('change_new1');
+    } else {
+      errEl.textContent = '現在のパスコードが違います。';
+      _pinBuf = ''; _updatePinDots();
+    }
+  } else if(_pinMode === 'change_new1'){
+    const _saved = _pinBuf;
+    openPinOverlay('change_new2');
+    _pinTemp = _saved;
+  } else if(_pinMode === 'change_new2'){
+    if(_pinBuf === _pinTemp){
+      localStorage.setItem('tomori_teacher_pin', _pinBuf);
+      closePinOverlay();
+      _showSqToast('✅ パスコードを変更しました！');
+      setTimeout(()=>_openTeacherDashboard(), 800);
+    } else {
+      errEl.textContent = '一致しません。最初からやり直してください。';
+      _pinBuf = ''; _pinTemp = ''; _updatePinDots();
+      setTimeout(()=>openPinOverlay('change_new1'), 1600);
+    }
+  } else if(_pinMode === 'forgot_new1'){
+    const _saved = _pinBuf;
+    openPinOverlay('forgot_new2');
+    _pinTemp = _saved;
+  } else if(_pinMode === 'forgot_new2'){
+    if(_pinBuf === _pinTemp){
+      localStorage.setItem('tomori_teacher_pin', _pinBuf);
+      closePinOverlay();
+      _showSqToast('✅ 新しいパスコードを設定しました！');
+      setTimeout(()=>_openTeacherDashboard(), 800);
+    } else {
+      errEl.textContent = '一致しません。最初からやり直してください。';
+      _pinBuf = ''; _pinTemp = ''; _updatePinDots();
+      setTimeout(()=>openPinOverlay('forgot_new1'), 1600);
+    }
   }
+}
+
+// ── パスコード変更フロー ──────────────────────────────────────────
+function openChangePinFlow(){
+  // teacher overlay を閉じてから PIN overlay を開く
+  document.getElementById('teacher-overlay').style.display = 'none';
+  openPinOverlay('change_old');
+}
+
+// ── 秘密の質問：忘れたときの照合フロー ──────────────────────────
+const SECRET_QUESTIONS = [
+  'うまれたまちの名前は？',
+  'はじめて飼ったペットの名前は？',
+  'いちばん好きな食べ物は？',
+  'おかあさんのなまえは？',
+  'すきなアニメのキャラクターは？',
+  'はじめて入った習い事は？',
+  'いちばん好きな色は？',
+];
+
+function openForgotPin(){
+  const q = localStorage.getItem('tomori_secret_q');
+  if(!q){ alert('秘密の質問が設定されていません。'); return; }
+  document.getElementById('sq-card').innerHTML = `
+    <div class="sq-title">🔑 パスコードを忘れた場合</div>
+    <div class="sq-sub">秘密の質問に答えて、新しいパスコードを設定できます。</div>
+    <div class="sq-q">${q}</div>
+    <input class="sq-input" id="sq-answer-input" type="text"
+      placeholder="ひらがな・カタカナ・漢字 どれでも OK"
+      autocomplete="off" autocorrect="off" spellcheck="false">
+    <div class="sq-err" id="sq-err"></div>
+    <button class="sq-btn" onclick="submitForgotAnswer()">✅ 確認する</button>
+    <button class="sq-cancel" onclick="closeSecretQOverlay()">キャンセル</button>
+  `;
+  document.getElementById('secret-q-overlay').classList.add('open');
+  setTimeout(()=>{ const el=document.getElementById('sq-answer-input'); if(el) el.focus(); }, 200);
+}
+
+function submitForgotAnswer(){
+  const input = document.getElementById('sq-answer-input');
+  const errEl = document.getElementById('sq-err');
+  if(!input) return;
+  const answer = input.value.trim();
+  const stored = localStorage.getItem('tomori_secret_a') || '';
+  if(!answer){ errEl.textContent = '答えを入力してください。'; return; }
+  if(answer === stored){
+    closeSecretQOverlay();
+    openPinOverlay('forgot_new1');
+  } else {
+    errEl.textContent = '答えが違います。もう一度確認してください。';
+    input.value = '';
+    input.focus();
+  }
+}
+
+// ── 秘密の質問：設定・変更フロー ─────────────────────────────────
+function openSetSecretQ(){
+  const currentQ = localStorage.getItem('tomori_secret_q') || '';
+  const currentA = localStorage.getItem('tomori_secret_a') || '';
+  const options = SECRET_QUESTIONS.map((q, i) =>
+    `<option value="${q}" ${q === currentQ ? 'selected' : ''}>${q}</option>`
+  ).join('');
+  document.getElementById('sq-card').innerHTML = `
+    <div class="sq-title">❓ 秘密の質問を設定</div>
+    <div class="sq-sub">パスコードを忘れたときに使います。<br>答えは自分だけが知っているものにしよう。</div>
+    <div class="sq-label">質問を選んでください</div>
+    <select class="sq-select" id="sq-question-select">
+      ${options}
+    </select>
+    <div class="sq-label" style="margin-top:14px">答えを入力</div>
+    <input class="sq-input" id="sq-set-answer" type="text"
+      value="${currentA}"
+      placeholder="答えを入力してください"
+      autocomplete="off" autocorrect="off" spellcheck="false">
+    <div class="sq-err" id="sq-err"></div>
+    <button class="sq-btn" onclick="saveSecretQ()">💾 保存する</button>
+    <button class="sq-cancel" onclick="closeSecretQOverlay()">キャンセル</button>
+  `;
+  document.getElementById('secret-q-overlay').classList.add('open');
+}
+
+function saveSecretQ(){
+  const sel = document.getElementById('sq-question-select');
+  const input = document.getElementById('sq-set-answer');
+  const errEl = document.getElementById('sq-err');
+  if(!sel || !input) return;
+  const q = sel.value.trim();
+  const a = input.value.trim();
+  if(!a){ errEl.textContent = '答えを入力してください。'; return; }
+  localStorage.setItem('tomori_secret_q', q);
+  localStorage.setItem('tomori_secret_a', a);
+  closeSecretQOverlay();
+  _showSqToast('✅ 秘密の質問を保存しました！');
+}
+
+function closeSecretQOverlay(){
+  document.getElementById('secret-q-overlay').classList.remove('open');
+}
+
+function _showSqToast(msg){
+  let t = document.getElementById('sq-toast');
+  if(!t){
+    t = document.createElement('div');
+    t.id = 'sq-toast';
+    t.style.cssText = `position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
+      background:rgba(0,200,120,.92);color:#fff;font-size:14px;font-weight:700;
+      padding:10px 22px;border-radius:40px;z-index:99999;
+      box-shadow:0 4px 20px rgba(0,0,0,.35);pointer-events:none;`;
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>{ t.style.opacity='0'; }, 2200);
 }
 
 // ── ダッシュボード ────────────────────────────
@@ -5161,7 +5392,7 @@ async function _loadTeacherAI(history){
   }
 
   try{
-    const res = await fetch(`${TOMORI_API_URL}/teacher`,{
+    const res = await fetchWithTimeout(`${TOMORI_API_URL}/teacher`,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({

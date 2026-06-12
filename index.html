@@ -595,6 +595,56 @@ body::before{
   background:rgba(255,255,255,.05);border-radius:8px;
   padding:6px 14px;letter-spacing:.1em;margin-top:8px}
 
+/* ══════════════════════════════════════════════
+   TUTORIAL BUBBLE SYSTEM
+   ══════════════════════════════════════════════ */
+/* 吹き出し本体 */
+.tut-bubble{
+  position:fixed;z-index:9200;
+  background:rgba(0,12,30,.96);
+  border:1.5px solid rgba(0,212,255,.55);
+  border-radius:14px;
+  padding:10px 14px 8px;
+  font-size:13px;line-height:1.6;
+  color:#e8f4ff;text-align:center;
+  max-width:190px;
+  box-shadow:0 4px 28px rgba(0,0,0,.55),0 0 14px rgba(0,212,255,.12);
+  pointer-events:auto;cursor:pointer;
+  animation:tutPop .28s cubic-bezier(.22,1,.36,1) both}
+@keyframes tutPop{0%{transform:scale(.65);opacity:0}100%{transform:scale(1);opacity:1}}
+.tut-bubble .tut-hint{font-size:10px;color:rgba(150,200,255,.5);margin-top:5px;letter-spacing:.04em}
+/* 矢印（CSS triangle）— 向きは「バブルからターゲットへ」 */
+.tut-bubble::after{content:'';position:absolute;width:0;height:0;border:8px solid transparent}
+.tut-bubble.arr-down::after{
+  bottom:-16px;left:50%;transform:translateX(-50%);
+  border-top-color:rgba(0,212,255,.55)}
+.tut-bubble.arr-up::after{
+  top:-16px;left:50%;transform:translateX(-50%);
+  border-bottom-color:rgba(0,212,255,.55)}
+.tut-bubble.arr-right::after{
+  right:-16px;top:50%;transform:translateY(-50%);
+  border-left-color:rgba(0,212,255,.55)}
+.tut-bubble.arr-left::after{
+  left:-16px;top:50%;transform:translateY(-50%);
+  border-right-color:rgba(0,212,255,.55)}
+
+/* ❓ ヘルプトグルボタン */
+#tut-toggle-btn{
+  position:fixed;bottom:22px;right:14px;z-index:8100;
+  width:46px;height:46px;border-radius:50%;
+  background:rgba(0,212,255,.12);
+  border:1.5px solid rgba(0,212,255,.3);
+  color:rgba(0,212,255,.7);font-size:20px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 20px rgba(0,0,0,.45);
+  transition:all .25s;-webkit-tap-highlight-color:transparent}
+#tut-toggle-btn:active{transform:scale(.88)}
+#tut-toggle-btn.on{
+  background:rgba(0,212,255,.25);
+  border-color:rgba(0,212,255,.7);
+  color:var(--cyan);
+  box-shadow:0 0 18px rgba(0,212,255,.35),0 4px 20px rgba(0,0,0,.45)}
+
 /* ── Demo item tutorial popup ── */
 #demo-item-tutorial{
   position:fixed;bottom:86px;left:50%;
@@ -2396,6 +2446,9 @@ body::before{
 <!-- Home floating button -->
 <button id="home-btn" onclick="goHome()" aria-label="スタートページへ戻る" title="スタートページへ">🏠</button>
 
+<!-- Tutorial help toggle button -->
+<button id="tut-toggle-btn" onclick="toggleTutorial()" aria-label="ヘルプ表示切替" title="チュートリアル">❓</button>
+
 <div class="depth-toast" id="depth-toast"></div>
 <input type="file" id="file-input" accept="image/*"
        style="display:none" onchange="handlePhoto(this)">
@@ -3144,6 +3197,123 @@ const COMPLETION_MESSAGES = {
 };
 
 // =============================================
+// TUTORIAL BUBBLE SYSTEM
+// =============================================
+const TUTO_TIPS = {
+  'screen-top': [
+    { sel:'#start-main-btn',  pos:'above', text:'⚔️ 冒険をはじめる\nここをタップしてスタート！' },
+    { sel:'#top-folder-btn',  pos:'above', text:'📚 雑学フォルダ\nクリアした知識がたまるよ' },
+  ],
+  'screen-worldmap': [
+    { sel:'.village-enter-btn', pos:'above', text:'🚶 タップして\n今のゾーンへ出発！' },
+    { sel:'.minimap',           pos:'left',  text:'🗺 世界マップ\nゾーンをクリアするほど広がるよ' },
+    { sel:'#wmap-xp',           pos:'below', text:'⭐ スター\nたまるとレベルアップ！' },
+  ],
+  'screen-map': [
+    { sel:'.hud-xp',    pos:'below', text:'⭐ ミッションクリアで\nスターが増えるよ！' },
+    { sel:'.hud-thumb', pos:'below', text:'📷 写真はここを\nタップして変えられるよ' },
+  ],
+  'screen-complete': [
+    { sel:'#complete-coin-wrap', pos:'above', text:'🪙 コインがたまると\n宝箱が出現！', delay:600 },
+    { sel:'#gacha-ticket-wrap',  pos:'above', text:'🎴 ガチャチケット！\nアイテムをゲットできるよ', delay:900 },
+  ],
+  'screen-profile': [
+    { sel:'.age-grid',   pos:'below', text:'学年を選んでね！\n君に合った問題にするよ' },
+  ],
+};
+
+const TUT_KEY = 'tomori_tut_off';
+
+function isTutOn(){ return !localStorage.getItem(TUT_KEY); }
+
+function toggleTutorial(){
+  if(isTutOn()){
+    localStorage.setItem(TUT_KEY,'1');
+    clearTutBubbles();
+  } else {
+    localStorage.removeItem(TUT_KEY);
+    // 現在のスクリーンのヒントを即表示
+    const active = document.querySelector('.screen.active');
+    if(active) showTutForScreen(active.id);
+  }
+  _updateTutBtn();
+}
+
+function _updateTutBtn(){
+  const btn = document.getElementById('tut-toggle-btn');
+  if(!btn) return;
+  btn.classList.toggle('on', isTutOn());
+  btn.title = isTutOn() ? 'ヘルプON（タップでOFF）' : 'ヘルプOFF（タップでON）';
+}
+
+function showTutForScreen(screenId){
+  clearTutBubbles();
+  if(!isTutOn()) return;
+  const tips = TUTO_TIPS[screenId];
+  if(!tips) return;
+  tips.forEach((tip, i) => {
+    const delay = tip.delay || (i * 220);
+    setTimeout(() => {
+      const el = document.querySelector(tip.sel);
+      if(!el) return;
+      _showTutBubble(el, tip.text, tip.pos);
+    }, delay);
+  });
+}
+
+function _showTutBubble(targetEl, text, pos){
+  const rect = targetEl.getBoundingClientRect();
+  if(rect.width === 0 && rect.height === 0) return; // 非表示要素はスキップ
+
+  const bubble = document.createElement('div');
+  // pos はバブルの位置（above=上, below=下, left=左, right=右）
+  // 矢印はターゲットの方向を向く
+  const arrowClass = { above:'arr-down', below:'arr-up', left:'arr-right', right:'arr-left' }[pos] || 'arr-down';
+  bubble.className = `tut-bubble ${arrowClass}`;
+  bubble.innerHTML = text.replace(/\n/g,'<br>') + '<div class="tut-hint">タップで閉じる</div>';
+  document.body.appendChild(bubble);
+
+  // サイズ確定後に位置計算
+  requestAnimationFrame(() => {
+    const bw = bubble.offsetWidth;
+    const bh = bubble.offsetHeight;
+    const gap = 14; // ターゲットとの隙間
+    let top, left;
+
+    if(pos === 'above'){
+      top  = rect.top - bh - gap;
+      left = rect.left + rect.width/2 - bw/2;
+    } else if(pos === 'below'){
+      top  = rect.bottom + gap;
+      left = rect.left + rect.width/2 - bw/2;
+    } else if(pos === 'left'){
+      top  = rect.top + rect.height/2 - bh/2;
+      left = rect.left - bw - gap;
+    } else { // right
+      top  = rect.top + rect.height/2 - bh/2;
+      left = rect.right + gap;
+    }
+    // 画面外クランプ
+    left = Math.max(8, Math.min(left, window.innerWidth  - bw - 8));
+    top  = Math.max(8, Math.min(top,  window.innerHeight - bh - 8));
+
+    bubble.style.left = left + 'px';
+    bubble.style.top  = top  + 'px';
+  });
+
+  bubble.addEventListener('click', () => bubble.remove(), { once:true });
+  const timer = setTimeout(() => { if(bubble.parentNode) bubble.remove(); }, 5000);
+  bubble._timer = timer;
+}
+
+function clearTutBubbles(){
+  document.querySelectorAll('.tut-bubble').forEach(b => {
+    clearTimeout(b._timer);
+    b.remove();
+  });
+}
+
+// =============================================
 // SCREEN NAVIGATION
 // =============================================
 function goTo(id){
@@ -3160,6 +3330,9 @@ function goTo(id){
   // home button: トップ画面では非表示、それ以外は表示
   const homeBtn=document.getElementById('home-btn');
   if(homeBtn) homeBtn.classList.toggle('visible', id!=='top');
+
+  // tutorial bubbles
+  setTimeout(()=> showTutForScreen('screen-'+id), 350);
 }
 
 // =============================================
@@ -6767,9 +6940,12 @@ buildStars();
 applyLanguage();  // buildProfile + buildSetup も内部で呼ばれる
 refreshTopFolderBtn();
 updateTTSBtn();   // TTS toggle initial state
+_updateTutBtn();  // チュートリアルボタン初期状態
 if(!checkDemoExpiry()){
   showResumePanel(); // 期限内のみ resume card を表示
 }
+// 初回訪問: トップ画面のチュートリアルを自動表示
+setTimeout(()=> showTutForScreen('screen-top'), 800);
 </script>
 </body>
 </html>

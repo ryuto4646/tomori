@@ -1578,6 +1578,50 @@ body::before{
   border-radius:6px;
   animation:speakRipple .9s ease-in-out infinite}
 
+/* ══ STREAK ══════════════════════════════════════════════════════════ */
+.streak-top-badge{
+  font-size:15px;font-weight:900;color:#fb923c;margin-top:10px;
+  text-shadow:0 0 12px rgba(251,146,60,.6);
+  animation:float 2.4s ease-in-out infinite;letter-spacing:.04em}
+.streak-hud{
+  font-size:11px;font-weight:900;color:#fb923c;margin-top:3px;
+  letter-spacing:.04em;text-shadow:0 0 6px rgba(251,146,60,.5)}
+
+/* ══ SOCRATIC FOLLOW-UP ══════════════════════════════════════════════ */
+.socratic-card{
+  margin:10px 20px 4px;
+  background:rgba(5,22,10,.94);
+  border:1.5px solid rgba(250,204,21,.32);
+  border-radius:16px;padding:16px 18px;
+  opacity:0;transform:translateY(12px);
+  transition:opacity .45s cubic-bezier(.22,1,.36,1),transform .45s cubic-bezier(.22,1,.36,1)}
+.socratic-card.visible{opacity:1;transform:translateY(0)}
+.socratic-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.socratic-icon{font-size:22px;line-height:1}
+.socratic-label{font-size:9px;letter-spacing:.2em;color:rgba(250,204,21,.7);
+  font-weight:900;text-transform:uppercase}
+.socratic-q{font-size:15px;font-weight:700;color:var(--text);line-height:1.55;margin-bottom:12px}
+.socratic-ta{
+  width:100%;background:rgba(255,255,255,.05);
+  border:1px solid rgba(250,204,21,.2);border-radius:10px;
+  color:var(--text);font-family:inherit;font-size:13px;
+  padding:10px 12px;resize:none;outline:none;
+  line-height:1.6;margin-bottom:10px}
+.socratic-ta:focus{border-color:rgba(250,204,21,.5);box-shadow:0 0 8px rgba(250,204,21,.15)}
+.socratic-btns{display:flex;gap:8px}
+.socratic-btn-skip{
+  flex:1;padding:11px;border-radius:10px;cursor:pointer;font-family:inherit;
+  font-size:13px;font-weight:700;
+  background:rgba(250,204,21,.1);border:1px solid rgba(250,204,21,.28);
+  color:rgba(250,204,21,.85);transition:all .2s}
+.socratic-btn-skip:active{transform:scale(.97)}
+.socratic-btn-send{
+  padding:11px 18px;border-radius:10px;cursor:pointer;font-family:inherit;
+  font-size:13px;font-weight:700;
+  background:rgba(250,204,21,.22);border:1px solid rgba(250,204,21,.5);
+  color:#facc15;transition:all .2s}
+.socratic-btn-send:active{transform:scale(.97)}
+
 /* ── VOICE MIC BUTTON ── */
 .mic-guide{
   font-size:12px;color:rgba(74,222,128,.7);text-align:center;
@@ -1681,6 +1725,7 @@ body::before{
   </div>
   <div class="top-cta">
     <button class="btn btn-primary" id="start-main-btn" onclick="goTo('profile')">⚔️ 冒険をはじめる</button>
+    <div id="streak-badge-top" class="streak-top-badge" style="display:none"></div>
     <button class="top-teacher-btn" onclick="openTeacherMode()">
       👩‍🏫 先生・支援者の方はこちら
     </button>
@@ -2100,6 +2145,9 @@ body::before{
     </div>
   </div>
 
+  <!-- ソクラテス深掘り質問（動的） -->
+  <div id="socratic-wrap"></div>
+
   <!-- AI-suggested next missions (always shown) -->
   <div id="ai-suggest-wrap"></div>
 
@@ -2217,6 +2265,7 @@ body::before{
     <div class="village-hud">
       <div class="village-hud-xp speakable" id="wmap-xp">⭐ 0</div>
       <div class="village-hud-depth speakable" id="wmap-depth">深度 0</div>
+      <div class="streak-hud" id="streak-badge-wmap" style="display:none"></div>
     </div>
 
     <!-- CENTER: uploaded photo (main focus) -->
@@ -3263,6 +3312,157 @@ function clearTutBubbles(){
 }
 
 // =============================================
+// STREAK SYSTEM
+// =============================================
+const STREAK_KEY = 'tomori_streak';
+
+function getTodayStr(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function getStreakData(){
+  try{ return JSON.parse(localStorage.getItem(STREAK_KEY)) || {count:0, lastDate:null}; }
+  catch{ return {count:0, lastDate:null}; }
+}
+
+function getYesterdayStr(){
+  const y = new Date(); y.setDate(y.getDate()-1);
+  return `${y.getFullYear()}-${String(y.getMonth()+1).padStart(2,'0')}-${String(y.getDate()).padStart(2,'0')}`;
+}
+
+function checkStreakRisk(){
+  const d = getStreakData();
+  if(!d.lastDate || d.count === 0) return 'new';
+  const today = getTodayStr();
+  if(d.lastDate === today) return 'alive';
+  if(d.lastDate === getYesterdayStr()) return 'at_risk';
+  return 'broken';
+}
+
+function updateStreakOnComplete(){
+  const today = getTodayStr();
+  const d = getStreakData();
+  if(d.lastDate === today) return d.count; // 今日すでにやった
+  const isConsec = d.lastDate === getYesterdayStr();
+  d.count = isConsec ? (d.count||0) + 1 : 1;
+  d.lastDate = today;
+  localStorage.setItem(STREAK_KEY, JSON.stringify(d));
+  return d.count;
+}
+
+function refreshStreakUI(){
+  const d = getStreakData();
+  const count = d.count || 0;
+  // トップ画面バッジ
+  const top = document.getElementById('streak-badge-top');
+  if(top){
+    top.style.display = count >= 2 ? '' : 'none';
+    top.textContent = `🔥 ${count}日連続！`;
+  }
+  // ワールドマップHUD
+  const wmap = document.getElementById('streak-badge-wmap');
+  if(wmap){
+    wmap.style.display = count >= 1 ? '' : 'none';
+    wmap.textContent = `🔥 ${count}日`;
+  }
+}
+
+function showStreakCelebration(count){
+  const msg =
+    count === 1  ? '🔥 連続記録スタート！毎日続けよう！' :
+    count === 3  ? '🔥🔥 3日連続達成！すごい！' :
+    count === 7  ? '🔥🔥🔥 1週間連続！！天才！' :
+    count === 14 ? '⚡ 2週間連続！！伝説の探究者！' :
+    count === 30 ? '🏆 1ヶ月連続！！！殿堂入り！' :
+    `🔥 ${count}日連続！`;
+  showToast(msg);
+  refreshStreakUI();
+}
+
+function checkStreakWarning(){
+  const status = checkStreakRisk();
+  if(status === 'at_risk'){
+    setTimeout(()=> showToast('⚡ 今日やらないと🔥連続記録が途切れるよ！'), 1800);
+  }
+}
+
+// =============================================
+// SOCRATIC FOLLOW-UP — ソクラテス式深掘り質問
+// =============================================
+const SOCRATIC_Q = {
+  shift:   ['もし逆の立場だったら、どう感じる？', '別の人はどう思うかな？', 'もし逆だったらどうなる？'],
+  connect: ['なぜそれが繋がると思ったの？', '似てるものって他にもある？'],
+  create:  ['もっとびっくりするアイデアはある？', 'もし何でもできたとしたら？', 'さらに大きくしたらどうなる？'],
+  explore: ['一番「なんで！？」と思ったのはどこ？', 'もっと知りたいことはある？'],
+  reflect: ['それはいつから気づいてたの？', 'どんな気持ちがしたか教えて？'],
+};
+const SOCRATIC_DEFAULT = ['なぜそう思ったの？', 'ひとつだけ理由を教えて？', '違う答えがあるとしたら？'];
+const SOCRATIC_STORAGE = 'tomori_socratics';
+
+function renderSocraticQuestion(questType){
+  const wrap = document.getElementById('socratic-wrap');
+  if(!wrap) return;
+  const pool = SOCRATIC_Q[questType] || SOCRATIC_DEFAULT;
+  const q = pool[Math.floor(Math.random() * pool.length)];
+
+  wrap.innerHTML = `
+    <div class="socratic-card" id="socratic-card">
+      <div class="socratic-header">
+        <div class="socratic-icon">🦉</div>
+        <div class="socratic-label">もう少し深掘り！</div>
+      </div>
+      <div class="socratic-q speakable">${q}</div>
+      <textarea class="socratic-ta" id="socratic-ta" rows="2"
+        placeholder="ここに書いてもいいし、心の中で考えるだけでもOK…"></textarea>
+      <div class="socratic-btns">
+        <button class="socratic-btn-skip" onclick="dismissSocratic()">💭 考えた！</button>
+        <button class="socratic-btn-send" onclick="sendSocratic('${q.replace(/'/g,"\\'")}')">送る →</button>
+      </div>
+    </div>`;
+
+  setTimeout(()=>{
+    const card = document.getElementById('socratic-card');
+    if(card) card.classList.add('visible');
+  }, 200);
+}
+
+function dismissSocratic(){
+  const wrap = document.getElementById('socratic-wrap');
+  if(!wrap) return;
+  const card = wrap.querySelector('.socratic-card');
+  if(card){
+    card.style.opacity = '0';
+    card.style.transform = 'translateY(8px)';
+  }
+  setTimeout(()=>{ if(wrap) wrap.innerHTML = ''; }, 350);
+  showToast('🦉 よく考えたね！');
+}
+
+function sendSocratic(question){
+  const ta = document.getElementById('socratic-ta');
+  const answer = ta ? ta.value.trim() : '';
+  if(answer){
+    try{
+      const list = JSON.parse(localStorage.getItem(SOCRATIC_STORAGE)||'[]');
+      list.push({ q: question, a: answer, depth: state.depth, date: Date.now() });
+      localStorage.setItem(SOCRATIC_STORAGE, JSON.stringify(list.slice(-60)));
+    }catch{}
+    showToast('🦉 深く考えてくれてありがとう！+5⭐');
+    state.xp = (state.xp||0) + 5;
+    updateHUD();
+  } else {
+    showToast('🦉 よく考えたね！');
+  }
+  const wrap = document.getElementById('socratic-wrap');
+  if(wrap){
+    const card = wrap.querySelector('.socratic-card');
+    if(card){ card.style.opacity='0'; card.style.transform='translateY(8px)'; }
+    setTimeout(()=>{ if(wrap) wrap.innerHTML=''; }, 350);
+  }
+}
+
+// =============================================
 // CTA PULSE — 次の導線ガイド
 // =============================================
 function pulseCTA(el){
@@ -4045,8 +4245,12 @@ function submitAnswer(){
         }
       }
       // フィナーレ時は次のミッション提案を描画しない
-      if(!_isFinale) renderAISuggestions(q, data);
-      else document.getElementById('ai-suggest-wrap').innerHTML='';
+      if(!_isFinale){
+        renderSocraticQuestion(q.type);
+        renderAISuggestions(q, data);
+      } else {
+        document.getElementById('ai-suggest-wrap').innerHTML='';
+      }
     })
     .catch(()=>{
       clearInterval(_thinkTimer);
@@ -4054,6 +4258,7 @@ function submitAnswer(){
       const titleEl=document.getElementById('complete-title');
       if(titleEl){ const fb=['探索者','発見者','想像者','冒険者','考察者']; titleEl.textContent=fb[state.depth%fb.length]; }
       document.getElementById('ai-suggest-wrap').innerHTML='';
+      if(!_isFinale) renderSocraticQuestion(q.type);
     });
   } else {
     const fallbacks=['探索者','発見者','想像者','冒険者','考察者'];
@@ -4084,6 +4289,9 @@ function submitAnswer(){
   goTo('complete');
   spawnBurst();
   updateHUD();
+  // ストリーク更新
+  const _newStreak = updateStreakOnComplete();
+  setTimeout(()=> showStreakCelebration(_newStreak), 1200);
   const _isDemoFinale = DEMO_MODE && state.depth >= DEMO_MISSION_LIMIT;
   setTimeout(()=>{
     if(_isDemoFinale){
@@ -6327,7 +6535,7 @@ function resetForDemo(){
   [
     'demo-end-overlay','treasure-overlay','gacha-overlay',
     'minigame-overlay','yt-request-overlay','teacher-overlay',
-    'demo-item-tutorial','demo-expired-overlay'
+    'demo-item-tutorial','demo-expired-overlay','socratic-wrap'
   ].forEach(id => {
     const el = document.getElementById(id);
     if(!el) return;
@@ -6758,6 +6966,8 @@ buildStars();
 applyLanguage();  // buildProfile + buildSetup も内部で呼ばれる
 updateTTSBtn();   // TTS toggle initial state
 _updateTutBtn();  // チュートリアルボタン初期状態
+refreshStreakUI(); // ストリークバッジ初期表示
+checkStreakWarning(); // 途切れ警告
 if(!checkDemoExpiry()){
   showResumePanel(); // 期限内のみ resume card を表示
 }

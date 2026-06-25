@@ -1578,6 +1578,36 @@ body::before{
   border-radius:6px;
   animation:speakRipple .9s ease-in-out infinite}
 
+/* ══ 転移学習ヒント ════════════════════════════════════════════════════ */
+.transfer-hint{
+  margin:0 20px 4px;padding:11px 14px;
+  background:rgba(250,204,21,.07);
+  border:1px solid rgba(250,204,21,.25);
+  border-radius:12px;
+  animation:cardIn .4s cubic-bezier(.22,1,.36,1) both}
+.transfer-label{font-size:9px;letter-spacing:.18em;color:rgba(250,204,21,.7);
+  font-weight:900;text-transform:uppercase;margin-bottom:5px}
+.transfer-text{font-size:13px;color:var(--text-dim);line-height:1.6}
+.transfer-text b{color:var(--text);font-weight:700}
+
+/* ══ 思考タイプカード ══════════════════════════════════════════════════ */
+.thinking-type-card{
+  margin:8px 20px 0;
+  border-radius:14px;padding:14px 16px;
+  display:flex;align-items:center;gap:14px;
+  animation:cardIn .4s cubic-bezier(.22,1,.36,1) both}
+.tt-em{font-size:32px;flex-shrink:0;filter:drop-shadow(0 0 8px currentColor)}
+.tt-body{flex:1}
+.tt-badge{font-size:9px;letter-spacing:.18em;font-weight:900;
+  text-transform:uppercase;margin-bottom:4px;opacity:.75}
+.tt-label{font-size:17px;font-weight:900;color:var(--text)}
+.tt-desc{font-size:12px;color:var(--text-dim);margin-top:3px;line-height:1.5}
+
+/* ══ プロセス称賛（complete-subtitle） ════════════════════════════════ */
+.complete-subtitle.process{
+  font-size:13px;color:rgba(74,222,128,.85);
+  margin-top:6px;font-weight:700;letter-spacing:.02em}
+
 /* ══ STREAK ══════════════════════════════════════════════════════════ */
 .streak-top-badge{
   font-size:15px;font-weight:900;color:#fb923c;margin-top:10px;
@@ -2101,6 +2131,9 @@ body::before{
     <div class="companion-bubble speakable" id="companion-msg"></div>
   </div>
 
+  <!-- 転移学習：前回の探究との接続ヒント -->
+  <div id="transfer-hint-wrap"></div>
+
   <div class="mission-body">
     <div class="mission-prompt speakable" id="mission-prompt"></div>
     <div id="answer-area"></div>
@@ -2125,6 +2158,9 @@ body::before{
     <div class="complete-title speakable" id="complete-title">すごい！</div>
     <div class="complete-subtitle speakable" id="complete-subtitle"></div>
   </div>
+
+  <!-- 思考タイプ可視化カード -->
+  <div id="thinking-type-wrap"></div>
 
   <div class="complete-companion">
     <div class="complete-svg" id="complete-companion-svg"></div>
@@ -3312,6 +3348,67 @@ function clearTutBubbles(){
 }
 
 // =============================================
+// 転移学習 — 昨日との接続ヒント
+// =============================================
+function renderTransferHint(currentQ){
+  const wrap = document.getElementById('transfer-hint-wrap');
+  if(!wrap) return;
+  const history = getAnswerHistory();
+  if(history.length < 1){ wrap.innerHTML=''; return; }
+  const prev = history[history.length - 1];
+  if(!prev || !prev.title || prev.title === currentQ.title){ wrap.innerHTML=''; return; }
+  wrap.innerHTML = `
+    <div class="transfer-hint">
+      <div class="transfer-label">🔗 前回の探究から</div>
+      <div class="transfer-text">「<b>${escH(prev.title)}</b>」について考えてたね。<br>今日の問いと何か繋がるかも？</div>
+    </div>`;
+}
+
+// =============================================
+// プロセス称賛 — 答えではなく「考え方」を褒める
+// =============================================
+const PROCESS_PRAISE = {
+  shift:   ['別の角度から見る力が輝いた！', '視点をひっくり返せた！それが思考の核心！', '逆から見る習慣、本物の思考力！'],
+  connect: ['バラバラなものを繋げた！それが発見の才能！', 'つながりを見つける目が育ってる！', '関連を見つける力、最高！'],
+  create:  ['ゼロから生み出した！創造力が爆発してる！', '「ないもの」を作る力、本物！', '誰も考えなかったことを考えた！'],
+  explore: ['深く追いかける力がすごい！', '「なぜ？」を止めない探究心！', 'もっと知りたがる力が才能！'],
+  reflect: ['自分の中をのぞける力がある！', '内省できる人は本当に強い！', '自分を知ることが思考の土台！'],
+};
+const PROCESS_DEFAULT = ['考えること自体がすごい！', 'その問い方、最高！', '思考プロセスが光った！'];
+
+function getProcessPraise(questType){
+  const pool = PROCESS_PRAISE[questType] || PROCESS_DEFAULT;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+// =============================================
+// 思考タイプ可視化
+// =============================================
+const THINKING_TYPE = {
+  shift:   { em:'🔄', label:'視点転換型',  desc:'別の角度から世界を見る力',        color:'rgba(250,204,21,', border:'rgba(250,204,21,.3)', bg:'rgba(250,204,21,.08)' },
+  connect: { em:'🔗', label:'関連発見型',  desc:'バラバラなものをつなげる力',       color:'rgba(74,222,128,',  border:'rgba(74,222,128,.3)', bg:'rgba(74,222,128,.08)' },
+  create:  { em:'✨', label:'創造型',     desc:'ゼロから新しいものを生み出す力',    color:'rgba(251,146,60,',  border:'rgba(251,146,60,.3)', bg:'rgba(251,146,60,.08)' },
+  explore: { em:'🔭', label:'探究型',     desc:'深く深くとことん追いかける力',      color:'rgba(163,230,53,',  border:'rgba(163,230,53,.3)', bg:'rgba(163,230,53,.08)' },
+  reflect: { em:'🪞', label:'内省型',     desc:'自分の心と思考を見つめる力',        color:'rgba(134,239,172,', border:'rgba(134,239,172,.3)', bg:'rgba(134,239,172,.08)' },
+};
+
+function renderThinkingType(questType){
+  const wrap = document.getElementById('thinking-type-wrap');
+  if(!wrap) return;
+  const t = THINKING_TYPE[questType];
+  if(!t){ wrap.innerHTML=''; return; }
+  wrap.innerHTML = `
+    <div class="thinking-type-card" style="background:${t.bg};border:1.5px solid ${t.border}">
+      <div class="tt-em" style="color:${t.color}1)">${t.em}</div>
+      <div class="tt-body">
+        <div class="tt-badge" style="color:${t.color}.75)">今日の思考タイプ</div>
+        <div class="tt-label">${t.label}</div>
+        <div class="tt-desc">${t.desc}</div>
+      </div>
+    </div>`;
+}
+
+// =============================================
 // STREAK SYSTEM
 // =============================================
 const STREAK_KEY = 'tomori_streak';
@@ -4088,6 +4185,9 @@ function renderMission(q){
   document.getElementById('companion-msg').innerHTML=
     `<b>${info.name}</b>より：${introFn(q)}`;
 
+  // 転移学習ヒント
+  renderTransferHint(q);
+
   // prompt
   document.getElementById('mission-prompt').textContent=q.prompt;
 
@@ -4289,6 +4389,13 @@ function submitAnswer(){
   goTo('complete');
   spawnBurst();
   updateHUD();
+
+  // 思考タイプ可視化
+  renderThinkingType(q.type);
+  // プロセス称賛（complete-subtitle に反映）
+  const subEl = document.getElementById('complete-subtitle');
+  if(subEl){ subEl.textContent = getProcessPraise(q.type); subEl.className='complete-subtitle process'; }
+
   // ストリーク更新
   const _newStreak = updateStreakOnComplete();
   setTimeout(()=> showStreakCelebration(_newStreak), 1200);

@@ -3805,22 +3805,33 @@ function refreshMap(){
 // =============================================
 
 // Scene images per zone (multiple = random pick, cached per session)
+const _V = 'images/village/';
+const _KIDS  = [
+  _V+'hyn_elf_kids_playing_with_dragon_in_the_village_pale_tone_fun_8c430f0a-6eee-458b-8483-f1dcb4c2dfdc_0.png',
+  _V+'hyn_elf_kids_playing_with_dragon_in_the_village_pale_tone_fun_8c430f0a-6eee-458b-8483-f1dcb4c2dfdc_1.png',
+  _V+'hyn_elf_kids_playing_with_dragon_in_the_village_pale_tone_fun_8c430f0a-6eee-458b-8483-f1dcb4c2dfdc_3.png',
+];
+const _ELF   = [
+  _V+'hyn_friendly_high_elf_village_pale_tone_dragon_--profile_l63y_4c68b1d1-4a02-4bd7-a5c7-077751c73787_0.png',
+  _V+'hyn_friendly_high_elf_village_pale_tone_dragon_--profile_l63y_4c68b1d1-4a02-4bd7-a5c7-077751c73787_2.png',
+  _V+'hyn_friendly_high_elf_village_pale_tone_dragon_--profile_l63y_7bd57dbf-b158-4f16-83c3-4f5e594c690b_1.png',
+];
+const _WHITE = [
+  _V+'hyn_white_elf_village_pale_tone_--profile_l63ybsq_--v_8.1_2348a1f8-bd37-4d15-981a-a8d62af98bdd_3.png',
+  _V+'hyn_white_elf_village_pale_tone_--profile_l63ybsq_--v_8.1_cd12549f-9533-4313-9e49-9993d39ca24e_0.png',
+  _V+'hyn_white_elf_village_pale_tone_--profile_l63ybsq_--v_8.1_e1ef693f-86fd-4322-95d4-6120e27d6c8e_3.png',
+];
+const _DGN   = [
+  _V+'hyn_elf_dangeon_pale_tone_not_dangerous_--profile_l63ybsq_--v_85edb8a3-d29f-4d2c-a7a7-7e77852becac_0.png',
+  _V+'hyn_elf_dangeon_pale_tone_not_dangerous_--profile_l63ybsq_--v_85edb8a3-d29f-4d2c-a7a7-7e77852becac_1.png',
+];
 const ZONE_SCENES = {
-  village: [
-    'images/village/village_01.jpg.png',
-    'images/village/village_02.jpg.png',
-    'images/village/village_03.jpg.png',
-    'images/village/village_04.jpg.png',
-    'images/village/village_05.jpg.png',
-    'images/village/village_06.jpg.png',
-    'images/village/village_07.jpg.png',
-    'images/village/village_08.jpg.png',
-  ],
-  forest:   ['images/village/village_01.jpg.png'],
-  mountain: ['images/village/village_02.jpg.png'],
-  sea:      ['images/village/village_03.jpg.png'],
-  city:     ['images/village/village_04.jpg.png'],
-  stars:    ['images/village/village_05.jpg.png'],
+  village:  [..._KIDS, ..._ELF, ..._WHITE],
+  forest:   _KIDS,
+  mountain: [..._DGN, _WHITE[0]],
+  sea:      _WHITE,
+  city:     _ELF,
+  stars:    [_WHITE[1], _WHITE[2], _DGN[0]],
 };
 const _sceneCache = {};
 
@@ -5084,8 +5095,14 @@ async function generateAINextMission(completedQuest){
 // =============================================
 // images/ フォルダに画像を追加するだけで自動的に候補になる
 const BG_IMAGES = [
-  'images/bg-adventure-field.png',
-  'images/bg-adventure-field2.png',
+  'images/hyn_elf_kids_playing_with_dragon_in_the_village_pale_tone_fun_8c430f0a-6eee-458b-8483-f1dcb4c2dfdc_0.png',
+  'images/hyn_elf_kids_playing_with_dragon_in_the_village_pale_tone_fun_8c430f0a-6eee-458b-8483-f1dcb4c2dfdc_1.png',
+  'images/hyn_elf_kids_playing_with_dragon_in_the_village_pale_tone_fun_8c430f0a-6eee-458b-8483-f1dcb4c2dfdc_3.png',
+  'images/hyn_friendly_high_elf_village_pale_tone_dragon_--profile_l63y_4c68b1d1-4a02-4bd7-a5c7-077751c73787_0.png',
+  'images/hyn_friendly_high_elf_village_pale_tone_dragon_--profile_l63y_4c68b1d1-4a02-4bd7-a5c7-077751c73787_2.png',
+  'images/hyn_white_elf_village_pale_tone_--profile_l63ybsq_--v_8.1_2348a1f8-bd37-4d15-981a-a8d62af98bdd_3.png',
+  'images/hyn_white_elf_village_pale_tone_--profile_l63ybsq_--v_8.1_cd12549f-9533-4313-9e49-9993d39ca24e_0.png',
+  'images/hyn_white_elf_village_pale_tone_--profile_l63ybsq_--v_8.1_e1ef693f-86fd-4322-95d4-6120e27d6c8e_3.png',
 ];
 
 function setRandomBackground(){

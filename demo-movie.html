@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>TOMORI — Demo Movie</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --g:#16a34a;--gl:#4ade80;--gold:#d97706;--amber:#fb923c;
+  --dark:#0f2218;--dark2:#162d1c;
+  --text-dark:#0f2218;--text-mid:#374151;--text-dim:#6b7280;
+  --card-light:rgba(240,253,244,.92);
+}
+body{
+  width:100vw;height:100vh;overflow:hidden;
+  font-family:'Hiragino Kaku Gothic Pro','Hiragino Sans',Meiryo,'Yu Gothic',sans-serif;
+  background:linear-gradient(135deg,#ffffff 0%,#f0fdf4 45%,#ecfdf5 100%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  cursor:pointer;user-select:none;
+}
+
+/* ── LAYOUT ── */
+.stage{
+  display:flex;align-items:center;justify-content:center;
+  gap:70px;width:100%;padding:28px 80px 20px;
+}
+
+/* ── LEFT: feature text ── */
+.fp{
+  width:400px;flex-shrink:0;
+  opacity:0;transform:translateX(-20px);
+  transition:opacity .55s ease,transform .55s ease;
+}
+.fp.on{opacity:1;transform:none}
+.fb{
+  display:inline-block;font-size:14px;letter-spacing:.18em;font-weight:700;
+  color:#fff;background:var(--g);
+  text-transform:uppercase;padding:5px 14px;border-radius:20px;margin-bottom:18px;
+}
+.ft{
+  font-size:52px;font-weight:900;color:var(--text-dark);
+  line-height:1.15;margin-bottom:18px;white-space:pre-line;
+  letter-spacing:-.02em;
+}
+.fd{
+  font-size:19px;color:var(--text-mid);line-height:1.85;
+  white-space:pre-line;border-left:4px solid #bbf7d0;padding-left:16px;
+}
+
+/* ── RIGHT: Phone ── */
+.phone{
+  position:relative;width:340px;height:720px;
+  background:var(--dark2);border-radius:48px;
+  border:3px solid rgba(22,163,74,.45);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.8),
+    0 20px 60px rgba(0,50,20,.18),
+    0 4px 20px rgba(0,0,0,.08),
+    inset 0 0 30px rgba(0,0,0,.15);
+  overflow:hidden;flex-shrink:0;
+}
+.notch{
+  position:absolute;top:8px;left:50%;transform:translateX(-50%);
+  width:80px;height:22px;background:var(--dark2);border-radius:14px;z-index:100;
+}
+.sw{position:absolute;inset:0;overflow:hidden}
+.sc{
+  position:absolute;inset:0;opacity:0;
+  transition:opacity .5s ease;padding-top:32px;
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.sc.on{opacity:1}
+.tbar{
+  position:absolute;bottom:0;left:0;height:3px;width:0%;
+  background:linear-gradient(90deg,#4ade80,#facc15);z-index:200;
+}
+
+/* ── BOTTOM: Progress & title ── */
+.bottom-bar{
+  display:flex;align-items:center;gap:16px;padding:10px 0 0;
+}
+.scene-title{
+  font-size:15px;letter-spacing:.06em;color:var(--text-dim);font-weight:500;
+}
+.pdots{display:flex;gap:6px;align-items:center}
+.pd{width:7px;height:7px;border-radius:50%;background:#d1fae5;cursor:pointer;transition:all .3s}
+.pd.on{width:22px;border-radius:4px;background:var(--g);box-shadow:0 0 8px rgba(22,163,74,.4)}
+.hint{position:fixed;top:16px;right:24px;font-size:11px;color:#9ca3af;letter-spacing:.06em}
+
+/* ── SCENE SHARED (inside phone) ── */
+.shud{
+  display:flex;align-items:center;gap:8px;padding:8px 14px;
+  background:rgba(10,28,16,.9);border-bottom:1px solid rgba(74,222,128,.12);
+  font-size:10px;color:#4ade80;font-weight:900;flex-shrink:0;
+}
+.shud-track{flex:1;height:5px;background:rgba(74,222,128,.1);border-radius:3px;overflow:hidden}
+.shud-fill{height:100%;background:linear-gradient(90deg,#4ade80,#facc15);border-radius:3px}
+.ff{position:absolute;border-radius:50%;animation:twinkle var(--d,2s) ease-in-out infinite;animation-delay:var(--dl,0s)}
+.sbtn{
+  width:calc(100% - 28px);margin:0 14px;padding:13px;border-radius:12px;
+  background:linear-gradient(135deg,rgba(74,222,128,.22),rgba(74,222,128,.1));
+  border:1.5px solid rgba(74,222,128,.5);color:#4ade80;
+  font-size:13px;font-weight:900;text-align:center;
+}
+
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes twinkle{0%,100%{opacity:.25}50%{opacity:1}}
+@keyframes cardIn{from{transform:translateY(16px) scale(.93);opacity:0}to{transform:none;opacity:1}}
+@keyframes dotBounce{0%,80%,100%{transform:scale(0);opacity:.3}40%{transform:scale(1);opacity:1}}
+@keyframes slideUp{from{transform:translateY(22px);opacity:0}to{transform:none;opacity:1}}
+@keyframes typeCursor{0%,100%{opacity:1}50%{opacity:0}}
+@keyframes streakPop{0%{transform:scale(.4);opacity:0}70%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
+@keyframes glow{0%,100%{box-shadow:0 0 8px rgba(74,222,128,.2)}50%{box-shadow:0 0 22px rgba(74,222,128,.55)}}
+</style>
+</head>
+<body>
+<div class="stage">
+  <!-- LEFT: Feature description -->
+  <div class="fp" id="fp">
+    <div class="fb" id="fb"></div>
+    <div class="ft" id="ft"></div>
+    <div class="fd" id="fd"></div>
+  </div>
+
+  <!-- RIGHT: Phone -->
+  <div class="phone" id="phone">
+    <div class="notch"></div>
+    <div class="sw" id="sw"></div>
+    <div class="tbar" id="tbar"></div>
+  </div>
+</div>
+
+<!-- Bottom bar -->
+<div class="bottom-bar">
+  <div class="pdots" id="pdots"></div>
+  <div class="scene-title" id="st"></div>
+</div>
+<div class="hint">クリック / → / Space</div>
+
+<script>
+var ff=function(n){
+  var cl=['#fef08a','#86efac','#fde68a','#a3e635','#d9f99d'],h='';
+  for(var i=0;i<n;i++){
+    var x=(Math.random()*88+5).toFixed(1),y=(Math.random()*88+5).toFixed(1);
+    var s=(1.5+Math.random()*3).toFixed(1),c=cl[i%cl.length];
+    var d=(1.5+Math.random()*2.5).toFixed(1),dl=(Math.random()*2.5).toFixed(1);
+    h+='<div class="ff" style="left:'+x+'%;top:'+y+'%;width:'+s+'px;height:'+s+'px;background:'+c+';box-shadow:0 0 '+(s*2.5).toFixed(1)+'px '+c+';--d:'+d+'s;--dl:'+dl+'s"></div>';
+  }
+  return h;
+};
+
+var SCENES=[
+
+/* 1. Opening */
+{d:5800,badge:'TOMORI',title:'考える力を\n育てる冒険',
+desc:'写真を撮るだけで始まる\nAI探究学習アプリ。\n子どもの思考力を楽しく伸ばします。',
+sub:'オープニング',html:
+'<div class="sc" style="align-items:center;justify-content:center;gap:16px;background:linear-gradient(160deg,#1e4a2a,#142e1c)">'+ff(18)+
+'<div style="position:relative;width:100px;height:100px;display:flex;align-items:center;justify-content:center">'+
+'<div style="position:absolute;inset:0;border:2.5px solid transparent;border-top-color:#4ade80;border-right-color:#4ade80;border-radius:50%;animation:spin 3s linear infinite;box-shadow:0 0 18px rgba(74,222,128,.4)"></div>'+
+'<div style="position:absolute;inset:14px;border:2px solid transparent;border-bottom-color:#facc15;border-left-color:#facc15;border-radius:50%;animation:spin 2s linear infinite reverse"></div>'+
+'<div style="font-size:48px;animation:float 3s ease-in-out infinite;filter:drop-shadow(0 0 16px rgba(74,222,128,.5))">🧭</div>'+
+'</div>'+
+'<div style="font-size:36px;font-weight:900;color:#4ade80;letter-spacing:.28em;text-shadow:0 0 32px rgba(74,222,128,.55)">TOMORI</div>'+
+'<div style="font-size:13px;color:rgba(200,245,210,.8);text-align:center;line-height:2;letter-spacing:.05em;animation:slideUp .8s .3s both"><b style="color:#e8f5e2">写真</b>が冒険の扉。<br>今日は何を<b style="color:#e8f5e2">探究</b>する？</div>'+
+'<div class="sbtn" style="animation:glow 2.5s ease-in-out infinite;margin-top:8px">⚔️ 冒険をはじめる</div>'+
+'</div>'},
+
+/* 2. 写真から探究 */
+{d:6500,badge:'機能 01',title:'写真を撮るだけで\n探究スタート',
+desc:'気になるものを何でも撮影。\nAIが子どもの興味に合わせた\nミッションをリアルタイムで生成します。',
+sub:'写真から探究スタート',html:
+'<div class="sc" style="background:#0e2618;align-items:center">'+ff(6)+
+'<div class="shud"><span>🧭 TOMORI</span><div class="shud-track"><div class="shud-fill" style="width:20%"></div></div><span>⭐ 0</span></div>'+
+'<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px">'+
+'<div style="font-size:14px;font-weight:900;color:#e8f5e2;letter-spacing:.04em">📸 冒険の起点</div>'+
+'<div style="font-size:12px;color:rgba(180,230,150,.6)">気になるものを撮ろう！何でもOK</div>'+
+'<div style="width:220px;height:168px;border-radius:16px;overflow:hidden;border:2px solid rgba(74,222,128,.45);position:relative;animation:cardIn .6s .4s both;box-shadow:0 0 28px rgba(74,222,128,.18)">'+
+'<div style="position:absolute;inset:0;background:linear-gradient(135deg,#1a4a2a,#2d6a4f,#3a8a5a);display:flex;align-items:center;justify-content:center;font-size:68px;filter:drop-shadow(0 2px 10px rgba(0,0,0,.4))">🌿</div>'+
+'<div style="position:absolute;bottom:9px;left:9px;background:rgba(0,0,0,.58);border-radius:8px;padding:3px 9px;font-size:11px;color:#fff">草むらの謎の葉っぱ</div>'+
+'</div>'+
+'<div class="sbtn" style="animation:glow 2s ease-in-out infinite;animation-delay:.8s;width:80%">🗺️ 冒険スタート！</div>'+
+'</div></div>'},
+
+/* 3. AIミッション */
+{d:7500,badge:'機能 02',title:'AIが個別に\nミッションを出題',
+desc:'子どものタイプ・年齢・過去の探究を\nもとにAIが最適なミッションを\nリアルタイムで生成。',
+sub:'AI個別ミッション',html:
+'<div class="sc" style="background:#0e2618">'+
+'<div class="shud">'+
+'<span style="font-size:16px;color:#4ade80">‹</span>'+
+'<span style="font-size:9px;padding:2px 8px;background:rgba(250,204,21,.12);border:1px solid rgba(250,204,21,.3);border-radius:4px;color:#facc15;font-weight:900;letter-spacing:.1em">探索</span>'+
+'<span style="flex:1;font-size:11px;color:#e8f5e2;font-weight:700">葉っぱの秘密を解け</span>'+
+'</div>'+
+'<div style="height:88px;background:linear-gradient(145deg,#1a4a2a,#2d6a4f,#3a8a5a);display:flex;align-items:center;justify-content:center;font-size:52px;flex-shrink:0;filter:drop-shadow(0 2px 12px rgba(0,0,0,.4))">🌿</div>'+
+'<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 15px;background:rgba(10,28,16,.72);flex-shrink:0">'+
+'<div style="width:36px;height:36px;border-radius:7px;background:linear-gradient(145deg,#1a4a2a,#2d6a4f);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🐉</div>'+
+'<div style="background:rgba(18,52,26,.88);border:1px solid rgba(74,222,128,.22);border-radius:12px;padding:9px 13px;font-size:12px;color:#e8f5e2;line-height:1.65;animation:slideUp .5s .3s both"><b style="color:#4ade80">トモリ</b>より：<br>この葉っぱ、ギザギザしてるね！なぜそういう形になったと思う？</div>'+
+'</div>'+
+'<div style="padding:13px 15px 0;flex:1">'+
+'<div style="font-size:15px;font-weight:900;color:#e8f5e2;line-height:1.6;margin-bottom:13px">この葉っぱのギザギザには<br>どんな意味があると思う？</div>'+
+'<div style="background:rgba(255,255,255,.05);border:1.5px solid rgba(74,222,128,.35);border-radius:11px;padding:11px 13px;font-size:13px;color:#e8f5e2;min-height:72px;line-height:1.6">虫が食べにくいように<span style="animation:typeCursor 1s infinite;color:#4ade80">|</span></div>'+
+'<div style="font-size:10.5px;color:rgba(74,222,128,.65);margin-top:5px">✅ 完璧！</div>'+
+'</div>'+
+'<div style="padding:9px 15px 14px"><div class="sbtn" style="animation:glow 2s ease-in-out infinite">✅ こたえる</div></div>'+
+'</div>'},
+
+/* 4. AI思考中 */
+{d:6200,badge:'機能 03',title:'AIが答えを読んで\n個別フィードバック',
+desc:'子どもの回答をリアルタイムで読み取り、\nその子だけのフィードバックと\n次の問いを生成します。',
+sub:'AIフィードバック',html:
+'<div class="sc" style="background:#0e2618;align-items:center;justify-content:center;gap:14px">'+ff(10)+
+'<div style="font-size:12px;color:rgba(74,222,128,.55);letter-spacing:.2em">クエスト完了！</div>'+
+'<div style="font-size:24px;font-weight:900;color:#e8f5e2">すごい！</div>'+
+'<div style="display:flex;flex-direction:column;align-items:center;gap:11px;margin:6px 0">'+
+'<div style="font-size:52px;animation:float 2s ease-in-out infinite;filter:drop-shadow(0 0 16px rgba(74,222,128,.45))">🧭</div>'+
+'<div id="thinkMsg" style="font-size:14px;color:#4ade80;letter-spacing:.04em;transition:opacity .25s">読んでいます…</div>'+
+'<div style="display:flex;gap:8px">'+
+'<div style="width:8px;height:8px;border-radius:50%;background:rgba(74,222,128,.75);animation:dotBounce 1.2s ease-in-out infinite"></div>'+
+'<div style="width:8px;height:8px;border-radius:50%;background:rgba(74,222,128,.75);animation:dotBounce 1.2s .2s ease-in-out infinite"></div>'+
+'<div style="width:8px;height:8px;border-radius:50%;background:rgba(74,222,128,.75);animation:dotBounce 1.2s .4s ease-in-out infinite"></div>'+
+'</div></div>'+
+'<div style="display:flex;gap:12px;margin:0 16px">'+
+'<div style="flex:1;background:rgba(18,50,26,.85);border:1px solid rgba(74,222,128,.15);border-radius:12px;padding:12px;text-align:center"><div style="font-size:8px;color:rgba(180,230,150,.5);letter-spacing:.12em;margin-bottom:4px">探索深度</div><div style="font-size:22px;font-weight:900;color:#4ade80">2</div></div>'+
+'<div style="flex:1;background:rgba(18,50,26,.85);border:1px solid rgba(74,222,128,.15);border-radius:12px;padding:12px;text-align:center"><div style="font-size:8px;color:rgba(180,230,150,.5);letter-spacing:.12em;margin-bottom:4px">獲得ポイント</div><div style="font-size:22px;font-weight:900;color:#facc15">+35</div></div>'+
+'</div></div>'},
+
+/* 5. 思考タイプ＋ソクラテス */
+{d:7500,badge:'機能 04 · 05',title:'思考タイプ可視化\n＋ 深掘り質問',
+desc:'「今日は視点転換型の思考」と可視化。\nさらに🦉が「なぜ？」と問いかけ\n思考をもう一段深めます。',
+sub:'思考タイプ & ソクラテス',html:
+'<div class="sc" style="background:#0e2618;overflow-y:auto">'+
+'<div style="padding:14px 15px 0;text-align:center;flex-shrink:0">'+
+'<div style="font-size:11px;letter-spacing:.2em;color:#4ade80;margin-bottom:4px">クエスト完了！</div>'+
+'<div style="font-size:24px;font-weight:900;color:#e8f5e2">視点転換の達人！</div>'+
+'<div style="font-size:12.5px;color:#4ade80;margin-top:4px;font-weight:700">別の角度から見る力が輝いた！</div>'+
+'</div>'+
+'<div style="margin:10px 15px;background:rgba(250,204,21,.08);border:1.5px solid rgba(250,204,21,.32);border-radius:15px;padding:14px 15px;display:flex;align-items:center;gap:14px;animation:cardIn .6s .3s both">'+
+'<div style="font-size:32px;filter:drop-shadow(0 0 8px rgba(250,204,21,.5))">🔄</div>'+
+'<div><div style="font-size:8px;letter-spacing:.18em;color:rgba(250,204,21,.7);font-weight:900;text-transform:uppercase;margin-bottom:4px">今日の思考タイプ</div>'+
+'<div style="font-size:17px;font-weight:900;color:#e8f5e2">視点転換型</div>'+
+'<div style="font-size:12px;color:rgba(180,230,150,.65);margin-top:2px">別の角度から世界を見る力</div></div>'+
+'</div>'+
+'<div style="margin:0 15px;display:flex;gap:9px;animation:cardIn .5s .5s both">'+
+'<div style="flex:1;background:rgba(18,50,26,.85);border:1px solid rgba(74,222,128,.15);border-radius:11px;padding:10px;text-align:center"><div style="font-size:8px;color:rgba(180,230,150,.5);letter-spacing:.12em;margin-bottom:3px">探索深度</div><div style="font-size:21px;font-weight:900;color:#4ade80">3</div></div>'+
+'<div style="flex:1;background:rgba(18,50,26,.85);border:1px solid rgba(74,222,128,.15);border-radius:11px;padding:10px;text-align:center"><div style="font-size:8px;color:rgba(180,230,150,.5);letter-spacing:.12em;margin-bottom:3px">獲得ポイント</div><div style="font-size:21px;font-weight:900;color:#facc15">+35</div></div>'+
+'</div>'+
+'<div style="margin:9px 15px;background:rgba(18,52,26,.92);border:1.5px solid rgba(250,204,21,.28);border-radius:15px;padding:14px 15px;animation:cardIn .6s .8s both">'+
+'<div style="display:flex;align-items:center;gap:8px;margin-bottom:9px">'+
+'<div style="font-size:22px">🦉</div><div style="font-size:8px;letter-spacing:.18em;color:rgba(250,204,21,.65);font-weight:900;text-transform:uppercase">もう少し深掘り！</div>'+
+'</div>'+
+'<div style="font-size:14px;font-weight:700;color:#e8f5e2;line-height:1.55;margin-bottom:11px">もし逆の立場だったら、どう感じる？</div>'+
+'<div style="display:flex;gap:8px">'+
+'<div style="flex:1;padding:10px;border-radius:10px;background:rgba(250,204,21,.1);border:1px solid rgba(250,204,21,.25);color:rgba(250,204,21,.85);font-size:12.5px;font-weight:700;text-align:center">💭 考えた！</div>'+
+'<div style="padding:10px 16px;border-radius:10px;background:rgba(250,204,21,.18);border:1px solid rgba(250,204,21,.45);color:#facc15;font-size:12.5px;font-weight:700">送る →</div>'+
+'</div></div></div>'},
+
+/* 6. ストリーク */
+{d:6000,badge:'機能 06',title:'連続記録で\n習慣化を促す',
+desc:'毎日のミッション達成を記録して\nストリーク表示。\n「今日もやりたい！」を\n自然に生み出します。',
+sub:'ストリーク（連続記録）',html:
+'<div class="sc" style="background:linear-gradient(160deg,#1e4a2a,#142e1c);align-items:center;justify-content:center;gap:14px">'+ff(14)+
+'<div style="font-size:72px;animation:streakPop .7s .3s both;filter:drop-shadow(0 0 24px rgba(251,146,60,.65))">🔥</div>'+
+'<div style="font-size:32px;font-weight:900;color:#fb923c;letter-spacing:.04em;text-shadow:0 0 22px rgba(251,146,60,.5);animation:streakPop .6s .55s both">7日連続！</div>'+
+'<div style="font-size:13px;color:rgba(200,245,210,.75);animation:slideUp .5s .85s both">毎日考え続けてる！すごい！</div>'+
+'<div style="width:240px;height:1px;background:rgba(74,222,128,.14);margin:4px 0"></div>'+
+'<div style="display:flex;gap:9px;animation:slideUp .5s 1.05s both">'+
+['月','火','水','木','金','土','日'].map(function(d){
+  return '<div style="display:flex;flex-direction:column;align-items:center;gap:4px">'+
+    '<div style="width:32px;height:32px;border-radius:50%;background:rgba(251,146,60,.22);border:1.5px solid rgba(251,146,60,.55);display:flex;align-items:center;justify-content:center;font-size:15px">🔥</div>'+
+    '<div style="font-size:9px;color:rgba(200,245,210,.45)">'+d+'</div></div>';
+}).join('')+
+'</div>'+
+'<div style="padding:11px 20px;background:rgba(251,146,60,.12);border:1px solid rgba(251,146,60,.35);border-radius:28px;font-size:12.5px;color:#fb923c;font-weight:700;animation:slideUp .5s 1.25s both">明日もやって8日連続を目指そう！</div>'+
+'</div>'},
+
+/* 7. 転移学習 */
+{d:6500,badge:'機能 07',title:'昨日の思考と\n今日をつなぐ',
+desc:'前回のミッションを参照し\n「繋がるかも？」と表示。\n点の思考を線の学びに変えます。',
+sub:'転移学習（昨日との接続）',html:
+'<div class="sc" style="background:#0e2618">'+
+'<div class="shud"><span style="font-size:16px;color:#4ade80">‹</span><span style="flex:1;font-size:11px;color:#e8f5e2;font-weight:700">なぜ葉っぱは緑なの？</span></div>'+
+'<div style="margin:9px 15px 5px;background:rgba(250,204,21,.07);border:1px solid rgba(250,204,21,.28);border-radius:13px;padding:11px 14px;animation:cardIn .6s .3s both">'+
+'<div style="font-size:8.5px;letter-spacing:.18em;font-weight:900;text-transform:uppercase;margin-bottom:5px;color:rgba(250,204,21,.7)">🔗 前回の探究から</div>'+
+'<div style="font-size:13px;color:rgba(180,230,150,.82);line-height:1.65">「<b style="color:#e8f5e2">葉っぱの秘密を解け</b>」について考えてたね。<br>今日の問いと何か繋がるかも？</div>'+
+'</div>'+
+'<div style="height:80px;background:linear-gradient(145deg,#1a4a2a,#2d6a4f);display:flex;align-items:center;justify-content:center;font-size:50px;flex-shrink:0">🌿</div>'+
+'<div style="display:flex;align-items:flex-start;gap:10px;padding:9px 15px;background:rgba(18,50,26,.7);flex-shrink:0">'+
+'<div style="width:34px;height:34px;border-radius:7px;background:linear-gradient(145deg,#1a4a2a,#2d6a4f);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🐉</div>'+
+'<div style="background:rgba(18,52,26,.88);border:1px solid rgba(74,222,128,.2);border-radius:12px;padding:9px 13px;font-size:12px;color:#e8f5e2;line-height:1.65"><b style="color:#4ade80">トモリ</b>より：<br>葉っぱが緑に見える理由は何だろう？</div>'+
+'</div>'+
+'<div style="padding:13px 15px;flex:1">'+
+'<div style="font-size:14px;font-weight:900;color:#e8f5e2;line-height:1.55;margin-bottom:12px">なぜ葉っぱは緑色をしているの？</div>'+
+'<div style="background:rgba(255,255,255,.05);border:1.5px solid rgba(74,222,128,.22);border-radius:11px;padding:11px 13px;font-size:13px;color:rgba(180,230,150,.45);min-height:66px">ここに書いてみよう！</div>'+
+'</div></div>'},
+
+/* 8. 先生モード */
+{d:7000,badge:'機能 08',title:'先生・保護者が\n思考の成長を確認',
+desc:'気分・思考タイプ・ソクラテス回答を\nダッシュボードで一覧。\n個別サポートに活用できます。',
+sub:'先生・保護者ダッシュボード',html:
+'<div class="sc" style="background:#0e2618;overflow-y:auto">'+
+'<div class="shud" style="justify-content:space-between;flex-shrink:0"><span style="font-size:11px;color:rgba(180,230,150,.5)">先生・支援者モード</span><span style="font-size:14px;color:rgba(180,230,150,.4);cursor:pointer">✕</span></div>'+
+'<div style="padding:11px 15px 16px">'+
+'<div style="font-size:14px;font-weight:900;color:#e8f5e2;margin-bottom:11px">🌿 みどりちゃん の探究記録</div>'+
+'<div style="background:rgba(18,50,26,.85);border:1px solid rgba(74,222,128,.15);border-radius:13px;padding:11px 13px;margin-bottom:9px;animation:cardIn .5s .2s both">'+
+'<div style="font-size:8px;letter-spacing:.15em;color:rgba(74,222,128,.6);font-weight:900;margin-bottom:7px">今週の気分</div>'+
+'<div style="display:flex;gap:5px">'+
+['😊','😊','😐','😊','🔥','😊','😊'].map(function(e){return '<div style="width:34px;height:34px;border-radius:9px;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.15);display:flex;align-items:center;justify-content:center;font-size:16px">'+e+'</div>';}).join('')+
+'</div></div>'+
+'<div style="background:rgba(18,50,26,.85);border:1px solid rgba(74,222,128,.15);border-radius:13px;padding:11px 13px;margin-bottom:9px;animation:cardIn .5s .4s both">'+
+'<div style="font-size:8px;letter-spacing:.15em;color:rgba(74,222,128,.6);font-weight:900;margin-bottom:7px">思考パターン（今週）</div>'+
+'<div style="display:flex;flex-wrap:wrap;gap:5px">'+
+[['🔄 視点転換型','rgba(250,204,21,'],['🔗 関連発見型','rgba(74,222,128,'],['🔗 関連発見型','rgba(74,222,128,'],['🔭 探究型','rgba(163,230,53,'],['✨ 創造型','rgba(251,146,60,']].map(function(t){return '<div style="padding:3px 10px;border-radius:20px;background:'+t[1]+'.1);border:1px solid '+t[1]+'.3);color:'+t[1]+'.9);font-size:11px;font-weight:700">'+t[0]+'</div>';}).join('')+
+'</div></div>'+
+'<div style="background:rgba(18,50,26,.85);border:1px solid rgba(74,222,128,.15);border-radius:13px;padding:11px 13px;animation:cardIn .5s .6s both">'+
+'<div style="font-size:8px;letter-spacing:.15em;color:rgba(74,222,128,.6);font-weight:900;margin-bottom:7px">深掘り回答（ソクラテス）</div>'+
+'<div style="font-size:12px;color:rgba(180,230,150,.8);line-height:1.75;border-left:2.5px solid rgba(74,222,128,.3);padding-left:10px">「もし虫が食べにくいようにトゲトゲしてるなら、花びらがふわふわなのはなんで？もっとデコボコにしないのかな」</div>'+
+'</div></div></div>'},
+
+/* 9. Closing */
+{d:8000,badge:'TOMORI',title:'まず無料で\nお試しください',
+desc:'ryuto4646.github.io/tomori\n\ntomori26project@gmail.com',
+sub:'まず無料でお試しください',html:
+'<div class="sc" style="align-items:center;justify-content:center;gap:18px;background:linear-gradient(160deg,#1e4a2a,#142e1c)">'+ff(20)+
+'<div style="position:relative;width:90px;height:90px;display:flex;align-items:center;justify-content:center">'+
+'<div style="position:absolute;inset:0;border:2.5px solid transparent;border-top-color:#4ade80;border-right-color:#4ade80;border-radius:50%;animation:spin 3s linear infinite"></div>'+
+'<div style="position:absolute;inset:12px;border:2px solid transparent;border-bottom-color:#facc15;border-left-color:#facc15;border-radius:50%;animation:spin 2s linear infinite reverse"></div>'+
+'<div style="font-size:40px;animation:float 3s ease-in-out infinite">🧭</div>'+
+'</div>'+
+'<div style="font-size:32px;font-weight:900;color:#4ade80;letter-spacing:.28em;text-shadow:0 0 28px rgba(74,222,128,.55)">TOMORI</div>'+
+'<div style="font-size:12px;color:rgba(200,245,210,.75);text-align:center;line-height:2;animation:slideUp .6s .25s both">子どもの<b style="color:#e8f5e2">考える力</b>を育てる<br>AI探究学習アプリ</div>'+
+'<div style="width:120px;height:120px;background:#f0fdf4;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;animation:cardIn .6s .45s both;box-shadow:0 0 28px rgba(74,222,128,.25)">'+
+'<div style="font-size:44px">📱</div><div style="font-size:8.5px;color:#0f2218;font-weight:900;text-align:center;line-height:1.5">QR CODE<br>で体験</div>'+
+'</div>'+
+'<div style="font-size:11px;color:rgba(74,222,128,.65);text-align:center;line-height:2;animation:slideUp .5s .7s both">ryuto4646.github.io/tomori<br><span style="color:rgba(180,230,150,.5)">tomori26project@gmail.com</span></div>'+
+'<div class="sbtn" style="animation:glow 2s ease-in-out infinite;animation-delay:.9s;margin-top:4px;width:85%">まず無料でお試しください →</div>'+
+'</div>'}
+];
+
+/* ── Engine ── */
+var cur=0,autoTimer=null,paused=false,scTimer=null;
+
+function mkDots(){
+  var c=document.getElementById('pdots');
+  SCENES.forEach(function(_,i){
+    var d=document.createElement('div');
+    d.className='pd';d.id='pd'+i;
+    d.onclick=function(e){e.stopPropagation();show(i);};
+    c.appendChild(d);
+  });
+}
+
+function show(n){
+  cur=(n+SCENES.length)%SCENES.length;
+  var sc=SCENES[cur];
+  var sw=document.getElementById('sw');
+  var fp=document.getElementById('fp');
+  clearTimeout(autoTimer);clearInterval(scTimer);
+  var old=sw.querySelector('.sc.on');
+  if(old) old.classList.remove('on');
+  fp.classList.remove('on');
+  setTimeout(function(){
+    sw.innerHTML=sc.html;
+    var el=sw.querySelector('.sc');
+    if(el) setTimeout(function(){el.classList.add('on');},40);
+    document.getElementById('fb').textContent=sc.badge;
+    document.getElementById('ft').textContent=sc.title;
+    document.getElementById('fd').textContent=sc.desc;
+    document.getElementById('st').textContent=sc.sub;
+    fp.classList.add('on');
+    document.querySelectorAll('.pd').forEach(function(d,i){d.classList.toggle('on',i===cur);});
+    var tbar=document.getElementById('tbar');
+    tbar.style.transition='none';tbar.style.width='0%';
+    requestAnimationFrame(function(){requestAnimationFrame(function(){
+      tbar.style.transition='width '+sc.d+'ms linear';tbar.style.width='100%';
+    });});
+    if(cur===3){
+      var msgs=['読んでいます…','ひらめきを探してるよ…','もうすぐだよ！'];var mi=0;
+      scTimer=setInterval(function(){
+        mi=(mi+1)%msgs.length;
+        var el2=document.getElementById('thinkMsg');
+        if(el2){el2.style.opacity='0';setTimeout(function(){if(el2){el2.textContent=msgs[mi];el2.style.opacity='1';}},250);}
+      },1900);
+    }
+    if(!paused) autoTimer=setTimeout(function(){show(cur+1);},sc.d);
+  },320);
+}
+
+mkDots();show(0);
+document.body.onclick=function(){show(cur+1);};
+document.addEventListener('keydown',function(e){
+  if(e.code==='Space'){e.preventDefault();paused=!paused;if(!paused)autoTimer=setTimeout(function(){show(cur+1);},SCENES[cur].d);else clearTimeout(autoTimer);}
+  if(e.code==='ArrowRight') show(cur+1);
+  if(e.code==='ArrowLeft')  show(cur-1);
+});
+</script>
+</body>
+</html>

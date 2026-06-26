@@ -1451,18 +1451,20 @@ body::before{
   border:1px solid var(--border);position:relative}
 .ai-photo-preview img{width:100%;object-fit:cover;border-radius:16px;max-height:200px}
 .ai-preview-placeholder{font-size:3rem;opacity:.45;position:absolute}
-.ai-desc-section{background:rgba(5,20,10,.78);backdrop-filter:blur(14px);
+.ai-desc-section{background:rgba(255,255,255,.94);backdrop-filter:blur(14px);
   border:1px solid var(--border);border-radius:14px;padding:14px}
-.ai-desc-label{font-size:.95rem;font-weight:700;color:var(--cyan);margin-bottom:4px;
-  text-shadow:0 1px 8px rgba(0,0,0,.9)}
-.ai-desc-hint{font-size:.78rem;color:var(--text-dim);margin-bottom:10px;
-  text-shadow:0 1px 6px rgba(0,0,0,.8)}
-.ai-desc-textarea{width:100%;background:rgba(5,20,10,.85);
+.ai-desc-label{font-size:.95rem;font-weight:700;color:var(--cyan);margin-bottom:4px}
+.ai-desc-hint{font-size:.78rem;color:var(--text-dim);margin-bottom:10px}
+.ai-desc-textarea{width:100%;background:rgba(250,248,242,.95);
   border:1px solid var(--border);border-radius:10px;
   color:var(--text);font-size:.9rem;padding:10px 12px;
   resize:none;font-family:inherit;line-height:1.5;outline:none}
 .ai-desc-textarea:focus{border-color:var(--cyan);box-shadow:0 0 0 2px rgba(74,222,128,.15)}
 .ai-desc-textarea::placeholder{color:var(--text-dim)}
+.desc-shuffle-btn{margin-top:8px;width:100%;padding:8px;border-radius:8px;
+  background:rgba(22,163,74,.10);border:1px solid rgba(22,163,74,.30);
+  color:var(--cyan);font-size:.82rem;font-weight:700;cursor:pointer;
+  font-family:inherit;display:none}
 .ai-gen-btn{width:100%;padding:15px;
   background:linear-gradient(135deg,rgba(74,222,128,.22),rgba(250,204,21,.22));
   border:1.5px solid rgba(74,222,128,.5);border-radius:14px;
@@ -2065,6 +2067,7 @@ body::before{
       <textarea class="ai-desc-textarea" id="ai-desc-input" rows="3"
         placeholder="例：古い木の橋。緑のコケがついていて川の上にかかっている。霧っぽくて神秘的な感じ"
         oninput="aiDescChanged()"></textarea>
+      <button class="desc-shuffle-btn" id="desc-shuffle-btn" onclick="shufflePresetDesc()">🔀 別のサンプル文にする</button>
     </div>
     <!-- Error -->
     <div class="ai-error-msg" id="ai-error-msg" style="display:none"></div>
@@ -2508,6 +2511,7 @@ const state = {
   // AI
   aiQuests: [],          // AI-generated quest objects
   photoDescription: '',  // text description sent to AI
+  demoPresetIdx: null,   // active preset index (null = real photo)
   lastAnswer: null,      // passed back to AI for next generation
   photoBase64: null,     // resized photo for Vision API
   photoMimeType: null,
@@ -4683,7 +4687,22 @@ function showAIScreen(){
   // テキストエリアに説明文を事前入力（プリセット含む）
   const ta=document.getElementById('ai-desc-input');
   if(ta)ta.value=state.photoDescription||'';
+  // プリセット選択時のみシャッフルボタンを表示
+  const shuffleBtn=document.getElementById('desc-shuffle-btn');
+  if(shuffleBtn)shuffleBtn.style.display=(state.demoPresetIdx!=null)?'block':'none';
   goTo('photo-ai');
+}
+
+function shufflePresetDesc(){
+  const i=state.demoPresetIdx;
+  if(i==null)return;
+  const desc=pickPresetDesc(i);
+  state.photoDescription=desc;
+  const ta=document.getElementById('ai-desc-input');
+  if(ta)ta.value=desc;
+  // AIミッション生成ボタンの有効化チェック
+  const btn=document.getElementById('ai-gen-btn');
+  if(btn)btn.disabled=!state.photoUrl&&desc.length<5;
 }
 
 function aiDescChanged(){
@@ -4784,19 +4803,45 @@ function skipAIAndStart(){
 
 // ─── デモ用プリセット ──────────────────────────────────────────────────────────
 const DEMO_PRESETS=[
-  {em:'🌿',name:'森の木',
-   desc:'森の中の大きな木。太い幹に緑のコケがついている。根元に小さなキノコが生えていて薄暗く神秘的。'},
-  {em:'🏙️',name:'古い商店街',
-   desc:'古い商店街。シャッターが閉まったお店が並んでいる。遠くに新しいビルが見える。昔のにぎわいの面影。'},
-  {em:'🌊',name:'夕暮れの浜辺',
-   desc:'砂浜。波打ち際に貝殻が散らばっている。夕日がオレンジ色に水面に反射している。遠くに小さな船。'},
+  {em:'🌿',name:'自然'},
+  {em:'🏙️',name:'街'},
+  {em:'🌊',name:'水辺'},
 ];
+const DEMO_PRESET_POOLS=[
+  [ // 0: 自然
+    '森の中の大きな木。太い幹に緑のコケがついている。根元に小さなキノコが生えていて薄暗く神秘的。',
+    '青空に広がる大きな入道雲。まるで綿菓子みたいに白くてふわふわしている。',
+    '葉っぱの上に丸い水滴がひとつ。朝露みたいに透明でキラキラ光っている。',
+    '道ばたに咲いている小さな野の花。雑草の中に混じって元気に咲いている。',
+    '落ち葉が積もった地面。赤・黄・茶色がまじってカラフルなじゅうたんみたい。',
+  ],
+  [ // 1: 街
+    '古い商店街。シャッターが閉まったお店が並んでいる。遠くに新しいビルが見える。昔のにぎわいの面影。',
+    '横断歩道の白と黒のしましま模様。たくさんの人が渡った跡で少し消えかかっている。',
+    '夜のコンビニ。窓から見えるカラフルな商品が並んでいて明るく光っている。',
+    '自転車がいっぱい並んでいる駐輪場。全部違う色でなんだか面白い。',
+    '電柱とごちゃごちゃした電線。いろんな方向に伸びていて迷路みたい。',
+  ],
+  [ // 2: 水辺
+    '砂浜。波打ち際に貝殻が散らばっている。夕日がオレンジ色に水面に反射している。遠くに小さな船。',
+    '川の流れ。石の間を水がくねくねと通り抜けていて涼しそう。',
+    '池に落ちた葉っぱがゆっくり流れている。波紋が広がってきれい。',
+    '雨の日の水たまり。空や建物が逆さまに映っていて不思議な感じ。',
+    '橋の上から見た川。水が緑がかっていて深そうで、魚が泳いでいるかも。',
+  ],
+];
+
+function pickPresetDesc(i){
+  const pool=DEMO_PRESET_POOLS[i];
+  return pool[Math.floor(Math.random()*pool.length)];
+}
 
 function usePreset(i){
   const p=DEMO_PRESETS[i];
   state.photoUrl=null;
   state.photoBase64=null;
-  state.photoDescription=p.desc;
+  state.demoPresetIdx=i;
+  state.photoDescription=pickPresetDesc(i);
 
   // プレースホルダーとして絵文字カード表示
   document.getElementById('cam-hero').style.display='none';

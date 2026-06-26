@@ -2485,7 +2485,7 @@ body::before{
 <button id="home-btn" onclick="goHome()" aria-label="スタートページへ戻る" title="スタートページへ">🏠</button>
 
 <!-- Tutorial help toggle button -->
-<button id="tut-toggle-btn" onclick="toggleTutorial()" aria-label="ヘルプ表示切替" title="チュートリアル">❓</button>
+<button id="tut-toggle-btn" onclick="toggleTutorial()" aria-label="ガイド表示切替" title="ガイドON/OFF">💡</button>
 
 <div class="depth-toast" id="depth-toast"></div>
 <input type="file" id="file-input" accept="image/*"
@@ -3131,6 +3131,13 @@ const TUTO_TIPS = {
   'screen-profile': [
     { sel:'.age-grid',   pos:'below', text:'学年を選んでね！\n君に合った問題にするよ' },
   ],
+  // イベントトリガー（depth関係なく forced=true で表示）
+  'event-zone': [
+    { sel:'#zone-advance-wrap button', pos:'above', text:'🗺️ 新エリア解放！\nここをタップして次のステージへ進もう' },
+  ],
+  'event-gacha': [
+    { sel:'#gacha-ticket-wrap .gacha-ticket-btn', pos:'above', text:'🎴 ガチャチケット！\nタップしてアイテムをゲットしよう！' },
+  ],
 };
 
 const TUT_KEY = 'tomori_tut_off';
@@ -3143,9 +3150,9 @@ function toggleTutorial(){
     clearTutBubbles();
   } else {
     localStorage.removeItem(TUT_KEY);
-    // 現在のスクリーンのヒントを即表示
+    // ONにしたとき現在のスクリーンのヒントを即表示（depth制限なし）
     const active = document.querySelector('.screen.active');
-    if(active) showTutForScreen(active.id);
+    if(active) showTutForScreen(active.id, true);
   }
   _updateTutBtn();
 }
@@ -3153,13 +3160,20 @@ function toggleTutorial(){
 function _updateTutBtn(){
   const btn = document.getElementById('tut-toggle-btn');
   if(!btn) return;
-  btn.classList.toggle('on', isTutOn());
-  btn.title = isTutOn() ? 'ヘルプON（タップでOFF）' : 'ヘルプOFF（タップでON）';
+  const on = isTutOn();
+  btn.classList.toggle('on', on);
+  btn.textContent = on ? '💡' : '💡';
+  btn.title = on ? 'ガイドON（タップでOFF）' : 'ガイドOFF（タップでON）';
+  btn.style.opacity = on ? '1' : '0.45';
 }
 
-function showTutForScreen(screenId){
+// forced=true のとき depth・OFF状態を無視して強制表示
+function showTutForScreen(screenId, forced=false){
   clearTutBubbles();
-  if(!isTutOn()) return;
+  if(!forced){
+    if(!isTutOn()) return;            // ガイドOFFなら自動表示しない
+    if((state.depth||0) >= 3) return; // 3クエスト以降は自動表示しない
+  }
   const tips = TUTO_TIPS[screenId];
   if(!tips) return;
   tips.forEach((tip, i) => {
@@ -4317,6 +4331,8 @@ function submitAnswer(){
           onclick="showZoneArrival(${newZoneI})">${zone.emoji}<br>${zone.name}へ進む！</button>
         <div class="zone-advance-sub">✨ 新しいステージ解放！</div>`;
     }
+    // 新エリア到達時はガイドを強制表示
+    setTimeout(()=> showTutForScreen('event-zone', true), 900);
   }
 }
 
@@ -6305,6 +6321,8 @@ function awardGachaTicket(){
       <span class="badge">${count}枚</span>
     </button>
   </div>`;
+  // ガチャチケット獲得時はガイドを強制表示
+  setTimeout(()=> showTutForScreen('event-gacha', true), 700);
 }
 
 // ── アイテム使用（submitAnswer 内で呼ぶ） ────────────────────────────────────

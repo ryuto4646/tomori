@@ -7039,6 +7039,10 @@ buildStars();
 
 applyLanguage();  // buildProfile + buildSetup も内部で呼ばれる
 updateTTSBtn();   // TTS toggle initial state
+// 2回目以降のプレイはガイドをデフォルトOFF（アイコンタップで表示可能）
+if(parseInt(localStorage.getItem(SESSION_KEY)||'0', 10) >= 1){
+  localStorage.setItem(TUT_KEY,'1');
+}
 _updateTutBtn();  // チュートリアルボタン初期状態
 refreshStreakUI(); // ストリークバッジ初期表示
 checkStreakWarning(); // 途切れ警告

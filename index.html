@@ -4104,6 +4104,7 @@ function renderMission(q){
   const area=document.getElementById('answer-area');
   const submitBtn=document.getElementById('mission-submit-btn');
   submitBtn.disabled=true;
+  submitBtn.style.display = q.ans==='choices' ? 'none' : '';
 
   if(q.ans==='choices'){
     area.innerHTML=`<div class="choices-grid">`+
@@ -4130,6 +4131,7 @@ function selectChoice(i,el){
   document.querySelectorAll('.choice-btn').forEach(b=>b.classList.remove('chosen'));
   el.classList.add('chosen');
   document.getElementById('mission-submit-btn').disabled=false;
+  setTimeout(submitAnswer, 350);
 }
 
 function hideMicGuide(){

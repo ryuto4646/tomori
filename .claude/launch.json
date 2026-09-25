@@ -6,6 +6,12 @@
       "runtimeExecutable": "python",
       "runtimeArgs": ["-m", "http.server", "3456", "--directory", "C:/Users/DELL/Documents/tomori"],
       "port": 3456
+    },
+    {
+      "name": "tomori-next",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "3457", "--directory", "C:/Users/DELL/Documents/tomori-next"],
+      "port": 3457
     }
   ]
 }

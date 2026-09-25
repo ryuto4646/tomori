@@ -123,6 +123,41 @@ html, body { width:100%; height:100%; overflow:hidden; background:#a8d8ea;
 ruby { ruby-align:center; }
 rt { font-size:0.55em; color:#7a8060; }
 
+/* ── 音声入力 ─────────────────────── */
+#btn-voice {
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  width:100%; background:#7ab648; color:white;
+  border:none; border-radius:24px; font-size:16px; font-weight:bold;
+  padding:16px 14px; cursor:pointer; margin-bottom:4px;
+  transition:background .25s, transform .1s;
+  position:relative; overflow:hidden;
+}
+#btn-voice:active { transform:scale(.97); }
+#btn-voice.recording { background:#f0a830; }
+#btn-voice.sr-unavail { background:#b0c8a0; opacity:.6; cursor:default; }
+.voice-pulse {
+  position:absolute; inset:0; border-radius:24px;
+  background:rgba(255,255,255,.25);
+  animation:voice-expand 1.8s ease-out infinite;
+  pointer-events:none;
+}
+@keyframes voice-expand {
+  0%   { transform:scale(.82); opacity:.75; }
+  100% { transform:scale(1.18); opacity:0; }
+}
+.voice-sub { font-size:12px; color:#9a8860; text-align:center; margin-bottom:10px; min-height:1em; }
+.voice-error { font-size:13px; color:#b04030; background:#fff0ec; border-radius:10px;
+  padding:8px 12px; margin-bottom:10px; display:none; line-height:1.55; }
+.voice-error.show { display:block; }
+.voice-divider { text-align:center; color:#c0a870; font-size:12px; margin-bottom:8px;
+  position:relative; }
+.voice-divider::before,.voice-divider::after {
+  content:''; display:inline-block; width:28%; height:1px;
+  background:#e0cfa0; vertical-align:middle; margin:0 6px;
+}
+.voice-privacy { font-size:11px; color:#b0a080; text-align:center;
+  margin-top:10px; line-height:1.6; }
+
 /* ── 世界変化オーバーレイ ───────────── */
 #overlay-world {
   position:fixed; inset:0; display:flex; flex-direction:column;
@@ -231,10 +266,19 @@ rt { font-size:0.55em; color:#7a8060; }
     <img id="expr-thumb" class="photo-thumb-sm" src="" alt="">
     <div class="photo-thumb-cap">選んだ写真</div>
   </div>
-  <div class="panel-title">この写真を見て、<br>どんな感じがした？</div>
-  <div class="panel-desc" style="margin-bottom:12px">うまく言えなくても大丈夫。<br>「やばい」だけでも次へ進めます。</div>
-  <textarea class="text-input" id="expr-input" rows="3" placeholder="例：やばい、すごい、なんか好き…"></textarea>
-  <button class="btn-primary btn-disabled" id="btn-expr-next" onclick="window.toWords()">気持ちを送る →</button>
+  <div class="panel-title">この写真を見て、<br>どんな感じがした？<br><span style="font-size:13px;font-weight:normal;color:#7a6040;">うまく言えなくても大丈夫。</span></div>
+  <!-- 音声入力ボタン（メイン） -->
+  <button id="btn-voice" onclick="window.toggleVoice()">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+    <span id="voice-btn-text">声で話す</span>
+  </button>
+  <div id="voice-sub" class="voice-sub">感じたことを、そのまま話してね</div>
+  <div id="voice-error" class="voice-error"></div>
+  <!-- テキスト入力（補助） -->
+  <div class="voice-divider">書いてもOK</div>
+  <textarea class="text-input" id="expr-input" rows="2" placeholder="例：やばい、すごい、なんか好き…"></textarea>
+  <button class="btn-primary btn-disabled" id="btn-expr-next" onclick="window.toWords()">ことばをひろげる →</button>
+  <div class="voice-privacy">話した声は、端末の音声認識を使って文字になります。</div>
 </div>
 
 <!-- 言葉カードパネル -->
@@ -292,6 +336,100 @@ let photoDataUrl = null;
 let enteredText   = '';
 let chosenWord    = '';
 
+/* ── 音声入力 ─────────────────────────────────── */
+const SR_API = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+let _voiceRec    = null;
+let _voiceActive = false;
+
+function stopVoice() {
+  if (_voiceRec) { try { _voiceRec.abort(); } catch(e){} _voiceRec = null; }
+  _voiceActive = false;
+  const btn = document.getElementById('btn-voice');
+  const sub = document.getElementById('voice-sub');
+  if (!btn) return;
+  btn.classList.remove('recording');
+  const pulse = btn.querySelector('.voice-pulse');
+  if (pulse) pulse.remove();
+  document.getElementById('voice-btn-text').textContent = '声で話す';
+  if (sub) sub.textContent = '感じたことを、そのまま話してね';
+}
+
+function _showVoiceError(msg) {
+  const el = document.getElementById('voice-error');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 5000);
+}
+
+window.toggleVoice = function() {
+  const btn = document.getElementById('btn-voice');
+  if (!SR_API) return;
+  if (btn && btn.classList.contains('sr-unavail')) return;
+  if (_voiceActive) { stopVoice(); return; }
+
+  document.getElementById('voice-error').classList.remove('show');
+  const rec = new SR_API();
+  rec.lang = 'ja-JP';
+  rec.interimResults = true;
+  rec.maxAlternatives = 1;
+  rec.continuous = false;
+  _voiceRec = rec;
+  _voiceActive = true;
+
+  const sub = document.getElementById('voice-sub');
+  btn.classList.add('recording');
+  document.getElementById('voice-btn-text').textContent = '聞いているよ…';
+  if (sub) sub.textContent = 'もう一度タップすると止まります';
+  if (!btn.querySelector('.voice-pulse')) {
+    const pulse = document.createElement('span');
+    pulse.className = 'voice-pulse';
+    btn.appendChild(pulse);
+  }
+
+  const ta = document.getElementById('expr-input');
+  const base = ta.value;
+
+  rec.onresult = function(e) {
+    let interim = '';
+    let final_  = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) final_ += t;
+      else interim += t;
+    }
+    ta.value = (base + final_ + interim).trimStart();
+    ta.dispatchEvent(new Event('input'));
+  };
+
+  rec.onend = function() {
+    const finalText = ta.value.trimStart();
+    const added = finalText.slice(base.trimStart().length);
+    if (added.trim()) {
+      ta.value = base ? base.trimEnd() + '\n' + added.trimStart() : added.trimStart();
+    } else {
+      ta.value = base;
+    }
+    ta.dispatchEvent(new Event('input'));
+    stopVoice();
+  };
+
+  rec.onerror = function(e) {
+    if (e.error === 'aborted' || e.error === 'no-speech') { stopVoice(); return; }
+    const msgs = {
+      'not-allowed': 'マイクが使えませんでした。設定を確認してね。',
+      'network':     'ネットワークが必要です。接続を確認してね。',
+    };
+    _showVoiceError(msgs[e.error] || 'うまくいかなかったよ。もう一度試してね。');
+    stopVoice();
+  };
+
+  try { rec.start(); } catch(e) { stopVoice(); }
+};
+
+window.addEventListener('beforeunload', stopVoice);
+/* ─────────────────────────────────────────────── */
+
 function setState(ns) {
   console.log('[state]', state, '→', ns);
   state = ns;
@@ -299,6 +437,7 @@ function setState(ns) {
 }
 
 function applyUI() {
+  stopVoice();
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('show'));
   document.getElementById('demo-end').classList.remove('show');
   const mbar = document.getElementById('mbar-text');
@@ -319,14 +458,28 @@ function applyUI() {
       openPanel('panel-photo');
       hint.style.opacity = '0';
       break;
-    case S.EXPRESSION_ENTERED:
+    case S.EXPRESSION_ENTERED: {
       openPanel('panel-expr');
       hint.style.opacity = '0';
       if (photoDataUrl) {
         document.getElementById('expr-thumb-row').style.display = 'flex';
         document.getElementById('expr-thumb').src = photoDataUrl;
       }
+      /* SR対応状況をボタンへ反映 */
+      const vb = document.getElementById('btn-voice');
+      if (vb) {
+        if (!SR_API) {
+          vb.classList.add('sr-unavail');
+          document.getElementById('voice-btn-text').textContent = 'この端末では、書いて教えてね';
+          const sub = document.getElementById('voice-sub');
+          if (sub) sub.textContent = '';
+        } else {
+          vb.classList.remove('sr-unavail');
+          document.getElementById('voice-btn-text').textContent = '声で話す';
+        }
+      }
       break;
+    }
     case S.WORDS_READY:
       openPanel('panel-words');
       hint.style.opacity = '0';
@@ -787,6 +940,7 @@ window.revealSecret = ()=>{
 window.confirmReset = ()=>{ if(confirm('デモを最初からやり直しますか？')) doReset(); };
 
 function doReset(){
+  stopVoice();
   if(character){ character.position.set(0,0,0); character.rotation.set(0,0,0); }
   targetPos.set(0,0,0); isMoving=false;
   camera.position.copy(CAM_OFF); camera.lookAt(0,0,0);

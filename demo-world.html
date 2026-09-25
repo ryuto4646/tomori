@@ -119,6 +119,10 @@ html, body { width:100%; height:100%; overflow:hidden; background:#a8d8ea;
 .word-title { font-size:17px; font-weight:bold; color:#3a7a28; margin-bottom:3px; }
 .word-desc { font-size:13px; color:#6a6048; line-height:1.5; }
 
+/* ── ルビ共通 ─────────────────────── */
+ruby { ruby-align:center; }
+rt { font-size:0.55em; color:#7a8060; }
+
 /* ── 世界変化オーバーレイ ───────────── */
 #overlay-world {
   position:fixed; inset:0; display:flex; flex-direction:column;
@@ -179,11 +183,11 @@ html, body { width:100%; height:100%; overflow:hidden; background:#a8d8ea;
   <button id="btn-reset" onclick="window.confirmReset()">デモを最初から</button>
   <button id="btn-back"  onclick="window.location.href='index.html'">← アプリへ</button>
   <div id="mission-bar"><span id="mbar-text">光るポイントを探して歩こう！</span></div>
-  <div id="hint">タップした場所へ歩きます　PC: W/A/S/D または矢印キー</div>
+  <div id="hint">タップした場所へ歩くよ！　パソコン：W A S D または 矢印キー</div>
   <div id="overlay-world"><div id="word-announce"></div></div>
   <div id="demo-end">
-    <div class="end-line1">遠くで、新しい発見が光っている。</div>
-    <div class="end-line2">つづきは、次の探究で。</div>
+    <div class="end-line1">遠くで、新しい"なにか"が光っている。</div>
+    <div class="end-line2">つづきは、次の冒険で。</div>
     <button class="btn-secondary" style="width:auto;display:inline-block;padding:10px 22px;margin:0 auto" onclick="window.confirmReset()">もう一度あそぶ</button>
   </div>
 </div>
@@ -193,7 +197,7 @@ html, body { width:100%; height:100%; overflow:hidden; background:#a8d8ea;
   <div class="panel-handle"></div>
   <div class="panel-icon">✨</div>
   <div class="panel-title">心があたたかくなる赤を<br>見つけよう</div>
-  <div class="panel-desc">この世界は、まだ名前のない気持ちを探しています。<br>あなたが見つけた景色を、世界のタネにしてみよう。</div>
+  <div class="panel-desc">この世界は、まだ名前のない気もちをさがしています。<br>見つけたけしきを、世界のタネにしてみよう。</div>
   <button class="btn-primary" onclick="window.toPhotoPanel()">さっそく探す！</button>
   <div class="panel-note">写真はサーバーへ送りません</div>
 </div>
@@ -272,7 +276,6 @@ html, body { width:100%; height:100%; overflow:hidden; background:#a8d8ea;
 </script>
 <script type="module">
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 // ── 状態 ────────────────────────────────────────────────────────
 const S = {
@@ -308,7 +311,7 @@ function applyUI() {
       break;
     case S.MISSION_FOUND:
       openPanel('panel-mission');
-      mbar.textContent = '探索ポイントに到着！';
+      mbar.textContent = '光るポイントに着いた！';
       hint.style.opacity = '0';
       break;
     case S.PHOTO_PANEL:
@@ -557,26 +560,10 @@ const ANIM_MAP={
   discover:['discover','Discover','surprised','Surprised'],
   celebrate:['celebrate','Celebrate','cheer','Cheer','victory'],
 };
-new GLTFLoader().load('assets/characters/hiroli.glb',
-  gltf=>{
-    character=gltf.scene;
-    const box=new THREE.Box3().setFromObject(character);
-    if(box.min.y!==0) character.position.y=-box.min.y;
-    scene.add(character);
-    if(gltf.animations.length){
-      mixer=new THREE.AnimationMixer(character);
-      gltf.animations.forEach(clip=>{
-        for(const[k,ns]of Object.entries(ANIM_MAP))
-          if(ns.some(n=>clip.name.toLowerCase()===n.toLowerCase())) clips[k]=clip;
-      });
-      if(!clips.idle&&gltf.animations[0]) clips.idle=gltf.animations[0];
-      if(!clips.walk&&gltf.animations[0]) clips.walk=gltf.animations[0];
-    }
-    playAnim('idle');
-  },
-  undefined,
-  ()=>{ character=mkPlaceholder(); scene.add(character); }
-);
+// GLBはこのデモには同梱していないため、プレースホルダーを直接生成する。
+// GLBを追加するときはここを new GLTFLoader().load(...) に戻す。
+character = mkPlaceholder();
+scene.add(character);
 
 function playAnim(n){
   if(!mixer||!clips[n]){currentAnim=n;return;}
@@ -729,26 +716,47 @@ window.toWords = ()=>{
 function buildWords(input){
   const q=input.length>10?input.slice(0,10)+'…':input;
   document.getElementById('words-quote').innerHTML=
-    `「${q}」の中には、<br>こんな気持ちが隠れているかもしれないよ。`;
+    `「${q}」の中に、<br>こんな気もちがひそんでいるかもしれないよ。`;
+
+  // word, reading, plainWord（世界変化テキスト用）, desc
   const words=[
-    {w:'鮮やか',    d:'目に飛び込んでくるような、はっきりした美しさ'},
-    {w:'燃えるよう', d:'熱や力を感じるほど、強く赤い様子'},
-    {w:'少しさびしげ',d:'きれいだけれど、静かな寂しさも感じる様子'},
+    {
+      w:'<ruby>鮮<rt>あざ</rt></ruby>やか',
+      reading:'あざやか',
+      plain:'鮮やか',
+      d:'目にぱっと入ってくる、<br><ruby>明<rt>あか</rt></ruby>るくはっきりした色',
+    },
+    {
+      w:'<ruby>燃<rt>も</rt></ruby>えるよう',
+      reading:'もえるよう',
+      plain:'燃えるよう',
+      d:'あつさや力を感じるような、<br>強い赤',
+    },
+    {
+      w:'<ruby>少<rt>すこ</rt></ruby>しさびしげ',
+      reading:'すこしさびしげ',
+      plain:'少しさびしげ',
+      d:'きれいだけれど、<br>しずかなさびしさもある色',
+    },
   ];
   const ctr=document.getElementById('word-cards');
   ctr.innerHTML='';
-  words.forEach(({w,d})=>{
+  words.forEach(({w,reading,plain,d})=>{
     const card=document.createElement('div');
     card.className='word-card';
+    // data属性：将来の音声読み上げ用
+    card.dataset.wordText=plain;
+    card.dataset.wordReading=reading;
+    card.dataset.wordDesc=d.replace(/<[^>]+>/g,'');
     card.innerHTML=`<div class="word-title">${w}</div><div class="word-desc">${d}</div>`;
     card.onclick=()=>{
       if(state!==S.WORDS_READY) return;
       document.querySelectorAll('.word-card').forEach(c=>c.classList.remove('selected'));
       card.classList.add('selected');
-      chosenWord=w;
+      chosenWord=plain;
       setTimeout(()=>{
         setState(S.WORD_SELECTED);
-        doWorldChange(w);
+        doWorldChange(plain);
       },400);
     };
     ctr.appendChild(card);
@@ -912,7 +920,7 @@ setTimeout(()=>{
 
 animate();
 console.log('[Tomori Demo] States:',Object.keys(S).join(', '));
-console.log('[Tomori Demo] GLB: assets/characters/hiroli.glb');
+console.log('[Tomori Demo] character: placeholder (GLB not bundled in this demo)');
 </script>
 </body>
 </html>

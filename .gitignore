@@ -1,0 +1,4 @@
+# 生成物・キャプチャ画像（Gitから除外・ファイルは削除しない）
+check_*.png
+demo_frames/
+tomori-demo.mp4

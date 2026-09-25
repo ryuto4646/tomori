@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Tomori 3D World</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  width: 100%; height: 100%;
+  background: #1a0a2e;
+  overflow: hidden;
+  font-family: 'Hiragino Sans', 'Meiryo', system-ui, sans-serif;
+}
+
+/* Three.js キャンバスは body に直接乗せる */
+#world-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none; /* タッチイベントとの干渉を防ぐ */
+}
+
+/* UIオーバーレイ */
+#ui {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* ミッションステータス帯 */
+#mission-bar {
+  position: absolute;
+  top: 12px; left: 50%;
+  transform: translateX(-50%);
+  background: rgba(10, 5, 20, 0.82);
+  border: 1.5px solid rgba(180, 140, 255, 0.5);
+  border-radius: 20px;
+  padding: 8px 20px;
+  color: #e8d8ff;
+  font-size: 14px;
+  font-weight: bold;
+  text-align: center;
+  min-width: 240px;
+  max-width: 90vw;
+  backdrop-filter: blur(6px);
+  transition: opacity 0.4s;
+}
+#mission-bar .em { font-size: 18px; margin-right: 6px; }
+
+/* 操作ヒント */
+#hint {
+  position: absolute;
+  bottom: 90px; left: 50%;
+  transform: translateX(-50%);
+  color: rgba(220, 200, 255, 0.7);
+  font-size: 12px;
+  text-align: center;
+  pointer-events: none;
+  transition: opacity 1s;
+}
+
+/* 戻るボタン */
+#btn-back {
+  position: absolute;
+  top: 12px; left: 12px;
+  background: rgba(10, 5, 20, 0.7);
+  border: 1.5px solid rgba(180, 140, 255, 0.4);
+  border-radius: 14px;
+  color: #c8b4ff;
+  font-size: 13px;
+  padding: 8px 14px;
+  cursor: pointer;
+  pointer-events: all;
+  backdrop-filter: blur(4px);
+  transition: background 0.2s;
+}
+#btn-back:hover { background: rgba(80, 40, 120, 0.7); }
+
+/* ミッション到達ポップアップ */
+#mission-popup {
+  position: absolute;
+  bottom: 100px; left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  width: min(360px, 90vw);
+  background: rgba(10, 5, 25, 0.93);
+  border: 2px solid rgba(180, 140, 255, 0.6);
+  border-radius: 20px;
+  padding: 20px;
+  color: #f0e8ff;
+  text-align: center;
+  backdrop-filter: blur(10px);
+  pointer-events: all;
+  opacity: 0;
+  transition: opacity 0.4s, transform 0.4s;
+}
+#mission-popup.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+#mission-popup .popup-em { font-size: 36px; margin-bottom: 8px; }
+#mission-popup .popup-title { font-size: 16px; font-weight: bold; margin-bottom: 8px; color: #d8c0ff; }
+#mission-popup .popup-prompt { font-size: 14px; line-height: 1.6; margin-bottom: 16px; }
+#mission-popup .popup-btn {
+  background: linear-gradient(135deg, #7c3aed, #a855f7);
+  border: none; border-radius: 24px;
+  color: white; font-size: 15px; font-weight: bold;
+  padding: 12px 32px; cursor: pointer;
+  width: 100%;
+  transition: opacity 0.2s;
+}
+#mission-popup .popup-btn:active { opacity: 0.8; }
+
+/* WebGL 非対応メッセージ */
+#no-webgl {
+  display: none;
+  position: fixed; inset: 0;
+  background: #1a0a2e;
+  color: #c8b4ff;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 16px; text-align: center; padding: 24px;
+}
+#no-webgl h2 { font-size: 20px; }
+#no-webgl p { font-size: 14px; opacity: 0.7; }
+#no-webgl a { color: #a78bfa; text-decoration: none; }
+
+/* ローディング画面 */
+#loading {
+  position: fixed; inset: 0;
+  background: #1a0a2e;
+  color: #c8b4ff;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 16px; z-index: 100;
+  transition: opacity 0.8s;
+}
+#loading .load-em { font-size: 48px; animation: pulse 1.2s ease-in-out infinite; }
+#loading p { font-size: 14px; opacity: 0.7; }
+@keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.15)} }
+</style>
+</head>
+<body>
+
+<canvas id="world-canvas"></canvas>
+
+<!-- UIオーバーレイ -->
+<div id="ui">
+  <button id="btn-back" onclick="goBackToApp()">← アプリへ</button>
+  <div id="mission-bar">
+    <span class="em">🗺️</span>
+    <span id="mission-bar-text">光るポイントを探して歩こう！</span>
+  </div>
+  <div id="hint">タップした場所へヒロリが歩きます</div>
+  <div id="mission-popup">
+    <div class="popup-em" id="popup-em">✨</div>
+    <div class="popup-title" id="popup-title">ミッション発見！</div>
+    <div class="popup-prompt" id="popup-prompt">写真を撮って、探究を始めよう！</div>
+    <button class="popup-btn" onclick="closeMissionPopup()">やってみる！</button>
+  </div>
+</div>
+
+<!-- ローディング -->
+<div id="loading">
+  <div class="load-em">🌟</div>
+  <p>世界を読み込んでいます…</p>
+</div>
+
+<!-- WebGL非対応時 -->
+<div id="no-webgl" style="display:none">
+  <h2>😢 3Dが表示できません</h2>
+  <p>このデバイスはWebGLに対応していないようです。</p>
+  <a href="index.html">← 通常モードで続ける</a>
+</div>
+
+<!-- Three.js (ES module 方式) -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+// ─────────────────────────────────────────────────────────
+// 定数・設定
+// ─────────────────────────────────────────────────────────
+
+// キャラクターGLBパス。ファイルを置くだけで仮モデルと自動切り替わる
+const CHAR_GLB_PATH = 'assets/characters/hiroli.glb';
+
+// アニメーションクリップ名マッピング
+// GLBのクリップ名が異なる場合はここを変更する
+const CHAR_ANIM_MAP = {
+  idle:      ['idle', 'Idle', 'IDLE', 'stand', 'Stand'],
+  walk:      ['walk', 'Walk', 'WALK', 'walking', 'Walking', 'run'],
+  discover:  ['discover', 'Discover', 'surprised', 'Surprised'],
+  celebrate: ['celebrate', 'Celebrate', 'cheer', 'Cheer', 'victory'],
+  think:     ['think', 'Think', 'thinking', 'Thinking'],
+};
+
+const MOVE_SPEED     = 4.0;   // ユニット/秒
+const ARRIVE_RADIUS  = 0.6;   // この距離以内で到着判定
+const MISSION_RADIUS = 1.8;   // ミッション地点の発動距離
+
+// ミッションデータ（デモ用・本番は index.html の QUESTS から取得）
+const DEMO_MISSIONS = [
+  { em:'🌿', title:'生きものだったら？', prompt:'この場所が生き物だったら、どんな名前をつける？', type:'shift' },
+  { em:'🔭', title:'巨大化したら？',   prompt:'もしこの景色が100倍大きくなったら、どうなる？', type:'scale' },
+  { em:'💭', title:'どんな気持ち？',   prompt:'この場所が気持ちを持っていたら、今どんな感情かな？', type:'feel' },
+  { em:'🌍', title:'世界が変わったら？', prompt:'ここに住む人がいたら、どんなルールで暮らしている？', type:'world' },
+  { em:'🎭', title:'役割を交換！',     prompt:'君がこの木になったら、一番最初に何を言う？', type:'role' },
+];
+
+// ─────────────────────────────────────────────────────────
+// WebGL 確認
+// ─────────────────────────────────────────────────────────
+
+function checkWebGL() {
+  try {
+    const c = document.createElement('canvas');
+    return !!(c.getContext('webgl2') || c.getContext('webgl') || c.getContext('experimental-webgl'));
+  } catch { return false; }
+}
+
+if (!checkWebGL()) {
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('no-webgl').style.display = 'flex';
+  throw new Error('WebGL not supported');
+}
+
+// ─────────────────────────────────────────────────────────
+// シーン・レンダラー・カメラ
+// ─────────────────────────────────────────────────────────
+
+const canvas = document.getElementById('world-canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+// 影は無効（スマートフォン向け軽量化）
+renderer.shadowMap.enabled = false;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87ceeb); // 空色
+scene.fog = new THREE.Fog(0x87ceeb, 20, 60);
+
+// カメラ（三人称・後方から見下ろし）
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+const CAMERA_OFFSET = new THREE.Vector3(0, 5, 8);
+camera.position.copy(CAMERA_OFFSET);
+camera.lookAt(0, 0, 0);
+
+// ─────────────────────────────────────────────────────────
+// ライト
+// ─────────────────────────────────────────────────────────
+
+const ambientLight = new THREE.AmbientLight(0xfff0e0, 1.2);
+scene.add(ambientLight);
+
+const sunLight = new THREE.DirectionalLight(0xfffad4, 2.0);
+sunLight.position.set(8, 12, 6);
+scene.add(sunLight);
+
+// 地面への青い反射光（スカイライト風）
+const skyFill = new THREE.HemisphereLight(0x87ceeb, 0x6aaa4f, 0.6);
+scene.add(skyFill);
+
+// ─────────────────────────────────────────────────────────
+// 地面
+// ─────────────────────────────────────────────────────────
+
+const groundGeo = new THREE.PlaneGeometry(60, 60, 8, 8);
+const groundMat = new THREE.MeshLambertMaterial({ color: 0x5a9e3f });
+const ground = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x = -Math.PI / 2;
+ground.name = 'ground';
+scene.add(ground);
+
+// ─────────────────────────────────────────────────────────
+// 手続き生成: 木
+// ─────────────────────────────────────────────────────────
+
+function createTree(x, z, scale = 1) {
+  const g = new THREE.Group();
+
+  // 幹
+  const trunkGeo = new THREE.CylinderGeometry(0.18 * scale, 0.25 * scale, 1.6 * scale, 7);
+  const trunkMat = new THREE.MeshLambertMaterial({ color: 0x8b5e3c });
+  const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+  trunk.position.y = 0.8 * scale;
+  g.add(trunk);
+
+  // 葉（3段）
+  const leafColors = [0x2d8a2d, 0x3aaf3a, 0x247a24];
+  [[0, 1.8, 1.3], [0.3, 1.2, 1.0], [-0.1, 0.7, 0.75]].forEach(([yOff, y, r], i) => {
+    const lGeo = new THREE.ConeGeometry(r * scale, 1.8 * scale, 7);
+    const lMat = new THREE.MeshLambertMaterial({ color: leafColors[i] });
+    const leaf = new THREE.Mesh(lGeo, lMat);
+    leaf.position.y = y * scale + yOff;
+    g.add(leaf);
+  });
+
+  g.position.set(x, 0, z);
+  return g;
+}
+
+// 木を散在配置（ミッション地点から遠ざける）
+const treePositions = [
+  [-5, -6], [-8, 2], [6, -7], [9, 1], [-3, 8], [4, 9],
+  [-10, -3], [11, -4], [0, -12], [-7, 11], [8, -12], [-12, 7],
+  [13, 6], [-14, -8], [7, 13], [-6, -14], [12, -9], [-9, 13],
+];
+treePositions.forEach(([x, z]) => scene.add(createTree(x, z, 0.8 + Math.random() * 0.4)));
+
+// ─────────────────────────────────────────────────────────
+// 手続き生成: 岩
+// ─────────────────────────────────────────────────────────
+
+function createRock(x, z) {
+  const geo = new THREE.DodecahedronGeometry(0.3 + Math.random() * 0.3, 0);
+  const mat = new THREE.MeshLambertMaterial({ color: 0x8a8a7a });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(x, 0.2, z);
+  mesh.rotation.set(Math.random(), Math.random(), Math.random());
+  return mesh;
+}
+[[-4, -3], [5, -2], [-2, 5], [6, 4], [-6, 6]].forEach(([x, z]) => scene.add(createRock(x, z)));
+
+// ─────────────────────────────────────────────────────────
+// ミッション地点
+// ─────────────────────────────────────────────────────────
+
+// 発光するトーラス + PointLight でミッション地点を表現
+const missionPointGroup = new THREE.Group();
+missionPointGroup.position.set(0, 0, -6);
+scene.add(missionPointGroup);
+
+// 地面に置くリング
+const ringGeo = new THREE.TorusGeometry(0.9, 0.08, 8, 32);
+const ringMat = new THREE.MeshBasicMaterial({ color: 0xd4a0ff });
+const ring = new THREE.Mesh(ringGeo, ringMat);
+ring.rotation.x = Math.PI / 2;
+ring.position.y = 0.05;
+missionPointGroup.add(ring);
+
+// 浮遊する結晶
+const crystalGeo = new THREE.OctahedronGeometry(0.35, 0);
+const crystalMat = new THREE.MeshBasicMaterial({ color: 0xb87fff, wireframe: false });
+const crystal = new THREE.Mesh(crystalGeo, crystalMat);
+crystal.position.y = 1.2;
+missionPointGroup.add(crystal);
+
+// 光源
+const missionLight = new THREE.PointLight(0xa060ff, 2.5, 6);
+missionLight.position.y = 1.2;
+missionPointGroup.add(missionLight);
+
+// ─────────────────────────────────────────────────────────
+// 到達後に出現する花（初期は非表示）
+// ─────────────────────────────────────────────────────────
+
+const flowerGroup = new THREE.Group();
+scene.add(flowerGroup);
+
+function createFlower(x, z) {
+  const g = new THREE.Group();
+  const colors = [0xff80b0, 0xffdd44, 0xffffff, 0x80e8ff, 0xcc88ff];
+  const stemGeo = new THREE.CylinderGeometry(0.03, 0.04, 0.4, 5);
+  const stemMat = new THREE.MeshLambertMaterial({ color: 0x4aaa4a });
+  const stem = new THREE.Mesh(stemGeo, stemMat);
+  stem.position.y = 0.2;
+  g.add(stem);
+  const headGeo = new THREE.SphereGeometry(0.12, 6, 6);
+  const headMat = new THREE.MeshLambertMaterial({ color: colors[Math.floor(Math.random() * colors.length)] });
+  const head = new THREE.Mesh(headGeo, headMat);
+  head.position.y = 0.44;
+  g.add(head);
+  g.position.set(x, 0, z);
+  g.scale.set(0, 0, 0); // 初期はスケール0（非表示）
+  return g;
+}
+
+// ミッション地点の周囲に花を事前生成しておく
+const flowers = [];
+for (let i = 0; i < 12; i++) {
+  const angle = (i / 12) * Math.PI * 2;
+  const r = 1.5 + Math.random() * 1.5;
+  const mx = missionPointGroup.position.x + Math.cos(angle) * r;
+  const mz = missionPointGroup.position.z + Math.sin(angle) * r;
+  const f = createFlower(mx + (Math.random() - 0.5) * 0.5, mz + (Math.random() - 0.5) * 0.5);
+  flowerGroup.add(f);
+  flowers.push(f);
+}
+
+// ─────────────────────────────────────────────────────────
+// パーティクル（キラキラ浮遊）
+// ─────────────────────────────────────────────────────────
+
+const particleCount = 80;
+const particleGeo = new THREE.BufferGeometry();
+const positions = new Float32Array(particleCount * 3);
+for (let i = 0; i < particleCount; i++) {
+  positions[i * 3]     = (Math.random() - 0.5) * 40;
+  positions[i * 3 + 1] = Math.random() * 6;
+  positions[i * 3 + 2] = (Math.random() - 0.5) * 40;
+}
+particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+const particleMat = new THREE.PointsMaterial({ color: 0xe0c8ff, size: 0.12, transparent: true, opacity: 0.6 });
+scene.add(new THREE.Points(particleGeo, particleMat));
+
+// ─────────────────────────────────────────────────────────
+// ヒロリ（キャラクター）
+// ─────────────────────────────────────────────────────────
+
+let character = null;
+let mixer = null;
+let clips = {};           // { idle, walk, discover, celebrate, think }
+let currentAnim = null;
+let isGLBLoaded = false;
+
+// 手続きで作る仮ヒロリ（カプセル型）
+function createPlaceholderChar() {
+  const g = new THREE.Group();
+  // 胴体
+  const bodyGeo = new THREE.CapsuleGeometry(0.35, 0.9, 8, 16);
+  const bodyMat = new THREE.MeshLambertMaterial({ color: 0xffa040 });
+  const body = new THREE.Mesh(bodyGeo, bodyMat);
+  body.position.y = 0.95;
+  g.add(body);
+  // 頭
+  const headGeo = new THREE.SphereGeometry(0.32, 12, 12);
+  const headMat = new THREE.MeshLambertMaterial({ color: 0xffcc88 });
+  const head = new THREE.Mesh(headGeo, headMat);
+  head.position.y = 1.9;
+  g.add(head);
+  // 目（左右）
+  const eyeGeo = new THREE.SphereGeometry(0.06, 6, 6);
+  const eyeMat = new THREE.MeshBasicMaterial({ color: 0x222222 });
+  [-0.13, 0.13].forEach(x => {
+    const eye = new THREE.Mesh(eyeGeo, eyeMat);
+    eye.position.set(x, 1.95, 0.28);
+    g.add(eye);
+  });
+  g.position.set(0, 0, 0);
+  return g;
+}
+
+// GLB 読み込み試みる → 失敗時は仮モデル
+const gltfLoader = new GLTFLoader();
+gltfLoader.load(
+  CHAR_GLB_PATH,
+  (gltf) => {
+    character = gltf.scene;
+    character.scale.setScalar(1);
+    // Y=0が足元になるようにバウンディングボックスで調整
+    const box = new THREE.Box3().setFromObject(character);
+    const yMin = box.min.y;
+    if (yMin !== 0) character.position.y = -yMin;
+    scene.add(character);
+    isGLBLoaded = true;
+
+    // アニメーションクリップを名前マッピングで登録
+    if (gltf.animations.length > 0) {
+      mixer = new THREE.AnimationMixer(character);
+      gltf.animations.forEach(clip => {
+        for (const [key, names] of Object.entries(CHAR_ANIM_MAP)) {
+          if (names.some(n => clip.name.toLowerCase() === n.toLowerCase())) {
+            clips[key] = clip;
+          }
+        }
+      });
+      // マッピングに合うものがなければ最初のクリップを idle に使う
+      if (!clips.idle && gltf.animations[0]) clips.idle = gltf.animations[0];
+      if (!clips.walk && gltf.animations[0]) clips.walk = gltf.animations[0];
+    }
+    playAnim('idle');
+    console.log('[Hiroli] GLB loaded. clips:', Object.keys(clips));
+  },
+  undefined, // progress (不要)
+  (_err) => {
+    // GLBが存在しない場合は仮モデルを使う
+    character = createPlaceholderChar();
+    scene.add(character);
+    console.log('[Hiroli] GLB not found → using placeholder. Put hiroli.glb at /assets/characters/hiroli.glb');
+  }
+);
+
+// アニメーション再生
+function playAnim(name) {
+  if (!mixer || !clips[name]) {
+    currentAnim = name;
+    return;
+  }
+  if (currentAnim === name) return;
+
+  // 前のアクションをフェードアウト
+  if (currentAnim && clips[currentAnim]) {
+    mixer.clipAction(clips[currentAnim]).fadeOut(0.25);
+  }
+  const action = mixer.clipAction(clips[name]);
+  action.reset().fadeIn(0.25).play();
+  currentAnim = name;
+}
+
+// ─────────────────────────────────────────────────────────
+// 移動システム
+// ─────────────────────────────────────────────────────────
+
+const targetPos = new THREE.Vector3();   // タップされた目標位置
+let isMoving = false;
+const raycaster = new THREE.Raycaster();
+const pointer   = new THREE.Vector2();
+
+function getPointerNDC(e) {
+  const rect = canvas.getBoundingClientRect();
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  return new THREE.Vector2(
+    ((clientX - rect.left) / rect.width)  * 2 - 1,
+    -((clientY - rect.top)  / rect.height) * 2 + 1
+  );
+}
+
+function onTap(e) {
+  if (missionPopupOpen) return; // ポップアップ中は移動不可
+  const ndc = getPointerNDC(e);
+  raycaster.setFromCamera(ndc, camera);
+  const hits = raycaster.intersectObject(ground);
+  if (hits.length > 0) {
+    targetPos.copy(hits[0].point);
+    targetPos.y = 0;
+    isMoving = true;
+    playAnim('walk');
+    // ヒントを隠す
+    document.getElementById('hint').style.opacity = '0';
+  }
+}
+
+canvas.addEventListener('click', onTap);
+canvas.addEventListener('touchend', e => { e.preventDefault(); onTap(e); }, { passive: false });
+
+// ─────────────────────────────────────────────────────────
+// ミッション状態
+// ─────────────────────────────────────────────────────────
+
+let missionTriggered   = false; // 今回のミッション地点を踏んだか
+let missionPopupOpen   = false;
+let missionCompleted   = false; // 今回のミッションを達成したか
+let flowersBloomIndex  = 0;     // 花をアニメで順番に咲かせるカウンタ
+let currentMissionIdx  = 0;
+
+function triggerMissionArrival() {
+  if (missionTriggered) return;
+  missionTriggered = true;
+  isMoving = false;
+  playAnim('discover');
+  setTimeout(() => playAnim('idle'), 1200);
+
+  // ミッション内容を選択
+  const m = DEMO_MISSIONS[currentMissionIdx % DEMO_MISSIONS.length];
+  document.getElementById('popup-em').textContent    = m.em;
+  document.getElementById('popup-title').textContent = m.title;
+  document.getElementById('popup-prompt').textContent = m.prompt;
+
+  // ポップアップを表示
+  const popup = document.getElementById('mission-popup');
+  popup.classList.add('show');
+  missionPopupOpen = true;
+
+  // ミッションバーを更新
+  document.getElementById('mission-bar-text').textContent = '🌟 ミッション発見！';
+}
+
+function closeMissionPopup() {
+  const popup = document.getElementById('mission-popup');
+  popup.classList.remove('show');
+  missionPopupOpen = false;
+
+  // ミッション達成エフェクト
+  completeMission();
+}
+
+function completeMission() {
+  missionCompleted = true;
+  playAnim('celebrate');
+  setTimeout(() => playAnim('idle'), 1600);
+
+  // ミッションバーを更新
+  document.getElementById('mission-bar-text').textContent = '🎉 ミッション達成！次のポイントを探そう！';
+
+  // 花を順番に咲かせる
+  bloomNextFlower();
+
+  // ミッション地点を別の場所へ移動
+  setTimeout(moveMissionPoint, 2000);
+}
+
+function bloomNextFlower() {
+  if (flowersBloomIndex >= flowers.length) return;
+  const f = flowers[flowersBloomIndex++];
+  // スケールを0→1にアニメ
+  const start = Date.now();
+  const duration = 400;
+  function grow() {
+    const t = Math.min((Date.now() - start) / duration, 1);
+    const s = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; // ease
+    f.scale.setScalar(s);
+    if (t < 1) requestAnimationFrame(grow);
+    else setTimeout(bloomNextFlower, 80);
+  }
+  grow();
+}
+
+function moveMissionPoint() {
+  // ランダムな場所に移動
+  const angle = Math.random() * Math.PI * 2;
+  const dist  = 5 + Math.random() * 5;
+  missionPointGroup.position.set(
+    Math.cos(angle) * dist,
+    0,
+    Math.sin(angle) * dist
+  );
+  missionTriggered = false;
+  missionCompleted = false;
+  currentMissionIdx++;
+  document.getElementById('mission-bar-text').textContent = '光るポイントを探して歩こう！';
+
+  // 新しい花グループも更新（次のミッション用に再生成）
+  flowerGroup.children.forEach(f => f.scale.setScalar(0));
+  flowersBloomIndex = 0;
+}
+
+window.closeMissionPopup = closeMissionPopup;
+
+// ─────────────────────────────────────────────────────────
+// カメラ追従
+// ─────────────────────────────────────────────────────────
+
+const cameraTarget = new THREE.Vector3();
+
+function updateCamera() {
+  if (!character) return;
+  // キャラクターの少し後ろ上から見るオフセット
+  const desired = character.position.clone().add(CAMERA_OFFSET);
+  camera.position.lerp(desired, 0.08);
+  cameraTarget.lerp(character.position.clone().add(new THREE.Vector3(0, 1, 0)), 0.08);
+  camera.lookAt(cameraTarget);
+}
+
+// ─────────────────────────────────────────────────────────
+// ゲームループ
+// ─────────────────────────────────────────────────────────
+
+const clock = new THREE.Clock();
+
+function animate() {
+  requestAnimationFrame(animate);
+
+  const delta = clock.getDelta();
+
+  // アニメーションミキサー更新
+  if (mixer) mixer.update(delta);
+
+  // 移動処理
+  if (character && isMoving) {
+    const dir = targetPos.clone().sub(character.position);
+    dir.y = 0;
+    const dist = dir.length();
+
+    if (dist < ARRIVE_RADIUS) {
+      // 到着
+      isMoving = false;
+      playAnim('idle');
+    } else {
+      // 移動
+      const step = Math.min(MOVE_SPEED * delta, dist);
+      const move = dir.normalize().multiplyScalar(step);
+      character.position.add(move);
+      // キャラクターを進行方向に向ける
+      character.rotation.y = Math.atan2(move.x, move.z);
+    }
+
+    // ミッション地点との距離チェック
+    if (!missionTriggered) {
+      const md = character.position.distanceTo(missionPointGroup.position);
+      if (md < MISSION_RADIUS) triggerMissionArrival();
+    }
+  }
+
+  // ミッション地点のアニメーション（浮遊＋回転）
+  const t = clock.elapsedTime;
+  crystal.position.y    = 1.2 + Math.sin(t * 1.8) * 0.18;
+  crystal.rotation.y    = t * 0.9;
+  ring.rotation.z       = t * 0.4;
+  missionLight.intensity = 2.0 + Math.sin(t * 2.5) * 0.8;
+
+  // カメラ追従
+  updateCamera();
+
+  renderer.render(scene, camera);
+}
+
+// ─────────────────────────────────────────────────────────
+// リサイズ対応
+// ─────────────────────────────────────────────────────────
+
+function onResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+window.addEventListener('resize', onResize);
+
+// ─────────────────────────────────────────────────────────
+// アプリへ戻る
+// ─────────────────────────────────────────────────────────
+
+window.goBackToApp = function() {
+  window.location.href = 'index.html';
+};
+
+// ─────────────────────────────────────────────────────────
+// 初期化完了
+// ─────────────────────────────────────────────────────────
+
+// ローディング画面を消す（Three.js の初回フレームが出てから）
+setTimeout(() => {
+  const loading = document.getElementById('loading');
+  loading.style.opacity = '0';
+  setTimeout(() => loading.style.display = 'none', 800);
+}, 800);
+
+// レンダリング開始
+animate();
+
+console.log('[Tomori 3D World] Ready.');
+console.log('  → GLB差し替え: /assets/characters/hiroli.glb を配置するだけ');
+console.log('  → アニメ対応名: idle, walk, discover, celebrate, think');
+</script>
+</body>
+</html>

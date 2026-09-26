@@ -388,9 +388,8 @@ let chosenWord    = '';
 
 // ── AI語彙 ──────────────────────────────────────────────────────────
 // VOCAB-CORE-BEGIN（test-vocabulary-integration.mjs がこの範囲を読み込んでテストする）
-// 緊急停止スイッチ：false の間は外部へ一切送らず、固定の3語を使う。
-// 本番Workerには /vocabulary が無く、未知のパスは /generate へ流れる（今の送信内容では400で止まる）。
-// Worker側の修正と公開が済むまで false のままにする。
+// 緊急停止スイッチ：false の間は外部へ一切送らず、匿名IDも作らず、固定の3語を使う。
+// Worker の公開と Preview での確認が済むまで false のままにする。
 const VOCABULARY_AI_ENABLED = false;
 const VOCABULARY_API_URL = 'https://tomori-api.tomori-ryuto.workers.dev/vocabulary';
 let _vocabGen      = 0;      // リセットのたびに増える。古い応答で画面を書き換えないため
@@ -407,6 +406,36 @@ const FALLBACK_WORDS = [
 ];
 const FALLBACK_FOLLOW_UP = 'この赤は、何に似ている？';
 const CARE_MESSAGE = 'とてもつらい気もちなんだね。\nひとりでかかえず、近くの信頼できる大人に話してね。';
+
+// 匿名セッションID：レート制限のためだけに使う。名前・年齢・写真・入力文とは結び付けない。
+// sessionStorage に置くので、タブを閉じると消える。リセットでは同じIDを使い続ける。
+const VOCAB_SESSION_KEY = 'tomori.vocabSession';
+const VOCAB_SESSION_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+let _vocabSessionMemory = null;  // sessionStorage が使えない端末用
+
+function makeVocabSessionId() {
+  const c = globalThis.crypto;
+  if (c && typeof c.randomUUID === 'function') return c.randomUUID();
+  if (!c || typeof c.getRandomValues !== 'function') return null;
+  const b = c.getRandomValues(new Uint8Array(16));
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const h = Array.from(b, x => x.toString(16).padStart(2, '0')).join('');
+  return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`;
+}
+
+function getVocabSessionId() {
+  try {
+    const saved = sessionStorage.getItem(VOCAB_SESSION_KEY);
+    if (saved && VOCAB_SESSION_PATTERN.test(saved)) return saved;
+  } catch (e) {}
+  if (_vocabSessionMemory) return _vocabSessionMemory;
+  const id = makeVocabSessionId();
+  if (!id || !VOCAB_SESSION_PATTERN.test(id)) return null;
+  _vocabSessionMemory = id;
+  try { sessionStorage.setItem(VOCAB_SESSION_KEY, id); } catch (e) {}
+  return id;
+}
 
 function resetVocabState() {
   if (_vocabAbort) { try { _vocabAbort.abort(); } catch(e){} _vocabAbort = null; }
@@ -439,6 +468,8 @@ function validateVocabResponse(data) {
 async function fetchVocabulary(expression) {
   resetVocabState();
   if (!VOCABULARY_AI_ENABLED) return 'fallback';
+  const sessionId = getVocabSessionId();
+  if (!sessionId) return 'fallback';
   const abort = new AbortController();
   _vocabAbort = abort;
 
@@ -447,7 +478,7 @@ async function fetchVocabulary(expression) {
   try {
     const res = await fetch(VOCABULARY_API_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Tomori-Session': sessionId },
       // 写真・音声・名前・履歴は送らない
       body: JSON.stringify({
         expression: expression.slice(0, 200),

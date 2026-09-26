@@ -34,6 +34,22 @@ Worker 側の仕様は `tomori-worker-next/docs/VOCABULARY_API.md` にある。
 送らないもの：写真、音声、名前、これまでの記録。
 写真は選んでも端末の中だけで使う。
 
+本文とは別に、ヘッダー `X-Tomori-Session` で匿名セッションIDを1つ送る（下の節）。
+
+---
+
+## 匿名セッションID
+
+Worker のレート制限（1つのタブにつき 6回/分）のためだけに使う。
+
+- `crypto.randomUUID()` で作る。使えない端末では `crypto.getRandomValues()` で同じ形（UUID v4）を作る。
+  どちらも無い端末では送らず、固定の3語を使う
+- `sessionStorage` の `tomori.vocabSession` に置く。タブを閉じると消える。Cookie・localStorage は使わない
+- 名前・年齢・学校・写真・入力文とは結び付けない。Worker も保存しない
+- 「デモを最初から」では同じIDを使い続ける
+- 保存された値の形がおかしいときは使わず、作り直す
+- **緊急停止スイッチが `false` の間は、IDを作らず、保存もしない**
+
 ---
 
 ## フォールバック
@@ -43,7 +59,7 @@ Worker 側の仕様は `tomori-worker-next/docs/VOCABULARY_API.md` にある。
 
 - 6秒を過ぎた
 - 通信できなかった
-- 404・500・502 などのエラー
+- 400・404・429（上限超過）・500・502・503 などのエラー
 - JSONとして読めない
 - 形がおかしい（3語でない、重複、文字数が多すぎる、質問が10〜35文字でない、など）
 
@@ -56,15 +72,21 @@ Worker 側の仕様は `tomori-worker-next/docs/VOCABULARY_API.md` にある。
 
 `demo-world.html` の `VOCABULARY_AI_ENABLED` で、AIへの通信を止められる。
 
-- `false`（いまの設定）：外部へ一切送らない。いつも固定の3語を出す
-- `true`：`/vocabulary` へ送る
+- `false`（いまの設定）：外部へ一切送らない。匿名IDも作らない。いつも固定の3語を出す
+- `true`：匿名IDを付けて `/vocabulary` へ送る
 
-いまの本番 Worker には `/vocabulary` が無い。知らないパスは `/generate`（ミッション生成）へ回る。
-`/generate` は写真か写真の説明が無いと 400 を返すので、いまの送信内容なら AI は呼ばれない
-（2026-09-26、本番のソースで確認）。ただし 404 にはならない。また、写真の説明を付けて
-知らないパスへ送れば、ミッション生成として AI が動く。
+いまの本番 Worker（#38）には `/vocabulary` が無く、知らないパスは `/generate` へ回る。
+ローカルの Worker（`tomori-worker-next`）では次のように直してあるが、まだ公開していない。
 
-**Worker 側で「知らないパスは 404 を返す」修正と `/vocabulary` の公開が済むまで、`false` のままにする。**
+- 入口は `/` `/generate` `/generate-next` `/feedback` `/journey` `/teacher` `/guide` `/vocabulary` だけ。
+  ほかは 404、POST 以外は 405
+- AI のエラー本文は返さない（`{"error":"AI service temporarily unavailable","code":"UPSTREAM_ERROR"}`）
+- `/vocabulary` はセッションごとに 6回/分、全体で 120回/分/Cloudflare拠点。超えたら 429
+
+Cloudflare の上限は拠点ごとに数えるので、世界全体の費用上限にはならない。
+Anthropic 側の支出上限を別に設定する必要がある。
+
+**Worker の公開と Preview URL での確認が済むまで、`false` のままにする。**
 
 ---
 
@@ -114,7 +136,8 @@ node --test test-vocabulary-integration.mjs
 
 ## 本番へ出す前に
 
-1. Worker を「知らないパスは 404」に直し、`/vocabulary` をデプロイする（別の作業・HQの判断が必要）
-2. Cloudflare でレート制限を設定する
-3. `VOCABULARY_AI_ENABLED` を `true` にする
-4. 本物の応答で、正常・care・フォールバックの3つを画面で確かめる
+1. Anthropic 側の支出上限を設定する
+2. `tomori-worker-next` の Worker を公開する（HQの判断が必要）
+3. Preview URL で、正常・care・429・404 を確かめる
+4. そのあとで `VOCABULARY_AI_ENABLED` を `true` にする
+5. 本物の応答で、正常・care・フォールバックの3つを画面で確かめる

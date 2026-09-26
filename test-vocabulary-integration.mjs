@@ -51,16 +51,20 @@ function makeDocument() {
 }
 
 // ── 読み込み ───────────────────────────────────────────────────
-function loadCore(fetchImpl) {
-  const factory = new Function('fetch', 'setTimeout', 'clearTimeout', `
-    ${CORE}
+function fakeStorage() {
+  const m = new Map();
+  return { map: m, getItem: k => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)) };
+}
+function loadCore(fetchImpl, { storage = fakeStorage(), core = CORE, crypto = globalThis.crypto } = {}) {
+  const factory = new Function('fetch', 'setTimeout', 'clearTimeout', 'sessionStorage', 'globalThis', `
+    ${core}
     return {
       VOCABULARY_API_URL, FALLBACK_WORDS, FALLBACK_FOLLOW_UP, CARE_MESSAGE,
-      validateVocabResponse, fetchVocabulary, resetVocabState,
+      validateVocabResponse, fetchVocabulary, resetVocabState, getVocabSessionId,
       get result() { return _vocabResult; }, get abort() { return _vocabAbort; },
       set fallback(v) { _vocabFallback = v; },
     };`);
-  return factory(fetchImpl, setTimeout, clearTimeout);
+  return factory(fetchImpl, setTimeout, clearTimeout, storage, { crypto });
 }
 function loadDom(doc, { vocabResult = null, vocabFallback = false } = {}) {
   const factory = new Function('document', `
@@ -325,6 +329,121 @@ test('31. 出荷ファイルではスイッチは false で、fetch より前に
   const guard = fn.indexOf("if (!VOCABULARY_AI_ENABLED) return 'fallback';");
   assert.ok(guard >= 0);
   assert.ok(guard < fn.indexOf('fetch(VOCABULARY_API_URL'));
+});
+
+// ── Step 8C：匿名セッションID ──────────────────────────────────
+const UUID4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+const headerOf = call => call.opts.headers['X-Tomori-Session'];
+
+test('32. スイッチが false のときは fetch 0回・匿名IDを作らず保存もしない', async () => {
+  const f = okFetch(NORMAL);
+  const storage = fakeStorage();
+  let uuidCalls = 0;
+  const crypto = { randomUUID: () => { uuidCalls++; return globalThis.crypto.randomUUID(); } };
+  const c = loadCore(f, { storage, crypto, core: CORE_SHIPPED });
+  assert.equal(await c.fetchVocabulary('やばい'), 'fallback');
+  assert.equal(f.calls.length, 0);
+  assert.equal(uuidCalls, 0);
+  assert.equal(storage.map.size, 0);
+});
+
+test('33. スイッチが true のときだけ X-Tomori-Session が付く', async () => {
+  const f = okFetch(NORMAL);
+  await loadCore(f).fetchVocabulary('やばい');
+  assert.match(headerOf(f.calls[0]), UUID4);
+  assert.deepEqual(Object.keys(f.calls[0].opts.headers).sort(), ['Content-Type', 'X-Tomori-Session']);
+});
+
+test('34. 本文は4項目だけで、匿名IDは本文に入らない', async () => {
+  const f = okFetch(NORMAL);
+  await loadCore(f).fetchVocabulary('やばい');
+  const body = JSON.parse(f.calls[0].opts.body);
+  assert.deepEqual(Object.keys(body).sort(), ['age', 'expression', 'language', 'mission']);
+  assert.ok(!f.calls[0].opts.body.includes(headerOf(f.calls[0])));
+});
+
+test('35. 写真・音声・名前・履歴は本文にもヘッダーにも入らない', async () => {
+  const f = okFetch(NORMAL);
+  await loadCore(f).fetchVocabulary('やばい');
+  const all = f.calls[0].opts.body + JSON.stringify(f.calls[0].opts.headers);
+  assert.ok(!/photo|image|base64|audio|voice|name|history|record|school/i.test(all));
+});
+
+test('36. 429 のときは固定の3語へ切り替える', async () => {
+  const f = okFetch({ error: 'Too many requests', code: 'RATE_LIMITED' }, 429);
+  const c = loadCore(f);
+  assert.equal(await c.fetchVocabulary('やばい'), 'fallback');
+  assert.equal(c.result, null);
+  const doc = makeDocument();
+  loadDom(doc, { vocabFallback: true }).buildWords('やばい');
+  assert.deepEqual(doc.byId['word-cards'].children.map(x => x.dataset.wordText), ['鮮やか', '燃えるよう', '少しさびしげ']);
+});
+
+test('37. 429 が続いても案内文は1回だけ', () => {
+  const doc = makeDocument();
+  const dom = loadDom(doc, { vocabFallback: true });
+  dom.buildWords('やばい');
+  dom.buildWords('やばい');
+  const quote = doc.byId['words-quote'].textContent;
+  assert.equal(quote.split('今日は、トモリが見つけたことばを見てみよう。').length - 1, 1);
+  assert.ok(!/429|Too many|RATE_LIMITED/.test(quote + doc.byId['word-cards'].textContent));
+});
+
+test('38. 同じタブ（sessionStorage）の中では同じIDを使い続ける', async () => {
+  const f = okFetch(NORMAL);
+  const storage = fakeStorage();
+  const c1 = loadCore(f, { storage });
+  await c1.fetchVocabulary('やばい');
+  await c1.fetchVocabulary('きれい');
+  const c2 = loadCore(f, { storage }); // ページを読み込み直した想定
+  await c2.fetchVocabulary('すごい');
+  const ids = f.calls.map(headerOf);
+  assert.equal(new Set(ids).size, 1);
+  assert.equal(storage.map.get('tomori.vocabSession'), ids[0]);
+  const other = okFetch(NORMAL);
+  await loadCore(other, { storage: fakeStorage() }).fetchVocabulary('やばい'); // 別のタブ
+  assert.notEqual(headerOf(other.calls[0]), ids[0]);
+});
+
+test('39. IDに個人情報や入力文が入らない（ランダムなUUIDだけ）', async () => {
+  const f = okFetch(NORMAL);
+  const storage = fakeStorage();
+  const c = loadCore(f, { storage });
+  await c.fetchVocabulary('たろう 小学3年 さくら小');
+  const id = headerOf(f.calls[0]);
+  assert.match(id, UUID4);
+  assert.deepEqual([...storage.map.keys()], ['tomori.vocabSession']);
+  assert.ok(!HTML.includes('document.cookie'));
+  const core = CORE_SHIPPED.replace(/\/\/.*$/gm, '');
+  assert.ok(!/localStorage/.test(core));
+});
+
+test('40. リセットしても同じIDのまま、次の通信も正常に進む', async () => {
+  const f = okFetch(NORMAL);
+  const c = loadCore(f);
+  assert.equal(await c.fetchVocabulary('やばい'), 'ok');
+  c.resetVocabState();
+  assert.equal(c.result, null);
+  assert.equal(await c.fetchVocabulary('きれい'), 'ok');
+  assert.equal(headerOf(f.calls[0]), headerOf(f.calls[1]));
+});
+
+test('41. randomUUID が無い端末でも安全なIDを作り、crypto が無ければ送らない', async () => {
+  const f = okFetch(NORMAL);
+  await loadCore(f, { crypto: { getRandomValues: a => globalThis.crypto.getRandomValues(a) } }).fetchVocabulary('やばい');
+  assert.match(headerOf(f.calls[0]), UUID4);
+  const g = okFetch(NORMAL);
+  assert.equal(await loadCore(g, { crypto: null }).fetchVocabulary('やばい'), 'fallback');
+  assert.equal(g.calls.length, 0);
+});
+
+test('42. 保存された値が壊れていたら使わず、作り直す', async () => {
+  const f = okFetch(NORMAL);
+  const storage = fakeStorage();
+  storage.setItem('tomori.vocabSession', '<script>taro</script>');
+  await loadCore(f, { storage }).fetchVocabulary('やばい');
+  assert.match(headerOf(f.calls[0]), UUID4);
+  assert.match(storage.map.get('tomori.vocabSession'), UUID4);
 });
 
 test('26. 語彙部分に innerHTML・console.log・APIキーがない', () => {

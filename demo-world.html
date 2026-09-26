@@ -388,6 +388,9 @@ let chosenWord    = '';
 
 // ── AI語彙 ──────────────────────────────────────────────────────────
 // VOCAB-CORE-BEGIN（test-vocabulary-integration.mjs がこの範囲を読み込んでテストする）
+// 緊急停止スイッチ：false の間は外部へ一切送らず、固定の3語を使う。
+// 本番Workerが未知のパスを /generate へ流すため、Worker側の修正が済むまで false のままにする。
+const VOCABULARY_AI_ENABLED = false;
 const VOCABULARY_API_URL = 'https://tomori-api.tomori-ryuto.workers.dev/vocabulary';
 let _vocabGen      = 0;      // リセットのたびに増える。古い応答で画面を書き換えないため
 let _vocabAbort    = null;   // AbortController
@@ -434,6 +437,7 @@ function validateVocabResponse(data) {
 
 async function fetchVocabulary(expression) {
   resetVocabState();
+  if (!VOCABULARY_AI_ENABLED) return 'fallback';
   const abort = new AbortController();
   _vocabAbort = abort;
 

@@ -50,8 +50,20 @@ Worker 側の仕様は `tomori-worker-next/docs/VOCABULARY_API.md` にある。
 このとき画面には「今日は、トモリが見つけたことばを見てみよう。」と1回だけ出す。
 エラーの中身は子どもに見せない。
 
-**いまの本番 Worker には `/vocabulary` がまだ無い。** そのため、デプロイするまでは
-404 になり、いつも固定の3語が出る。
+---
+
+## 緊急停止スイッチ
+
+`demo-world.html` の `VOCABULARY_AI_ENABLED` で、AIへの通信を止められる。
+
+- `false`（いまの設定）：外部へ一切送らない。いつも固定の3語を出す
+- `true`：`/vocabulary` へ送る
+
+いまの本番 Worker は、知らないパスを `/generate`（ミッション生成）へ回す作りになっている。
+`/vocabulary` が無いまま `true` にすると、404 にはならず、押すたびに AI を呼んで費用がかかる。
+画面には固定の3語が出るので、気づきにくい。
+
+**Worker 側で「知らないパスは 404 を返す」修正と `/vocabulary` の公開が済むまで、`false` のままにする。**
 
 ---
 
@@ -101,6 +113,7 @@ node --test test-vocabulary-integration.mjs
 
 ## 本番へ出す前に
 
-1. Worker に `/vocabulary` をデプロイする（別の作業・HQの判断が必要）
+1. Worker を「知らないパスは 404」に直し、`/vocabulary` をデプロイする（別の作業・HQの判断が必要）
 2. Cloudflare でレート制限を設定する
-3. 本物の応答で、正常・care・フォールバックの3つを画面で確かめる
+3. `VOCABULARY_AI_ENABLED` を `true` にする
+4. 本物の応答で、正常・care・フォールバックの3つを画面で確かめる

@@ -12,7 +12,11 @@ function section(begin, end) {
   assert.ok(s >= 0 && e > s, `marker ${begin} not found`);
   return HTML.slice(HTML.indexOf('\n', s) + 1, e);
 }
-const CORE = section('// VOCAB-CORE-BEGIN', '// VOCAB-CORE-END');
+const CORE_SHIPPED = section('// VOCAB-CORE-BEGIN', '// VOCAB-CORE-END');
+const SWITCH_OFF = 'const VOCABULARY_AI_ENABLED = false;';
+assert.ok(CORE_SHIPPED.includes(SWITCH_OFF), 'shipped file must have the AI switch off');
+// 通信まわりのテストは、スイッチを入れた状態で動かす
+const CORE = CORE_SHIPPED.replace(SWITCH_OFF, 'const VOCABULARY_AI_ENABLED = true;');
 const DOM  = section('// VOCAB-DOM-BEGIN',  '// VOCAB-DOM-END');
 
 // ── 最小限の偽DOM ──────────────────────────────────────────────
@@ -303,6 +307,24 @@ test('29. 「冒険にもどる」後は、離れてから近づくとミッシ�
   assert.match(HTML, /if\(md<MISSION_RADIUS\)\{\s*if\(!missionNeedsLeave\) triggerMission\(\);\s*\} else \{\s*missionNeedsLeave=false;/);
   const reset = HTML.match(/function doReset\(\)\{([\s\S]*?)\n\}/)[1];
   assert.match(reset, /missionNeedsLeave=false/);
+});
+
+test('30. 緊急停止スイッチが false なら fetch を1回も呼ばず、固定の語へ切り替える', async () => {
+  const f = okFetch(NORMAL);
+  const factory = new Function('fetch', 'setTimeout', 'clearTimeout',
+    `${CORE_SHIPPED}; return { fetchVocabulary, get result() { return _vocabResult; } };`);
+  const c = factory(f, setTimeout, clearTimeout);
+  assert.equal(await c.fetchVocabulary('やばい'), 'fallback');
+  assert.equal(await c.fetchVocabulary('つらい'), 'fallback');
+  assert.equal(f.calls.length, 0);
+  assert.equal(c.result, null);
+});
+
+test('31. 出荷ファイルではスイッチは false で、fetch より前に判定している', () => {
+  const fn = CORE_SHIPPED.match(/async function fetchVocabulary\(expression\) \{([\s\S]*?)\n\}/)[1];
+  const guard = fn.indexOf("if (!VOCABULARY_AI_ENABLED) return 'fallback';");
+  assert.ok(guard >= 0);
+  assert.ok(guard < fn.indexOf('fetch(VOCABULARY_API_URL'));
 });
 
 test('26. 語彙部分に innerHTML・console.log・APIキーがない', () => {

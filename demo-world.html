@@ -183,12 +183,46 @@ rt { font-size:0.55em; color:#7a8060; }
   transform:translateX(-50%) translateY(20px);
   background:rgba(254,249,240,.94); border:2px solid #e8d4a0; border-radius:20px;
   padding:18px 22px; max-width:min(320px,88vw); text-align:center;
-  pointer-events:all; box-shadow:0 4px 20px rgba(0,0,0,.12);
+  pointer-events:none; box-shadow:0 4px 20px rgba(0,0,0,.12);
   opacity:0; transition:opacity .5s,transform .5s; z-index:20;
 }
-#demo-end.show { opacity:1; transform:translateX(-50%) translateY(0); }
+#demo-end.show { opacity:1; transform:translateX(-50%) translateY(0); pointer-events:all; }
 .end-line1 { font-size:15px; color:#3a3328; line-height:1.7; margin-bottom:8px; }
 .end-line2 { font-size:13px; color:#7a6040; margin-bottom:14px; }
+
+/* ── AI語彙ローディング ─────────────── */
+#vocab-loading {
+  display:none; text-align:center; padding:18px 0 10px;
+}
+#vocab-loading.show { display:block; }
+.vocab-loading-text {
+  font-size:14px; color:#5a8040; margin-bottom:10px; line-height:1.7;
+}
+.vocab-glow {
+  display:inline-block; width:40px; height:40px;
+  border-radius:50%;
+  background:radial-gradient(circle, #d4f0a0 0%, #a8d860 60%, transparent 100%);
+  animation:vocab-breathe 2s ease-in-out infinite;
+}
+@keyframes vocab-breathe {
+  0%,100%{ opacity:.5; transform:scale(.85); box-shadow:0 0 8px 2px rgba(120,200,60,.2); }
+  50%{     opacity:1;  transform:scale(1.1);  box-shadow:0 0 16px 6px rgba(120,200,60,.35); }
+}
+
+/* ── AI語彙 careメッセージ ────────── */
+#vocab-care {
+  display:none; padding:16px; background:#fff8f0; border:2px solid #f0c080;
+  border-radius:14px; margin-bottom:12px; text-align:center;
+}
+#vocab-care.show { display:block; }
+.care-msg {
+  font-size:14px; color:#5a3820; line-height:1.75; margin-bottom:14px; white-space:pre-line;
+}
+.care-btns { display:flex; gap:8px; justify-content:center; }
+.btn-care { flex:1; padding:10px 8px; border:none; border-radius:10px; cursor:pointer;
+  font-size:13px; font-weight:bold; font-family:inherit; }
+.btn-care-rewrite { background:#f5e8d0; color:#5a3820; }
+.btn-care-back    { background:#e8f5d0; color:#3a5020; }
 
 /* ── ローディング・WebGL非対応 ─────── */
 #loading {
@@ -284,9 +318,25 @@ rt { font-size:0.55em; color:#7a8060; }
 <!-- 言葉カードパネル -->
 <div class="panel" id="panel-words">
   <div class="panel-handle"></div>
+  <!-- AI待機中 -->
+  <div id="vocab-loading">
+    <div class="vocab-glow"></div>
+    <div class="vocab-loading-text">ことばのタネを<br>見つけているよ…</div>
+  </div>
+  <!-- care時メッセージ -->
+  <div id="vocab-care">
+    <div class="care-msg" id="care-msg-text"></div>
+    <div class="care-btns">
+      <button class="btn-care btn-care-rewrite" onclick="window.careRewrite()">書きなおす</button>
+      <button class="btn-care btn-care-back"    onclick="window.careBack()">冒険にもどる</button>
+    </div>
+  </div>
+  <!-- 通常 -->
   <div id="words-quote"></div>
-  <div class="panel-title" style="font-size:15px;margin-bottom:14px">1つだけ選んでみよう</div>
+  <div class="panel-title" id="words-pick-title" style="font-size:15px;margin-bottom:14px">1つだけ選んでみよう</div>
   <div id="word-cards"></div>
+  <!-- followUpQuestion（深掘りの問い：カード選択後に使用） -->
+  <div id="words-followup" style="display:none"></div>
 </div>
 
 <!-- 深掘りパネル -->
@@ -294,7 +344,7 @@ rt { font-size:0.55em; color:#7a8060; }
   <div class="panel-handle"></div>
   <div class="panel-icon">🌸</div>
   <div class="panel-title">もう少しだけ<br>聞いてもいい？</div>
-  <div class="panel-desc">この赤は、何に似ている？</div>
+  <div class="panel-desc" id="secret-q-text">この赤は、何に似ている？</div>
   <button class="btn-primary"   onclick="window.toSecretText()">答えてみる</button>
   <button class="btn-secondary" onclick="window.toDemoEnd()">今は進む</button>
 </div>
@@ -303,7 +353,7 @@ rt { font-size:0.55em; color:#7a8060; }
 <div class="panel" id="panel-secret-t">
   <div class="panel-handle"></div>
   <div class="panel-icon">🌺</div>
-  <div class="panel-title">この赤は、何に似ている？</div>
+  <div class="panel-title" id="secret-t-title">この赤は、何に似ている？</div>
   <div class="panel-desc" style="margin-bottom:12px">例：夕焼け　火　あたたかい毛布</div>
   <textarea class="text-input" id="secret-input" rows="2" placeholder="思ったことを書いてみよう"></textarea>
   <button class="btn-primary btn-disabled" id="btn-secret-next" onclick="window.revealSecret()">送る</button>
@@ -335,6 +385,95 @@ let state = S.EXPLORE;
 let photoDataUrl = null;
 let enteredText   = '';
 let chosenWord    = '';
+
+// ── AI語彙 ──────────────────────────────────────────────────────────
+// VOCAB-CORE-BEGIN（test-vocabulary-integration.mjs がこの範囲を読み込んでテストする）
+const VOCABULARY_API_URL = 'https://tomori-api.tomori-ryuto.workers.dev/vocabulary';
+let _vocabGen      = 0;      // リセットのたびに増える。古い応答で画面を書き換えないため
+let _vocabAbort    = null;   // AbortController
+let _vocabResult   = null;   // 最後に取得したAI語彙（通常時）
+let _vocabFallback = false;  // フォールバック中か
+let _vocabCare     = false;  // care状態か
+
+// フォールバック固定候補
+const FALLBACK_WORDS = [
+  { word:'鮮やか',   reading:'あざやか',   description:'目にぱっと入ってくる、明るくはっきりした色' },
+  { word:'燃えるよう', reading:'もえるよう',  description:'あつさや力を感じるような、強い赤'          },
+  { word:'少しさびしげ', reading:'すこしさびしげ', description:'きれいだけれど、しずかなさびしさもある色' },
+];
+const FALLBACK_FOLLOW_UP = 'この赤は、何に似ている？';
+const CARE_MESSAGE = 'とてもつらい気もちなんだね。\nひとりでかかえず、近くの信頼できる大人に話してね。';
+
+function resetVocabState() {
+  if (_vocabAbort) { try { _vocabAbort.abort(); } catch(e){} _vocabAbort = null; }
+  _vocabResult   = null;
+  _vocabFallback = false;
+  _vocabCare     = false;
+}
+
+// フロント側のレスポンス検証
+function validateVocabResponse(data) {
+  if (!data || typeof data !== 'object') return false;
+  if (data.safetyLevel === 'care') {
+    return Array.isArray(data.words) && data.words.length === 0 && data.followUpQuestion === null;
+  }
+  if (data.safetyLevel !== 'normal') return false;
+  if (!Array.isArray(data.words) || data.words.length !== 3) return false;
+  const wordTexts = [];
+  for (const w of data.words) {
+    if (typeof w.word !== 'string' || w.word.length === 0 || w.word.length > 20) return false;
+    if (typeof w.reading !== 'string' || w.reading.length === 0 || w.reading.length > 30) return false;
+    if (typeof w.description !== 'string' || w.description.length === 0 || w.description.length > 60) return false;
+    wordTexts.push(w.word);
+  }
+  if (new Set(wordTexts).size !== 3) return false;
+  const fq = data.followUpQuestion;
+  if (typeof fq !== 'string' || fq.length < 10 || fq.length > 35) return false;
+  return true;
+}
+
+async function fetchVocabulary(expression) {
+  resetVocabState();
+  const abort = new AbortController();
+  _vocabAbort = abort;
+
+  const timeoutId = setTimeout(() => abort.abort(), 6000);
+
+  try {
+    const res = await fetch(VOCABULARY_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      // 写真・音声・名前・履歴は送らない
+      body: JSON.stringify({
+        expression: expression.slice(0, 200),
+        mission: '心があたたかくなる赤を見つけよう',
+        age: 'grade_3_4',
+        language: 'ja',
+      }),
+      signal: abort.signal,
+    });
+    clearTimeout(timeoutId);
+    _vocabAbort = null;
+
+    if (!res.ok) return 'fallback';
+
+    let data;
+    try { data = await res.json(); } catch { return 'fallback'; }
+
+    if (!validateVocabResponse(data)) return 'fallback';
+
+    if (data.safetyLevel === 'care') return 'care';
+
+    _vocabResult = data;
+    return 'ok';
+
+  } catch (e) {
+    clearTimeout(timeoutId);
+    _vocabAbort = null;
+    return 'fallback';
+  }
+}
+// VOCAB-CORE-END
 
 /* ── 音声入力 ─────────────────────────────────── */
 const SR_API = window.SpeechRecognition || window.webkitSpeechRecognition || null;
@@ -769,6 +908,7 @@ canvas.addEventListener('touchend',e=>{e.preventDefault();onTap(e);},{passive:fa
 
 // ── ミッション管理 ───────────────────────────────────────────────
 let missionTriggered=false;
+let missionNeedsLeave=false; // 「冒険にもどる」後は、一度離れてから再び近づくと始まる
 const MISSION_RADIUS=1.8, CALLOUT_RADIUS=5.5;
 
 function triggerMission(){
@@ -858,63 +998,178 @@ document.getElementById('expr-input').addEventListener('input',function(){
   document.getElementById('btn-expr-next').classList.toggle('btn-disabled',!this.value.trim());
 });
 
-window.toWords = ()=>{
+window.toWords = async ()=>{
   const v=document.getElementById('expr-input').value.trim();
   if(!v) return;
   enteredText=v;
-  buildWords(v);
+
+  // ボタンを無効化（二重送信防止）
+  const btnNext = document.getElementById('btn-expr-next');
+  btnNext.classList.add('btn-disabled');
+
+  // パネルをwords側へ移行してローディング表示
   setState(S.WORDS_READY);
+  showVocabLoading(true);
+
+  const gen = ++_vocabGen;
+  const result = await fetchVocabulary(v);
+  if (gen !== _vocabGen) return;
+
+  showVocabLoading(false);
+
+  if (result === 'care') {
+    _vocabCare = true;
+    showCarePanel();
+    return;
+  }
+
+  if (result === 'fallback') {
+    _vocabFallback = true;
+  }
+
+  buildWords(v);
 };
 
-function buildWords(input){
-  const q=input.length>10?input.slice(0,10)+'…':input;
-  document.getElementById('words-quote').innerHTML=
-    `「${q}」の中に、<br>こんな気もちがひそんでいるかもしれないよ。`;
+function showVocabLoading(show) {
+  const el = document.getElementById('vocab-loading');
+  const quote = document.getElementById('words-quote');
+  const title = document.getElementById('words-pick-title');
+  const cards = document.getElementById('word-cards');
+  if (show) {
+    el.classList.add('show');
+    quote.style.display = 'none';
+    title.style.display = 'none';
+    cards.style.display = 'none';
+  } else {
+    el.classList.remove('show');
+    quote.style.display = '';
+    title.style.display = '';
+    cards.style.display = '';
+  }
+}
 
-  // word, reading, plainWord（世界変化テキスト用）, desc
-  const words=[
-    {
-      w:'<ruby>鮮<rt>あざ</rt></ruby>やか',
-      reading:'あざやか',
-      plain:'鮮やか',
-      d:'目にぱっと入ってくる、<br><ruby>明<rt>あか</rt></ruby>るくはっきりした色',
-    },
-    {
-      w:'<ruby>燃<rt>も</rt></ruby>えるよう',
-      reading:'もえるよう',
-      plain:'燃えるよう',
-      d:'あつさや力を感じるような、<br>強い赤',
-    },
-    {
-      w:'<ruby>少<rt>すこ</rt></ruby>しさびしげ',
-      reading:'すこしさびしげ',
-      plain:'少しさびしげ',
-      d:'きれいだけれど、<br>しずかなさびしさもある色',
-    },
-  ];
-  const ctr=document.getElementById('word-cards');
-  ctr.innerHTML='';
-  words.forEach(({w,reading,plain,d})=>{
-    const card=document.createElement('div');
-    card.className='word-card';
-    // data属性：将来の音声読み上げ用
-    card.dataset.wordText=plain;
-    card.dataset.wordReading=reading;
-    card.dataset.wordDesc=d.replace(/<[^>]+>/g,'');
-    card.innerHTML=`<div class="word-title">${w}</div><div class="word-desc">${d}</div>`;
-    card.onclick=()=>{
-      if(state!==S.WORDS_READY) return;
-      document.querySelectorAll('.word-card').forEach(c=>c.classList.remove('selected'));
+function showCarePanel() {
+  const careEl = document.getElementById('vocab-care');
+  const msgEl  = document.getElementById('care-msg-text');
+  const quote  = document.getElementById('words-quote');
+  const title  = document.getElementById('words-pick-title');
+  const cards  = document.getElementById('word-cards');
+  // textContent で表示（innerHTMLは使わない）
+  msgEl.textContent = CARE_MESSAGE;
+  careEl.classList.add('show');
+  quote.style.display  = 'none';
+  title.style.display  = 'none';
+  cards.style.display  = 'none';
+}
+
+window.careRewrite = () => {
+  // 入力画面へ戻る（入力内容は残す）
+  const careEl = document.getElementById('vocab-care');
+  careEl.classList.remove('show');
+  document.getElementById('words-quote').style.display = '';
+  document.getElementById('words-pick-title').style.display = '';
+  document.getElementById('word-cards').style.display = '';
+  _vocabCare = false;
+  setState(S.EXPRESSION_ENTERED);
+  // ボタンを再有効化
+  const btnNext = document.getElementById('btn-expr-next');
+  if (document.getElementById('expr-input').value.trim()) {
+    btnNext.classList.remove('btn-disabled');
+  }
+};
+
+window.careBack = () => {
+  // 入力パネルを閉じて世界へ戻る（ミッション未完了のまま）
+  const careEl = document.getElementById('vocab-care');
+  careEl.classList.remove('show');
+  document.getElementById('words-quote').style.display = '';
+  document.getElementById('words-pick-title').style.display = '';
+  document.getElementById('word-cards').style.display = '';
+  _vocabCare = false;
+  missionTriggered = false;
+  missionNeedsLeave = true;
+  // パネルを閉じて世界へ
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('show'));
+  setState(S.EXPLORE);
+};
+
+// VOCAB-DOM-BEGIN
+function buildWords(input){
+  // words-quote を安全に構築（innerHTML を使わない）
+  const quoteEl = document.getElementById('words-quote');
+  quoteEl.textContent = '';
+  const displayInput = input.length > 40 ? input.slice(0, 40) + '…' : input;
+  // 「...」の中に / こんな気もちがひそんでいるかもしれないよ。 を2行で
+  const line1 = document.createTextNode('「' + displayInput + '」の中に、');
+  const br    = document.createElement('br');
+  const line2 = document.createTextNode(_vocabFallback
+    ? '今日は、トモリが見つけたことばを見てみよう。'
+    : 'こんな気もちがひそんでいるかもしれないよ。'
+  );
+  quoteEl.appendChild(line1);
+  quoteEl.appendChild(br);
+  quoteEl.appendChild(line2);
+
+  // 語彙データの取得（AI結果かフォールバックか）
+  const source = (!_vocabFallback && _vocabResult)
+    ? _vocabResult.words
+    : FALLBACK_WORDS;
+
+  // followUpQuestion の保持
+  const followUp = (!_vocabFallback && _vocabResult && _vocabResult.followUpQuestion)
+    ? _vocabResult.followUpQuestion
+    : FALLBACK_FOLLOW_UP;
+
+  // 深掘り問いを panel-secret-q / panel-secret-t に反映（textContent で安全に）
+  const secretQEl = document.getElementById('secret-q-text');
+  const secretTEl = document.getElementById('secret-t-title');
+  if (secretQEl) secretQEl.textContent = followUp;
+  if (secretTEl) secretTEl.textContent = followUp;
+
+  // カード構築（すべて DOM API、innerHTML を使わない）
+  const ctr = document.getElementById('word-cards');
+  ctr.textContent = '';
+
+  source.forEach(({ word, reading, description }) => {
+    const card = document.createElement('div');
+    card.className = 'word-card';
+    card.dataset.wordText    = word;
+    card.dataset.wordReading = reading;
+    card.dataset.wordDesc    = description;
+
+    // タイトル：<ruby> をDOM APIで構築
+    const titleEl = document.createElement('div');
+    titleEl.className = 'word-title';
+    const ruby = document.createElement('ruby');
+    const wordNode = document.createTextNode(word);
+    const rt = document.createElement('rt');
+    rt.textContent = reading;
+    ruby.appendChild(wordNode);
+    ruby.appendChild(rt);
+    titleEl.appendChild(ruby);
+
+    // 説明：textContent で安全に
+    const descEl = document.createElement('div');
+    descEl.className = 'word-desc';
+    descEl.textContent = description;
+
+    card.appendChild(titleEl);
+    card.appendChild(descEl);
+
+    card.onclick = () => {
+      if (state !== S.WORDS_READY) return;
+      document.querySelectorAll('.word-card').forEach(c => c.classList.remove('selected'));
       card.classList.add('selected');
-      chosenWord=plain;
-      setTimeout(()=>{
+      chosenWord = word;
+      setTimeout(() => {
         setState(S.WORD_SELECTED);
-        doWorldChange(plain);
-      },400);
+        doWorldChange(word);
+      }, 400);
     };
     ctr.appendChild(card);
   });
 }
+// VOCAB-DOM-END
 
 window.toSecretText = ()=>setState(S.SECRET_UNLOCKED);
 window.toDemoEnd   = ()=>{ nextGroup.visible=true; setState(S.DEMO_COMPLETE); };
@@ -941,11 +1196,28 @@ window.confirmReset = ()=>{ if(confirm('デモを最初からやり直します�
 
 function doReset(){
   stopVoice();
+  // AI語彙状態をクリア（進行中のfetchもAbort、古い応答は世代番号で無視）
+  _vocabGen++;
+  resetVocabState();
+  // care/loading/words UIをリセット
+  document.getElementById('vocab-care').classList.remove('show');
+  document.getElementById('vocab-loading').classList.remove('show');
+  document.getElementById('words-quote').style.display = '';
+  document.getElementById('words-pick-title').style.display = '';
+  document.getElementById('word-cards').style.display = '';
+  document.getElementById('word-cards').textContent = '';
+  document.getElementById('words-quote').textContent = '';
+  // followUpQuestion をデフォルトへ戻す
+  const sqEl = document.getElementById('secret-q-text');
+  const stEl = document.getElementById('secret-t-title');
+  if (sqEl) sqEl.textContent = FALLBACK_FOLLOW_UP;
+  if (stEl) stEl.textContent = FALLBACK_FOLLOW_UP;
+
   if(character){ character.position.set(0,0,0); character.rotation.set(0,0,0); }
   targetPos.set(0,0,0); isMoving=false;
   camera.position.copy(CAM_OFF); camera.lookAt(0,0,0);
 
-  mpGroup.position.set(0,0,-8); missionTriggered=false;
+  mpGroup.position.set(0,0,-8); missionTriggered=false; missionNeedsLeave=false;
   vineGroup.visible=true;
   newPath.visible=false;
   secretGroup.visible=false;
@@ -1033,9 +1305,12 @@ function animate(){
     if(state===S.EXPLORE){
       const md=character.position.distanceTo(mpGroup.position);
       const mbar=document.getElementById('mbar-text');
-      if(md<MISSION_RADIUS) triggerMission();
-      else if(md<CALLOUT_RADIUS) mbar.textContent='なにかが呼んでいる…';
-      else mbar.textContent='光るポイントを探して歩こう！';
+      if(md<MISSION_RADIUS){
+        if(!missionNeedsLeave) triggerMission();
+      } else {
+        missionNeedsLeave=false;
+        mbar.textContent = md<CALLOUT_RADIUS ? 'なにかが呼んでいる…' : '光るポイントを探して歩こう！';
+      }
     }
   }
 

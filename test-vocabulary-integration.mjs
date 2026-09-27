@@ -2,9 +2,11 @@
 // 実行: node --test test-vocabulary-integration.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 
 const HTML = readFileSync(new URL('./demo-world.html', import.meta.url), 'utf8');
+// 参照元（tomori-vocabulary）。無い環境では照合テストだけ飛ばす
+const WORKER_PATH = new URL('../tomori-vocabulary/worker.js', import.meta.url);
 
 function section(begin, end) {
   const s = HTML.indexOf(begin);
@@ -38,7 +40,7 @@ class FakeNode {
 }
 function makeDocument() {
   const byId = {};
-  for (const id of ['words-quote', 'word-cards', 'secret-q-text', 'secret-t-title']) {
+  for (const id of ['words-quote', 'words-pick-title', 'words-pick-sub', 'word-cards', 'secret-q-text', 'secret-t-title']) {
     byId[id] = new FakeNode('div');
   }
   return {
@@ -59,10 +61,13 @@ function loadCore(fetchImpl, { storage = fakeStorage(), core = CORE, crypto = gl
   const factory = new Function('fetch', 'setTimeout', 'clearTimeout', 'sessionStorage', 'globalThis', `
     ${core}
     return {
-      VOCABULARY_API_URL, FALLBACK_WORDS, FALLBACK_FOLLOW_UP, CARE_MESSAGE,
+      VOCABULARY_API_URL, VOCABULARY_AI_ENABLED, FALLBACK_FOLLOW_UP, CARE_SUPPORT_MESSAGE,
+      DETERMINISTIC_CARE_PATTERNS, normalizeForSafety, detectDeterministicCare,
+      detectLocalResponseMode, buildLocalVocabularyFallback, buildLocalCareResponse,
       validateVocabResponse, fetchVocabulary, resetVocabState, getVocabSessionId,
       get result() { return _vocabResult; }, get abort() { return _vocabAbort; },
-      set fallback(v) { _vocabFallback = v; },
+      get fallback() { return _vocabFallback; }, set fallback(v) { _vocabFallback = v; },
+      get care() { return _vocabCare; },
     };`);
   return factory(fetchImpl, setTimeout, clearTimeout, storage, { crypto });
 }
@@ -81,6 +86,7 @@ function loadDom(doc, { vocabResult = null, vocabFallback = false } = {}) {
 
 // ── テストデータ ───────────────────────────────────────────────
 const NORMAL = {
+  responseMode: 'feeling',
   words: [
     { word: 'あたたかい', reading: 'あたたかい', description: '心がほっとするような感じ' },
     { word: '鮮やか', reading: 'あざやか', description: '目にぱっと入ってくる明るい色' },
@@ -234,14 +240,16 @@ test('18. AIの深掘り質問が深掘りパネルに入る', () => {
   assert.equal(doc.byId['secret-t-title'].textContent, NORMAL.followUpQuestion);
 });
 
-test('19. フォールバック時は固定の3語と固定の質問を出し、案内文は1回だけ', () => {
+const NOTE = '今日は、トモリが見つけた言葉から選んでみよう。';
+
+test('19. フォールバック時は端末内の3語と mode 別の質問を出し、案内文は1回だけ', () => {
   const doc = makeDocument();
   loadDom(doc, { vocabFallback: true }).buildWords('やばい');
   const words = doc.byId['word-cards'].children.map(c => c.dataset.wordText);
-  assert.deepEqual(words, ['鮮やか', '燃えるよう', '少しさびしげ']);
-  assert.equal(doc.byId['secret-q-text'].textContent, 'この赤は、何に似ている？');
+  assert.deepEqual(words, ['目を奪われる', '息をのむ', '心が動く']);
+  assert.equal(doc.byId['secret-q-text'].textContent, 'どのあたりで、そう感じたのかな？');
   const quote = doc.byId['words-quote'].textContent;
-  assert.equal(quote.split('今日は、トモリが見つけたことばを見てみよう。').length - 1, 1);
+  assert.equal(quote.split(NOTE).length - 1, 1);
 });
 
 test('20. 長い入力は画面上で40文字に切る', () => {
@@ -255,8 +263,8 @@ test('20. 長い入力は画面上で40文字に切る', () => {
 test('21. care の表示はフロント側の固定文を textContent で使う（Workerの文面は表示しない）', () => {
   const m = HTML.match(/function showCarePanel\(\)\s*\{([\s\S]*?)\n\}/);
   assert.ok(m);
-  assert.match(m[1], /msgEl\.textContent = CARE_MESSAGE/);
-  assert.ok(!/supportMessage|innerHTML/.test(m[1].replace(/\/\/.*$/gm, '')));
+  assert.match(m[1], /msgEl\.textContent = buildLocalCareResponse\(\)\.supportMessage/);
+  assert.ok(!/data\.supportMessage|_vocabResult|innerHTML/.test(m[1].replace(/\/\/.*$/gm, '')));
   assert.match(HTML, /onclick="window\.careRewrite\(\)">書きなおす</);
   assert.match(HTML, /onclick="window\.careBack\(\)">冒険にもどる</);
 });
@@ -313,20 +321,20 @@ test('29. 「冒険にもどる」後は、離れてから近づくとミッシ�
   assert.match(reset, /missionNeedsLeave=false/);
 });
 
-test('30. 緊急停止スイッチが false なら fetch を1回も呼ばず、固定の語へ切り替える', async () => {
+test('30. 緊急停止スイッチが false なら fetch を1回も呼ばず、端末内の語へ切り替える', async () => {
   const f = okFetch(NORMAL);
   const factory = new Function('fetch', 'setTimeout', 'clearTimeout',
     `${CORE_SHIPPED}; return { fetchVocabulary, get result() { return _vocabResult; } };`);
   const c = factory(f, setTimeout, clearTimeout);
   assert.equal(await c.fetchVocabulary('やばい'), 'fallback');
+  assert.equal(c.result.responseMode, 'feeling');
   assert.equal(await c.fetchVocabulary('つらい'), 'fallback');
   assert.equal(f.calls.length, 0);
-  assert.equal(c.result, null);
 });
 
 test('31. 出荷ファイルではスイッチは false で、fetch より前に判定している', () => {
   const fn = CORE_SHIPPED.match(/async function fetchVocabulary\(expression\) \{([\s\S]*?)\n\}/)[1];
-  const guard = fn.indexOf("if (!VOCABULARY_AI_ENABLED) return 'fallback';");
+  const guard = fn.indexOf('if (!VOCABULARY_AI_ENABLED) return useLocalVocabulary(expression);');
   assert.ok(guard >= 0);
   assert.ok(guard < fn.indexOf('fetch(VOCABULARY_API_URL'));
 });
@@ -369,14 +377,15 @@ test('35. 写真・音声・名前・履歴は本文にもヘッダーにも入�
   assert.ok(!/photo|image|base64|audio|voice|name|history|record|school/i.test(all));
 });
 
-test('36. 429 のときは固定の3語へ切り替える', async () => {
+test('36. 429 のときは端末内の3語へ切り替える', async () => {
   const f = okFetch({ error: 'Too many requests', code: 'RATE_LIMITED' }, 429);
   const c = loadCore(f);
   assert.equal(await c.fetchVocabulary('やばい'), 'fallback');
-  assert.equal(c.result, null);
+  assert.equal(c.fallback, true);
+  assert.deepEqual(c.result.words.map(w => w.word), ['目を奪われる', '息をのむ', '心が動く']);
   const doc = makeDocument();
   loadDom(doc, { vocabFallback: true }).buildWords('やばい');
-  assert.deepEqual(doc.byId['word-cards'].children.map(x => x.dataset.wordText), ['鮮やか', '燃えるよう', '少しさびしげ']);
+  assert.deepEqual(doc.byId['word-cards'].children.map(x => x.dataset.wordText), ['目を奪われる', '息をのむ', '心が動く']);
 });
 
 test('37. 429 が続いても案内文は1回だけ', () => {
@@ -385,7 +394,7 @@ test('37. 429 が続いても案内文は1回だけ', () => {
   dom.buildWords('やばい');
   dom.buildWords('やばい');
   const quote = doc.byId['words-quote'].textContent;
-  assert.equal(quote.split('今日は、トモリが見つけたことばを見てみよう。').length - 1, 1);
+  assert.equal(quote.split(NOTE).length - 1, 1);
   assert.ok(!/429|Too many|RATE_LIMITED/.test(quote + doc.byId['word-cards'].textContent));
 });
 
@@ -453,4 +462,201 @@ test('26. 語彙部分に innerHTML・console.log・APIキーがない', () => {
     assert.ok(!/console\.log/.test(code));
     assert.ok(!/sk-ant-|ANTHROPIC_API_KEY|x-api-key/i.test(code));
   }
+});
+
+// ── Step 9F：3つの入力モードと端末内フォールバック ─────────────────
+const HEADINGS = {
+  feeling:     ['気もちに近い言葉を見つけよう', '今の感じに近いものを、1つ選んでみよう。'],
+  observation: ['どこに目が止まったのかな？', 'もう少し見てみたいところを、1つ選んでみよう。'],
+  story:       ['この場面を、もう少し言葉にしてみよう', 'いちばん近い言葉を、1つ選んでみよう。'],
+};
+const withMode = mode => ({ ...clone(NORMAL), responseMode: mode });
+const shipped = () => loadCore(okFetch(NORMAL), { core: CORE_SHIPPED });
+
+test('43. 送り先は tomori-vocabulary の Worker で、AIスイッチは false のまま', () => {
+  const c = shipped();
+  assert.equal(c.VOCABULARY_API_URL, 'https://tomori-vocabulary.tomori-ryuto.workers.dev/vocabulary');
+  assert.equal(c.VOCABULARY_AI_ENABLED, false);
+  assert.ok(!HTML.includes('tomori-api.tomori-ryuto.workers.dev'));
+});
+
+test('44. AIスイッチが false なら、どの入力でも fetch 0回・sessionStorage 0件', async () => {
+  const f = okFetch(NORMAL);
+  const storage = fakeStorage();
+  const c = loadCore(f, { storage, core: CORE_SHIPPED });
+  for (const e of ['やばい', 'おじさん', 'ねこが寝ていた', 'わからない', '死にたい']) await c.fetchVocabulary(e);
+  assert.equal(f.calls.length, 0);
+  assert.equal(storage.map.size, 0);
+});
+
+test('45. 気もちの言葉は feeling、名前だけは observation、出来事は story', () => {
+  const c = shipped();
+  for (const e of ['やばい', 'すごい', 'きれい', 'かわいい', 'うれしい', '楽しい', 'さびしい', '悲しい', 'こわい', 'びっくり',
+    'うざい', 'むかつく', 'イライラ', 'キモい', '気持ち悪い', 'なつかしい', '落ち着く', '好き', '嫌い', 'やばいくらい空がきれい']) {
+    assert.equal(c.detectLocalResponseMode(e), 'feeling', e);
+  }
+  for (const e of ['おじさん', 'ねこ', '木', '空', '電車', 'わからない', 'なんとなく', '何も思わない', '']) {
+    assert.equal(c.detectLocalResponseMode(e), 'observation', e);
+  }
+  for (const e of ['ねこが寝ていた', '人が歩いていた', '友達が走ってきた', '空が赤くなった', '雨が降ってきた']) {
+    assert.equal(c.detectLocalResponseMode(e), 'story', e);
+  }
+});
+
+test('46. feeling は気もちの種類ごとに3語を選ぶ', () => {
+  const c = shipped();
+  const words = e => c.buildLocalVocabularyFallback(e, 'm').words.map(w => w.word);
+  assert.deepEqual(words('やばい'), ['目を奪われる', '息をのむ', '心が動く']);
+  assert.deepEqual(words('かわいい'), ['心がはずむ', '愛らしい', 'ほっとする']);
+  assert.deepEqual(words('むかつく'), ['いらだつ', 'もどかしい', 'くやしい']);
+  assert.deepEqual(words('キモい'), ['ぞわっとする', 'ぶきみ', '苦手']);
+  assert.deepEqual(words('こわい'), ['ぎょっとする', 'どきどきする', '不安']);
+  assert.deepEqual(words('なつかしい'), ['穏やか', 'なつかしい', '落ち着く']);
+  assert.deepEqual(words('悲しい'), ['心細い', 'しんみりする', 'さびしい']);
+});
+
+test('47. observation は見る観点だけを示し、気もちや外見を作らない', () => {
+  const c = shipped();
+  const fb = e => c.buildLocalVocabularyFallback(e, 'm');
+  assert.deepEqual(fb('おじさん').words.map(w => w.word), ['表情', 'しぐさ', 'まなざし']);
+  assert.deepEqual(fb('ねこ').words.map(w => w.word), ['表情', 'しぐさ', 'まなざし']);
+  assert.deepEqual(fb('木').words.map(w => w.word), ['色合い', '輪郭', 'たたずまい']);
+  assert.deepEqual(fb('わからない').words.map(w => w.word), ['色', '形', '動き']);
+  assert.equal(fb('わからない').followUpQuestion, '最初に目に入ったのは、どこかな？');
+  assert.equal(fb('おじさん').followUpQuestion, 'もう少し見てみたいところはある？');
+  for (const e of ['おじさん', 'ねこ', '木', 'わからない', 'ぴかぴか']) {
+    const d = fb(e);
+    assert.equal(d.responseMode, 'observation');
+    for (const w of d.words) assert.ok(!/気もち|気持ち|うれし|かなし|悲し|さびし|こわ|やさし|きれい|かわい/.test(w.word + w.description), `${e}: ${w.word}`);
+  }
+});
+
+test('48. story は様子・変化・流れで、原因・気もち・結末を足さない', () => {
+  const c = shipped();
+  for (const e of ['ねこが寝ていた', '人が歩いていた', '友達が走ってきた', '空が赤くなった', '雨が降ってきた']) {
+    const d = c.buildLocalVocabularyFallback(e, 'm');
+    assert.equal(d.responseMode, 'story');
+    assert.deepEqual(d.words.map(w => w.word), ['様子', '変化', '流れ']);
+    assert.equal(d.followUpQuestion, 'そのあと、どうなったと思う？');
+    for (const w of d.words) assert.ok(!/気もち|気持ち|から|ので|ため|終わ|最後/.test(w.description), w.word);
+  }
+});
+
+test('49. 端末内の候補はどれも Worker と同じ形の決まりを満たす', () => {
+  const c = shipped();
+  for (const e of ['やばい', 'かわいい', 'むかつく', 'キモい', 'こわい', 'なつかしい', '悲しい', 'おじさん', '木', 'わからない', 'ねこが寝ていた']) {
+    const d = c.buildLocalVocabularyFallback(e, 'm');
+    assert.equal(c.validateVocabResponse(d), true, e);
+    for (const w of d.words) assert.ok(/^[^。]*。$/.test(w.description), `description は1文: ${w.word}`);
+  }
+});
+
+test('50. responseMode は小文字の3種類だけ受け取る（normal のとき）', () => {
+  const c = shipped();
+  for (const m of ['feeling', 'observation', 'story']) assert.equal(c.validateVocabResponse(withMode(m)), true, m);
+  const missing = clone(NORMAL); delete missing.responseMode;
+  for (const bad of [missing, withMode(1), withMode(['feeling']), withMode('Feeling'), withMode('FEELING'), withMode('emotion'), withMode(null), withMode('')]) {
+    assert.equal(c.validateVocabResponse(bad), false, JSON.stringify(bad.responseMode));
+  }
+  assert.equal(c.validateVocabResponse(CARE), true, 'care には responseMode は要らない');
+});
+
+test('51. responseMode が不正な AI 応答は、端末内の候補へ切り替える', async () => {
+  for (const bad of [withMode('Feeling'), withMode(3), withMode(['story'])]) {
+    const c = loadCore(okFetch(bad));
+    assert.equal(await c.fetchVocabulary('ねこが寝ていた'), 'fallback');
+    assert.equal(c.fallback, true);
+    assert.equal(c.result.responseMode, 'story');
+  }
+});
+
+test('52. AI の3つの mode で、見出し・補助文・Worker の深掘り質問が出る', async () => {
+  for (const mode of ['feeling', 'observation', 'story']) {
+    const c = loadCore(okFetch(withMode(mode)));
+    assert.equal(await c.fetchVocabulary('ねこ'), 'ok');
+    const doc = makeDocument();
+    loadDom(doc, { vocabResult: c.result }).buildWords('ねこ');
+    assert.equal(doc.byId['words-pick-title'].textContent, HEADINGS[mode][0]);
+    assert.equal(doc.byId['words-pick-sub'].textContent, HEADINGS[mode][1]);
+    assert.equal(doc.byId['secret-q-text'].textContent, NORMAL.followUpQuestion);
+    assert.ok(!doc.byId['words-quote'].textContent.includes(NOTE), 'AI 成功時は案内文を出さない');
+  }
+});
+
+test('53. フォールバックの見出しと深掘り質問も mode に合わせる', () => {
+  const cases = [['やばい', 'feeling', 'どのあたりで、そう感じたのかな？'],
+    ['おじさん', 'observation', 'もう少し見てみたいところはある？'],
+    ['ねこが寝ていた', 'story', 'そのあと、どうなったと思う？'],
+    ['わからない', 'observation', '最初に目に入ったのは、どこかな？']];
+  for (const [e, mode, q] of cases) {
+    const c = shipped();
+    const doc = makeDocument();
+    loadDom(doc, { vocabResult: c.buildLocalVocabularyFallback(e, 'm'), vocabFallback: true }).buildWords(e);
+    assert.equal(doc.byId['words-pick-title'].textContent, HEADINGS[mode][0], e);
+    assert.equal(doc.byId['words-pick-sub'].textContent, HEADINGS[mode][1], e);
+    assert.equal(doc.byId['secret-q-text'].textContent, q, e);
+    assert.equal(doc.byId['secret-t-title'].textContent, q, e);
+    assert.equal(doc.byId['words-quote'].textContent, `「${e}」${NOTE}`);
+  }
+});
+
+test('54. 明示的な care 表現は、AIスイッチが true でも送らず・IDも作らず care にする', async () => {
+  for (const e of ['死にたい', 'シニタイ', 'し に た い', '自分を傷つけたい', '殴られてる', '家に帰るのが怖い']) {
+    const f = okFetch(NORMAL);
+    const storage = fakeStorage();
+    const c = loadCore(f, { storage });
+    assert.equal(await c.fetchVocabulary(e), 'care', e);
+    assert.equal(f.calls.length, 0, e);
+    assert.equal(storage.map.size, 0, e);
+    assert.equal(c.result, null);
+    assert.equal(c.care, true);
+  }
+  const c = shipped();
+  assert.deepEqual(c.buildLocalCareResponse(),
+    { safetyLevel: 'care', words: [], followUpQuestion: null, supportMessage: 'とてもつらい気もちなんだね。ひとりでかかえず、近くの信頼できる大人に話してね。' });
+  for (const e of ['死ぬほど楽しい', 'ゲームで死んだ', '学校に行きたくない']) assert.equal(c.detectDeterministicCare(e), false, e);
+});
+
+test('55. care の規則・正規化・固定文は tomori-vocabulary の worker.js と同じ', { skip: !existsSync(WORKER_PATH) && 'tomori-vocabulary が見つからない' }, () => {
+  const w = readFileSync(WORKER_PATH, 'utf8').replace(/\r\n/g, '\n');
+  const start = w.indexOf('// ゼロ幅文字（ZWSP');
+  const e1 = w.indexOf('export function detectDeterministicCare');
+  const workerBlock = w.slice(start, w.indexOf('\n}\n', e1) + 2).replace(/^export function/gm, 'function');
+  const html = HTML.replace(/\r\n/g, '\n');
+  assert.ok(html.includes(workerBlock), '安全判定の部分が参照元とずれている');
+  const msg = w.match(/const CARE_SUPPORT_MESSAGE =\s*'([^']*)'/)[1];
+  assert.equal(shipped().CARE_SUPPORT_MESSAGE, msg);
+  assert.equal(shipped().DETERMINISTIC_CARE_PATTERNS.length, 20);
+});
+
+test('56. care 画面は語彙カード・見出しを隠し、固定文だけを出す', () => {
+  const m = HTML.match(/function showCarePanel\(\)\s*\{([\s\S]*?)\n\}/)[1];
+  assert.match(m, /setWordsAreaVisible\(false\)/);
+  const v = HTML.match(/function setWordsAreaVisible\(show\) \{([\s\S]*?)\n\}/)[1];
+  for (const id of ['words-quote', 'words-pick-title', 'words-pick-sub', 'word-cards']) assert.ok(v.includes(`'${id}'`), id);
+  const t = HTML.match(/window\.toWords = async \(\)=>\{([\s\S]*?)\n\};/)[1];
+  assert.match(t, /if \(result === 'care'\) \{\s*showCarePanel\(\);\s*return;\s*\}/);
+});
+
+test('57. ページ全体で innerHTML への代入が0件、console.log は DEBUG_LOG の中だけ', () => {
+  assert.equal((HTML.match(/\.innerHTML\s*=/g) || []).length, 0);
+  assert.match(HTML, /const DEBUG_LOG = false;/);
+  const stripped = HTML
+    .replace(/if \(DEBUG_LOG\) \{[^}]*\}/g, '')
+    .replace(/if \(DEBUG_LOG\) console\.log\([^;]*\);/g, '');
+  assert.equal((stripped.match(/console\.log/g) || []).length, 0);
+});
+
+test('58. ひらがなだけの語（読みと同じ）にはルビを付けず、漢字の語には付ける', () => {
+  const doc = makeDocument();
+  const c = loadCore(okFetch(NORMAL), { core: CORE_SHIPPED });
+  loadDom(doc, { vocabResult: c.buildLocalVocabularyFallback('むかつく', 'm'), vocabFallback: true }).buildWords('むかつく');
+  const [a, b] = doc.byId['word-cards'].children;
+  assert.ok(!a.all().some(n => n.tagName === 'ruby' || n.tagName === 'rt'), 'いらだつ');
+  assert.equal(a.all().find(n => n.className === 'word-title').textContent, 'いらだつ');
+  assert.ok(!b.all().some(n => n.tagName === 'ruby'), 'もどかしい');
+  doc.byId['word-cards'].textContent = '';
+  loadDom(doc, { vocabResult: c.buildLocalVocabularyFallback('木', 'm'), vocabFallback: true }).buildWords('木');
+  const rt = doc.byId['word-cards'].children[1].all().find(n => n.tagName === 'rt');
+  assert.equal(rt.textContent, 'りんかく');
 });

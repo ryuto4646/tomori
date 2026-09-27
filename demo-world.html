@@ -333,7 +333,8 @@ rt { font-size:0.55em; color:#7a8060; }
   </div>
   <!-- 通常 -->
   <div id="words-quote"></div>
-  <div class="panel-title" id="words-pick-title" style="font-size:15px;margin-bottom:14px">1つだけ選んでみよう</div>
+  <div class="panel-title" id="words-pick-title" style="font-size:15px;margin-bottom:4px">気もちに近い言葉を見つけよう</div>
+  <div id="words-pick-sub" style="font-size:13px;line-height:1.6;opacity:.8;text-align:center;margin-bottom:12px">今の感じに近いものを、1つ選んでみよう。</div>
   <div id="word-cards"></div>
   <!-- followUpQuestion（深掘りの問い：カード選択後に使用） -->
   <div id="words-followup" style="display:none"></div>
@@ -388,24 +389,206 @@ let chosenWord    = '';
 
 // ── AI語彙 ──────────────────────────────────────────────────────────
 // VOCAB-CORE-BEGIN（test-vocabulary-integration.mjs がこの範囲を読み込んでテストする）
-// 緊急停止スイッチ：false の間は外部へ一切送らず、匿名IDも作らず、固定の3語を使う。
-// Worker の公開と Preview での確認が済むまで false のままにする。
+// 緊急停止スイッチ：false の間は外部へ一切送らず、匿名IDも作らず、端末内の固定候補を使う。
+// Worker の公開と確認が済むまで false のままにする。
 const VOCABULARY_AI_ENABLED = false;
-const VOCABULARY_API_URL = 'https://tomori-api.tomori-ryuto.workers.dev/vocabulary';
+// 恒久版の語彙 Worker（tomori-vocabulary）。まだ公開していない予定の URL
+const VOCABULARY_API_URL = 'https://tomori-vocabulary.tomori-ryuto.workers.dev/vocabulary';
+const VOCAB_MISSION = '心があたたかくなる赤を見つけよう';
 let _vocabGen      = 0;      // リセットのたびに増える。古い応答で画面を書き換えないため
 let _vocabAbort    = null;   // AbortController
-let _vocabResult   = null;   // 最後に取得したAI語彙（通常時）
-let _vocabFallback = false;  // フォールバック中か
+let _vocabResult   = null;   // 画面に出す語彙（AI の応答か、端末内の固定候補）
+let _vocabFallback = false;  // 端末内の固定候補を使っているか
 let _vocabCare     = false;  // care状態か
 
-// フォールバック固定候補
-const FALLBACK_WORDS = [
-  { word:'鮮やか',   reading:'あざやか',   description:'目にぱっと入ってくる、明るくはっきりした色' },
-  { word:'燃えるよう', reading:'もえるよう',  description:'あつさや力を感じるような、強い赤'          },
-  { word:'少しさびしげ', reading:'すこしさびしげ', description:'きれいだけれど、しずかなさびしさもある色' },
-];
+// 深掘り画面の初期の問い（リセット時にも戻す）
 const FALLBACK_FOLLOW_UP = 'この赤は、何に似ている？';
-const CARE_MESSAGE = 'とてもつらい気もちなんだね。\nひとりでかかえず、近くの信頼できる大人に話してね。';
+
+// ── 安全判定（第一段階）：tomori-vocabulary e958669 の worker.js から機械的に写したもの ──
+// 規則・正規化・固定文を変えたときは、参照元と一緒に直す（test-vocabulary-integration.mjs が差を検出する）
+const CARE_SUPPORT_MESSAGE = 'とてもつらい気もちなんだね。ひとりでかかえず、近くの信頼できる大人に話してね。';
+// ゼロ幅文字（ZWSP・ZWNJ・ZWJ・WORD JOINER・BOM）
+const SAFETY_ZERO_WIDTH = new RegExp('[' + String.fromCharCode(0x200B, 0x200C, 0x200D, 0x2060, 0xFEFF) + ']', 'g');
+// 文字を分けるのに使われやすい記号（NFKC のあとで全角は半角になっている）
+const SAFETY_SEPARATORS = /[、。，．,.!?・･…‥「」『』()［］\[\]"'“”‘’~〜_*\/\\|-]/g;
+
+// 判定用の文字列を作る。元の expression は変えない。
+// カタカナはひらがなへそろえる（「シニタイ」「ｼﾆﾀｲ」も同じように判定するため）
+function normalizeForSafety(text) {
+  return text
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(SAFETY_ZERO_WIDTH, '')
+    .replace(/\s+/g, '')
+    .replace(SAFETY_SEPARATORS, '')
+    .replace(/[ァ-ヶ]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0x60));
+}
+
+// 意図がはっきりした表現だけ。「死」の1文字や「死ぬほど」「ゲームで死んだ」には反応しない。
+// ひらがなは、ほかの言葉と取りちがえにくいものだけ入れている（例：「いきたくない」＝行きたくない は入れない）
+const DETERMINISTIC_CARE_PATTERNS = [
+  // 自傷・自殺
+  /(死|し)にたい(?!し[てた]|する)/,
+  /(死|し)にてえ/,
+  /(死|し)ん(で|じゃ)(しま|ちゃ)?いたい/,
+  /生き(てい)?たくない/,
+  /(消|き)え(てしまい|ちゃい)?たい/,
+  /いなくなりたい/,
+  /(自殺|じさつ)/,
+  /(自傷|じしょう)/,
+  /(自分|じぶん)(を|のこと(を)?)?(傷つけ|きずつけ|殺し|ころし)/,
+  // 他害
+  /(傷つけ|きずつけ)(たい|てやる)/,
+  /(殺|ころ)(したい|してやる|すぞ)/,
+  /ぶっ(殺|ころ)/,
+  /(殴|なぐ)り(たい|てやる)/,
+  /刺し(たい|てやる)/,
+  // 虐待・被害
+  /(殴|なぐ)られ(てい|てる|た)/,
+  /(叩|たた)かれ(てい|てる)/,
+  /蹴られ(てい|てる|た)/,
+  /(怖|こわ)いことを?され/,
+  /(触|さわ)られたくない(ところ|とこ|場所)を?(触|さわ)られ/,
+  /(家|いえ|うち)に(帰|かえ)るのが(怖|こわ)い/,
+];
+
+function detectDeterministicCare(expression) {
+  const s = normalizeForSafety(expression);
+  return DETERMINISTIC_CARE_PATTERNS.some(p => p.test(s));
+}
+// ── 安全判定ここまで ──
+
+function buildLocalCareResponse() {
+  return { safetyLevel: 'care', words: [], followUpQuestion: null, supportMessage: CARE_SUPPORT_MESSAGE };
+}
+
+// ── 端末内の固定候補（AI を使わないとき・使えないとき）──
+// 入力の種類を見て選ぶ。入力に無い気持ち・外見・原因・結末は作らない
+const RESPONSE_MODES = new Set(['feeling', 'observation', 'story']);
+
+const LOCAL_BANKS = {
+  wonder: [
+    { word:'目を奪われる', reading:'めをうばわれる', description:'思わず、じっと見てしまう気もち。' },
+    { word:'息をのむ',     reading:'いきをのむ',     description:'はっとして、一しゅん息が止まるような気もち。' },
+    { word:'心が動く',     reading:'こころがうごく', description:'見たものに、心がゆさぶられる気もち。' },
+  ],
+  joy: [
+    { word:'心がはずむ',   reading:'こころがはずむ', description:'うれしくて、わくわくする気もち。' },
+    { word:'愛らしい',     reading:'あいらしい',     description:'見ていると、大切にしたくなる気もち。' },
+    { word:'ほっとする',   reading:'ほっとする',     description:'安心して、力がぬける気もち。' },
+  ],
+  anger: [
+    { word:'いらだつ',     reading:'いらだつ',       description:'思いどおりにならなくて、じっとしていられない気もち。' },
+    { word:'もどかしい',   reading:'もどかしい',     description:'うまく進まなくて、じれったい気もち。' },
+    { word:'くやしい',     reading:'くやしい',       description:'できなかったことを、もう一度やりたい気もち。' },
+  ],
+  dislike: [
+    { word:'ぞわっとする', reading:'ぞわっとする',   description:'体がむずむずして、はなれたくなる気もち。' },
+    { word:'ぶきみ',       reading:'ぶきみ',         description:'なんだかふしぎで、少し近づきにくい気もち。' },
+    { word:'苦手',         reading:'にがて',         description:'あまり好きではなく、さけたくなる気もち。' },
+  ],
+  fear: [
+    { word:'ぎょっとする', reading:'ぎょっとする',   description:'急なことに、びくっとおどろく気もち。' },
+    { word:'どきどきする', reading:'どきどきする',   description:'むねがどきどきして、落ち着かない気もち。' },
+    { word:'不安',         reading:'ふあん',         description:'この先どうなるか、心配になる気もち。' },
+  ],
+  calm: [
+    { word:'穏やか',       reading:'おだやか',       description:'しずかで、ゆったりしている気もち。' },
+    { word:'なつかしい',   reading:'なつかしい',     description:'前のことを思い出して、あたたかくなる気もち。' },
+    { word:'落ち着く',     reading:'おちつく',       description:'心がしずかになって、ほっとする気もち。' },
+  ],
+  sad: [
+    { word:'心細い',       reading:'こころぼそい',   description:'ひとりぼっちのようで、少し不安な気もち。' },
+    { word:'しんみりする', reading:'しんみりする',   description:'しずかに、少しさびしくなる気もち。' },
+    { word:'さびしい',     reading:'さびしい',       description:'だれかや何かがいなくて、ものたりない気もち。' },
+  ],
+  // observation：見るところ（観点）だけを示す。答えは子どもにまかせる
+  lookBeing: [
+    { word:'表情',         reading:'ひょうじょう',   description:'顔のようすを、よく見てみる言葉。' },
+    { word:'しぐさ',       reading:'しぐさ',         description:'手や体の、小さな動きに目を向ける言葉。' },
+    { word:'まなざし',     reading:'まなざし',       description:'どこを見ているのか、目の向きを見る言葉。' },
+  ],
+  lookThing: [
+    { word:'色合い',       reading:'いろあい',       description:'どんな色が、どうまざっているかを見る言葉。' },
+    { word:'輪郭',         reading:'りんかく',       description:'ものの、まわりの線や形を見る言葉。' },
+    { word:'たたずまい',   reading:'たたずまい',     description:'そこにある姿や、まわりのようすを見る言葉。' },
+  ],
+  lookAny: [
+    { word:'色',           reading:'いろ',           description:'どんな色が見えるかに、目を向ける言葉。' },
+    { word:'形',           reading:'かたち',         description:'どんな形をしているかに、目を向ける言葉。' },
+    { word:'動き',         reading:'うごき',         description:'動いているところがあるかに、目を向ける言葉。' },
+  ],
+  // story：起きたことを表す言葉。入力に無い原因・気持ち・結末は足さない
+  scene: [
+    { word:'様子',         reading:'ようす',         description:'そのとき、どんなふうだったかを表す言葉。' },
+    { word:'変化',         reading:'へんか',         description:'前とくらべて、かわったところを表す言葉。' },
+    { word:'流れ',         reading:'ながれ',         description:'どんな順番で起きたかを表す言葉。' },
+  ],
+};
+
+const LOCAL_FOLLOW_UPS = {
+  feeling: 'どのあたりで、そう感じたのかな？',
+  observation: 'もう少し見てみたいところはある？',
+  story: 'そのあと、どうなったと思う？',
+  unsure: '最初に目に入ったのは、どこかな？',
+};
+
+// 判定は normalizeForSafety でそろえた文字（ひらがな・記号なし）に対して行う
+const LOCAL_FEELING_WORDS = [
+  ['wonder', ['やばい', 'すごい', 'きれい', '綺麗']],
+  ['joy', ['かわいい', '可愛い', 'うれしい', '嬉しい', 'たのしい', '楽しい', '好き', 'すき']],
+  ['anger', ['うざい', 'むかつく', 'いらいら']],
+  ['dislike', ['きもい', 'きもちわるい', '気持ち悪い', '気持ちわるい', 'きらい', '嫌い']],
+  ['fear', ['こわい', '怖い', 'びっくり']],
+  ['calm', ['なつかしい', '懐かしい', 'おちつく', '落ち着く', '落ちつく']],
+  ['sad', ['さびしい', '寂しい', '淋しい', 'かなしい', '悲しい']],
+];
+const LOCAL_UNSURE_WORDS = ['わからない', 'わかんない', '分からない', 'なんとなく', '何となく', 'なにもおもわない', '何も思わない', '気になった', 'きになった', 'とくにない', '特にない', 'べつに', '別に'];
+const LOCAL_BEING_WORDS = ['おじさん', 'おばさん', 'おじいさん', 'おばあさん', 'おとうさん', 'お父さん', 'おかあさん', 'お母さん', 'おにいさん', 'お兄さん', 'おねえさん', 'お姉さん',
+  '友達', '友だち', 'ともだち', '子ども', '子供', 'こども', '赤ちゃん', 'あかちゃん', '先生', 'せんせい', '人', 'ひと', 'ねこ', '猫', 'いぬ', '犬', '鳥', 'とり', '虫', 'むし', '魚', 'さかな', 'うさぎ', 'きんぎょ', '金魚', 'はと', 'からす'];
+const LOCAL_THING_WORDS = ['木', '空', 'そら', '雲', 'くも', '花', 'はな', '山', 'やま', '海', 'うみ', '川', 'かわ', '石', 'いし', '葉', 'はっぱ', '夕日', 'ゆうひ', '電車', 'でんしゃ', '車', 'くるま',
+  '建物', 'たてもの', 'びる', '家', 'いえ', '道', 'みち', '橋', 'はし', '公園', 'こうえん', '駅', 'えき', '学校', 'がっこう', 'まど', '窓', 'かべ', '壁'];
+// 出来事・行動の文の終わり方（「ねこが寝ていた」「友達が走ってきた」「空が赤くなった」）
+const LOCAL_STORY_ENDING = /(ていた|ている|てた|てる|てきた|ってきた|った|んだ|いた|した|なった|きた|れた|えた|ねた|みた|でた|だした)$/;
+
+function _localSafetyText(expression) {
+  return normalizeForSafety(String(expression || ''));
+}
+
+// 入力が「気持ち・見たもの・出来事」のどれかを、端末内でおおまかに決める。迷ったら observation
+function detectLocalResponseMode(expression) {
+  const s = _localSafetyText(expression);
+  if (!s) return 'observation';
+  if (LOCAL_FEELING_WORDS.some(([, words]) => words.some(w => s.includes(w)))) return 'feeling';
+  if (LOCAL_UNSURE_WORDS.some(w => s.includes(w))) return 'observation';
+  if (s.length >= 3 && LOCAL_STORY_ENDING.test(s)) return 'story';
+  return 'observation';
+}
+
+function _pickLocalBank(mode, s) {
+  if (mode === 'feeling') {
+    const hit = LOCAL_FEELING_WORDS.find(([, words]) => words.some(w => s.includes(w)));
+    return { bank: LOCAL_BANKS[hit ? hit[0] : 'wonder'], followUp: LOCAL_FOLLOW_UPS.feeling };
+  }
+  if (mode === 'story') return { bank: LOCAL_BANKS.scene, followUp: LOCAL_FOLLOW_UPS.story };
+  if (!s || LOCAL_UNSURE_WORDS.some(w => s.includes(w))) return { bank: LOCAL_BANKS.lookAny, followUp: LOCAL_FOLLOW_UPS.unsure };
+  if (LOCAL_BEING_WORDS.some(w => s.includes(w))) return { bank: LOCAL_BANKS.lookBeing, followUp: LOCAL_FOLLOW_UPS.observation };
+  if (LOCAL_THING_WORDS.some(w => s.includes(w))) return { bank: LOCAL_BANKS.lookThing, followUp: LOCAL_FOLLOW_UPS.observation };
+  return { bank: LOCAL_BANKS.lookAny, followUp: LOCAL_FOLLOW_UPS.unsure };
+}
+
+// mission は受け取るが、候補づくりには使わない（入力に無いことを足さないため）
+function buildLocalVocabularyFallback(expression, mission) {
+  const mode = detectLocalResponseMode(expression);
+  const { bank, followUp } = _pickLocalBank(mode, _localSafetyText(expression));
+  return {
+    responseMode: mode,
+    words: bank.map(w => ({ ...w })),
+    followUpQuestion: followUp,
+    safetyLevel: 'normal',
+    supportMessage: null,
+  };
+}
 
 // 匿名セッションID：レート制限のためだけに使う。名前・年齢・写真・入力文とは結び付けない。
 // sessionStorage に置くので、タブを閉じると消える。リセットでは同じIDを使い続ける。
@@ -451,6 +634,8 @@ function validateVocabResponse(data) {
     return Array.isArray(data.words) && data.words.length === 0 && data.followUpQuestion === null;
   }
   if (data.safetyLevel !== 'normal') return false;
+  // 小文字の決まった3種類だけ。文字列以外・大文字・未知の値は受け取らない
+  if (typeof data.responseMode !== 'string' || !RESPONSE_MODES.has(data.responseMode)) return false;
   if (!Array.isArray(data.words) || data.words.length !== 3) return false;
   const wordTexts = [];
   for (const w of data.words) {
@@ -465,11 +650,20 @@ function validateVocabResponse(data) {
   return true;
 }
 
+// 端末内の固定候補へ切り替える（AI を使わないとき・失敗したとき）
+function useLocalVocabulary(expression) {
+  _vocabResult   = buildLocalVocabularyFallback(expression, VOCAB_MISSION);
+  _vocabFallback = true;
+  return 'fallback';
+}
+
 async function fetchVocabulary(expression) {
   resetVocabState();
-  if (!VOCABULARY_AI_ENABLED) return 'fallback';
+  // 明示的な表現は、送信もIDづくりもせず、端末内で固定の支援文にする
+  if (detectDeterministicCare(String(expression || ''))) { _vocabCare = true; return 'care'; }
+  if (!VOCABULARY_AI_ENABLED) return useLocalVocabulary(expression);
   const sessionId = getVocabSessionId();
-  if (!sessionId) return 'fallback';
+  if (!sessionId) return useLocalVocabulary(expression);
   const abort = new AbortController();
   _vocabAbort = abort;
 
@@ -482,7 +676,7 @@ async function fetchVocabulary(expression) {
       // 写真・音声・名前・履歴は送らない
       body: JSON.stringify({
         expression: expression.slice(0, 200),
-        mission: '心があたたかくなる赤を見つけよう',
+        mission: VOCAB_MISSION,
         age: 'grade_3_4',
         language: 'ja',
       }),
@@ -491,14 +685,14 @@ async function fetchVocabulary(expression) {
     clearTimeout(timeoutId);
     _vocabAbort = null;
 
-    if (!res.ok) return 'fallback';
+    if (!res.ok) return useLocalVocabulary(expression);
 
     let data;
-    try { data = await res.json(); } catch { return 'fallback'; }
+    try { data = await res.json(); } catch { return useLocalVocabulary(expression); }
 
-    if (!validateVocabResponse(data)) return 'fallback';
+    if (!validateVocabResponse(data)) return useLocalVocabulary(expression);
 
-    if (data.safetyLevel === 'care') return 'care';
+    if (data.safetyLevel === 'care') { _vocabCare = true; return 'care'; }
 
     _vocabResult = data;
     return 'ok';
@@ -506,7 +700,7 @@ async function fetchVocabulary(expression) {
   } catch (e) {
     clearTimeout(timeoutId);
     _vocabAbort = null;
-    return 'fallback';
+    return useLocalVocabulary(expression);
   }
 }
 // VOCAB-CORE-END
@@ -605,8 +799,11 @@ window.toggleVoice = function() {
 window.addEventListener('beforeunload', stopVoice);
 /* ─────────────────────────────────────────────── */
 
+// 開発中だけ true にする。ふだんは console へ何も出さない（入力・AI・care の内容も出さない）
+const DEBUG_LOG = false;
+
 function setState(ns) {
-  console.log('[state]', state, '→', ns);
+  if (DEBUG_LOG) console.log('[state]', state, '→', ns);
   state = ns;
   applyUI();
 }
@@ -1338,57 +1535,42 @@ window.toWords = async ()=>{
   showVocabLoading(false);
 
   if (result === 'care') {
-    _vocabCare = true;
     showCarePanel();
     return;
-  }
-
-  if (result === 'fallback') {
-    _vocabFallback = true;
   }
 
   buildWords(v);
 };
 
+// 言葉えらびの部分（引用・見出し・補助文・カード）をまとめて出し入れする
+function setWordsAreaVisible(show) {
+  ['words-quote', 'words-pick-title', 'words-pick-sub', 'word-cards'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = show ? '' : 'none';
+  });
+}
+
 function showVocabLoading(show) {
   const el = document.getElementById('vocab-loading');
-  const quote = document.getElementById('words-quote');
-  const title = document.getElementById('words-pick-title');
-  const cards = document.getElementById('word-cards');
-  if (show) {
-    el.classList.add('show');
-    quote.style.display = 'none';
-    title.style.display = 'none';
-    cards.style.display = 'none';
-  } else {
-    el.classList.remove('show');
-    quote.style.display = '';
-    title.style.display = '';
-    cards.style.display = '';
-  }
+  if (show) el.classList.add('show');
+  else el.classList.remove('show');
+  setWordsAreaVisible(!show);
 }
 
 function showCarePanel() {
   const careEl = document.getElementById('vocab-care');
   const msgEl  = document.getElementById('care-msg-text');
-  const quote  = document.getElementById('words-quote');
-  const title  = document.getElementById('words-pick-title');
-  const cards  = document.getElementById('word-cards');
-  // textContent で表示（innerHTMLは使わない）
-  msgEl.textContent = CARE_MESSAGE;
+  // 固定の支援文を textContent で表示（innerHTMLは使わない）。文の区切りで改行して読みやすくする
+  msgEl.textContent = buildLocalCareResponse().supportMessage.replace(/。(?=.)/g, '。\n');
   careEl.classList.add('show');
-  quote.style.display  = 'none';
-  title.style.display  = 'none';
-  cards.style.display  = 'none';
+  setWordsAreaVisible(false);
 }
 
 window.careRewrite = () => {
   // 入力画面へ戻る（入力内容は残す）
   const careEl = document.getElementById('vocab-care');
   careEl.classList.remove('show');
-  document.getElementById('words-quote').style.display = '';
-  document.getElementById('words-pick-title').style.display = '';
-  document.getElementById('word-cards').style.display = '';
+  setWordsAreaVisible(true);
   _vocabCare = false;
   setState(S.EXPRESSION_ENTERED);
   // ボタンを再有効化
@@ -1402,9 +1584,7 @@ window.careBack = () => {
   // 入力パネルを閉じて世界へ戻る（ミッション未完了のまま）
   const careEl = document.getElementById('vocab-care');
   careEl.classList.remove('show');
-  document.getElementById('words-quote').style.display = '';
-  document.getElementById('words-pick-title').style.display = '';
-  document.getElementById('word-cards').style.display = '';
+  setWordsAreaVisible(true);
   _vocabCare = false;
   missionTriggered = false;
   missionNeedsLeave = true;
@@ -1414,30 +1594,38 @@ window.careBack = () => {
 };
 
 // VOCAB-DOM-BEGIN
+// 入力の種類ごとの見出し。気持ちを言わせる書き方にしない
+const MODE_COPY = {
+  feeling:     { title: '気もちに近い言葉を見つけよう',     sub: '今の感じに近いものを、1つ選んでみよう。' },
+  observation: { title: 'どこに目が止まったのかな？',       sub: 'もう少し見てみたいところを、1つ選んでみよう。' },
+  story:       { title: 'この場面を、もう少し言葉にしてみよう', sub: 'いちばん近い言葉を、1つ選んでみよう。' },
+};
+const FALLBACK_NOTE = '今日は、トモリが見つけた言葉から選んでみよう。';
+
 function buildWords(input){
+  // 表示する語彙（AI の応答か、端末内の固定候補）。どちらも無いときは端末内で作る
+  const data = _vocabResult || buildLocalVocabularyFallback(input, VOCAB_MISSION);
+  const copy = MODE_COPY[data.responseMode] || MODE_COPY.observation;
+
   // words-quote を安全に構築（innerHTML を使わない）
   const quoteEl = document.getElementById('words-quote');
   quoteEl.textContent = '';
   const displayInput = input.length > 40 ? input.slice(0, 40) + '…' : input;
-  // 「...」の中に / こんな気もちがひそんでいるかもしれないよ。 を2行で
-  const line1 = document.createTextNode('「' + displayInput + '」の中に、');
-  const br    = document.createElement('br');
-  const line2 = document.createTextNode(_vocabFallback
-    ? '今日は、トモリが見つけたことばを見てみよう。'
-    : 'こんな気もちがひそんでいるかもしれないよ。'
-  );
-  quoteEl.appendChild(line1);
-  quoteEl.appendChild(br);
-  quoteEl.appendChild(line2);
+  quoteEl.appendChild(document.createTextNode('「' + displayInput + '」'));
+  if (_vocabFallback) {
+    // エラーとしてではなく、案内として1回だけ出す
+    quoteEl.appendChild(document.createElement('br'));
+    quoteEl.appendChild(document.createTextNode(FALLBACK_NOTE));
+  }
 
-  // 語彙データの取得（AI結果かフォールバックか）
-  const source = (!_vocabFallback && _vocabResult)
-    ? _vocabResult.words
-    : FALLBACK_WORDS;
+  const titleEl = document.getElementById('words-pick-title');
+  const subEl   = document.getElementById('words-pick-sub');
+  if (titleEl) titleEl.textContent = copy.title;
+  if (subEl)   subEl.textContent   = copy.sub;
 
-  // followUpQuestion の保持
-  const followUp = (!_vocabFallback && _vocabResult && _vocabResult.followUpQuestion)
-    ? _vocabResult.followUpQuestion
+  const source = data.words;
+  const followUp = (typeof data.followUpQuestion === 'string' && data.followUpQuestion)
+    ? data.followUpQuestion
     : FALLBACK_FOLLOW_UP;
 
   // 深掘り問いを panel-secret-q / panel-secret-t に反映（textContent で安全に）
@@ -1457,16 +1645,19 @@ function buildWords(input){
     card.dataset.wordReading = reading;
     card.dataset.wordDesc    = description;
 
-    // タイトル：<ruby> をDOM APIで構築
+    // タイトル：<ruby> をDOM APIで構築。ひらがなだけの語（読みと同じ）にはルビを付けない
     const titleEl = document.createElement('div');
     titleEl.className = 'word-title';
-    const ruby = document.createElement('ruby');
-    const wordNode = document.createTextNode(word);
-    const rt = document.createElement('rt');
-    rt.textContent = reading;
-    ruby.appendChild(wordNode);
-    ruby.appendChild(rt);
-    titleEl.appendChild(ruby);
+    if (reading === word) {
+      titleEl.appendChild(document.createTextNode(word));
+    } else {
+      const ruby = document.createElement('ruby');
+      const rt = document.createElement('rt');
+      rt.textContent = reading;
+      ruby.appendChild(document.createTextNode(word));
+      ruby.appendChild(rt);
+      titleEl.appendChild(ruby);
+    }
 
     // 説明：textContent で安全に
     const descEl = document.createElement('div');
@@ -1524,9 +1715,7 @@ function doReset(){
   // care/loading/words UIをリセット
   document.getElementById('vocab-care').classList.remove('show');
   document.getElementById('vocab-loading').classList.remove('show');
-  document.getElementById('words-quote').style.display = '';
-  document.getElementById('words-pick-title').style.display = '';
-  document.getElementById('word-cards').style.display = '';
+  setWordsAreaVisible(true);
   document.getElementById('word-cards').textContent = '';
   document.getElementById('words-quote').textContent = '';
   // followUpQuestion をデフォルトへ戻す
@@ -1756,8 +1945,10 @@ setTimeout(()=>{
 },800);
 
 animate();
-console.log('[Tomori Demo] States:',Object.keys(S).join(', '));
-console.log('[Tomori Demo] character: Hirori placeholder (GLB not bundled in this demo)');
+if (DEBUG_LOG) {
+  console.log('[Tomori Demo] States:',Object.keys(S).join(', '));
+  console.log('[Tomori Demo] character: Hirori placeholder (GLB not bundled in this demo)');
+}
 </script>
 </body>
 </html>

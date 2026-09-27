@@ -53,7 +53,7 @@ class Node {
 }
 function makeDocument() {
   const ids = {};
-  for (const id of ['overlay-world', 'word-announce', 'words-quote', 'word-cards', 'secret-q-text', 'secret-t-title']) ids[id] = new Node('div');
+  for (const id of ['overlay-world', 'word-announce', 'words-quote', 'words-pick-title', 'words-pick-sub', 'word-cards', 'secret-q-text', 'secret-t-title']) ids[id] = new Node('div');
   const body = new Node('body');
   return {
     ids, body,
@@ -170,16 +170,16 @@ test('4. リセット後の2回目では、花がそれぞれ1回だけ咲く', 
   assert.equal(env.app.stateLog.filter(s => s === 'SECRET_QUESTION').length, 1);
 });
 
-test('5. 固定の語・通常の表示・ルビは今までどおり', () => {
+test('5. 端末内の語・通常の表示・ルビは今までどおり', () => {
   const env = load();
   env.app.setResult(null); env.app.buildWords('やばい');
   const cards = env.doc.ids['word-cards'].children;
-  assert.deepEqual(cards.map(c => c.dataset.wordText), ['鮮やか', '燃えるよう', '少しさびしげ']);
+  assert.deepEqual(cards.map(c => c.dataset.wordText), ['目を奪われる', '息をのむ', '心が動く']);
   const ruby = cards[0].all().find(n => n.tagName === 'ruby');
-  assert.equal(ruby.children[0].textContent, '鮮やか');
-  assert.equal(ruby.children.find(n => n.tagName === 'rt').textContent, 'あざやか');
+  assert.equal(ruby.children[0].textContent, '目を奪われる');
+  assert.equal(ruby.children.find(n => n.tagName === 'rt').textContent, 'めをうばわれる');
   pickFirstCard(env); env.clock.advance(500);
-  assert.equal(env.doc.ids['word-announce'].textContent, '『鮮やか』が、世界をひらいた。');
+  assert.equal(env.doc.ids['word-announce'].textContent, '『目を奪われる』が、世界をひらいた。');
 });
 
 test('6. VOCABULARY_AI_ENABLED は false で、fetch は0回', () => {

@@ -776,3 +776,23 @@ test('65. 喜びの語群は「心がはずむ／わくわくする／ほっと�
     assert.ok(!/人|ひと|動物|ねこ|いぬ|かわい|愛らし|見た目|顔|姿/.test(w.word + w.description), w.word);
   }
 });
+
+// ── Step 10B：「すご」を語の一部として拾わない ─────────────────
+test('66. 「すごい」の活用形だけを中立にし、「すごろく」などの語の一部には反応しない', () => {
+  const c = shipped();
+  const table = [
+    ['すごい', 'feeling', NEUTRAL], ['すごかった', 'feeling', NEUTRAL], ['スゴい', 'feeling', NEUTRAL],
+    ['すごくきれい', 'feeling', BANK_OF.wonder], ['すごくこわい', 'feeling', BANK_OF.fear],
+    ['すごろく', 'observation', ['色', '形', '動き']],
+    ['すごろくがあった', 'observation', null],
+    ['すごろくで遊んでいた', 'story', BANK_OF.scene],
+  ];
+  for (const [e, mode, words] of table) {
+    const d = c.buildLocalVocabularyFallback(e, 'm');
+    assert.equal(c.detectLocalResponseMode(e), mode, e);
+    assert.equal(d.responseMode, mode, e);
+    if (words) assert.deepEqual(d.words.map(w => w.word), words, e);
+    assert.equal(c.validateVocabResponse(d), true, e);
+  }
+  assert.equal(c.detectDeterministicCare('すごろく'), false);
+});

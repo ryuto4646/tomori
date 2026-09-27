@@ -554,7 +554,8 @@ const LOCAL_FEELING_WORDS = [
 ];
 // 気もちの言葉だが、良い・悪いを決める手がかりにならないもの
 // （「すごい」「すごかった」「すごく」も、ほかに手がかりが無ければ中立にする）
-const LOCAL_AMBIGUOUS_FEELING_WORDS = ['やば', 'すご', '凄'];
+// 「すごい・すごく・すごかった・すごすぎ・すごっ」のような活用形だけに当て、「すごろく」などの語の一部には当てない
+const LOCAL_AMBIGUOUS_FEELING = /(やば|すご|凄)(い|く|か|すぎ|っ|$)/;
 const LOCAL_UNSURE_WORDS = ['わからない', 'わかんない', '分からない', 'なんとなく', '何となく', 'なにもおもわない', '何も思わない', '気になった', 'きになった', 'とくにない', '特にない', 'べつに', '別に'];
 const LOCAL_BEING_WORDS = ['おじさん', 'おばさん', 'おじいさん', 'おばあさん', 'おとうさん', 'お父さん', 'おかあさん', 'お母さん', 'おにいさん', 'お兄さん', 'おねえさん', 'お姉さん',
   '友達', '友だち', 'ともだち', '子ども', '子供', 'こども', '赤ちゃん', 'あかちゃん', '先生', 'せんせい', '人', 'ひと', 'ねこ', '猫', 'いぬ', '犬', '鳥', 'とり', '虫', 'むし', '魚', 'さかな', 'うさぎ', 'きんぎょ', '金魚', 'はと', 'からす'];
@@ -579,7 +580,7 @@ function detectLocalResponseMode(expression) {
   const s = _localSafetyText(expression);
   if (!s) return 'observation';
   if (LOCAL_FEELING_WORDS.some(([, words]) => _hasAny(s, words))) return 'feeling';
-  if (_hasAny(s, LOCAL_AMBIGUOUS_FEELING_WORDS)) return 'feeling';
+  if (LOCAL_AMBIGUOUS_FEELING.test(s)) return 'feeling';
   if (_hasAny(s, LOCAL_UNSURE_WORDS)) return 'observation';
   // 1. はっきりした動作・変化があれば story（末尾の「〜がいた／見えた」は動作として数えない）
   const existence = s.match(LOCAL_EXISTENCE_ENDING);

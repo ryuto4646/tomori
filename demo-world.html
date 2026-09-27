@@ -1183,6 +1183,34 @@ function triggerMission(){
   setState(S.MISSION_FOUND);
 }
 
+// WORLD-FX-BEGIN（test-world-effects.mjs がこの範囲を読み込んでテストする）
+// ── 世界変化の演出：世代番号とタイマーの管理 ─────────────────────
+// リセットすると世代番号が進み、古い世代の予約（タイマー・アニメ）は何もせずに終わる。
+// 対象は世界変化の演出だけ。描画ループ（animate）などアプリ全体の処理は含めない。
+let _worldEffectGen = 0;
+const _worldTimers = new Set();
+const _worldFrames = new Set();
+
+function worldTimeout(fn, ms){
+  const gen=_worldEffectGen;
+  const id=setTimeout(()=>{ _worldTimers.delete(id); if(gen!==_worldEffectGen) return; fn(); }, ms);
+  _worldTimers.add(id);
+  return id;
+}
+function worldFrame(fn){
+  const gen=_worldEffectGen;
+  const id=requestAnimationFrame(t=>{ _worldFrames.delete(id); if(gen!==_worldEffectGen) return; fn(t); });
+  _worldFrames.add(id);
+  return id;
+}
+function cancelWorldEffects(){
+  _worldEffectGen++;
+  for(const id of _worldTimers) clearTimeout(id);
+  _worldTimers.clear();
+  for(const id of _worldFrames) cancelAnimationFrame(id);
+  _worldFrames.clear();
+}
+
 // ── 花をアニメで順番に咲かせる ───────────────────────────────────
 function bloomSeq(arr,onDone){
   let idx=0;
@@ -1194,7 +1222,7 @@ function bloomSeq(arr,onDone){
       const t=Math.min((Date.now()-t0)/380,1);
       const s=t<.5?2*t*t:-1+(4-2*t)*t;
       f.scale.setScalar(s);
-      if(t<1) requestAnimationFrame(grow); else setTimeout(next,55);
+      if(t<1) worldFrame(grow); else worldTimeout(next,55);
     })();
   }
   next();
@@ -1207,35 +1235,63 @@ function spawnRing(){
   d.className='light-ring';
   d.style.cssText=`width:${sz}px;height:${sz}px;left:${innerWidth/2-sz/2}px;top:${innerHeight/2-sz/2}px`;
   document.body.appendChild(d);
-  setTimeout(()=>d.remove(),1400);
+  worldTimeout(()=>d.remove(),1400);
+}
+
+// 選んだ語は、AI や利用者から届く可能性がある文字。HTML として解釈させず、文字として入れる
+function showWordAnnounce(word){
+  const el=document.getElementById('word-announce');
+  el.replaceChildren(
+    document.createTextNode('『'+String(word)+'』が、'),
+    document.createElement('br'),
+    document.createTextNode('世界をひらいた。'),
+  );
 }
 
 function doWorldChange(word){
   // CSS演出
   spawnRing();
   const ov=document.getElementById('overlay-world');
-  document.getElementById('word-announce').innerHTML=`『${word}』が、<br>世界をひらいた。`;
+  showWordAnnounce(word);
   ov.classList.add('show');
 
   // 3D変化（段階的に）
-  setTimeout(()=>{
+  worldTimeout(()=>{
     vineGroup.visible=false;
     newPath.visible=true;
     secretGroup.visible=true;
   }, 500);
 
   // 赤い花を咲かせる
-  setTimeout(()=>bloomSeq(redFlowers,null), 700);
+  worldTimeout(()=>bloomSeq(redFlowers,null), 700);
 
   // メインの花（一部）
-  setTimeout(()=>bloomSeq(mainFlowers.slice(0,6),null), 300);
+  worldTimeout(()=>bloomSeq(mainFlowers.slice(0,6),null), 300);
 
   // テキストオーバーレイを消してSECRET_QUESTIONへ
-  setTimeout(()=>{
+  worldTimeout(()=>{
     ov.classList.remove('show');
     setState(S.SECRET_QUESTION);
   }, 2800);
 }
+
+// 世界を最初の状態へ戻す。まず予約をすべて止めてから戻す（あとから古い演出が書き換えないように）
+function resetWorldState(){
+  cancelWorldEffects();
+  document.getElementById('overlay-world').classList.remove('show');
+  document.getElementById('word-announce').replaceChildren();
+  document.querySelectorAll('.light-ring').forEach(d=>d.remove());
+  vineGroup.visible=true;
+  newPath.visible=false;
+  secretGroup.visible=false;
+  nextGroup.visible=false;
+  [...mainFlowers,...redFlowers].forEach(f=>f.scale.setScalar(0));
+  // 今回の世界変化で追加した花（revealSecret）だけを消す。最初からある花・木・岩は消さない
+  [...flowerGroup.children]
+    .filter(f=>!mainFlowers.includes(f)&&!redFlowers.includes(f))
+    .forEach(f=>flowerGroup.remove(f));
+}
+// WORLD-FX-END
 
 // ── 公開フロー関数 ────────────────────────────────────────────────
 window.toPhotoPanel = ()=>setState(S.PHOTO_PANEL);
@@ -1425,7 +1481,7 @@ function buildWords(input){
       document.querySelectorAll('.word-card').forEach(c => c.classList.remove('selected'));
       card.classList.add('selected');
       chosenWord = word;
-      setTimeout(() => {
+      worldTimeout(() => {
         setState(S.WORD_SELECTED);
         doWorldChange(word);
       }, 400);
@@ -1452,7 +1508,7 @@ window.revealSecret = ()=>{
     flowerGroup.add(f); extra.push(f);
   }
   bloomSeq(extra,null);
-  setTimeout(()=>{ nextGroup.visible=true; setState(S.DEMO_COMPLETE); },900);
+  worldTimeout(()=>{ nextGroup.visible=true; setState(S.DEMO_COMPLETE); },900);
 };
 
 // ── リセット ─────────────────────────────────────────────────────
@@ -1460,6 +1516,8 @@ window.confirmReset = ()=>{ if(confirm('デモを最初からやり直します�
 
 function doReset(){
   stopVoice();
+  // 世界変化の演出を最初に止めて戻す（古い花・メッセージ・道があとから出ないように）
+  resetWorldState();
   // AI語彙状態をクリア（進行中のfetchもAbort、古い応答は世代番号で無視）
   _vocabGen++;
   resetVocabState();
@@ -1483,16 +1541,6 @@ function doReset(){
   camera.position.copy(CAM_OFF); camera.lookAt(0,0,0);
 
   mpGroup.position.copy(MISSION_POS); missionTriggered=false; missionNeedsLeave=false;
-  vineGroup.visible=true;
-  newPath.visible=false;
-  secretGroup.visible=false;
-  nextGroup.visible=false;
-
-  [...mainFlowers,...redFlowers].forEach(f=>f.scale.setScalar(0));
-  // 追加生成した花を削除
-  const all=[...flowerGroup.children];
-  all.filter(f=>!mainFlowers.includes(f)&&!redFlowers.includes(f))
-     .forEach(f=>flowerGroup.remove(f));
 
   photoDataUrl=null; enteredText=''; chosenWord='';
   document.getElementById('expr-input').value='';

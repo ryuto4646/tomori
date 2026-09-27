@@ -507,8 +507,9 @@ test('46. feeling は気もちの種類ごとに3語を選ぶ', () => {
   const c = shipped();
   const words = e => c.buildLocalVocabularyFallback(e, 'm').words.map(w => w.word);
   assert.deepEqual(words('やばい'), ['びっくりした', '気になった', '心が動いた']);
-  assert.deepEqual(words('すごい'), ['目を奪われる', '息をのむ', '心が動く']);
-  assert.deepEqual(words('かわいい'), ['心がはずむ', '愛らしい', 'ほっとする']);
+  assert.deepEqual(words('すごい'), ['びっくりした', '気になった', '心が動いた']);
+  assert.deepEqual(words('きれい'), ['目を奪われる', '息をのむ', '心が動く']);
+  assert.deepEqual(words('かわいい'), ['心がはずむ', 'わくわくする', 'ほっとする']);
   assert.deepEqual(words('むかつく'), ['いらだつ', 'もどかしい', 'くやしい']);
   assert.deepEqual(words('キモい'), ['ぞわっとする', 'ぶきみ', '苦手']);
   assert.deepEqual(words('こわい'), ['ぎょっとする', 'どきどきする', '不安']);
@@ -666,7 +667,7 @@ test('58. ひらがなだけの語（読みと同じ）にはルビを付けず�
 // ── Step 9G：「やばい」単独の中立化と、存在文の扱い ─────────────────
 const NEUTRAL = ['びっくりした', '気になった', '心が動いた'];
 const BANK_OF = {
-  wonder: ['目を奪われる', '息をのむ', '心が動く'], joy: ['心がはずむ', '愛らしい', 'ほっとする'],
+  wonder: ['目を奪われる', '息をのむ', '心が動く'], joy: ['心がはずむ', 'わくわくする', 'ほっとする'],
   fear: ['ぎょっとする', 'どきどきする', '不安'], dislike: ['ぞわっとする', 'ぶきみ', '苦手'],
   being: ['表情', 'しぐさ', 'まなざし'], thing: ['色合い', '輪郭', 'たたずまい'], scene: ['様子', '変化', '流れ'],
 };
@@ -742,4 +743,36 @@ test('63. AI が成功したときは、端末内の判定で上書きしない'
   assert.deepEqual(doc.byId['word-cards'].children.map(x => x.dataset.wordText), NORMAL.words.map(w => w.word));
   assert.equal(doc.byId['words-pick-title'].textContent, HEADINGS.story[0]);
   assert.equal(doc.byId['secret-q-text'].textContent, NORMAL.followUpQuestion);
+});
+
+// ── Step 10A：「すごい」単独も中立にする・喜びの語群 ─────────────────
+test('64. 「すごい」単独は中立、ほかの手がかりがあればその語群', () => {
+  const c = shipped();
+  const neutralQ = 'どんなところで、そう感じたのかな？', feelQ = 'どのあたりで、そう感じたのかな？';
+  const table = [
+    ['すごい', NEUTRAL, neutralQ], ['すごかった', NEUTRAL, neutralQ], ['スゴい！', NEUTRAL, neutralQ], ['やばい', NEUTRAL, neutralQ],
+    ['すごくきれい', BANK_OF.wonder, feelQ], ['すごくこわい', BANK_OF.fear, feelQ],
+    ['すごくうれしい', BANK_OF.joy, feelQ], ['すごくキモい', BANK_OF.dislike, feelQ],
+  ];
+  for (const [e, words, q] of table) {
+    const d = c.buildLocalVocabularyFallback(e, 'm');
+    assert.equal(d.responseMode, 'feeling', e);
+    assert.deepEqual(d.words.map(w => w.word), words, e);
+    assert.equal(d.followUpQuestion, q, e);
+    assert.equal(c.validateVocabResponse(d), true, e);
+  }
+  // observation・story・care の判定は変わらない
+  assert.deepEqual(c.buildLocalVocabularyFallback('おじさんがいた', 'm').words.map(w => w.word), BANK_OF.being);
+  assert.deepEqual(c.buildLocalVocabularyFallback('ねこが寝ていた', 'm').words.map(w => w.word), BANK_OF.scene);
+  assert.equal(c.detectDeterministicCare('死にたい'), true);
+});
+
+test('65. 喜びの語群は「心がはずむ／わくわくする／ほっとする」で、人物・動物・外見を決めつけない', () => {
+  const d = shipped().buildLocalVocabularyFallback('うれしい', 'm');
+  assert.deepEqual(d.words.map(w => w.word), ['心がはずむ', 'わくわくする', 'ほっとする']);
+  assert.equal(d.words[1].reading, 'わくわくする');
+  for (const w of d.words) {
+    assert.ok(/^[^。]*。$/.test(w.description) && w.description.length <= 30, w.description);
+    assert.ok(!/人|ひと|動物|ねこ|いぬ|かわい|愛らし|見た目|顔|姿/.test(w.word + w.description), w.word);
+  }
 });

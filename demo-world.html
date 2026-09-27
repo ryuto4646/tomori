@@ -869,28 +869,241 @@ scene.add(new THREE.Points(pGeo,new THREE.PointsMaterial({color:0xe0f0c0,size:.1
 // ── キャラクター ─────────────────────────────────────────────────
 let character=null, mixer=null, clips={}, currentAnim=null;
 
-function mkPlaceholder(){
-  const g=new THREE.Group();
-  const body=new THREE.Mesh(new THREE.CapsuleGeometry(.35,.9,8,16),
-    new THREE.MeshLambertMaterial({color:0xffa040}));
-  body.position.y=.95; g.add(body);
-  const head=new THREE.Mesh(new THREE.SphereGeometry(.32,12,12),
-    new THREE.MeshLambertMaterial({color:0xffcc88}));
-  head.position.y=1.9; g.add(head);
-  const eyeG=new THREE.SphereGeometry(.06,6,6);
-  const eyeM=new THREE.MeshBasicMaterial({color:0x222222});
-  [-0.13,0.13].forEach(x=>{const e=new THREE.Mesh(eyeG,eyeM);e.position.set(x,1.95,.28);g.add(e);});
-  return g;
+// HIRORI-BEGIN（test-hirori-placeholder.mjs がこの範囲を読み込んでテストする）
+// ── 仮ヒロリ（正式GLBが届くまでの交換用モデル）──────────────────
+// 基本形状の組み合わせ。足元が原点（y=0）、正面は +z。
+// 動かす部位は userData.parts に入れておき、毎フレーム検索しない。
+function createHiroriPlaceholder(){
+  const mat = (color) => new THREE.MeshStandardMaterial({ color, roughness: 0.82, metalness: 0 });
+  const M = {
+    coral: mat(0xe9786e),   // 中心色：コーラルピンク
+    cream: mat(0xfff0d4),   // 胸・おなか：朝のクリーム色
+    aqua:  mat(0xa9dbe6),   // 花びら・ひれの内側：淡い水色
+    eye:   new THREE.MeshStandardMaterial({ color: 0x2b1d18, roughness: 0.55, metalness: 0 }),
+    mouth: mat(0x9a5550),
+    shadow: new THREE.MeshBasicMaterial({ color: 0x2f4a22, transparent: true, opacity: 0.22, depthWrite: false }),
+  };
+  const G = {
+    sphere: new THREE.SphereGeometry(1, 18, 14),
+    small:  new THREE.SphereGeometry(1, 10, 8),
+    limb:   new THREE.CapsuleGeometry(1, 1, 4, 10),
+    disc:   new THREE.CircleGeometry(1, 20),
+  };
+  const mesh = (geo, m, sx, sy, sz) => { const o = new THREE.Mesh(geo, m); o.scale.set(sx, sy, sz); return o; };
+
+  const root = new THREE.Group();
+  root.name = 'HiroriPlaceholder';
+
+  // 足元の影（地面に沈んで見えないように、少しだけ浮かせる）
+  const shadow = mesh(G.disc, M.shadow, 0.42, 0.42, 1);
+  shadow.rotation.x = -Math.PI / 2;
+  shadow.position.y = 0.012;
+  root.add(shadow);
+
+  // 脚：腰の位置を支点にして前後へ振る
+  const makeLeg = (x) => {
+    const leg = new THREE.Group();
+    leg.position.set(x, 0.56, 0);
+    const thigh = mesh(G.limb, M.coral, 0.085, 0.2, 0.085);
+    thigh.position.y = -0.24;
+    const foot = mesh(G.small, M.coral, 0.11, 0.06, 0.15);
+    foot.position.set(0, -0.5, 0.04);
+    leg.add(thigh, foot);
+    return leg;
+  };
+  const leftLeg = makeLeg(-0.13), rightLeg = makeLeg(0.13);
+  root.add(leftLeg, rightLeg);
+
+  // 体：呼吸・歩行の上下はこのグループだけを動かす（足元は動かさない）
+  const body = new THREE.Group();
+  root.add(body);
+  const torso = mesh(G.limb, M.coral, 0.25, 0.26, 0.22);
+  torso.position.y = 0.93;
+  const belly = mesh(G.sphere, M.cream, 0.19, 0.3, 0.1);
+  belly.position.set(0, 0.9, 0.15);
+  body.add(torso, belly);
+
+  // 腕：肩を支点にする
+  const makeArm = (x) => {
+    const arm = new THREE.Group();
+    arm.position.set(x, 1.12, 0.02);
+    const a = mesh(G.limb, M.coral, 0.06, 0.15, 0.06);
+    a.position.y = -0.2;
+    const hand = mesh(G.small, M.cream, 0.07, 0.07, 0.07);
+    hand.position.y = -0.38;
+    arm.add(a, hand);
+    return arm;
+  };
+  const leftArm = makeArm(-0.29), rightArm = makeArm(0.29);
+  leftArm.rotation.z = -0.12; rightArm.rotation.z = 0.12;
+  body.add(leftArm, rightArm);
+
+  // 頭：丸く柔らかく。首の位置を支点にする
+  const head = new THREE.Group();
+  head.position.set(0, 1.36, 0);
+  // 鼻先（マズル）は付けない。特定の動物に見えないよう、顔は丸いまま
+  const skull = mesh(G.sphere, M.coral, 0.39, 0.37, 0.37);
+  skull.position.y = 0.33;
+  head.add(skull);
+
+  const makeEye = (x) => { const e = mesh(G.small, M.eye, 0.042, 0.06, 0.03); e.position.set(x, 0.38, 0.345); return e; };
+  const leftEye = makeEye(-0.13), rightEye = makeEye(0.13);
+  const mouth = mesh(G.small, M.mouth, 0.032, 0.011, 0.012);
+  mouth.position.set(0, 0.24, 0.36);
+  head.add(leftEye, rightEye, mouth);
+
+  // 耳：先の丸い、ひれのような形。外側コーラル、内側に淡い水色
+  const makeEar = (side) => {
+    const ear = new THREE.Group();
+    ear.position.set(side * 0.31, 0.52, -0.04);
+    ear.rotation.set(-0.2, side * 0.35, -side * 0.9);
+    const outer = mesh(G.sphere, M.coral, 0.1, 0.15, 0.045);
+    outer.position.y = 0.08;
+    const inner = mesh(G.sphere, M.aqua, 0.065, 0.1, 0.03);
+    inner.position.set(0, 0.08, 0.025);
+    ear.add(outer, inner);
+    return ear;
+  };
+  head.add(makeEar(-1), makeEar(1));
+
+  // 頭の後ろの花びら・ひれ：少し遅れて揺れるように、まとめて1つの支点に付ける
+  const headPetals = new THREE.Group();
+  headPetals.position.set(0, 0.47, -0.27);
+  [[-0.55, 0.9], [0, 1], [0.55, 0.9]].forEach(([tilt, s]) => {
+    const petal = new THREE.Group();
+    petal.rotation.set(-0.6, 0, tilt);
+    const outer = mesh(G.sphere, M.coral, 0.12 * s, 0.3 * s, 0.05);
+    outer.position.y = 0.22 * s;
+    const inner = mesh(G.sphere, M.aqua, 0.07 * s, 0.2 * s, 0.03);
+    inner.position.set(0, 0.22 * s, -0.03);
+    petal.add(outer, inner);
+    headPetals.add(petal);
+  });
+  head.add(headPetals);
+  body.add(head);
+
+  // 尻尾・ひれ：腰の後ろを支点にして、大きく柔らかく後ろへ伸ばす
+  const tail = new THREE.Group();
+  tail.position.set(0, 0.72, -0.2);
+  const tailBase = mesh(G.sphere, M.coral, 0.14, 0.12, 0.3);
+  tailBase.position.set(0, 0.02, -0.22);
+  const tailFin = mesh(G.sphere, M.coral, 0.3, 0.07, 0.3);
+  tailFin.position.set(0, 0.1, -0.52);
+  tailFin.rotation.x = -0.25;
+  const tailInner = mesh(G.sphere, M.aqua, 0.2, 0.05, 0.2);
+  tailInner.position.set(0, 0.14, -0.54);
+  tailInner.rotation.x = -0.25;
+  tail.add(tailBase, tailFin, tailInner);
+  body.add(tail);
+
+  root.userData.parts = { root, body, head, leftArm, rightArm, leftLeg, rightLeg, tail, headPetals, leftEye, rightEye, mouth, shadow };
+  return root;
 }
+
+// ── 仮ヒロリの動き（idle / walk / arrival）─────────────────────────
+// 正式GLBに入れ替えたら mixer 側で動くので、この関数は呼ばれなくなる（animate() の !mixer 分岐）
+const reduceMotionQuery = matchMedia('(prefers-reduced-motion: reduce)');
+const hiroriMotion = {
+  walkBlend: 0,        // 0＝待機、1＝歩行。急に止まらないよう少しずつ変える
+  phase: 0,            // 歩行の周期
+  blinkIn: 3,          // 次のまばたきまでの秒数
+  blinkT: -1,          // まばたき中の経過秒（-1 は休み）
+  arrivalT: -1,        // 到着モーションの経過秒（-1 は休み）
+  facing: 0,           // 目標の向き（ラジアン）
+};
+const ARRIVAL_SEC = 0.9;
+const STRIDE_UNITS = 1.6;   // 1周期（左右1歩ずつ）で進む距離。移動速度と足の動きを合わせる
+
+function startHiroriArrival(){ hiroriMotion.arrivalT = 0; }
+function resetHiroriMotion(){
+  hiroriMotion.walkBlend = 0; hiroriMotion.phase = 0; hiroriMotion.arrivalT = -1;
+  hiroriMotion.blinkT = -1; hiroriMotion.blinkIn = 3; hiroriMotion.facing = 0;
+}
+// 向きを最短回りで少しずつ合わせる（瞬間的な回転をしない）
+function turnToward(obj, target, dt){
+  let d = target - obj.rotation.y;
+  d = Math.atan2(Math.sin(d), Math.cos(d));
+  obj.rotation.y += d * (1 - Math.exp(-10 * dt));
+}
+
+function updateHiroriMotion(root, dt, t, moving){
+  const p = root.userData.parts;
+  if (!p) return;
+  const m = hiroriMotion;
+  const reduce = reduceMotionQuery.matches;
+  const sway = reduce ? 0.4 : 1;     // 揺れの大きさ
+  const lift = reduce ? 0 : 1;       // 上下動の大きさ
+
+  m.walkBlend += ((moving ? 1 : 0) - m.walkBlend) * (1 - Math.exp(-10 * dt));
+  const w = m.walkBlend;
+  if (moving) m.phase += dt * SPEED * (Math.PI * 2) / STRIDE_UNITS;
+  const s = Math.sin(m.phase);
+
+  // 脚と腕：脚は交互に、腕は脚と反対へ小さく
+  p.leftLeg.rotation.x  =  s * 0.55 * w;
+  p.rightLeg.rotation.x = -s * 0.55 * w;
+  p.leftArm.rotation.x  = -s * 0.4 * w;
+  p.rightArm.rotation.x =  s * 0.4 * w;
+
+  // 体：待機は呼吸、歩行は1歩ごとの小さな上下
+  const breath = Math.sin(t * 2.0);
+  p.body.position.y = (breath * 0.012 * (1 - w) + Math.abs(s) * 0.045 * w) * lift;
+  p.body.rotation.z = s * 0.04 * w * sway;
+
+  // 頭：待機中は少し周りを見る。顔の位置は大きく崩さない
+  p.head.rotation.y = Math.sin(t * 0.5) * 0.08 * (1 - w) * sway;
+  p.head.rotation.z = Math.sin(t * 0.7) * 0.035 * sway;
+  p.head.rotation.x = Math.sin(m.phase * 2) * 0.03 * w * sway;
+
+  // 尻尾と頭の花びら：体より少し遅れて揺れる
+  p.tail.rotation.y = (Math.sin(t * 1.2) * 0.12 * (1 - w) + Math.sin(m.phase - 0.9) * 0.3 * w) * sway;
+  p.tail.rotation.x = 0;
+  p.headPetals.rotation.x = (Math.sin(t * 1.2 - 0.6) * 0.07 * (1 - w) + Math.sin(m.phase * 2 - 1.1) * 0.1 * w) * sway;
+  p.headPetals.scale.setScalar(1);
+
+  // 到着：小さく跳ね、両腕を少し上げ、尻尾と花びらがふわっと広がる（1回だけ）
+  let hop = 0;
+  if (m.arrivalT >= 0) {
+    m.arrivalT += dt;
+    const u = Math.min(m.arrivalT / ARRIVAL_SEC, 1);
+    const k = Math.sin(Math.PI * u);
+    hop = k * 0.22 * lift;
+    const raise = k * (reduce ? 0.5 : 1.1);
+    p.leftArm.rotation.z = -0.12 - raise;
+    p.rightArm.rotation.z = 0.12 + raise;
+    p.headPetals.scale.setScalar(1 + k * 0.22 * sway);
+    p.tail.rotation.x = -k * 0.35 * sway;
+    if (u >= 1) m.arrivalT = -1;
+  } else {
+    p.leftArm.rotation.z = -0.12; p.rightArm.rotation.z = 0.12;
+  }
+  root.position.y = hop;
+  p.shadow.position.y = 0.012 - hop;          // 影は地面に残す
+  p.shadow.scale.setScalar(0.42 * (1 - hop));
+
+  // まばたき：数秒に一度
+  if (m.blinkT < 0) {
+    m.blinkIn -= dt;
+    if (m.blinkIn <= 0) { m.blinkT = 0; m.blinkIn = 2.5 + Math.random() * 3; }
+  }
+  let eyeY = 1;
+  if (m.blinkT >= 0) {
+    m.blinkT += dt;
+    eyeY = m.blinkT < 0.14 ? Math.max(0.12, Math.abs(1 - m.blinkT / 0.07)) : 1;
+    if (m.blinkT >= 0.14) m.blinkT = -1;
+  }
+  p.leftEye.scale.y = p.rightEye.scale.y = 0.06 * eyeY;
+}
+// HIRORI-END
 const ANIM_MAP={
   idle:['idle','Idle','IDLE','stand','Stand'],
   walk:['walk','Walk','WALK','walking','Walking','run'],
   discover:['discover','Discover','surprised','Surprised'],
   celebrate:['celebrate','Celebrate','cheer','Cheer','victory'],
 };
-// GLBはこのデモには同梱していないため、プレースホルダーを直接生成する。
-// GLBを追加するときはここを new GLTFLoader().load(...) に戻す。
-character = mkPlaceholder();
+// GLBはこのデモには同梱していないため、仮ヒロリを直接生成する。
+// 正式GLBを追加するときはここを new GLTFLoader().load(...) に戻す（docs/HIRORI_3D_PLACEHOLDER.md）。
+character = createHiroriPlaceholder();
 scene.add(character);
 
 function playAnim(n){
@@ -951,6 +1164,7 @@ function triggerMission(){
   if(missionTriggered) return;
   missionTriggered=true;
   isMoving=false; playAnim('discover');
+  if(!mixer) startHiroriArrival();
   setTimeout(()=>playAnim('idle'),1200);
   setState(S.MISSION_FOUND);
 }
@@ -1250,6 +1464,7 @@ function doReset(){
   if (stEl) stEl.textContent = FALLBACK_FOLLOW_UP;
 
   if(character){ character.position.set(0,0,0); character.rotation.set(0,0,0); }
+  resetHiroriMotion();
   targetPos.set(0,0,0); isMoving=false;
   camera.position.copy(CAM_OFF); camera.lookAt(0,0,0);
 
@@ -1310,7 +1525,7 @@ function animate(){
       if(kd.lengthSq()>0){
         kd.normalize();
         character.position.addScaledVector(kd,SPEED*dt);
-        character.rotation.y=Math.atan2(kd.x,kd.z);
+        hiroriMotion.facing=Math.atan2(kd.x,kd.z);
         isMoving=false; playAnim('walk');
         document.getElementById('hint').style.opacity='0';
       } else if(!isMoving) { playAnim('idle'); }
@@ -1324,17 +1539,20 @@ function animate(){
       else{
         const mv=dir.normalize().multiplyScalar(Math.min(SPEED*dt,dist));
         character.position.add(mv);
-        character.rotation.y=Math.atan2(mv.x,mv.z);
+        hiroriMotion.facing=Math.atan2(mv.x,mv.z);
       }
     }
 
-    // 仮モデルのbob
+    // 進行方向へ、少しずつ向きを合わせる
+    turnToward(character, hiroriMotion.facing, dt);
+
+    // 仮ヒロリの動き（正式GLBでは mixer が動かす）
     if(!mixer){
-      const walking=currentAnim==='walk'&&(isMoving||
+      const walking=canMove()&&currentAnim==='walk'&&(isMoving||
         keys['w']||keys['W']||keys['s']||keys['S']||
         keys['a']||keys['A']||keys['d']||keys['D']||
         keys['ArrowUp']||keys['ArrowDown']||keys['ArrowLeft']||keys['ArrowRight']);
-      character.position.y = walking?Math.sin(t*8)*.06:0;
+      updateHiroriMotion(character, dt, t, walking);
     }
 
     // 距離チェック（探索中のみ）
@@ -1385,7 +1603,7 @@ setTimeout(()=>{
 
 animate();
 console.log('[Tomori Demo] States:',Object.keys(S).join(', '));
-console.log('[Tomori Demo] character: placeholder (GLB not bundled in this demo)');
+console.log('[Tomori Demo] character: Hirori placeholder (GLB not bundled in this demo)');
 </script>
 </body>
 </html>

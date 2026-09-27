@@ -265,8 +265,8 @@ rt { font-size:0.55em; color:#7a8060; }
 <div class="panel" id="panel-mission">
   <div class="panel-handle"></div>
   <div class="panel-icon">✨</div>
-  <div class="panel-title">心があたたかくなる赤を<br>見つけよう</div>
-  <div class="panel-desc">この世界は、まだ名前のない気もちをさがしています。<br>見つけたけしきを、世界のタネにしてみよう。</div>
+  <div class="panel-title mission-title">気になったものを、<br>ひとつ見つけよう</div>
+  <div class="panel-desc mission-sub">見たもの・起きたこと・感じたこと。どこからでも大丈夫。</div>
   <button class="btn-primary" onclick="window.toPhotoPanel()">さっそく探す！</button>
   <div class="panel-note">写真はサーバーへ送りません</div>
 </div>
@@ -275,7 +275,7 @@ rt { font-size:0.55em; color:#7a8060; }
 <div class="panel" id="panel-photo">
   <div class="panel-handle"></div>
   <div class="panel-icon">📷</div>
-  <div class="panel-title">心があたたかくなる赤を<br>見つけよう</div>
+  <div class="panel-title mission-title">気になったものを、<br>ひとつ見つけよう</div>
   <div class="photo-options">
     <button class="photo-opt" onclick="document.getElementById('inp-cam').click()">
       <span class="photo-opt-icon">📸</span>いま見つける
@@ -300,17 +300,17 @@ rt { font-size:0.55em; color:#7a8060; }
     <img id="expr-thumb" class="photo-thumb-sm" src="" alt="">
     <div class="photo-thumb-cap">選んだ写真</div>
   </div>
-  <div class="panel-title">この写真を見て、<br>どんな感じがした？<br><span style="font-size:13px;font-weight:normal;color:#7a6040;">うまく言えなくても大丈夫。</span></div>
+  <div class="panel-title"><span id="expr-question">何が気になった？</span><br><span style="font-size:13px;font-weight:normal;color:#7a6040;">うまく言えなくても大丈夫。</span></div>
   <!-- 音声入力ボタン（メイン） -->
   <button id="btn-voice" onclick="window.toggleVoice()">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
     <span id="voice-btn-text">声で話す</span>
   </button>
-  <div id="voice-sub" class="voice-sub">感じたことを、そのまま話してね</div>
+  <div id="voice-sub" class="voice-sub">見つけたことを、そのまま話してね</div>
   <div id="voice-error" class="voice-error"></div>
   <!-- テキスト入力（補助） -->
   <div class="voice-divider">書いてもOK</div>
-  <textarea class="text-input" id="expr-input" rows="2" placeholder="例：やばい、すごい、なんか好き…"></textarea>
+  <textarea class="text-input" id="expr-input" rows="2" placeholder="見つけたことを、そのまま教えてね"></textarea>
   <button class="btn-primary btn-disabled" id="btn-expr-next" onclick="window.toWords()">ことばをひろげる →</button>
   <div class="voice-privacy">話した声は、端末の音声認識を使って文字になります。</div>
 </div>
@@ -345,7 +345,7 @@ rt { font-size:0.55em; color:#7a8060; }
   <div class="panel-handle"></div>
   <div class="panel-icon">🌸</div>
   <div class="panel-title">もう少しだけ<br>聞いてもいい？</div>
-  <div class="panel-desc" id="secret-q-text">この赤は、何に似ている？</div>
+  <div class="panel-desc" id="secret-q-text">もう少し見てみたいところはある？</div>
   <button class="btn-primary"   onclick="window.toSecretText()">答えてみる</button>
   <button class="btn-secondary" onclick="window.toDemoEnd()">今は進む</button>
 </div>
@@ -354,8 +354,8 @@ rt { font-size:0.55em; color:#7a8060; }
 <div class="panel" id="panel-secret-t">
   <div class="panel-handle"></div>
   <div class="panel-icon">🌺</div>
-  <div class="panel-title" id="secret-t-title">この赤は、何に似ている？</div>
-  <div class="panel-desc" style="margin-bottom:12px">例：夕焼け　火　あたたかい毛布</div>
+  <div class="panel-title" id="secret-t-title">もう少し見てみたいところはある？</div>
+  <div class="panel-desc" style="margin-bottom:12px">思いついたことを、ひとことでも大丈夫。</div>
   <textarea class="text-input" id="secret-input" rows="2" placeholder="思ったことを書いてみよう"></textarea>
   <button class="btn-primary btn-disabled" id="btn-secret-next" onclick="window.revealSecret()">送る</button>
 </div>
@@ -394,7 +394,12 @@ let chosenWord    = '';
 const VOCABULARY_AI_ENABLED = true;
 // 語彙 Worker（tomori-vocabulary）。localhost からの送信だけを受け付ける（本番の Origin は未設定）
 const VOCABULARY_API_URL = 'https://tomori-vocabulary.tomori-ryuto.workers.dev/vocabulary';
-const VOCAB_MISSION = '心があたたかくなる赤を見つけよう';
+// ミッションの中心文。画面に出す文と、Worker へ送る mission を同じにする（答えを限定しない言い方）
+const VOCAB_MISSION = '気になったものを、ひとつ見つけよう';
+const MISSION_SUB = '見たもの・起きたこと・感じたこと。どこからでも大丈夫。';
+const EXPR_QUESTION = '何が気になった？';
+const EXPR_PLACEHOLDER = '見つけたことを、そのまま教えてね';
+const VOICE_SUB = '見つけたことを、そのまま話してね';
 let _vocabGen      = 0;      // リセットのたびに増える。古い応答で画面を書き換えないため
 let _vocabAbort    = null;   // AbortController
 let _vocabResult   = null;   // 画面に出す語彙（AI の応答か、端末内の固定候補）
@@ -402,7 +407,7 @@ let _vocabFallback = false;  // 端末内の固定候補を使っているか
 let _vocabCare     = false;  // care状態か
 
 // 深掘り画面の初期の問い（リセット時にも戻す）
-const FALLBACK_FOLLOW_UP = 'この赤は、何に似ている？';
+const FALLBACK_FOLLOW_UP = 'もう少し見てみたいところはある？';
 
 // ── 安全判定（第一段階）：tomori-vocabulary e958669 の worker.js から機械的に写したもの ──
 // 規則・正規化・固定文を変えたときは、参照元と一緒に直す（test-vocabulary-integration.mjs が差を検出する）
@@ -735,6 +740,23 @@ async function fetchVocabulary(expression) {
 }
 // VOCAB-CORE-END
 
+// ミッションまわりの文面を定数から入れる。「、」のあとで改行する（textContent と DOM だけで組み立てる）
+function applyMissionCopy() {
+  document.querySelectorAll('.mission-title').forEach(el => {
+    el.textContent = '';
+    const i = VOCAB_MISSION.indexOf('、');
+    if (i < 0) { el.textContent = VOCAB_MISSION; return; }
+    el.appendChild(document.createTextNode(VOCAB_MISSION.slice(0, i + 1)));
+    el.appendChild(document.createElement('br'));
+    el.appendChild(document.createTextNode(VOCAB_MISSION.slice(i + 1)));
+  });
+  document.querySelectorAll('.mission-sub').forEach(el => { el.textContent = MISSION_SUB; });
+  const q = document.getElementById('expr-question'); if (q) q.textContent = EXPR_QUESTION;
+  const inp = document.getElementById('expr-input'); if (inp) inp.placeholder = EXPR_PLACEHOLDER;
+  const vs = document.getElementById('voice-sub'); if (vs) vs.textContent = VOICE_SUB;
+}
+applyMissionCopy();
+
 /* ── 音声入力 ─────────────────────────────────── */
 const SR_API = window.SpeechRecognition || window.webkitSpeechRecognition || null;
 let _voiceRec    = null;
@@ -750,7 +772,7 @@ function stopVoice() {
   const pulse = btn.querySelector('.voice-pulse');
   if (pulse) pulse.remove();
   document.getElementById('voice-btn-text').textContent = '声で話す';
-  if (sub) sub.textContent = '感じたことを、そのまま話してね';
+  if (sub) sub.textContent = VOICE_SUB;
 }
 
 function _showVoiceError(msg) {

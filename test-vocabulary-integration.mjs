@@ -96,7 +96,7 @@ const NORMAL = {
     { word: '鮮やか', reading: 'あざやか', description: '目にぱっと入ってくる明るい色' },
     { word: 'まぶしい', reading: 'まぶしい', description: '光が強くて目を細めたくなる' },
   ],
-  followUpQuestion: 'その赤は、どんな音がしそう？',
+  followUpQuestion: 'そのとき、どんな音がしていた？',
   safetyLevel: 'normal',
   supportMessage: null,
 };
@@ -848,4 +848,91 @@ test('69. 成功・失敗・care のどれでも、入力や応答を console �
     loadDom(doc, { vocabResult: NORMAL }).buildWords('やばい');
   } finally { for (const k of Object.keys(orig)) console[k] = orig[k]; }
   assert.deepEqual(logs, []);
+});
+
+// ── Step 10G：答えを限定しないミッション ───────────────────────────
+const MISSION = '気になったものを、ひとつ見つけよう';
+const MISSION_SUB_TEXT = '見たもの・起きたこと・感じたこと。どこからでも大丈夫。';
+// 利用者に見える HTML（script・style・コメントを除いた本文）
+const VISIBLE_HTML = HTML.slice(HTML.indexOf('<body'), HTML.indexOf('<script type="importmap">'))
+  .replace(/<!--[\s\S]*?-->/g, '');
+const APPLY_SRC = HTML.match(/function applyMissionCopy\(\) \{[\s\S]*?\n\}/)[0];
+
+test('70. 古い「赤」のミッションが、画面にも送信本文にもソースにも残っていない', async () => {
+  assert.ok(!HTML.includes('心があたたかくなる赤'));
+  assert.ok(!HTML.includes('この赤は'));
+  assert.ok(!/赤/.test(VISIBLE_HTML.replace(/<[^>]+>/g, '')), 'visible text mentions 赤');
+  const f = okFetch(NORMAL);
+  await loadCore(f, { core: CORE_SHIPPED }).fetchVocabulary('木');
+  assert.ok(!f.calls[0].opts.body.includes('赤'));
+});
+
+test('71. 中心文・補助文・入力の問い・placeholder が決めた文面（定数と HTML の両方）', () => {
+  const c = shipped();
+  const src = CORE_SHIPPED;
+  assert.match(src, /const VOCAB_MISSION = '気になったものを、ひとつ見つけよう';/);
+  assert.match(src, /const MISSION_SUB = '見たもの・起きたこと・感じたこと。どこからでも大丈夫。';/);
+  assert.match(src, /const EXPR_QUESTION = '何が気になった？';/);
+  assert.match(src, /const EXPR_PLACEHOLDER = '見つけたことを、そのまま教えてね';/);
+  assert.equal((VISIBLE_HTML.match(/class="panel-title mission-title">気になったものを、<br>ひとつ見つけよう</g) || []).length, 2);
+  assert.ok(VISIBLE_HTML.includes(`class="panel-desc mission-sub">${MISSION_SUB_TEXT}<`));
+  assert.ok(VISIBLE_HTML.includes('<span id="expr-question">何が気になった？</span>'));
+  assert.ok(VISIBLE_HTML.includes('placeholder="見つけたことを、そのまま教えてね"'));
+  assert.equal(c.FALLBACK_FOLLOW_UP, 'もう少し見てみたいところはある？');
+});
+
+test('72. 画面に回答例（やばい・おじさん・ねこ・例：）を出さない。入力画面は気持ちだけを求めない', () => {
+  const text = VISIBLE_HTML.replace(/<[^>]+>/g, ' ');
+  const placeholders = [...VISIBLE_HTML.matchAll(/placeholder="([^"]*)"/g)].map(m => m[1]).join(' ');
+  for (const w of ['やばい', 'おじさん', 'ねこ', '例：']) assert.ok(!(text + placeholders).includes(w), w);
+  const expr = VISIBLE_HTML.slice(VISIBLE_HTML.indexOf('id="panel-expr"'), VISIBLE_HTML.indexOf('id="panel-words"'));
+  assert.ok(!/どんな感じ|感じたことを|気もち|気持ち/.test(expr), 'expression panel asks for feelings');
+});
+
+test('73. Worker へ送る mission は画面の中心文と同じで、本文は4項目だけ', async () => {
+  const f = okFetch(NORMAL);
+  await loadCore(f, { core: CORE_SHIPPED }).fetchVocabulary('ねこが寝ていた');
+  const body = JSON.parse(f.calls[0].opts.body);
+  assert.deepEqual(Object.keys(body).sort(), ['age', 'expression', 'language', 'mission']);
+  assert.equal(body.mission, MISSION);
+  assert.ok(!/photo|image|base64|audio|voice|name|history/i.test(f.calls[0].opts.body));
+});
+
+test('74. applyMissionCopy は定数から文面を入れ、「、」のあとで改行する（DOM だけ・innerHTML なし）', () => {
+  const titles = [new FakeNode('div'), new FakeNode('div')], subs = [new FakeNode('div')];
+  const q = new FakeNode('span'), vs = new FakeNode('div'), inp = { placeholder: '' };
+  const doc = {
+    querySelectorAll: sel => sel === '.mission-title' ? titles : sel === '.mission-sub' ? subs : [],
+    getElementById: id => ({ 'expr-question': q, 'expr-input': inp, 'voice-sub': vs })[id] ?? null,
+    createElement: tag => new FakeNode(tag), createTextNode: t => new FakeNode('#text', t),
+  };
+  new Function('document', `${CORE_SHIPPED}\n${APPLY_SRC}\napplyMissionCopy();`)(doc);
+  for (const t of titles) {
+    assert.equal(t.textContent, MISSION);
+    assert.deepEqual(t.children.map(n => n.tagName), ['#text', 'br', '#text']);
+    assert.ok(!t.innerHTMLUsed);
+  }
+  assert.equal(subs[0].textContent, MISSION_SUB_TEXT);
+  assert.equal(q.textContent, '何が気になった？');
+  assert.equal(inp.placeholder, '見つけたことを、そのまま教えてね');
+  assert.equal(vs.textContent, '見つけたことを、そのまま話してね');
+  assert.ok(!/innerHTML|console\./.test(APPLY_SRC));
+});
+
+test('75. スイッチは true のまま。3つの mode・care・429 の動きは変わらない', async () => {
+  assert.equal(shipped().VOCABULARY_AI_ENABLED, true);
+  for (const [mode, e] of [['feeling', 'やばい'], ['observation', 'おじさん'], ['story', 'ねこが寝ていた']]) {
+    const c = loadCore(okFetch(withMode(mode)), { core: CORE_SHIPPED });
+    assert.equal(await c.fetchVocabulary(e), 'ok');
+    const doc = makeDocument();
+    loadDom(doc, { vocabResult: c.result }).buildWords(e);
+    assert.equal(doc.byId['words-pick-title'].textContent, HEADINGS[mode][0]);
+    assert.equal(doc.byId['word-cards'].children.length, 3);
+  }
+  const careFetch = okFetch(NORMAL);
+  assert.equal(await loadCore(careFetch, { core: CORE_SHIPPED }).fetchVocabulary('自分を傷つけたい'), 'care');
+  assert.equal(careFetch.calls.length, 0);
+  const rl = loadCore(okFetch({ error: 'x', code: 'RATE_LIMITED' }, 429), { core: CORE_SHIPPED });
+  assert.equal(await rl.fetchVocabulary('やばい'), 'fallback');
+  assert.deepEqual(rl.result.words.map(w => w.word), NEUTRAL);
 });

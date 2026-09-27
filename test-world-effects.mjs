@@ -172,7 +172,7 @@ test('4. リセット後の2回目では、花がそれぞれ1回だけ咲く', 
 
 test('5. 端末内の語・通常の表示・ルビは今までどおり', () => {
   const env = load();
-  env.app.setResult(null); env.app.buildWords('やばい');
+  env.app.setResult(null); env.app.buildWords('きれい');
   const cards = env.doc.ids['word-cards'].children;
   assert.deepEqual(cards.map(c => c.dataset.wordText), ['目を奪われる', '息をのむ', '心が動く']);
   const ruby = cards[0].all().find(n => n.tagName === 'ruby');

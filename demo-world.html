@@ -502,6 +502,12 @@ const LOCAL_BANKS = {
     { word:'しんみりする', reading:'しんみりする',   description:'しずかに、少しさびしくなる気もち。' },
     { word:'さびしい',     reading:'さびしい',       description:'だれかや何かがいなくて、ものたりない気もち。' },
   ],
+  // 「やばい」だけのとき：良い・悪いのどちらにも決めつけない
+  neutral: [
+    { word:'びっくりした', reading:'びっくりした',   description:'思っていなかったことに、はっとした。' },
+    { word:'気になった',   reading:'きになった',     description:'なんだか、そこに目や心が向いた。' },
+    { word:'心が動いた',   reading:'こころがうごいた', description:'見たものに、心の中の何かがゆれた。' },
+  ],
   // observation：見るところ（観点）だけを示す。答えは子どもにまかせる
   lookBeing: [
     { word:'表情',         reading:'ひょうじょう',   description:'顔のようすを、よく見てみる言葉。' },
@@ -528,47 +534,69 @@ const LOCAL_BANKS = {
 
 const LOCAL_FOLLOW_UPS = {
   feeling: 'どのあたりで、そう感じたのかな？',
+  neutral: 'どんなところで、そう感じたのかな？',
   observation: 'もう少し見てみたいところはある？',
   story: 'そのあと、どうなったと思う？',
   unsure: '最初に目に入ったのは、どこかな？',
 };
 
 // 判定は normalizeForSafety でそろえた文字（ひらがな・記号なし）に対して行う
+// 「こわくて」「うれしくて」のような形でも当たるよう、〜く・〜か の形も入れる
 const LOCAL_FEELING_WORDS = [
-  ['wonder', ['やばい', 'すごい', 'きれい', '綺麗']],
-  ['joy', ['かわいい', '可愛い', 'うれしい', '嬉しい', 'たのしい', '楽しい', '好き', 'すき']],
-  ['anger', ['うざい', 'むかつく', 'いらいら']],
-  ['dislike', ['きもい', 'きもちわるい', '気持ち悪い', '気持ちわるい', 'きらい', '嫌い']],
-  ['fear', ['こわい', '怖い', 'びっくり']],
-  ['calm', ['なつかしい', '懐かしい', 'おちつく', '落ち着く', '落ちつく']],
-  ['sad', ['さびしい', '寂しい', '淋しい', 'かなしい', '悲しい']],
+  ['wonder', ['すごい', 'すごく', 'きれい', '綺麗']],
+  ['joy', ['かわいい', 'かわいく', '可愛い', '可愛く', 'うれしい', 'うれしく', 'うれしか', '嬉しい', '嬉しく', '嬉しか',
+    'たのしい', 'たのしく', 'たのしか', '楽しい', '楽しく', '楽しか', '好き', 'すき']],
+  ['anger', ['うざい', 'うざく', 'うざか', 'むかつ', 'いらいら']],
+  ['dislike', ['きもい', 'きもく', 'きもか', 'きもちわる', '気持ち悪', '気持ちわる', 'きらい', '嫌い']],
+  ['fear', ['こわい', 'こわく', 'こわか', '怖い', '怖く', '怖か', 'びっくり']],
+  ['calm', ['なつかしい', 'なつかしく', '懐かしい', '懐かしく', 'おちつく', 'おちつい', '落ち着', '落ちつ']],
+  ['sad', ['さびしい', 'さびしく', '寂しい', '寂しく', '淋しい', 'かなしい', 'かなしく', '悲しい', '悲しく', '悲しか']],
 ];
+// 気もちの言葉だが、良い・悪いを決める手がかりにならないもの
+const LOCAL_AMBIGUOUS_FEELING_WORDS = ['やば'];
 const LOCAL_UNSURE_WORDS = ['わからない', 'わかんない', '分からない', 'なんとなく', '何となく', 'なにもおもわない', '何も思わない', '気になった', 'きになった', 'とくにない', '特にない', 'べつに', '別に'];
 const LOCAL_BEING_WORDS = ['おじさん', 'おばさん', 'おじいさん', 'おばあさん', 'おとうさん', 'お父さん', 'おかあさん', 'お母さん', 'おにいさん', 'お兄さん', 'おねえさん', 'お姉さん',
   '友達', '友だち', 'ともだち', '子ども', '子供', 'こども', '赤ちゃん', 'あかちゃん', '先生', 'せんせい', '人', 'ひと', 'ねこ', '猫', 'いぬ', '犬', '鳥', 'とり', '虫', 'むし', '魚', 'さかな', 'うさぎ', 'きんぎょ', '金魚', 'はと', 'からす'];
 const LOCAL_THING_WORDS = ['木', '空', 'そら', '雲', 'くも', '花', 'はな', '山', 'やま', '海', 'うみ', '川', 'かわ', '石', 'いし', '葉', 'はっぱ', '夕日', 'ゆうひ', '電車', 'でんしゃ', '車', 'くるま',
   '建物', 'たてもの', 'びる', '家', 'いえ', '道', 'みち', '橋', 'はし', '公園', 'こうえん', '駅', 'えき', '学校', 'がっこう', 'まど', '窓', 'かべ', '壁'];
-// 出来事・行動の文の終わり方（「ねこが寝ていた」「友達が走ってきた」「空が赤くなった」）
-const LOCAL_STORY_ENDING = /(ていた|ている|てた|てる|てきた|ってきた|った|んだ|いた|した|なった|きた|れた|えた|ねた|みた|でた|だした)$/;
+// 「〜がいた」「〜があった」「〜が見えた」のように、見つけた・そこにあっただけの文の終わり方。
+// 助詞（が・は・も・を）のすぐ後ろにあるときだけ当てる（「寝ていた」の「いた」は当てない）
+const LOCAL_EXISTENCE_ENDING = /(が|は|も|を)(いた|いる|います|いました|あった|ある|あります|ありました|みえた|みえる|みえました|見えた|見える|見えました|みつけた|見つけた|見つけました)$/;
+// はっきりした動作・変化のしるし（文のどこにあっても出来事とみなす）
+const LOCAL_ACTION_MARKERS = /(ていた|ている|ていて|てた|てる|てきた|ていった|てった|てしまった|ちゃった|なった|なって|だした|はじめた|始めた)/;
+// 出来事・行動の文の終わり方（「寝た」「転んだ」「けった」など）
+const LOCAL_STORY_ENDING = /(った|んだ|いた|した|きた|れた|えた|ねた|みた|でた)$/;
 
 function _localSafetyText(expression) {
   return normalizeForSafety(String(expression || ''));
 }
 
+const _hasAny = (s, words) => words.some(w => s.includes(w));
+
 // 入力が「気持ち・見たもの・出来事」のどれかを、端末内でおおまかに決める。迷ったら observation
 function detectLocalResponseMode(expression) {
   const s = _localSafetyText(expression);
   if (!s) return 'observation';
-  if (LOCAL_FEELING_WORDS.some(([, words]) => words.some(w => s.includes(w)))) return 'feeling';
-  if (LOCAL_UNSURE_WORDS.some(w => s.includes(w))) return 'observation';
+  if (LOCAL_FEELING_WORDS.some(([, words]) => _hasAny(s, words))) return 'feeling';
+  if (_hasAny(s, LOCAL_AMBIGUOUS_FEELING_WORDS)) return 'feeling';
+  if (_hasAny(s, LOCAL_UNSURE_WORDS)) return 'observation';
+  // 1. はっきりした動作・変化があれば story（末尾の「〜がいた／見えた」は動作として数えない）
+  const existence = s.match(LOCAL_EXISTENCE_ENDING);
+  const rest = existence ? s.slice(0, existence.index) : s;
+  if (LOCAL_ACTION_MARKERS.test(rest)) return 'story';
+  // 2. 見つけた・そこにあっただけなら observation
+  if (existence) return 'observation';
   if (s.length >= 3 && LOCAL_STORY_ENDING.test(s)) return 'story';
+  // 3. 判断できなければ observation
   return 'observation';
 }
 
 function _pickLocalBank(mode, s) {
   if (mode === 'feeling') {
-    const hit = LOCAL_FEELING_WORDS.find(([, words]) => words.some(w => s.includes(w)));
-    return { bank: LOCAL_BANKS[hit ? hit[0] : 'wonder'], followUp: LOCAL_FOLLOW_UPS.feeling };
+    // 手がかりがある語群を優先し、「やばい」だけなら中立の3語にする
+    const hit = LOCAL_FEELING_WORDS.find(([, words]) => _hasAny(s, words));
+    if (hit) return { bank: LOCAL_BANKS[hit[0]], followUp: LOCAL_FOLLOW_UPS.feeling };
+    return { bank: LOCAL_BANKS.neutral, followUp: LOCAL_FOLLOW_UPS.neutral };
   }
   if (mode === 'story') return { bank: LOCAL_BANKS.scene, followUp: LOCAL_FOLLOW_UPS.story };
   if (!s || LOCAL_UNSURE_WORDS.some(w => s.includes(w))) return { bank: LOCAL_BANKS.lookAny, followUp: LOCAL_FOLLOW_UPS.unsure };

@@ -246,8 +246,8 @@ test('19. フォールバック時は端末内の3語と mode 別の質問を出
   const doc = makeDocument();
   loadDom(doc, { vocabFallback: true }).buildWords('やばい');
   const words = doc.byId['word-cards'].children.map(c => c.dataset.wordText);
-  assert.deepEqual(words, ['目を奪われる', '息をのむ', '心が動く']);
-  assert.equal(doc.byId['secret-q-text'].textContent, 'どのあたりで、そう感じたのかな？');
+  assert.deepEqual(words, ['びっくりした', '気になった', '心が動いた']);
+  assert.equal(doc.byId['secret-q-text'].textContent, 'どんなところで、そう感じたのかな？');
   const quote = doc.byId['words-quote'].textContent;
   assert.equal(quote.split(NOTE).length - 1, 1);
 });
@@ -382,10 +382,10 @@ test('36. 429 のときは端末内の3語へ切り替える', async () => {
   const c = loadCore(f);
   assert.equal(await c.fetchVocabulary('やばい'), 'fallback');
   assert.equal(c.fallback, true);
-  assert.deepEqual(c.result.words.map(w => w.word), ['目を奪われる', '息をのむ', '心が動く']);
+  assert.deepEqual(c.result.words.map(w => w.word), ['びっくりした', '気になった', '心が動いた']);
   const doc = makeDocument();
   loadDom(doc, { vocabFallback: true }).buildWords('やばい');
-  assert.deepEqual(doc.byId['word-cards'].children.map(x => x.dataset.wordText), ['目を奪われる', '息をのむ', '心が動く']);
+  assert.deepEqual(doc.byId['word-cards'].children.map(x => x.dataset.wordText), ['びっくりした', '気になった', '心が動いた']);
 });
 
 test('37. 429 が続いても案内文は1回だけ', () => {
@@ -506,7 +506,8 @@ test('45. 気もちの言葉は feeling、名前だけは observation、出来�
 test('46. feeling は気もちの種類ごとに3語を選ぶ', () => {
   const c = shipped();
   const words = e => c.buildLocalVocabularyFallback(e, 'm').words.map(w => w.word);
-  assert.deepEqual(words('やばい'), ['目を奪われる', '息をのむ', '心が動く']);
+  assert.deepEqual(words('やばい'), ['びっくりした', '気になった', '心が動いた']);
+  assert.deepEqual(words('すごい'), ['目を奪われる', '息をのむ', '心が動く']);
   assert.deepEqual(words('かわいい'), ['心がはずむ', '愛らしい', 'ほっとする']);
   assert.deepEqual(words('むかつく'), ['いらだつ', 'もどかしい', 'くやしい']);
   assert.deepEqual(words('キモい'), ['ぞわっとする', 'ぶきみ', '苦手']);
@@ -584,7 +585,8 @@ test('52. AI の3つの mode で、見出し・補助文・Worker の深掘り�
 });
 
 test('53. フォールバックの見出しと深掘り質問も mode に合わせる', () => {
-  const cases = [['やばい', 'feeling', 'どのあたりで、そう感じたのかな？'],
+  const cases = [['やばい', 'feeling', 'どんなところで、そう感じたのかな？'],
+    ['きれい', 'feeling', 'どのあたりで、そう感じたのかな？'],
     ['おじさん', 'observation', 'もう少し見てみたいところはある？'],
     ['ねこが寝ていた', 'story', 'そのあと、どうなったと思う？'],
     ['わからない', 'observation', '最初に目に入ったのは、どこかな？']];
@@ -659,4 +661,85 @@ test('58. ひらがなだけの語（読みと同じ）にはルビを付けず�
   loadDom(doc, { vocabResult: c.buildLocalVocabularyFallback('木', 'm'), vocabFallback: true }).buildWords('木');
   const rt = doc.byId['word-cards'].children[1].all().find(n => n.tagName === 'rt');
   assert.equal(rt.textContent, 'りんかく');
+});
+
+// ── Step 9G：「やばい」単独の中立化と、存在文の扱い ─────────────────
+const NEUTRAL = ['びっくりした', '気になった', '心が動いた'];
+const BANK_OF = {
+  wonder: ['目を奪われる', '息をのむ', '心が動く'], joy: ['心がはずむ', '愛らしい', 'ほっとする'],
+  fear: ['ぎょっとする', 'どきどきする', '不安'], dislike: ['ぞわっとする', 'ぶきみ', '苦手'],
+  being: ['表情', 'しぐさ', 'まなざし'], thing: ['色合い', '輪郭', 'たたずまい'], scene: ['様子', '変化', '流れ'],
+};
+
+test('59. 表のとおりに mode と3語が決まる', () => {
+  const c = shipped();
+  const table = [
+    ['やばい', 'feeling', NEUTRAL, 'どんなところで、そう感じたのかな？'],
+    ['ヤバい！', 'feeling', NEUTRAL, 'どんなところで、そう感じたのかな？'],
+    ['空がきれいでやばい', 'feeling', BANK_OF.wonder, 'どのあたりで、そう感じたのかな？'],
+    ['こわくてやばい', 'feeling', BANK_OF.fear, 'どのあたりで、そう感じたのかな？'],
+    ['うれしくてやばい', 'feeling', BANK_OF.joy, 'どのあたりで、そう感じたのかな？'],
+    ['キモくてやばい', 'feeling', BANK_OF.dislike, 'どのあたりで、そう感じたのかな？'],
+    ['おじさんがいた', 'observation', BANK_OF.being, 'もう少し見てみたいところはある？'],
+    ['ねこがいた', 'observation', BANK_OF.being, 'もう少し見てみたいところはある？'],
+    ['人がいる', 'observation', BANK_OF.being, 'もう少し見てみたいところはある？'],
+    ['木があった', 'observation', BANK_OF.thing, 'もう少し見てみたいところはある？'],
+    ['電車が見えた', 'observation', BANK_OF.thing, 'もう少し見てみたいところはある？'],
+    ['花がある', 'observation', BANK_OF.thing, 'もう少し見てみたいところはある？'],
+    ['ねこが寝ていた', 'story', BANK_OF.scene, 'そのあと、どうなったと思う？'],
+    ['人が歩いていた', 'story', BANK_OF.scene, 'そのあと、どうなったと思う？'],
+    ['友達が走ってきた', 'story', BANK_OF.scene, 'そのあと、どうなったと思う？'],
+    ['空が赤くなった', 'story', BANK_OF.scene, 'そのあと、どうなったと思う？'],
+    ['雨が降ってきた', 'story', BANK_OF.scene, 'そのあと、どうなったと思う？'],
+  ];
+  for (const [e, mode, words, q] of table) {
+    const d = c.buildLocalVocabularyFallback(e, 'm');
+    assert.equal(c.detectLocalResponseMode(e), mode, e);
+    assert.equal(d.responseMode, mode, e);
+    assert.deepEqual(d.words.map(w => w.word), words, e);
+    assert.equal(d.followUpQuestion, q, e);
+    assert.equal(c.validateVocabResponse(d), true, e);
+  }
+});
+
+test('60. 「やばい」の中立の3語は、良い・悪い・美しさを決めつけない', () => {
+  const d = shipped().buildLocalVocabularyFallback('やばい', 'm');
+  for (const w of d.words) {
+    assert.ok(!/きれい|美し|うれし|楽し|こわ|怖|いや|悲し|感動|すてき|最高|最悪/.test(w.word + w.description), w.word);
+    assert.ok(/^[^。]*。$/.test(w.description) && w.description.length <= 30, w.description);
+  }
+});
+
+test('61. 「〜ていた」の文字だけでは決めず、見つけただけの文は observation', () => {
+  const c = shipped();
+  // 末尾が「いた」でも、助詞のすぐ後ろなら存在文
+  assert.equal(c.detectLocalResponseMode('おじさんがいた'), 'observation');
+  // 見えた・いた の前に動作があれば story
+  assert.equal(c.detectLocalResponseMode('ねこが寝ているのが見えた'), 'story');
+  assert.equal(c.detectLocalResponseMode('ねこがねていた'), 'story');
+  // 動作も存在も分からない名前だけの入力は observation
+  assert.equal(c.detectLocalResponseMode('ぴかぴか'), 'observation');
+});
+
+test('62. care は mode 判定より先で、存在文・「やばい」付きでも固定の支援文になる', async () => {
+  for (const e of ['死にたい', '死にたいくらいやばい']) {
+    const f = okFetch(NORMAL);
+    const storage = fakeStorage();
+    const c = loadCore(f, { storage });
+    assert.equal(await c.fetchVocabulary(e), 'care', e);
+    assert.equal(f.calls.length, 0);
+    assert.equal(storage.map.size, 0);
+    assert.equal(c.result, null);
+  }
+});
+
+test('63. AI が成功したときは、端末内の判定で上書きしない', async () => {
+  const d = withMode('story');
+  const c = loadCore(okFetch(d));
+  assert.equal(await c.fetchVocabulary('やばい'), 'ok');
+  const doc = makeDocument();
+  loadDom(doc, { vocabResult: c.result }).buildWords('やばい');
+  assert.deepEqual(doc.byId['word-cards'].children.map(x => x.dataset.wordText), NORMAL.words.map(w => w.word));
+  assert.equal(doc.byId['words-pick-title'].textContent, HEADINGS.story[0]);
+  assert.equal(doc.byId['secret-q-text'].textContent, NORMAL.followUpQuestion);
 });

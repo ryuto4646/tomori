@@ -182,9 +182,9 @@ test('5. 端末内の語・通常の表示・ルビは今までどおり', () =>
   assert.equal(env.doc.ids['word-announce'].textContent, '『目を奪われる』が、世界をひらいた。');
 });
 
-test('6. VOCABULARY_AI_ENABLED は false で、fetch は0回', () => {
+test('6. スイッチが true でも、カード選択・世界変化・リセットでは fetch は0回', () => {
   const env = load();
-  assert.equal(env.app.VOCABULARY_AI_ENABLED, false);
+  assert.equal(env.app.VOCABULARY_AI_ENABLED, true);
   env.app.setResult(null); env.app.buildWords('やばい');
   pickFirstCard(env); env.clock.advance(4000); reset(env); env.clock.advance(4000);
   assert.equal(env.fetchCalls.length, 0);

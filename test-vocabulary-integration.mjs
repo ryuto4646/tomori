@@ -16,9 +16,13 @@ function section(begin, end) {
 }
 const CORE_SHIPPED = section('// VOCAB-CORE-BEGIN', '// VOCAB-CORE-END');
 const SWITCH_OFF = 'const VOCABULARY_AI_ENABLED = false;';
-assert.ok(CORE_SHIPPED.includes(SWITCH_OFF), 'shipped file must have the AI switch off');
+const SWITCH_ON = 'const VOCABULARY_AI_ENABLED = true;';
+// Step 10F：ローカルのデモ用に、出荷ファイルのスイッチは true
+assert.ok(CORE_SHIPPED.includes(SWITCH_ON), 'shipped file must have the AI switch on (local demo)');
+// 緊急停止（false に戻したとき）の動きも確かめ続ける
+const CORE_OFF = CORE_SHIPPED.replace(SWITCH_ON, SWITCH_OFF);
 // 通信まわりのテストは、スイッチを入れた状態で動かす
-const CORE = CORE_SHIPPED.replace(SWITCH_OFF, 'const VOCABULARY_AI_ENABLED = true;');
+const CORE = CORE_SHIPPED;
 const DOM  = section('// VOCAB-DOM-BEGIN',  '// VOCAB-DOM-END');
 
 // ── 最小限の偽DOM ──────────────────────────────────────────────
@@ -321,10 +325,10 @@ test('29. 「冒険にもどる」後は、離れてから近づくとミッシ�
   assert.match(reset, /missionNeedsLeave=false/);
 });
 
-test('30. 緊急停止スイッチが false なら fetch を1回も呼ばず、端末内の語へ切り替える', async () => {
+test('30. 緊急停止スイッチを false に戻せば fetch を1回も呼ばず、端末内の語へ切り替える', async () => {
   const f = okFetch(NORMAL);
   const factory = new Function('fetch', 'setTimeout', 'clearTimeout',
-    `${CORE_SHIPPED}; return { fetchVocabulary, get result() { return _vocabResult; } };`);
+    `${CORE_OFF}; return { fetchVocabulary, get result() { return _vocabResult; } };`);
   const c = factory(f, setTimeout, clearTimeout);
   assert.equal(await c.fetchVocabulary('やばい'), 'fallback');
   assert.equal(c.result.responseMode, 'feeling');
@@ -332,7 +336,7 @@ test('30. 緊急停止スイッチが false なら fetch を1回も呼ばず、�
   assert.equal(f.calls.length, 0);
 });
 
-test('31. 出荷ファイルではスイッチは false で、fetch より前に判定している', () => {
+test('31. スイッチは fetch より前に判定している（false に戻すだけで止まる）', () => {
   const fn = CORE_SHIPPED.match(/async function fetchVocabulary\(expression\) \{([\s\S]*?)\n\}/)[1];
   const guard = fn.indexOf('if (!VOCABULARY_AI_ENABLED) return useLocalVocabulary(expression);');
   assert.ok(guard >= 0);
@@ -348,7 +352,7 @@ test('32. スイッチが false のときは fetch 0回・匿名IDを作らず�
   const storage = fakeStorage();
   let uuidCalls = 0;
   const crypto = { randomUUID: () => { uuidCalls++; return globalThis.crypto.randomUUID(); } };
-  const c = loadCore(f, { storage, crypto, core: CORE_SHIPPED });
+  const c = loadCore(f, { storage, crypto, core: CORE_OFF });
   assert.equal(await c.fetchVocabulary('やばい'), 'fallback');
   assert.equal(f.calls.length, 0);
   assert.equal(uuidCalls, 0);
@@ -473,17 +477,17 @@ const HEADINGS = {
 const withMode = mode => ({ ...clone(NORMAL), responseMode: mode });
 const shipped = () => loadCore(okFetch(NORMAL), { core: CORE_SHIPPED });
 
-test('43. 送り先は tomori-vocabulary の Worker で、AIスイッチは false のまま', () => {
+test('43. 送り先は tomori-vocabulary の Worker で、AIスイッチは true（ローカルのデモ）', () => {
   const c = shipped();
   assert.equal(c.VOCABULARY_API_URL, 'https://tomori-vocabulary.tomori-ryuto.workers.dev/vocabulary');
-  assert.equal(c.VOCABULARY_AI_ENABLED, false);
+  assert.equal(c.VOCABULARY_AI_ENABLED, true);
   assert.ok(!HTML.includes('tomori-api.tomori-ryuto.workers.dev'));
 });
 
 test('44. AIスイッチが false なら、どの入力でも fetch 0回・sessionStorage 0件', async () => {
   const f = okFetch(NORMAL);
   const storage = fakeStorage();
-  const c = loadCore(f, { storage, core: CORE_SHIPPED });
+  const c = loadCore(f, { storage, core: CORE_OFF });
   for (const e of ['やばい', 'おじさん', 'ねこが寝ていた', 'わからない', '死にたい']) await c.fetchVocabulary(e);
   assert.equal(f.calls.length, 0);
   assert.equal(storage.map.size, 0);
@@ -795,4 +799,53 @@ test('66. 「すごい」の活用形だけを中立にし、「すごろく」�
     assert.equal(c.validateVocabResponse(d), true, e);
   }
   assert.equal(c.detectDeterministicCare('すごろく'), false);
+});
+
+// ── Step 10F：スイッチ true（ローカルのデモ）──────────────────────
+test('67. 出荷ファイル（スイッチ true）でも、care 判定は fetch・ID作成・sessionStorage より先', async () => {
+  const f = okFetch(NORMAL);
+  const storage = fakeStorage();
+  let uuidCalls = 0;
+  const crypto = { randomUUID: () => { uuidCalls++; return globalThis.crypto.randomUUID(); } };
+  const c = loadCore(f, { storage, crypto, core: CORE_SHIPPED });
+  assert.equal(await c.fetchVocabulary('自分を傷つけたい'), 'care');
+  assert.equal(f.calls.length, 0);
+  assert.equal(uuidCalls, 0);
+  assert.equal(storage.map.size, 0);
+  // 続けて普通の入力を送ると、そこで初めて ID を作って1回だけ送る
+  assert.equal(await c.fetchVocabulary('やばい'), 'ok');
+  assert.equal(f.calls.length, 1);
+  assert.equal(uuidCalls, 1);
+  assert.match(headerOf(f.calls[0]), UUID4);
+  assert.deepEqual(Object.keys(JSON.parse(f.calls[0].opts.body)).sort(), ['age', 'expression', 'language', 'mission']);
+});
+
+test('68. 400・403 のときも端末内の候補へ切り替え、エラー本文は画面に出さない', async () => {
+  for (const [status, body] of [[400, { error: 'expression must not be blank' }], [403, { error: 'Origin not allowed', code: 'ORIGIN_NOT_ALLOWED' }],
+    [502, { error: 'Invalid AI response', code: 'INVALID_AI_RESPONSE', diagnosticCode: 'JSON_PARSE_ERROR' }]]) {
+    const c = loadCore(okFetch(body, status), { core: CORE_SHIPPED });
+    assert.equal(await c.fetchVocabulary('おじさん'), 'fallback', String(status));
+    assert.equal(c.fallback, true);
+    assert.equal(c.result.responseMode, 'observation');
+    const doc = makeDocument();
+    loadDom(doc, { vocabResult: c.result, vocabFallback: true }).buildWords('おじさん');
+    const shown = Object.values(doc.byId).map(n => n.textContent).join('');
+    assert.ok(!/Origin not allowed|blank|diagnosticCode|JSON_PARSE_ERROR|INVALID/.test(shown), String(status));
+    assert.equal(shown.split(NOTE).length - 1, 1);
+  }
+});
+
+test('69. 成功・失敗・care のどれでも、入力や応答を console へ出さない', async () => {
+  const logs = []; const orig = {};
+  for (const k of ['log', 'warn', 'error', 'info', 'debug', 'trace']) { orig[k] = console[k]; console[k] = (...a) => logs.push(a.map(String).join(' ')); }
+  try {
+    await loadCore(okFetch(NORMAL), { core: CORE_SHIPPED }).fetchVocabulary('やばい');
+    await loadCore(okFetch({ error: 'x' }, 429), { core: CORE_SHIPPED }).fetchVocabulary('やばい');
+    await loadCore(async () => { throw new TypeError('Failed to fetch'); }, { core: CORE_SHIPPED }).fetchVocabulary('やばい');
+    await loadCore(okFetch(withMode('Feeling')), { core: CORE_SHIPPED }).fetchVocabulary('やばい');
+    await loadCore(okFetch(NORMAL), { core: CORE_SHIPPED }).fetchVocabulary('自分を傷つけたい');
+    const doc = makeDocument();
+    loadDom(doc, { vocabResult: NORMAL }).buildWords('やばい');
+  } finally { for (const k of Object.keys(orig)) console[k] = orig[k]; }
+  assert.deepEqual(logs, []);
 });

@@ -389,10 +389,10 @@ let chosenWord    = '';
 
 // ── AI語彙 ──────────────────────────────────────────────────────────
 // VOCAB-CORE-BEGIN（test-vocabulary-integration.mjs がこの範囲を読み込んでテストする）
-// 緊急停止スイッチ：false の間は外部へ一切送らず、匿名IDも作らず、端末内の固定候補を使う。
-// Worker の公開と確認が済むまで false のままにする。
-const VOCABULARY_AI_ENABLED = false;
-// 恒久版の語彙 Worker（tomori-vocabulary）。まだ公開していない予定の URL
+// 緊急停止スイッチ：false にすると外部へ一切送らず、匿名IDも作らず、端末内の固定候補を使う。
+// ローカルのデモ（localhost）で AI 語彙を使うため true にしている。止めるときは false に戻すだけでよい。
+const VOCABULARY_AI_ENABLED = true;
+// 語彙 Worker（tomori-vocabulary）。localhost からの送信だけを受け付ける（本番の Origin は未設定）
 const VOCABULARY_API_URL = 'https://tomori-vocabulary.tomori-ryuto.workers.dev/vocabulary';
 const VOCAB_MISSION = '心があたたかくなる赤を見つけよう';
 let _vocabGen      = 0;      // リセットのたびに増える。古い応答で画面を書き換えないため

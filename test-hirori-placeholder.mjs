@@ -267,7 +267,7 @@ test('21. 探索中のカメラ追従は元のまま。パネル中だけ構図�
   assert.match(HTML, /updateCamera\(dt\);/);
 });
 
-test('17. VOCABULARY_AI_ENABLED は false のまま', () => {
-  assert.match(HTML, /const VOCABULARY_AI_ENABLED = false;/);
-  assert.ok(!/VOCABULARY_AI_ENABLED = true/.test(HTML));
+test('17. VOCABULARY_AI_ENABLED は true（Step 10F：ローカルのデモ）で、定義は1か所だけ', () => {
+  assert.match(HTML, /const VOCABULARY_AI_ENABLED = true;/);
+  assert.equal((HTML.match(/VOCABULARY_AI_ENABLED =/g) || []).length, 1);
 });

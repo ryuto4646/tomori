@@ -238,6 +238,35 @@ test('16. GLB・外部素材・新しい通信に頼っていない', () => {
   assert.equal((HTML.match(/https:\/\/cdn\./g) || []).length, 2, 'no new CDN');
 });
 
+// ═══ Step 9B：ミッション地点と構図（ソースの確認。見え方はブラウザで確認） ═══
+test('18. ミッション地点は MISSION_POS 1か所で決まり、リセットでも同じ場所に戻る', () => {
+  assert.match(HTML, /const MISSION_POS = new THREE\.Vector3\(1\.5, 0, -6\.5\);/);
+  assert.match(HTML, /mpGroup\.position\.copy\(MISSION_POS\); scene\.add\(mpGroup\);/);
+  assert.match(HTML, /function doReset\(\)\{[\s\S]*?mpGroup\.position\.copy\(MISSION_POS\);/);
+  assert.ok(!/mpGroup\.position\.set\(0,0,-8\)/.test(HTML));
+});
+
+test('19. 到着時：結晶の手前（1.3以上）で止まり、結晶の方を向き、映す角度を決める', () => {
+  assert.match(HTML, /const ARRIVAL_MIN_GAP=1\.3;/);
+  const tm = HTML.match(/function triggerMission\(\)\{([\s\S]*?)\n\}/)[1];
+  assert.match(tm, /if\(gap<ARRIVAL_MIN_GAP\)/);
+  assert.match(tm, /hiroriMotion\.facing=Math\.atan2\(toC\.x,toC\.z\);/);
+  assert.match(tm, /chooseFocusSide\(\);[\s\S]*setState\(S\.MISSION_FOUND\);/);
+});
+
+test('20. 名前ラベルは、動けないとき（到着後・パネル表示中）は消す', () => {
+  const fn = HTML.match(/function updateLabel\(\)\{([\s\S]*?)\n\}/)[1];
+  assert.match(fn, /if\(!canMove\(\)\)\{charLabel\.style\.opacity='0';return;\}/);
+});
+
+test('21. 探索中のカメラ追従は元のまま。パネル中だけ構図を変え、動きを減らす設定では即座に落ち着く', () => {
+  const fn = HTML.match(/function updateCamera\(dt\)\{([\s\S]*?)\n\}/)[1];
+  assert.match(fn, /if\(!focus\)\{\s*camera\.position\.lerp\(character\.position\.clone\(\)\.add\(CAM_OFF\),\.08\);/);
+  assert.match(fn, /const k=reduceMotionQuery\.matches\?1:1-Math\.exp\(-dt\/FOCUS_TAU\);/);
+  assert.match(fn, /camera\.clearViewOffset\(\)/);
+  assert.match(HTML, /updateCamera\(dt\);/);
+});
+
 test('17. VOCABULARY_AI_ENABLED は false のまま', () => {
   assert.match(HTML, /const VOCABULARY_AI_ENABLED = false;/);
   assert.ok(!/VOCABULARY_AI_ENABLED = true/.test(HTML));

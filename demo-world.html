@@ -52,6 +52,22 @@ html, body { width:100%; height:100%; overflow:hidden; background:#a8d8ea;
 }
 #btn-back:hover { background:rgba(255,230,160,.9); }
 
+/* スマホ幅：上の2つのボタンを1段目、状態表示を2段目に分けて、重ならないようにする。
+   （状態表示は left:50% の配置のため、使える幅が画面の半分になり、2行に折れてボタンにかかっていた）
+   ボタンは指で押しやすい 44px 以上にし、iPhone の safe area（ノッチ）も避ける。PC の配置は変えない */
+@media (max-width: 600px) {
+  #btn-back, #btn-reset {
+    top:max(8px, env(safe-area-inset-top));
+    min-height:44px; min-width:44px;
+  }
+  #btn-back  { left:max(8px, env(safe-area-inset-left)); }
+  #btn-reset { right:max(8px, env(safe-area-inset-right)); }
+  #mission-bar {
+    top:calc(max(8px, env(safe-area-inset-top)) + 52px);
+    width:max-content; min-width:0; max-width:calc(100vw - 24px);
+  }
+}
+
 /* ── 汎用パネル ─────────────────────── */
 .panel {
   position:absolute; bottom:0; left:0; right:0;

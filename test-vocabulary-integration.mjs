@@ -936,3 +936,27 @@ test('75. スイッチは true のまま。3つの mode・care・429 の動き�
   assert.equal(await rl.fetchVocabulary('やばい'), 'fallback');
   assert.deepEqual(rl.result.words.map(w => w.word), NEUTRAL);
 });
+
+// ── Step 10I：スマホ幅で上のボタンと状態表示を重ねない ─────────────────
+test('76. スマホ幅（600px 以下）では、ボタン2つを1段目、状態表示を2段目に分ける', () => {
+  const m = HTML.match(/@media \(max-width: 600px\) \{([\s\S]*?)\n\}/);
+  assert.ok(m, 'mobile media query missing');
+  const css = m[1];
+  // 1段目：上から safe area か 8px、高さ 44px 以上 → 下端は 8 + 44 = 52px
+  assert.match(css, /#btn-back, #btn-reset \{\s*top:max\(8px, env\(safe-area-inset-top\)\);\s*min-height:44px; min-width:44px;/);
+  assert.match(css, /#btn-back  \{ left:max\(8px, env\(safe-area-inset-left\)\); \}/);
+  assert.match(css, /#btn-reset \{ right:max\(8px, env\(safe-area-inset-right\)\); \}/);
+  // 2段目：同じ基準から 52px 下（ボタンの下端 + 8px のすき間）で、画面幅からはみ出さない
+  assert.match(css, /#mission-bar \{\s*top:calc\(max\(8px, env\(safe-area-inset-top\)\) \+ 52px\);\s*width:max-content; min-width:0; max-width:calc\(100vw - 24px\);/);
+  const buttonBottom = 8 + 44, barTop = 8 + 52;
+  assert.ok(barTop > buttonBottom, 'rows must not intersect');
+  // JavaScript で位置を動かしていない（CSS だけ）
+  assert.ok(!/btn-reset'\)\.style\.(top|left|right)|mission-bar'\)\.style\.(top|left)/.test(HTML));
+});
+
+test('77. PC の上部 UI の配置は変わっていない（ふだんのルール）', () => {
+  assert.match(HTML, /#mission-bar \{\n  position:absolute; top:12px; left:50%; transform:translateX\(-50%\);/);
+  assert.match(HTML, /#btn-reset \{\n  position:absolute; top:12px; right:12px;/);
+  assert.match(HTML, /#btn-back \{\n  position:absolute; top:52px; left:12px;/);
+  assert.match(HTML, /min-width:190px; max-width:88vw;/);
+});

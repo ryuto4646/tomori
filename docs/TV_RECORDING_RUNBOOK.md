@@ -11,12 +11,21 @@
 |---|---|
 | フォルダ | `C:\Users\DELL\Documents\tomori-next` |
 | ブランチ | `feature/tomori-open-world-demo` |
-| コミット | `ee808b5`（このあとに手順書だけを足したコミットがあっても、画面の中身は同じ） |
+| 画面・機能の基準コミット | `d3fddab` |
+| 収録候補のタグ | `tv-recording-candidate-20260928` |
 | 語彙の Worker | `tomori-vocabulary`、Version `e0bac5f9-1b5e-4d0d-8435-4c8dcd461852` |
 | 開く URL | `http://localhost:3458/demo-world.html` |
 
 - これは **この PC の中だけで動かす版**です。GitHub Pages の公開版とは別のもので、収録にはこちらを使います。
 - 画面の文面・AI の設定・Worker は、この版から変えずに収録します。
+- タグ `tv-recording-candidate-20260928` は、収録版の目印です。別のコミットへ勝手に付け替えないでください。
+- 収録版に戻したいときは、`git switch --detach tv-recording-candidate-20260928` でこのタグの状態を取り出せます。
+
+### 画面の大きさ
+
+- 収録で確かめた最小の画面は **375×812**（スマホ幅）。収録には、これ以上の大きさの画面を使います。
+- PC は 1280×800 で確認ずみです。
+- 320×568 でも操作はできます。ただ、背の高い言葉のカードのパネルが出ると、ヒロリはほとんど隠れてしまいます。
 
 ---
 

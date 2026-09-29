@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TOMORI｜冒険のはじまり</title>
+<meta name="description" content="写真の中で見つけたことを、ことばにしてみよう。">
+<!-- favicon を取りに行かないための空のアイコン（外への通信はしない） -->
+<link rel="icon" href="data:,">
+<style>
+/* トモリの新しいスタートページ（案A「世界への扉」）。HTML と CSS とローカルの WebP だけで動く。
+   JavaScript・外部フォント・CDN・通信は使わない。色は demo-world.html の 3D 世界に合わせる */
+:root {
+  --sky: #a8d8ea;
+  --sky-pale: #a9dbe6;
+  --meadow: #8fcf5a;
+  --meadow-deep: #6aaa4f;
+  --light: #ffe566;
+  --coral: #e9786e;
+  --cream: #fef9f0;
+  --cream-deep: #fef3d8;
+  --frame: #e8d4a0;
+  --ink: #3a3328;
+  --ink-soft: #5a4830;
+  --cta: #4a7f24;
+  --cta-hover: #3f6f1e;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  background: var(--cream);
+  color: var(--ink);
+  font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Meiryo', system-ui, sans-serif;
+  line-height: 1.6;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* 全体：スマホは上下、PC は左右 */
+.gate {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* ── 風景（画像が読めなくても、CSS の空・草原・光で成り立つ） ── */
+.scene {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 30vh;
+  overflow: hidden;
+  /* いちばん上が demo-world を撮影した画像（装飾）。読めないときは、下の CSS の光・空・草原だけが見える */
+  background-image:
+    url("assets/tomori-world-gateway.webp"),
+    radial-gradient(ellipse 34% 22% at 60% 48%, rgba(255, 229, 102, .55), rgba(255, 229, 102, 0) 70%),
+    linear-gradient(to bottom, var(--sky) 0%, var(--sky-pale) 22%, #b7e3c4 26%, var(--meadow) 34%, var(--meadow-deep) 100%);
+  background-size: cover, auto, auto;
+  background-position: 62% 42%, center, center;
+  background-repeat: no-repeat;
+  background-color: var(--sky);
+}
+/* 小道の先の、ごく小さな光のゆらぎ（装飾） */
+.scene::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 28% 18% at 58% 44%, rgba(255, 246, 200, .55), rgba(255, 246, 200, 0) 72%);
+  opacity: .35;
+  animation: glow 7s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes glow {
+  0%, 100% { opacity: .25; }
+  50%      { opacity: .6; }
+}
+
+/* ── 文字のパネル ── */
+.panel {
+  flex: 0 0 auto;
+  min-height: 44vh;
+  min-height: 44dvh;
+  background: var(--cream);
+  border-top: 2px solid var(--frame);
+  border-radius: 24px 24px 0 0;
+  margin-top: -24px;              /* 風景に少し重ねる */
+  position: relative;
+  padding: 22px 20px 28px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+}
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: .22em;
+  color: var(--cta);
+}
+/* ロゴの前の、光の黄色の小さな灯り（CSS だけの飾り。正式ロゴではない） */
+.logo::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 40%, #fff6c8, var(--light) 60%, #f3c93c);
+  box-shadow: 0 0 0 3px rgba(255, 229, 102, .35);
+}
+h1 {
+  font-size: 24px;
+  line-height: 1.45;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: .02em;
+}
+h1 .line { display: inline-block; }
+.lead {
+  font-size: 15px;
+  line-height: 1.75;
+  color: var(--ink-soft);
+}
+.lead .line { display: inline-block; }
+.lead .note {
+  display: block;
+  margin-top: 4px;
+  color: var(--ink);
+  font-weight: 700;
+}
+.lead .note::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: var(--coral);
+  vertical-align: .15em;
+}
+
+/* 主ボタン（ふつうのリンク） */
+.cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 52px;
+  min-width: 44px;
+  padding: 12px 24px;
+  margin-top: 6px;
+  border-radius: 26px;
+  background: var(--cta);
+  color: #fff;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-decoration: none;
+  box-shadow: 0 4px 0 #35591a, 0 8px 18px rgba(58, 51, 40, .14);
+  transition: background-color .2s, transform .1s, box-shadow .1s;
+}
+.cta::after {
+  content: "→" / "";
+  font-size: 18px;
+}
+.cta:hover { background: var(--cta-hover); }
+.cta:active { transform: translateY(2px); box-shadow: 0 2px 0 #35591a, 0 4px 10px rgba(58, 51, 40, .14); }
+.cta:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 4px;
+}
+
+/* ── 小さい画面（320px 幅など） ── */
+@media (max-width: 359px) {
+  .panel { padding: 18px 16px 22px; gap: 10px; }
+  h1 { font-size: 21px; }
+  .lead { font-size: 14px; line-height: 1.7; }
+  .cta { font-size: 16px; min-height: 48px; }
+}
+@media (max-height: 600px) and (max-width: 767px) {
+  .panel { min-height: 0; }
+}
+
+/* ── PC：左 55% に風景、右 45% にパネル ── */
+@media (min-width: 768px) {
+  .gate { flex-direction: row; height: 100vh; height: 100dvh; min-height: 560px; }
+  .scene { flex: 0 0 55%; min-height: 0; }
+  .panel {
+    flex: 0 0 45%;
+    min-height: 0;
+    margin-top: 0;
+    margin-left: -24px;
+    border-top: 0;
+    border-left: 2px solid var(--frame);
+    border-radius: 24px 0 0 24px;
+    padding: 48px clamp(32px, 5vw, 64px);
+    gap: 18px;
+  }
+  .logo { font-size: 20px; }
+  h1 { font-size: 32px; line-height: 1.4; }
+  .lead { font-size: 17px; line-height: 1.8; }
+  .cta { font-size: 18px; max-width: 360px; min-height: 56px; }
+}
+
+/* 動きを減らす設定：装飾の動きをすべて止める */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .scene::after { opacity: .4; }
+}
+</style>
+</head>
+<body>
+<main class="gate">
+  <!-- 風景は装飾なので、画像は CSS の背景として置く（読み上げの対象にしない） -->
+  <div class="scene" aria-hidden="true"></div>
+  <div class="panel">
+    <p class="logo">TOMORI</p>
+    <h1><span class="line">きみの「気になった」が、</span><br><span class="line">世界をひらく。</span></h1>
+    <p class="lead">
+      <span class="line">写真の中で見つけたことを、</span><br><span class="line">ことばにしてみよう。</span>
+      <span class="note">正解は、ひとつじゃない。</span>
+    </p>
+    <a class="cta" href="./demo-world.html">冒険をはじめる</a>
+  </div>
+</main>
+</body>
+</html>

@@ -1,6 +1,7 @@
-// start.html（新しいスタートページ・案A「世界への扉」）のテスト。ブラウザも通信も使わない
+// 新しいスタートページ（案A「世界への扉」）のテスト。ブラウザも通信も使わない
+// Step 11C から、正本はルートの index.html（Step 11B の start.html をそのまま移したもの）。旧アプリは legacy-app.html
 // 実行: node --test test-start-page.mjs
-// START_PAGE_ROOT を指定すると、そのフォルダの start.html と画像を調べる（壊した一時コピーで、テストが失敗できるかを確かめるため）
+// START_PAGE_ROOT を指定すると、そのフォルダの index.html と画像を調べる（壊した一時コピーで、テストが失敗できるかを確かめるため）
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync, statSync } from 'node:fs';
@@ -10,29 +11,51 @@ import { dirname, join } from 'node:path';
 
 const REPO = dirname(fileURLToPath(import.meta.url));
 const ROOT = process.env.START_PAGE_ROOT || REPO;
-const START = join(ROOT, 'start.html');
+const START = join(ROOT, 'index.html');
 const WEBP = join(ROOT, 'assets', 'tomori-world-gateway.webp');
 const HTML = existsSync(START) ? readFileSync(START, 'utf8') : '';
 const CSS = (HTML.match(/<style>([\s\S]*?)<\/style>/) || [, ''])[1];
 const CSS_CODE = CSS.replace(/\/\*[\s\S]*?\*\//g, '');
 const BODY = (HTML.match(/<body>([\s\S]*?)<\/body>/) || [, ''])[1];
 const VISIBLE_TEXT = BODY.replace(/<!--[\s\S]*?-->/g, '').replace(/<[^>]+>/g, '').replace(/\s+/g, '');
-// 収録版タグの時点のファイル（index.html と demo-world.html はそれと同じでなければならない）
+// 収録版タグの時点のファイル（demo-world.html などはそれと同じでなければならない）
 const TAG = 'tv-recording-candidate-20260928';
-const atTag = file => execFileSync('git', ['show', `${TAG}:${file}`], { cwd: REPO, maxBuffer: 64 * 1024 * 1024 }).toString('utf8');
+// Step 11B で承認された start.html（このコミットの内容が、新しい index.html の正本）
+const APPROVED = 'febcae9';
+const gitShow = (rev, file) => execFileSync('git', ['show', `${rev}:${file}`], { cwd: REPO, maxBuffer: 64 * 1024 * 1024 }).toString('utf8');
+const atTag = file => gitShow(TAG, file);
 const normalize = s => s.replace(/\r\n/g, '\n');
 
-test('1. start.html がある', () => {
-  assert.ok(existsSync(START), 'start.html is missing');
+test('1. index.html が、Step 11B で承認した新しいスタートページそのもの', () => {
+  assert.ok(existsSync(START), 'index.html is missing');
   assert.match(HTML, /^<!DOCTYPE html>/i);
+  if (ROOT === REPO) assert.equal(normalize(HTML), normalize(gitShow(APPROVED, 'start.html')));
 });
 
-test('2. index.html は収録版タグから変わっていない', () => {
-  assert.equal(normalize(readFileSync(join(REPO, 'index.html'), 'utf8')), normalize(atTag('index.html')));
+test('2. start.html は残っていない（index.html だけが正本）', () => {
+  assert.ok(!existsSync(join(REPO, 'start.html')));
 });
 
-test('3. demo-world.html は収録版タグから変わっていない', () => {
-  assert.equal(normalize(readFileSync(join(REPO, 'demo-world.html'), 'utf8')), normalize(atTag('demo-world.html')));
+test('2b. 旧アプリは legacy-app.html に、中身を削らずに保存されている', () => {
+  const legacy = join(REPO, 'legacy-app.html');
+  assert.ok(existsSync(legacy), 'legacy-app.html is missing');
+  assert.equal(normalize(readFileSync(legacy, 'utf8')), normalize(atTag('index.html')));
+  // 新しいスタートページから旧アプリへのリンクは置かない
+  assert.ok(!HTML.includes('legacy-app'));
+});
+
+test('3. demo-world.html・起動ファイル・手順書は収録版タグから変わっていない', () => {
+  for (const f of ['demo-world.html', 'start-tv-demo.cmd', 'docs/TV_RECORDING_RUNBOOK.md']) {
+    assert.equal(normalize(readFileSync(join(REPO, f), 'utf8')), normalize(atTag(f)), f);
+  }
+  // 「← アプリへ」は index.html を指したまま（新しいスタートページへ戻る）
+  assert.match(readFileSync(join(REPO, 'demo-world.html'), 'utf8'), /id="btn-back"\s+onclick="window\.location\.href='index\.html'"/);
+});
+
+test('3b. 収録版タグは 1890884 を指したまま・AI スイッチは true のまま', () => {
+  const tagCommit = execFileSync('git', ['rev-parse', '--short', `${TAG}^{commit}`], { cwd: REPO }).toString().trim();
+  assert.equal(tagCommit, '1890884');
+  assert.match(readFileSync(join(REPO, 'demo-world.html'), 'utf8'), /const VOCABULARY_AI_ENABLED = true;/);
 });
 
 test('4・5. CTA はふつうの a 要素で、行き先は ./demo-world.html（JavaScript で移動しない）', () => {

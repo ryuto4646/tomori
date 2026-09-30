@@ -44,7 +44,7 @@ PC では左右に、エルフの村のイラスト（約 2MB の PNG）が暗�
 
 ### 1-6. 画像・書体・CDN・外部通信
 - 読み込み時の外部通信は **0件**（CDN も Web フォントも解析ツールも無い）。今回の撮影で記録した外への通信も、0件。
-- `tomori-api.tomori-ryuto.workers.dev` への POST は、写真を送る・答えを送る・先生モードを開くなど、**操作したときだけ**です（`/generate` `/feedback` `/generate-next` `/journey` `/teacher`）。
+- 旧 API（`tomori-api`。2026-09-30 に停止版へ切り替え済み）への POST は、写真を送る・答えを送る・先生モードを開くなど、**操作したときだけ**です（`/generate` `/feedback` `/generate-next` `/journey` `/teacher`）。
 - 画像：`images/` は合計約 43MB。背景の PNG は1枚 1.6〜2.3MB あり、**毎回の最初の読み込みで、約 2MB の背景を1枚ダウンロードする**作り。
 - 保存：localStorage に言語・年齢・続けた日数などを読み書きします。あとの画面では答えの履歴や写真（base64）も保存し、先生用の PIN と秘密の質問・答えは平文で保存しています。Cookie は使っていません。
 

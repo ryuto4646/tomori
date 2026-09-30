@@ -481,7 +481,8 @@ test('43. 送り先は tomori-vocabulary の Worker で、AIスイッチは true
   const c = shipped();
   assert.equal(c.VOCABULARY_API_URL, 'https://tomori-vocabulary.tomori-ryuto.workers.dev/vocabulary');
   assert.equal(c.VOCABULARY_AI_ENABLED, true);
-  assert.ok(!HTML.includes('tomori-api.tomori-ryuto.workers.dev'));
+  // 停止した旧 API（tomori-api）の URL は、公開するファイルに書かない
+  assert.ok(!/tomori-api\.[a-z0-9-]+\.workers\.dev/.test(HTML));
 });
 
 test('44. AIスイッチが false なら、どの入力でも fetch 0回・sessionStorage 0件', async () => {

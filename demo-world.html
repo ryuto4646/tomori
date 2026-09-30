@@ -256,7 +256,15 @@ rt { font-size:0.55em; color:#7a8060; }
   gap:14px; text-align:center; padding:24px;
 }
 #no-webgl h2 { font-size:20px; }
-#no-webgl a { color:#7ab648; }
+/* 3D を使えないときだけ出す「3Dを使わずに続ける」。押しやすく、読みやすい濃さにする。
+   非対応画面は、3D 用の UI（z-index:10）より前に出して、歩く案内やボタンを隠す */
+#no-webgl { z-index:30; }
+#no-webgl a {
+  display:inline-flex; align-items:center; justify-content:center;
+  min-height:48px; min-width:44px; padding:12px 24px; border-radius:24px;
+  background:#4a7f24; color:#fff; font-size:16px; font-weight:bold; text-decoration:none;
+}
+#no-webgl a:focus-visible { outline:3px solid #3a3328; outline-offset:4px; }
 </style>
 </head>
 <body>
@@ -379,7 +387,7 @@ rt { font-size:0.55em; color:#7a8060; }
 <div id="loading"><div class="em">🌿</div><p>世界を読み込んでいます…</p></div>
 <div id="no-webgl" style="display:none">
   <h2>😢 3Dが表示できません</h2><p>このデバイスはWebGLに対応していないようです。</p>
-  <a href="index.html">← 通常モードで続ける</a>
+  <a href="./legacy-app.html">3Dを使わずに続ける</a>
 </div>
 
 <script type="importmap">
@@ -953,6 +961,8 @@ function openPanel(id) {
   } catch {
     document.getElementById('loading').style.display = 'none';
     document.getElementById('no-webgl').style.display = 'flex';
+    // 後ろに隠れた 3D 用のボタンより先に、キーボードで「3Dを使わずに続ける」へ届くようにする
+    document.querySelector('#no-webgl a').focus();
     throw new Error('no webgl');
   }
 })();

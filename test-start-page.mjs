@@ -1,5 +1,6 @@
 // 新しいスタートページ（案A「世界への扉」）のテスト。ブラウザも通信も使わない
-// Step 11C から、正本はルートの index.html（Step 11B の start.html をそのまま移したもの）。旧アプリは legacy-app.html
+// Step 11C から、正本はルートの index.html（Step 11B の start.html をそのまま移したもの）。
+// 旧アプリ（legacy-app.html）は Step 11E で安全上の理由から作業ツリーを外した。ソースは Git の履歴（e099fa3・6824c02）から読める
 // 実行: node --test test-start-page.mjs
 // START_PAGE_ROOT を指定すると、そのフォルダの index.html と画像を調べる（壊した一時コピーで、テストが失敗できるかを確かめるため）
 import { test } from 'node:test';
@@ -36,17 +37,21 @@ test('2. start.html は残っていない（index.html だけが正本）', () =
   assert.ok(!existsSync(join(REPO, 'start.html')));
 });
 
-test('2b. 旧アプリは legacy-app.html に、中身を削らずに保存されている', () => {
-  const legacy = join(REPO, 'legacy-app.html');
-  assert.ok(existsSync(legacy), 'legacy-app.html is missing');
-  assert.equal(normalize(readFileSync(legacy, 'utf8')), normalize(atTag('index.html')));
-  // 新しいスタートページから旧アプリへのリンクは置かない
+test('2b. 旧アプリ（legacy-app.html）は公開される作業ツリーに無く、index・demo-world から旧アプリへ進めない', () => {
+  assert.ok(!existsSync(join(REPO, 'legacy-app.html')), 'legacy-app.html must not be in the working tree');
   assert.ok(!HTML.includes('legacy-app'));
+  assert.ok(!DEMO_NOW().includes('legacy-app'));
 });
 
-// Step 11D で demo-world.html に入れた変更は、WebGL が使えないときの画面（#no-webgl）の2か所だけ。
-// この2か所を元に戻すと、収録版タグの時点のファイルとまったく同じになる
-const NO_WEBGL_CSS_NEW = `/* 3D を使えないときだけ出す「3Dを使わずに続ける」。押しやすく、読みやすい濃さにする。
+test('2c. 旧アプリのソースは Git の履歴（e099fa3・6824c02）から読み出せ、収録版タグ時点の旧 index と同じ', () => {
+  const old = normalize(atTag('index.html'));
+  for (const rev of ['e099fa3', '6824c02']) assert.equal(normalize(gitShow(rev, 'legacy-app.html')), old, rev);
+  assert.ok(old.split(String.fromCharCode(10)).length > 7000, 'about 7,000 lines');
+});
+
+// demo-world.html の収録版タグからの変更は、WebGL が使えないときの画面（#no-webgl）に関わる3か所だけ（Step 11D・11E）。
+// この3か所を元に戻すと、収録版タグの時点のファイルとまったく同じになる
+const NO_WEBGL_CSS_NEW = `/* 3D を使えないときだけ出す「スタートへ戻る」。押しやすく、読みやすい濃さにする。
    非対応画面は、3D 用の UI（z-index:10）より前に出して、歩く案内やボタンを隠す */
 #no-webgl { z-index:30; }
 #no-webgl a {
@@ -56,10 +61,13 @@ const NO_WEBGL_CSS_NEW = `/* 3D を使えないときだけ出す「3Dを使わ�
 }
 #no-webgl a:focus-visible { outline:3px solid #3a3328; outline-offset:4px; }`;
 const NO_WEBGL_CSS_OLD = '#no-webgl a { color:#7ab648; }';
-const NO_WEBGL_LINK_NEW = '<a href="./legacy-app.html">3Dを使わずに続ける</a>';
-const NO_WEBGL_LINK_OLD = '<a href="index.html">← 通常モードで続ける</a>';
+const NO_WEBGL_LINK_NEW = `  <h2>3D版をひらけません</h2>
+  <p>このブラウザでは、3Dの世界を表示できません。<br>WebGLが使えるブラウザや端末で、もう一度ためしてね。</p>
+  <a href="./index.html">スタートへ戻る</a>`;
+const NO_WEBGL_LINK_OLD = `  <h2>😢 3Dが表示できません</h2><p>このデバイスはWebGLに対応していないようです。</p>
+  <a href="index.html">← 通常モードで続ける</a>`;
 const NO_WEBGL_FOCUS_NEW = `    document.getElementById('no-webgl').style.display = 'flex';
-    // 後ろに隠れた 3D 用のボタンより先に、キーボードで「3Dを使わずに続ける」へ届くようにする
+    // 後ろに隠れた 3D 用のボタンより先に、キーボードで「スタートへ戻る」へ届くようにする
     document.querySelector('#no-webgl a').focus();`;
 const NO_WEBGL_FOCUS_OLD = `    document.getElementById('no-webgl').style.display = 'flex';`;
 const DEMO_NOW = () => normalize(readFileSync(join(REPO, 'demo-world.html'), 'utf8'));
@@ -209,32 +217,41 @@ test('19. 決めた色を使う（主ボタンは #4a7f24 に白い文字）', (
   assert.match(cta, /color:\s*#fff;/);
 });
 
-// ── Step 11D：WebGL が使えないときは、旧アプリ（legacy-app.html）へ進む ─────────────────
+// ── Step 11E：WebGL が使えないときは、旧アプリへ進ませず、スタートへ戻る案内だけを出す ─────────────────
 const STEP11C = 'e099fa3';
 const noWebglBlock = () => (DEMO_NOW().match(/<div id="no-webgl"[^>]*>([\s\S]*?)<\/div>/) || [, ''])[1];
 
-test('20. WebGL 非対応画面の文字は「3Dを使わずに続ける」で、ふつうの a 要素', () => {
+test('20. 非対応画面の見出し・説明・ボタンが確定した文面', () => {
   const block = noWebglBlock();
+  assert.ok(block.includes('<h2>3D版をひらけません</h2>'));
+  assert.ok(block.includes('<p>このブラウザでは、3Dの世界を表示できません。<br>WebGLが使えるブラウザや端末で、もう一度ためしてね。</p>'));
   const links = [...block.matchAll(/<a\b([^>]*)>([^<]*)<\/a>/g)];
   assert.equal(links.length, 1);
-  assert.equal(links[0][2], '3Dを使わずに続ける');
-  assert.ok(!/onclick|javascript:/i.test(block), 'no script in the fallback link');
+  assert.equal(links[0][2], 'スタートへ戻る');
 });
 
-test('21. その行き先は ./legacy-app.html で、index.html を指していない（ループしない）', () => {
+test('21. ボタンはふつうの a 要素で ./index.html を指し、自動の転送も旧アプリへの道も無い', () => {
   const block = noWebglBlock();
-  assert.match(block, /<a href="\.\/legacy-app\.html">/);
-  assert.ok(!/index\.html/.test(block), 'fallback must not point to index.html');
-  assert.ok(existsSync(join(REPO, 'legacy-app.html')));
+  assert.ok(block.includes('<a href="./index.html">スタートへ戻る</a>'));
+  assert.ok(!/onclick|javascript:|legacy-app/i.test(block));
+  const check = DEMO_NOW().match(/\/\/ ── WebGL チェック[\s\S]*?\}\)\(\);/)[0];
+  assert.ok(!/location|setTimeout|http-equiv/i.test(check), 'no automatic redirect');
+  assert.ok(!/http-equiv="refresh"/i.test(DEMO_NOW()));
+});
+
+test('21b. 非対応画面に「😢」「3Dを使わずに続ける」「通常モードで続ける」が無い', () => {
+  const block = noWebglBlock();
+  for (const w of ['😢', '3Dを使わずに続ける', '通常モードで続ける']) assert.ok(!block.includes(w), w);
+  assert.ok(!DEMO_NOW().includes('3Dを使わずに続ける'));
+  assert.ok(!DEMO_NOW().includes('通常モードで続ける'));
 });
 
 test('22. ふだんの「← アプリへ」は index.html、新しい index の CTA は ./demo-world.html のまま', () => {
   assert.match(DEMO_NOW(), /<button id="btn-back"\s+onclick="window\.location\.href='index\.html'">← アプリへ<\/button>/);
-  if (ROOT === REPO) assert.match(HTML, /<a class="cta" href="\.\/demo-world\.html">冒険をはじめる<\/a>/);
+  if (ROOT === REPO) assert.ok(HTML.includes('<a class="cta" href="./demo-world.html">冒険をはじめる</a>'));
 });
 
-test('23. legacy-app.html は収録版タグ時点の旧 index と同じ、index.html と WebP は Step 11C から変わっていない', () => {
-  assert.equal(normalize(readFileSync(join(REPO, 'legacy-app.html'), 'utf8')), normalize(atTag('index.html')));
+test('23. index.html と WebP は Step 11C から変わっていない', () => {
   assert.equal(normalize(readFileSync(join(REPO, 'index.html'), 'utf8')), normalize(gitShow(STEP11C, 'index.html')));
   const blobNow = execFileSync('git', ['hash-object', 'assets/tomori-world-gateway.webp'], { cwd: REPO }).toString().trim();
   const blobThen = execFileSync('git', ['rev-parse', `${STEP11C}:assets/tomori-world-gateway.webp`], { cwd: REPO }).toString().trim();
@@ -263,4 +280,9 @@ test('26. 非対応画面を出したときは、リンクへフォーカスを�
 test('27. 非対応画面は 3D 用の UI（z-index:10）より前に出る', () => {
   assert.match(DEMO_NOW(), /#no-webgl \{ z-index:30; \}/);
   assert.match(DEMO_NOW(), /#ui \{[^}]*z-index:10;/);
+});
+
+test('28. demo-world.html の外部 URL は収録版タグの時点から増えていない', () => {
+  const urls = s => [...s.matchAll(/https?:\/\/[^\s"'`)<>]+/g)].map(m => m[0]).sort();
+  assert.deepEqual(urls(DEMO_NOW()), urls(normalize(atTag('demo-world.html'))));
 });

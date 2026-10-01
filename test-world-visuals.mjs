@@ -33,21 +33,21 @@ const between = (s, a, b) => { const i = s.indexOf(a), j = s.indexOf(b, i + 1); 
 const count = (s, re) => (s.match(re) || []).length;
 const fnBody = (s, head) => { const i = s.indexOf(head); assert.ok(i >= 0, head); return s.slice(i, s.indexOf('\n}\n', i) + 3); };
 
-test('1. 美術の要素がそろっている（空・遠くの丘と森・霧・朝の光・草花と小石・光る小道・ミッション地点の光）', () => {
+test('1. 美術の要素がそろっている（空・遠くの丘と森・霧・朝の光・3系統の木・地面の明暗・草花・光る小道・聖域・光の柱）', () => {
   assert.ok(ART.length > 0, 'WORLD-ART block');
-  assert.match(ART, /new THREE\.CylinderGeometry\(SKY_R, SKY_R, SKY_H[^)]*\)/, 'sky band');
-  assert.match(ART, /skyTop[\s\S]*skyMid[\s\S]*skyLow/, 'sky gradient colors');
-  assert.match(ART, /side: THREE\.BackSide, fog: false/, 'sky is not fogged');
+  assert.match(NOW, /background:linear-gradient\(180deg, #6fb7e3 0%[^;]*#d6ecef 100%\);/, 'CSS sky gradient');
   assert.match(ART, /const HILLS = \[/, 'distant hills');
   assert.match(ART, /const FOREST = \[/, 'distant forest');
-  assert.match(ART, /const grass = new THREE\.InstancedMesh/, 'grass');
-  assert.match(ART, /const flowers = new THREE\.InstancedMesh/, 'flowers');
-  assert.match(ART, /const pebbles = new THREE\.InstancedMesh/, 'pebbles');
+  assert.match(ART, /type === 'tall'[\s\S]*type === 'round'/, 'tree types');
+  assert.match(ART, /ground\.geometry = groundGeo;/, 'ground vertex colors');
+  assert.match(ART, /const tuft = /, 'grass tufts');
+  assert.match(ART, /const flower = /, 'flowers with stems');
   assert.match(ART, /new THREE\.CatmullRomCurve3/, 'light path curve');
+  assert.match(ART, /const light = new THREE\.Mesh\(ribbonGeo, pathMat\)/, 'light path ribbon');
   assert.match(ART, /const mpGlow = new THREE\.Mesh/, 'mission glow');
-  assert.match(ART, /const MP_FLOWERS = \[/, 'mission flowers');
-  assert.match(ART, /const MP_STONES = \[/, 'mission stones');
-  assert.match(NOW, /scene\.fog = new THREE\.Fog\(/, 'fog');
+  assert.match(ART, /const MP_STONES = \[/, 'sanctuary stones');
+  assert.match(ART, /const beam = new THREE\.Mesh\(beamGeo, beamMat\)/, 'light shaft');
+  assert.match(NOW, /scene\.fog = new THREE\.Fog\(0xd6ecef/, 'fog matches horizon');
   assert.match(NOW, /const sun = new THREE\.DirectionalLight\(0xffe6c0/, 'warm key light');
   assert.match(NOW, /const fillLight = new THREE\.DirectionalLight\(0xbcdcff/, 'pale blue fill light');
   assert.match(fnBody(NOW, 'function animate(){'), /worldArt\.update\(t\);/, 'update called from animate');
@@ -61,8 +61,11 @@ test('2. 光る小道・草花・小石に当たり判定が無く、タップ�
   assert.equal(count(ART, /scene\.add\(/g), 1);
   assert.match(ART, /scene\.add\(group\);/);
   // 小道は地面すれすれ（y 0.05 未満）に置く
-  const y = ART.match(/place\(light, i, [^,]+, ([0-9.]+), p\.z/);
+  const y = ART.match(/const PATH_Y = ([0-9.]+)/);
   assert.ok(y && Number(y[1]) < 0.05, 'path y');
+  assert.match(ART, /pp\[v \* 3 \+ 1\] = PATH_Y;/);
+  // 地面の形を細かくしても、タップ移動の対象は ground のまま（名前・回転も同じ）
+  assert.match(NOW, /ground\.rotation\.x = -Math\.PI\/2; ground\.name = 'ground'; scene\.add\(ground\);/);
   // 小道は出発点の近くからミッション地点の手前まで
   const pts = JSON.parse(ART.match(/const PATH_PTS = (\[[^;]+\]);/)[1]);
   const mp = NOW.match(/const MISSION_POS = new THREE\.Vector3\(([-0-9.]+), 0, ([-0-9.]+)\);/).slice(1).map(Number);
@@ -136,11 +139,11 @@ test('12. 新しい外部 URL・CDN・パッケージが無い', () => {
   assert.equal(importmap(NOW), importmap(OLD));
 });
 
-test('13. テクスチャを使わない。新しいジオメトリ・素材はそれぞれ8つ以内', () => {
-  assert.ok(!/Texture|Loader|map\s*:|CanvasTexture|<canvas/.test(ART), 'no texture in art');
+test('13. テクスチャを使わない。新しいジオメトリは8つ・素材は6つ以内（Step 11H より増やさない）', () => {
+  assert.ok(!/Texture|Loader|map\s*:|CanvasTexture|<canvas/.test(ART_CODE), 'no texture in art');
   assert.equal(count(NOW, /Texture/g), count(OLD, /Texture/g));
   assert.ok(count(ART, /new THREE\.\w*Geometry\(/g) <= 8, 'geometries');
-  assert.ok(count(ART, /new THREE\.\w+Material\(/g) <= 8, 'materials');
+  assert.ok(count(ART, /new THREE\.\w+Material\(/g) <= 6, 'materials');
   assert.ok(!/\.clone\(\)/.test(ART), 'no cloned materials');
 });
 
@@ -150,10 +153,12 @@ test('14. requestAnimationFrame を増やしていない（美術は animate の
   assert.equal(count(NOW, /worldArt\.update\(/g), 1);
 });
 
-test('15. 毎フレームの処理で、配列・Vector・Color・ジオメトリ・素材を新しく作らない', () => {
-  const upd = between(ART, 'update(t) {', '\n    },');
-  assert.ok(upd.length > 0);
-  assert.ok(!/\bnew\b|\.clone\(|\[|=>|\.map\(|\.filter\(|\.slice\(|\{\s*\w+\s*:/.test(upd.slice('update(t) {'.length)), upd);
+test('15. 毎フレームの処理（PER-FRAME の範囲）で、配列・Vector・Color・関数・ジオメトリ・素材を新しく作らない', () => {
+  const frame = between(ART, '// PER-FRAME-BEGIN', '// PER-FRAME-END');
+  const code = frame.split('\n').filter(l => !/^\s*\/\//.test(l)).map(l => l.replace(/\/\/.*$/, '')).join('\n');
+  assert.match(code, /function update\(t\)/);
+  assert.match(ART, /return \{[^}]*\bupdate\b[^}]*\};/);
+  assert.ok(!/\bnew\b|\.clone\(|=\s*\[|\(\s*\[|=>|\.map\(|\.filter\(|\.slice\(|\.concat\(|\{\s*\w+\s*:/.test(code), code);
 });
 
 test('16. 収録版タグは 1890884 を指したまま', () => {
@@ -174,4 +179,41 @@ test('17. 公開されるファイルに、停止した旧 API（tomori-api）�
 test('18. console への出力を増やしていない', () => {
   assert.equal(count(NOW, /console\./g), count(OLD, /console\./g));
   assert.ok(!/console\./.test(ART));
+});
+
+test('19. 空の旧方式（空の筒・scene.background）が残っておらず、背景は透明で CSS の空を見せる', () => {
+  assert.ok(!/SKY_R|SKY_H|skyGeo|BackSide/.test(ART), 'no sky cylinder');
+  assert.ok(!/scene\.background\s*=/.test(NOW), 'no scene.background');
+  assert.match(NOW, /new THREE\.WebGLRenderer\(\{ canvas, antialias:true, alpha:true \}\)/);
+  assert.ok(!/setClearColor/.test(NOW), 'clear color stays transparent');
+});
+
+test('20. 木は共有の形（InstancedMesh）で描き、木ごとに形や素材を作らない。木の位置（TREE_SPOTS）は変えない', () => {
+  assert.ok(!/function mkTree|mkTree\(/.test(NOW), 'mkTree removed');
+  const spots = s => s.match(/const TREE_SPOTS=\[[\s\S]*?\n\];/)[0];
+  assert.equal(spots(NOW), spots(OLD));
+  const trees = between(ART, 'TREE_SPOTS.forEach(([x, z], k) => {', '\n  });');
+  assert.ok(!/\bnew\b/.test(trees), 'no new objects per tree');
+  assert.match(trees, /place\(cones, ci\+\+/);
+  assert.match(trees, /place\(blobs, bi\+\+/);
+  assert.match(ART, /const blobs = new THREE\.InstancedMesh\(blobGeo, decorMat/);
+  assert.match(ART, /const cones = new THREE\.InstancedMesh\(coneGeo, decorMat/);
+  // 3系統（背の高い木・丸い木・若木）
+  for (const t of ['tall', 'round', 'sapling']) assert.ok(trees.includes(`'${t}'`), t);
+});
+
+test('21. 光の柱は四角い輪郭を見せない（左右のふちと上の端が透明・カメラの方を向く1枚・加算合成なし）', () => {
+  assert.ok(!/AdditiveBlending/.test(ART), 'no additive blending');
+  assert.match(ART, /Math\.pow\(1 - Math\.min\(1, Math\.abs\(bp\.getX\(i\)\) \/ BW\), 1\.8\)/, 'side edges fade to 0');
+  assert.match(ART, /Math\.pow\(1 - sy, 2\.4\)/, 'top fades to 0');
+  assert.match(between(ART, '// PER-FRAME-BEGIN', '// PER-FRAME-END'), /beam\.rotation\.y = Math\.atan2\(camera\.position\.x - beam\.position\.x, camera\.position\.z - beam\.position\.z\);/, 'billboard');
+  // 小道もふちは透明（板や道路に見せない）
+  assert.match(ART, /PA = \[0, \.55, 1, \.55, 0\]/);
+});
+
+test('22. reduced-motion のときは、小道の流れと光の柱の揺れを止める', () => {
+  const frame = between(ART, '// PER-FRAME-BEGIN', '// PER-FRAME-END');
+  assert.match(frame, /const still = reduceMotionQuery\.matches;/);
+  assert.match(frame, /const k = still \? 1 :/);
+  assert.match(frame, /beamMat\.opacity = still \? BEAM_BASE :/);
 });

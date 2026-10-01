@@ -9,6 +9,7 @@ import { readFileSync, existsSync, statSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { revertWorldArt } from './world-art-baseline.mjs';
 
 const REPO = dirname(fileURLToPath(import.meta.url));
 const ROOT = process.env.START_PAGE_ROOT || REPO;
@@ -49,8 +50,8 @@ test('2c. 旧アプリのソースは Git の履歴（e099fa3・6824c02）から
   assert.ok(old.split(String.fromCharCode(10)).length > 7000, 'about 7,000 lines');
 });
 
-// demo-world.html の収録版タグからの変更は、WebGL が使えないときの画面（#no-webgl）に関わる3か所だけ（Step 11D・11E）。
-// この3か所を元に戻すと、収録版タグの時点のファイルとまったく同じになる
+// demo-world.html の収録版タグからの変更は、WebGL が使えないときの画面（#no-webgl）に関わる3か所（Step 11D・11E）と、
+// ワールドの美術（Step 11H。world-art-baseline.mjs に一覧がある）だけ。これらを元に戻すと、収録版タグの時点のファイルとまったく同じになる
 const NO_WEBGL_CSS_NEW = `/* 3D を使えないときだけ出す「スタートへ戻る」。押しやすく、読みやすい濃さにする。
    非対応画面は、3D 用の UI（z-index:10）より前に出して、歩く案内やボタンを隠す */
 #no-webgl { z-index:30; }
@@ -72,8 +73,8 @@ const NO_WEBGL_FOCUS_NEW = `    document.getElementById('no-webgl').style.displa
 const NO_WEBGL_FOCUS_OLD = `    document.getElementById('no-webgl').style.display = 'flex';`;
 const DEMO_NOW = () => normalize(readFileSync(join(REPO, 'demo-world.html'), 'utf8'));
 
-test('3. demo-world.html は WebGL 非対応画面の3か所だけが変わり、起動ファイル・手順書は収録版タグのまま', () => {
-  const now = DEMO_NOW();
+test('3. demo-world.html は WebGL 非対応画面の3か所とワールド美術だけが変わり、起動ファイル・手順書は収録版タグのまま', () => {
+  const now = revertWorldArt(DEMO_NOW());
   assert.equal(now.split(NO_WEBGL_CSS_NEW).length - 1, 1, 'new fallback CSS appears once');
   assert.equal(now.split(NO_WEBGL_LINK_NEW).length - 1, 1, 'new fallback link appears once');
   assert.equal(now.split(NO_WEBGL_FOCUS_NEW).length - 1, 1, 'fallback focus appears once');

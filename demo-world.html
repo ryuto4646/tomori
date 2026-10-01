@@ -978,8 +978,9 @@ renderer.toneMappingExposure = 1.1;
 renderer.shadowMap.enabled = false;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xa8d8ea);
-scene.fog = new THREE.Fog(0xa8d8ea, 22, 65);
+// 空の上のほうの水色（地平線近くは WORLD-ART の空の筒が描く）。霧は地平線の色：遠くほど淡く、少し青みがかる
+scene.background = new THREE.Color(0x78c2e8);
+scene.fog = new THREE.Fog(0xd6ecef, 24, 88);
 
 const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 120);
 const CAM_OFF = new THREE.Vector3(0, 5, 8);
@@ -987,15 +988,18 @@ camera.position.copy(CAM_OFF);
 camera.lookAt(0,0,0);
 
 // ── ライト ────────────────────────────────────────────────────────
-scene.add(new THREE.AmbientLight(0xfff5e0, 1.4));
-const sun = new THREE.DirectionalLight(0xfffacd, 2.0);
-sun.position.set(8,12,6); scene.add(sun);
-scene.add(new THREE.HemisphereLight(0xa8d8ea, 0x6aaa4f, 0.7));
+// 朝の光：暖かい主光源（斜め上）と、影の側をやわらげる淡い青の補助光。影は使わない（黒くつぶさない）
+scene.add(new THREE.AmbientLight(0xfff3e2, 1.05));
+const sun = new THREE.DirectionalLight(0xffe6c0, 2.2);
+sun.position.set(9,10,7); scene.add(sun);
+const fillLight = new THREE.DirectionalLight(0xbcdcff, 0.6);
+fillLight.position.set(-8,5,4); scene.add(fillLight);
+scene.add(new THREE.HemisphereLight(0xbfe3f2, 0x78ad5a, 0.7));
 
 // ── 地面 ──────────────────────────────────────────────────────────
 const ground = new THREE.Mesh(
   new THREE.PlaneGeometry(80,80,8,8),
-  new THREE.MeshLambertMaterial({ color:0x6aaa4f })
+  new THREE.MeshLambertMaterial({ color:0x74b155 })
 );
 ground.rotation.x = -Math.PI/2; ground.name = 'ground'; scene.add(ground);
 
@@ -1144,6 +1148,135 @@ const pPos=new Float32Array(80*3);
 for(let i=0;i<80;i++){pPos[i*3]=(Math.random()-.5)*55;pPos[i*3+1]=Math.random()*7;pPos[i*3+2]=(Math.random()-.5)*55;}
 pGeo.setAttribute('position',new THREE.BufferAttribute(pPos,3));
 scene.add(new THREE.Points(pGeo,new THREE.PointsMaterial({color:0xe0f0c0,size:.14,transparent:true,opacity:.5})));
+
+// WORLD-ART-BEGIN（test-world-visuals.mjs がこの範囲を読み込んでテストする）
+// 朝の草原の美術。形は数種類の共有ジオメトリと InstancedMesh だけで作り、テクスチャ・外部素材は使わない。
+// どれも raycaster の対象にしない（タップ移動は今までどおり ground だけ）。当たり判定も持たない。
+// 置き場所は乱数の種を固定して毎回同じにする（見た目を安定させるため）
+const worldArt = (() => {
+  let seed = 20261001;
+  const rnd = () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), pos = new THREE.Vector3(), scl = new THREE.Vector3(), eul = new THREE.Euler(), col = new THREE.Color();
+  const place = (mesh, i, x, y, z, sx, sy, sz, ry = 0, hex = null) => {
+    eul.set(0, ry, 0); q.setFromEuler(eul); pos.set(x, y, z); scl.set(sx, sy, sz);
+    mesh.setMatrixAt(i, m4.compose(pos, q, scl));
+    if (hex !== null) mesh.setColorAt(i, col.set(hex));
+  };
+  const group = new THREE.Group(); group.name = 'worldArt';
+
+  // ── 空：地平線は明るく暖かい水色、上へいくほど少し深い水色。見える帯だけを筒で作る（頂点色。霧の影響は受けない）──
+  // 筒より上は scene.background（上の水色）がそのまま見える
+  const SKY_R = 88, SKY_H = 42;
+  const skyGeo = new THREE.CylinderGeometry(SKY_R, SKY_R, SKY_H, 16, 3, true);
+  skyGeo.translate(0, SKY_H / 2 - 1.5, 0);
+  const skyTop = new THREE.Color(0x78c2e8), skyMid = new THREE.Color(0xa3d6ea), skyLow = new THREE.Color(0xd6ecef);
+  const sp = skyGeo.attributes.position, sc = new Float32Array(sp.count * 3);
+  for (let i = 0; i < sp.count; i++) {
+    const h = Math.max(0, sp.getY(i) / SKY_H);                   // 0 = 地平線, 1 = 筒の上のふち
+    const c = h < 0.06 ? col.copy(skyLow).lerp(skyMid, h / 0.06) : col.copy(skyMid).lerp(skyTop, Math.min(1, (h - 0.06) / 0.3));
+    sc[i * 3] = c.r; sc[i * 3 + 1] = c.g; sc[i * 3 + 2] = c.b;
+  }
+  skyGeo.setAttribute('color', new THREE.BufferAttribute(sc, 3));
+  const sky = new THREE.Mesh(skyGeo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false, depthWrite: false }));
+  // 不透明な物のあとに描く：地面や木に隠れる部分は計算しない（描画の負担を減らす）
+  sky.renderOrder = 10; sky.frustumCulled = false; group.add(sky);
+
+  // 共有する素材：色は InstancedMesh の instanceColor で付ける（素材を増やさない）
+  const decorMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+
+  // ── 遠景：歩ける範囲（地面の端 ±40）の外に、低い丘と森のかたまり。霧で淡く青みがかる ──
+  const farGround = new THREE.Mesh(new THREE.RingGeometry(39.5, 90, 24, 1), new THREE.MeshLambertMaterial({ color: 0x8cc06a }));
+  farGround.rotation.x = -Math.PI / 2; farGround.position.y = -0.02; group.add(farGround);
+  const HILLS = [[-40, -52, 20, 7], [-12, -60, 26, 9], [22, -56, 18, 6], [50, -38, 16, 5], [58, 14, 20, 6], [-56, 8, 18, 6], [-34, 50, 16, 5]];
+  const hills = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 8, 4), decorMat, HILLS.length);
+  HILLS.forEach(([x, z, r, hgt], i) => place(hills, i, x, -hgt * 0.35, z, r, hgt, r * 0.7, rnd() * 3, i % 2 ? 0x8cc27a : 0x7fb877));
+  group.add(hills);
+  // 森は3つのまとまりだけ。方向ごとに密度を変え、何も無い方向も残す
+  const FOREST = [[-22, -44, 9, 9], [30, -44, 7, 7], [-46, -18, 6, 6], [44, 22, 7, 5]];
+  const trees = []; FOREST.forEach(([cx, cz, spread, n]) => { for (let k = 0; k < n; k++) trees.push([cx + (rnd() - .5) * spread * 2, cz + (rnd() - .5) * spread, 2.6 + rnd() * 2.2]); });
+  const forest = new THREE.InstancedMesh(new THREE.ConeGeometry(1, 1, 5, 1, true), decorMat, trees.length);
+  trees.forEach(([x, z, h], i) => place(forest, i, x, h / 2, z, h * 0.34, h, h * 0.34, rnd() * 3, rnd() < .5 ? 0x4f8f5a : 0x5f9d62));
+  group.add(forest);
+
+  // ── やわらかい円（中心は不透明、ふちへ向かって透明）：光る小道とミッションの光に共有 ──
+  const SEG = 12, discPos = [0, 0, 0], discCol = [1, 1, 1, 1], discIdx = [];
+  for (let s = 0; s < SEG; s++) { const a = s / SEG * Math.PI * 2; discPos.push(Math.cos(a) * .5, Math.sin(a) * .5, 0); discCol.push(1, 1, 1, .85); }
+  for (let s = 0; s < SEG; s++) { const a = s / SEG * Math.PI * 2; discPos.push(Math.cos(a), Math.sin(a), 0); discCol.push(1, 1, 1, 0); }
+  for (let s = 0; s < SEG; s++) { const n = (s + 1) % SEG, a = 1 + s, b = 1 + n, c2 = 1 + SEG + s, d = 1 + SEG + n; discIdx.push(0, a, b, a, c2, b, b, c2, d); }
+  const discGeo = new THREE.BufferGeometry();
+  discGeo.setAttribute('position', new THREE.Float32BufferAttribute(discPos, 3));
+  discGeo.setAttribute('color', new THREE.Float32BufferAttribute(discCol, 4));
+  discGeo.setIndex(discIdx); discGeo.rotateX(-Math.PI / 2);
+  const softMat = new THREE.MeshBasicMaterial({ color: 0xfff0b0, vertexColors: true, transparent: true, opacity: .5, depthWrite: false });
+
+  // 立ち入らない場所：ヒロリの出発点・光る小道のまわり・ミッション地点・秘密エリアとつる・次の探索ポイント
+  const START = [0, 0], MP = [MISSION_POS.x, MISSION_POS.z];
+  const PATH_PTS = [[0.15, -0.95], [0.75, -2.3], [0.55, -3.7], [1.05, -4.85], [1.35, -5.35]];
+  const pathCurve = new THREE.CatmullRomCurve3(PATH_PTS.map(([x, z]) => new THREE.Vector3(x, 0, z)));
+  const pathSamples = pathCurve.getSpacedPoints(40);
+  const nearPath = (x, z, r) => pathSamples.some(p => (p.x - x) ** 2 + (p.z - z) ** 2 < r * r);
+  const d2 = (x, z, [a, b]) => (x - a) ** 2 + (z - b) ** 2;
+  const blocked = (x, z) => d2(x, z, START) < 2.6 || nearPath(x, z, 1.0) || d2(x, z, MP) < 7.3 || d2(x, z, [16, -8]) < 36 || d2(x, z, [12, -10]) < 16 || d2(x, z, [22, -20]) < 9 || Math.abs(x) > 37 || Math.abs(z) > 37;
+
+  // ── 草・花・小石：まとまり（クラスター）ごとに置き、密度に強弱をつける。草は膝より低い ──
+  const clusters = []; for (let k = 0; k < 16; k++) { let x, z; do { const a = rnd() * Math.PI * 2, r = 3 + rnd() * 24; x = Math.cos(a) * r; z = Math.sin(a) * r - 5; } while (blocked(x, z)); clusters.push([x, z, 0.8 + rnd() * 1.8]); }
+  const scatter = (count, spreadMul, fn) => { let i = 0, guard = 0; while (i < count && guard++ < count * 40) { const [cx, cz, cr] = clusters[Math.floor(rnd() * clusters.length)]; const a = rnd() * Math.PI * 2, r = Math.sqrt(rnd()) * cr * spreadMul; const x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r; if (blocked(x, z)) continue; fn(i++, x, z); } return i; };
+  const grass = new THREE.InstancedMesh(new THREE.ConeGeometry(.07, 1, 3, 1, true), decorMat, 90);
+  grass.count = scatter(90, 1, (i, x, z) => { const h = .18 + rnd() * .17; place(grass, i, x, h / 2, z, 1, h, 1, rnd() * 3, rnd() < .55 ? 0x6fb64e : 0x9bcf5c); });
+  group.add(grass);
+
+  const smallGeo = new THREE.OctahedronGeometry(1, 0);
+  const FLOWER_COLORS = [0xfff7e6, 0xffe08a, 0xa8d8f0, 0xf4a09a];
+  const flowers = new THREE.InstancedMesh(smallGeo, decorMat, 96);
+  let fi = scatter(44, 1.2, (i, x, z) => place(flowers, i, x, .1, z, .065, .065, .065, rnd() * 3, FLOWER_COLORS[Math.floor(rnd() * 4)]));
+  // 小道のふちに、クリームと水色の小さな花（小道の上には置かない）
+  for (let k = 4; k < pathSamples.length - 4 && fi < 52; k += 5) {
+    const p = pathSamples[k], side = (k / 5) % 2 ? 1 : -1, off = 1.1 + rnd() * .5;
+    place(flowers, fi++, p.x + side * off, .1, p.z + (rnd() - .5) * .4, .065, .065, .065, rnd() * 3, rnd() < .5 ? 0xffe08a : 0xa8d8f0);
+  }
+  // ミッション地点：結晶の奥と横にだけ（手前はヒロリが立つので空ける）
+  const MP_FLOWERS = [[-1.7, -.6], [-1.3, -1.5], [.2, -1.9], [1.35, -1.45], [1.8, -.4], [-2.0, .4]];
+  MP_FLOWERS.forEach(([dx, dz], k) => place(flowers, fi++, MP[0] + dx, .1, MP[1] + dz, .075, .075, .075, k, k % 2 ? 0xa8d8f0 : 0xffe08a));
+  flowers.count = fi; group.add(flowers);
+
+  const pebbles = new THREE.InstancedMesh(smallGeo, decorMat, 24);
+  let pi = scatter(18, 1.4, (i, x, z) => { const s = .08 + rnd() * .08; place(pebbles, i, x, .02, z, s * 1.3, s * .55, s, rnd() * 3, rnd() < .5 ? 0xa39d8a : 0x938e7d); });
+  // ミッション地点を囲む平たい石（奥と横）
+  const MP_STONES = [[-1.45, -1.05, .26], [-.55, -1.75, .22], [.75, -1.8, .28], [1.6, -.95, .24], [-1.85, -.1, .2], [1.95, .05, .18]];
+  MP_STONES.forEach(([dx, dz, s], k) => place(pebbles, pi++, MP[0] + dx, .03, MP[1] + dz, s * 1.3, s * .42, s, k * .9, k % 2 ? 0xa8a28e : 0x9a9482));
+  pebbles.count = pi; group.add(pebbles);
+
+  // ── 光る小道：出発点の近くからミッション地点の手前まで、ゆるい曲線にやわらかい光の点を間をあけて並べる ──
+  // 幅と明るさを少しずつ変え、板や矢印には見せない。地面から少しだけ浮かせる。当たり判定なし
+  const pathMat = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: .9, depthWrite: false });
+  const PATH_N = 12, light = new THREE.InstancedMesh(discGeo, pathMat, PATH_N);
+  const cream = new THREE.Color(0xffe89a), gold = new THREE.Color(0xffcf55);
+  for (let i = 0; i < PATH_N; i++) {
+    const u = (i + .5) / PATH_N, p = pathCurve.getPointAt(u), tan = pathCurve.getTangentAt(u);
+    const w = .22 + Math.sin(i * 1.7) * .04 + rnd() * .04, len = w * (1.2 + rnd() * .2);
+    place(light, i, p.x + (rnd() - .5) * .12, .014, p.z, w, 1, len, Math.atan2(tan.x, tan.z));
+    light.setColorAt(i, col.copy(cream).lerp(gold, u));
+  }
+  light.renderOrder = 2; group.add(light);
+
+  // ── ミッション地点：結晶の下のごく淡い光（白飛びさせない）──
+  const mpGlow = new THREE.Mesh(discGeo, softMat);
+  mpGlow.position.set(MP[0], .012, MP[1]); mpGlow.scale.setScalar(1.7); mpGlow.renderOrder = 2; group.add(mpGlow);
+
+  [hills, forest, grass, flowers, pebbles, light].forEach(m => { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; m.computeBoundingSphere(); });
+  scene.add(group);
+
+  // 毎フレーム：空のドームをカメラに合わせ、小道の明るさをごくゆっくり揺らす（新しい物は作らない）
+  const PATH_BASE = .9;
+  return {
+    group, sky, pathMat, light, mpGlow, decorMat, softMat,
+    update(t) {
+      sky.position.set(camera.position.x, 0, camera.position.z);
+      pathMat.opacity = reduceMotionQuery.matches ? PATH_BASE : PATH_BASE - .08 + Math.sin(t * 1.1) * .08;
+    },
+  };
+})();
+// WORLD-ART-END
 
 // ── キャラクター ─────────────────────────────────────────────────
 let character=null, mixer=null, clips={}, currentAnim=null;
@@ -2006,6 +2139,7 @@ function animate(){
 
   updateCamera(dt);
   updateLabel();
+  worldArt.update(t);   // 空をカメラに合わせ、小道の明るさをゆっくり揺らす（WORLD-ART）
   renderer.render(scene,camera);
 }
 

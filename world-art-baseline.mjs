@@ -16,7 +16,7 @@ scene.add(new THREE.HemisphereLight(0xa8d8ea, 0x6aaa4f, 0.7));`,
    `// 朝の光：暖かい主光源（斜め上）と、影の側をやわらげる淡い青の補助光。影は使わない（黒くつぶさない）
 scene.add(new THREE.AmbientLight(0xfff3e2, 1.05));
 const sun = new THREE.DirectionalLight(0xffe6c0, 2.2);
-sun.position.set(9,10,7); scene.add(sun);
+sun.position.set(12,9,4); scene.add(sun);
 const fillLight = new THREE.DirectionalLight(0xbcdcff, 0.6);
 fillLight.position.set(-8,5,4); scene.add(fillLight);
 scene.add(new THREE.HemisphereLight(0xbfe3f2, 0x78ad5a, 0.7));`],

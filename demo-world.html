@@ -991,7 +991,7 @@ camera.lookAt(0,0,0);
 // 朝の光：暖かい主光源（斜め上）と、影の側をやわらげる淡い青の補助光。影は使わない（黒くつぶさない）
 scene.add(new THREE.AmbientLight(0xfff3e2, 1.05));
 const sun = new THREE.DirectionalLight(0xffe6c0, 2.2);
-sun.position.set(9,10,7); scene.add(sun);
+sun.position.set(12,9,4); scene.add(sun);
 const fillLight = new THREE.DirectionalLight(0xbcdcff, 0.6);
 fillLight.position.set(-8,5,4); scene.add(fillLight);
 scene.add(new THREE.HemisphereLight(0xbfe3f2, 0x78ad5a, 0.7));
@@ -1216,21 +1216,32 @@ const worldArt = (() => {
   const pathSamples = pathCurve.getSpacedPoints(40);
   const nearPath = (x, z, r) => pathSamples.some(p => (p.x - x) ** 2 + (p.z - z) ** 2 < r * r);
   const d2 = (x, z, [a, b]) => (x - a) ** 2 + (z - b) ** 2;
-  const blocked = (x, z) => d2(x, z, START) < 2.6 || nearPath(x, z, 1.0) || d2(x, z, MP) < 7.3 || d2(x, z, [16, -8]) < 36 || d2(x, z, [12, -10]) < 16 || d2(x, z, [22, -20]) < 9 || Math.abs(x) > 37 || Math.abs(z) > 37;
+  const blocked = (x, z) => d2(x, z, START) < 5.8 || nearPath(x, z, 1.0) || d2(x, z, MP) < 7.3 || d2(x, z, [16, -8]) < 36 || d2(x, z, [12, -10]) < 16 || d2(x, z, [22, -20]) < 9 || Math.abs(x) > 37 || Math.abs(z) > 37;
 
   // ── 草・花・小石：まとまり（クラスター）ごとに置き、密度に強弱をつける。草は膝より低い ──
   const clusters = []; for (let k = 0; k < 16; k++) { let x, z; do { const a = rnd() * Math.PI * 2, r = 3 + rnd() * 24; x = Math.cos(a) * r; z = Math.sin(a) * r - 5; } while (blocked(x, z)); clusters.push([x, z, 0.8 + rnd() * 1.8]); }
   const scatter = (count, spreadMul, fn) => { let i = 0, guard = 0; while (i < count && guard++ < count * 40) { const [cx, cz, cr] = clusters[Math.floor(rnd() * clusters.length)]; const a = rnd() * Math.PI * 2, r = Math.sqrt(rnd()) * cr * spreadMul; const x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r; if (blocked(x, z)) continue; fn(i++, x, z); } return i; };
-  const grass = new THREE.InstancedMesh(new THREE.ConeGeometry(.07, 1, 3, 1, true), decorMat, 90);
-  grass.count = scatter(90, 1, (i, x, z) => { const h = .18 + rnd() * .17; place(grass, i, x, h / 2, z, 1, h, 1, rnd() * 3, rnd() < .55 ? 0x6fb64e : 0x9bcf5c); });
-  group.add(grass);
+  const near = z => Math.min(1, Math.max(0, (z + 4) / 8));          // 0 = 奥, 1 = 手前
+  const grass = new THREE.InstancedMesh(new THREE.ConeGeometry(.07, 1, 3, 1, true), decorMat, 96);
+  let gi = scatter(66, 1, (i, x, z) => { const h = (.16 + rnd() * .14) * (1 + near(z)); place(grass, i, x, h / 2, z, 1, h, 1, rnd() * 3, near(z) > .5 ? 0x5aa443 : rnd() < .5 ? 0x7cbd55 : 0xa3d265); });
+  // 手前の草むら（左下・右下）：背が高く濃い緑。ヒロリを画面の中で囲む額縁の役
+  const FRONT = [[-4.6, 3.9, 1.1], [4.9, 3.3, 1.0]];
+  for (let k = 0; k < 30; k++) {
+    const [cx, cz, cr] = FRONT[k % 2], a = rnd() * Math.PI * 2, r = Math.sqrt(rnd()) * cr, x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r * .7;
+    const h = .26 + rnd() * .18; place(grass, gi++, x, h / 2, z, 1.05, h, 1.05, rnd() * 3, rnd() < .6 ? 0x579f40 : 0x68b04a);
+  }
+  grass.count = gi; group.add(grass);
 
   const smallGeo = new THREE.OctahedronGeometry(1, 0);
   const FLOWER_COLORS = [0xfff7e6, 0xffe08a, 0xa8d8f0, 0xf4a09a];
   const flowers = new THREE.InstancedMesh(smallGeo, decorMat, 96);
-  let fi = scatter(44, 1.2, (i, x, z) => place(flowers, i, x, .1, z, .065, .065, .065, rnd() * 3, FLOWER_COLORS[Math.floor(rnd() * 4)]));
-  // 小道のふちに、クリームと水色の小さな花（小道の上には置かない）
-  for (let k = 4; k < pathSamples.length - 4 && fi < 52; k += 5) {
+  let fi = scatter(28, 1.2, (i, x, z) => place(flowers, i, x, .1, z, .065, .065, .065, rnd() * 3, FLOWER_COLORS[Math.floor(rnd() * 4)]));
+  for (let k = 0; k < 8; k++) {
+    const [cx, cz, cr] = FRONT[k % 2], a = rnd() * Math.PI * 2, r = Math.sqrt(rnd()) * cr;
+    place(flowers, fi++, cx + Math.cos(a) * r, .16, cz + Math.sin(a) * r * .7, .075, .075, .075, rnd() * 3, k % 3 ? 0xffe08a : 0xf4a09a);
+  }
+  // 小道のふちに、金色と水色の小さな花。ミッション地点へ近い後半だけ（小道の上には置かない）
+  for (let k = 18; k < pathSamples.length - 3 && fi < 46; k += 5) {
     const p = pathSamples[k], side = (k / 5) % 2 ? 1 : -1, off = 1.1 + rnd() * .5;
     place(flowers, fi++, p.x + side * off, .1, p.z + (rnd() - .5) * .4, .065, .065, .065, rnd() * 3, rnd() < .5 ? 0xffe08a : 0xa8d8f0);
   }
@@ -1240,10 +1251,10 @@ const worldArt = (() => {
   flowers.count = fi; group.add(flowers);
 
   const pebbles = new THREE.InstancedMesh(smallGeo, decorMat, 24);
-  let pi = scatter(18, 1.4, (i, x, z) => { const s = .08 + rnd() * .08; place(pebbles, i, x, .02, z, s * 1.3, s * .55, s, rnd() * 3, rnd() < .5 ? 0xa39d8a : 0x938e7d); });
+  let pi = scatter(9, 1.4, (i, x, z) => { const s = .08 + rnd() * .08; place(pebbles, i, x, .02, z, s * 1.3, s * .55, s, rnd() * 3, rnd() < .5 ? 0xa39d8a : 0x938e7d); });
   // ミッション地点を囲む平たい石（奥と横）
-  const MP_STONES = [[-1.45, -1.05, .26], [-.55, -1.75, .22], [.75, -1.8, .28], [1.6, -.95, .24], [-1.85, -.1, .2], [1.95, .05, .18]];
-  MP_STONES.forEach(([dx, dz, s], k) => place(pebbles, pi++, MP[0] + dx, .03, MP[1] + dz, s * 1.3, s * .42, s, k * .9, k % 2 ? 0xa8a28e : 0x9a9482));
+  const MP_STONES = [[-1.6, -.9, .26, 1.6], [-.7, -1.7, .3, 2.1], [.65, -1.85, .32, 2.4], [1.65, -1.0, .28, 1.8], [-2.0, .2, .22, 1.0], [2.1, .15, .22, 1.0]];
+  MP_STONES.forEach(([dx, dz, s, tall], k) => place(pebbles, pi++, MP[0] + dx, s * tall * .4, MP[1] + dz, s * 1.15, s * tall, s, k * .9, k % 2 ? 0xa9a08a : 0x9b927e));
   pebbles.count = pi; group.add(pebbles);
 
   // ── 光る小道：出発点の近くからミッション地点の手前まで、ゆるい曲線にやわらかい光の点を間をあけて並べる ──
@@ -1259,20 +1270,40 @@ const worldArt = (() => {
   }
   light.renderOrder = 2; group.add(light);
 
+  // ── 木と岩の足もとの影：本物の影は使わず、やわらかい円を光と反対側（左）へずらして置く ──
+  const ROCK_SPOTS = [[-4, -3], [5, -2], [-2, 5], [6, 4], [-6, 6]];
+  const shadeMat = new THREE.MeshBasicMaterial({ color: 0x35612a, vertexColors: true, transparent: true, opacity: .3, depthWrite: false });
+  const shades = new THREE.InstancedMesh(discGeo, shadeMat, TREE_SPOTS.length + ROCK_SPOTS.length);
+  TREE_SPOTS.forEach(([x, z], i) => place(shades, i, x - .75, .008, z - .2, 1.55, 1, 1.1, 0));
+  ROCK_SPOTS.forEach(([x, z], k) => place(shades, TREE_SPOTS.length + k, x - .25, .008, z - .05, .6, 1, .45, 0));
+  shades.renderOrder = 1; group.add(shades);
+
+  // ── ミッション地点の光の柱：遠くからも「あそこへ行けば何か起きる」と分かる、淡い光（下ほど濃く、上で消える）──
+  const beamGeo = new THREE.CylinderGeometry(.3, .62, 4.0, 14, 1, true);
+  beamGeo.translate(0, 2.0, 0);
+  const bp = beamGeo.attributes.position, bc = new Float32Array(bp.count * 4);
+  for (let i = 0; i < bp.count; i++) { bc[i * 4] = bc[i * 4 + 1] = bc[i * 4 + 2] = 1; bc[i * 4 + 3] = bp.getY(i) < 1 ? .5 : 0; }
+  beamGeo.setAttribute('color', new THREE.BufferAttribute(bc, 4));
+  const beamMat = new THREE.MeshBasicMaterial({ color: 0xfff3cf, vertexColors: true, transparent: true, opacity: .5, depthWrite: false, side: THREE.DoubleSide });
+  const beam = new THREE.Mesh(beamGeo, beamMat);
+  beam.position.set(MP[0], 0, MP[1]); beam.renderOrder = 3; group.add(beam);
+
   // ── ミッション地点：結晶の下のごく淡い光（白飛びさせない）──
   const mpGlow = new THREE.Mesh(discGeo, softMat);
   mpGlow.position.set(MP[0], .012, MP[1]); mpGlow.scale.setScalar(1.7); mpGlow.renderOrder = 2; group.add(mpGlow);
 
-  [hills, forest, grass, flowers, pebbles, light].forEach(m => { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; m.computeBoundingSphere(); });
+  [hills, forest, grass, flowers, pebbles, light, shades].forEach(m => { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; m.computeBoundingSphere(); });
   scene.add(group);
 
-  // 毎フレーム：空のドームをカメラに合わせ、小道の明るさをごくゆっくり揺らす（新しい物は作らない）
-  const PATH_BASE = .9;
+  // 毎フレーム：空の筒をカメラに合わせ、小道と光の柱の明るさをごくゆっくり揺らす（新しい物は作らない）
+  const PATH_BASE = .9, BEAM_BASE = .5;
   return {
-    group, sky, pathMat, light, mpGlow, decorMat, softMat,
+    group, sky, pathMat, light, mpGlow, decorMat, softMat, shades, beam, beamMat,
     update(t) {
       sky.position.set(camera.position.x, 0, camera.position.z);
-      pathMat.opacity = reduceMotionQuery.matches ? PATH_BASE : PATH_BASE - .08 + Math.sin(t * 1.1) * .08;
+      const still = reduceMotionQuery.matches;
+      pathMat.opacity = still ? PATH_BASE : PATH_BASE - .08 + Math.sin(t * 1.1) * .08;
+      beamMat.opacity = still ? BEAM_BASE : BEAM_BASE - .05 + Math.sin(t * .8) * .05;
     },
   };
 })();

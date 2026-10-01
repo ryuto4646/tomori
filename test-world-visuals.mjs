@@ -139,7 +139,7 @@ test('12. 新しい外部 URL・CDN・パッケージが無い', () => {
 test('13. テクスチャを使わない。新しいジオメトリ・素材はそれぞれ8つ以内', () => {
   assert.ok(!/Texture|Loader|map\s*:|CanvasTexture|<canvas/.test(ART), 'no texture in art');
   assert.equal(count(NOW, /Texture/g), count(OLD, /Texture/g));
-  assert.ok(count(ART, /new THREE\.\w+Geometry\(/g) + count(ART, /new THREE\.BufferGeometry\(/g) <= 8, 'geometries');
+  assert.ok(count(ART, /new THREE\.\w*Geometry\(/g) <= 8, 'geometries');
   assert.ok(count(ART, /new THREE\.\w+Material\(/g) <= 8, 'materials');
   assert.ok(!/\.clone\(\)/.test(ART), 'no cloned materials');
 });

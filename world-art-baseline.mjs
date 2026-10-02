@@ -1,4 +1,4 @@
-// Step 11H・11I-A：ワールド美術で変えた場所の一覧（テスト用）。
+// Step 11H・11I-A・11I-B：ワールド美術（V1）とワールドV2で変えた場所の一覧（テスト用）。
 // demo-world.html から美術の変更だけを元へ戻す関数を、test-start-page.mjs と test-world-visuals.mjs で共有する。
 // ここに無い場所が変わっていたら、元へ戻した結果が収録版タグと一致せず、テストが落ちる。
 
@@ -57,8 +57,50 @@ TREE_SPOTS.forEach(([x,z])=>scene.add(mkTree(x,z,.8+Math.random()*.4)));
   [`  updateLabel();
   renderer.render(scene,camera);`,
    `  updateLabel();
-  worldArt.update(t);   // 小道の光と光の柱を、ゆっくり動かす（WORLD-ART）
+  worldArt.update(t); worldV2.update(t);   // 小道の光・光の柱・ことばの樹の実を、ゆっくり動かす（WORLD-ART・WORLD-V2）
   renderer.render(scene,camera);`],
+  [`const canvas   = document.getElementById('world-canvas');
+`,
+   `const canvas   = document.getElementById('world-canvas');
+// WORLD-V2：ワールドV2を使うか・画質（起動時に一度だけ決める。?quality=high|low は品質確認用）
+const WORLD_V2_ENABLED = true;
+const WORLD_QUALITY = (() => {
+  const q = new URLSearchParams(location.search).get('quality');
+  if (q === 'high' || q === 'low') return q;
+  const coarse = matchMedia('(pointer: coarse)').matches, short = Math.min(screen.width, screen.height);
+  return coarse || short < 700 || (devicePixelRatio >= 2.5 && short < 900) ? 'low' : 'high';
+})();
+`],
+  [`renderer.setPixelRatio(Math.min(devicePixelRatio, 2));`,
+   `renderer.setPixelRatio(Math.min(devicePixelRatio, WORLD_QUALITY === 'low' ? 1.25 : 2));   // 画質（WORLD-V2）`],
+  [`[[-4,-3],[5,-2],[-2,5],[6,4],[-6,6]].forEach(([x,z])=>scene.add(mkRock(x,z)));`,
+   `const v1Rocks=[[-4,-3],[5,-2],[-2,5],[6,4],[-6,6]].map(([x,z])=>{ const r=mkRock(x,z); scene.add(r); return r; });   // V2 では隠す（WORLD-V2）`],
+  [`    targetPos.copy(hits[0].point); targetPos.y=0;`,
+   `    targetPos.copy(hits[0].point); targetPos.y=0; worldV2.clampToWalkable(targetPos, 0.97);   // 歩ける範囲の内側へ（WORLD-V2）`],
+  [`      updateHiroriMotion(character, dt, t, walking);
+    }
+
+    // 距離チェック（探索中のみ）
+`,
+   `      updateHiroriMotion(character, dt, t, walking);
+    }
+    worldV2.groundCharacter(character);   // 歩ける範囲の内側・地面の高さへ（WORLD-V2。仮ヒロリの上下の弾みのあとに足す）
+
+    // 距離チェック（探索中のみ）
+`],
+  [`      const md=character.position.distanceTo(mpGroup.position);`,
+   `      const md=Math.hypot(character.position.x-mpGroup.position.x, character.position.z-mpGroup.position.z);   // 平面の距離（WORLD-V2：起伏で判定がぶれない）`],
+  [`setTimeout(()=>{
+  const ld=document.getElementById('loading');
+  ld.style.opacity='0';
+  setTimeout(()=>ld.style.display='none',800);
+},800);`,
+   `// ワールド（V2、または失敗したときの V1）の準備ができてから、読み込み画面を消す（最短でも 0.8 秒は見せる）
+Promise.all([new Promise(r=>setTimeout(r,800)), worldV2.ready]).then(()=>{
+  const ld=document.getElementById('loading');
+  ld.style.opacity='0';
+  setTimeout(()=>ld.style.display='none',800);
+});`],
 ];
 
 const ART_BLOCK = /\/\/ WORLD-ART-BEGIN[\s\S]*?\/\/ WORLD-ART-END\n\n/;

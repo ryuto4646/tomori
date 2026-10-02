@@ -1,0 +1,131 @@
+{
+  "name": "TOMORI World V2 kit",
+  "generator": "tools/world-v2/generate_tomori_world.py (Blender 5.2.1 LTS)",
+  "seed": 20261001,
+  "files": [
+    {
+      "path": "assets/world-v2/tomori-world-kit.glb",
+      "bytes": 155196,
+      "sha256": "ffaa6bb5b7d144220292fc4bcc1e8f3dafb83cb181b69432e7c7858ea278b53e",
+      "format": "glTF 2.0 binary",
+      "textures": 0,
+      "external_uris": 0
+    }
+  ],
+  "nodes": [
+    {
+      "name": "Bush_A",
+      "triangles": 240
+    },
+    {
+      "name": "Bush_B",
+      "triangles": 160
+    },
+    {
+      "name": "Flowers_A",
+      "triangles": 94
+    },
+    {
+      "name": "Flowers_B",
+      "triangles": 94
+    },
+    {
+      "name": "Flowers_C",
+      "triangles": 94
+    },
+    {
+      "name": "Grass_A",
+      "triangles": 54
+    },
+    {
+      "name": "Grass_B",
+      "triangles": 42
+    },
+    {
+      "name": "Grass_C",
+      "triangles": 48
+    },
+    {
+      "name": "Rock_Medium_A",
+      "triangles": 80
+    },
+    {
+      "name": "Rock_Medium_B",
+      "triangles": 80
+    },
+    {
+      "name": "Rock_Pebbles",
+      "triangles": 60
+    },
+    {
+      "name": "RootGate_Left",
+      "triangles": 350
+    },
+    {
+      "name": "RootGate_Right",
+      "triangles": 350
+    },
+    {
+      "name": "RootGate_Top",
+      "triangles": 352
+    },
+    {
+      "name": "Shrine",
+      "triangles": 664
+    },
+    {
+      "name": "Stone_Standing_A",
+      "triangles": 80
+    },
+    {
+      "name": "Stone_Standing_B",
+      "triangles": 80
+    },
+    {
+      "name": "Tree_Round_A",
+      "triangles": 301
+    },
+    {
+      "name": "Tree_Round_B",
+      "triangles": 301
+    },
+    {
+      "name": "Tree_Sapling_A",
+      "triangles": 180
+    },
+    {
+      "name": "Tree_Tall_A",
+      "triangles": 156
+    },
+    {
+      "name": "Tree_Tall_B",
+      "triangles": 123
+    },
+    {
+      "name": "WordTree",
+      "triangles": 1540
+    },
+    {
+      "name": "WordTree_Fruit_01",
+      "triangles": 80
+    },
+    {
+      "name": "WordTree_Fruit_02",
+      "triangles": 80
+    },
+    {
+      "name": "WordTree_Fruit_03",
+      "triangles": 80
+    },
+    {
+      "name": "WordTree_Fruit_04",
+      "triangles": 80
+    },
+    {
+      "name": "WordTree_Fruit_05",
+      "triangles": 80
+    }
+  ],
+  "external_assets": 0,
+  "license": "TOMORI original: generated for TOMORI by this script. No third-party, redistributed or Craftopia assets."
+}

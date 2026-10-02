@@ -25,6 +25,10 @@ const NOW = read('demo-world.html');
 const ART = artBlock(NOW);
 // コメントを除いた美術のコード（説明文の言葉に反応しないように）
 const ART_CODE = ART.split('\n').map(l => l.replace(/\/\/.*$/, '')).join('\n');
+// ワールドV2（WORLD-V2-BEGIN〜END）は美術の範囲の中にあるが、別のきまり（test-world-v2.mjs）で調べる。ここでは V1 の美術だけを見る
+const V2_BLOCK = (ART.match(/\/\/ WORLD-V2-BEGIN[\s\S]*?\/\/ WORLD-V2-END\n/) || [''])[0];
+const ART_V1 = ART.replace(V2_BLOCK, '');
+const ART_V1_CODE = ART_V1.split('\n').map(l => l.replace(/\/\/.*$/, '')).join('\n');
 const OLD = gitShow(TAG, 'demo-world.html');
 const BASE_DEMO = gitShow(BASE, 'demo-world.html');
 // 美術を外した今のファイル（美術以外の部分を比べるのに使う）
@@ -58,7 +62,7 @@ test('2. 光る小道・草花・小石に当たり判定が無く、タップ�
   assert.equal(count(NOW, /intersectObject/g), count(OLD, /intersectObject/g));
   assert.match(NOW, /const hits=raycaster\.intersectObject\(ground\);/);
   // 美術は1つのグループにまとめ、シーンへ1回だけ加える（ほかの物の子にしない）
-  assert.equal(count(ART, /scene\.add\(/g), 1);
+  assert.equal(count(ART_V1, /scene\.add\(/g), 1);
   assert.match(ART, /scene\.add\(group\);/);
   // 小道は地面すれすれ（y 0.05 未満）に置く
   const y = ART.match(/const PATH_Y = ([0-9.]+)/);
@@ -140,16 +144,16 @@ test('12. 新しい外部 URL・CDN・パッケージが無い', () => {
 });
 
 test('13. テクスチャを使わない。新しいジオメトリは8つ・素材は6つ以内（Step 11H より増やさない）', () => {
-  assert.ok(!/Texture|Loader|map\s*:|CanvasTexture|<canvas/.test(ART_CODE), 'no texture in art');
+  assert.ok(!/Texture|Loader|map\s*:|CanvasTexture|<canvas/.test(ART_V1_CODE), 'no texture in art');
   assert.equal(count(NOW, /Texture/g), count(OLD, /Texture/g));
-  assert.ok(count(ART, /new THREE\.\w*Geometry\(/g) <= 8, 'geometries');
-  assert.ok(count(ART, /new THREE\.\w+Material\(/g) <= 6, 'materials');
+  assert.ok(count(ART_V1, /new THREE\.\w*Geometry\(/g) <= 8, 'geometries');
+  assert.ok(count(ART_V1, /new THREE\.\w+Material\(/g) <= 6, 'materials');
   assert.ok(!/\.clone\(\)/.test(ART), 'no cloned materials');
 });
 
 test('14. requestAnimationFrame を増やしていない（美術は animate の中で1回だけ更新）', () => {
   assert.equal(count(NOW, /requestAnimationFrame/g), count(OLD, /requestAnimationFrame/g));
-  assert.ok(!/requestAnimationFrame|setInterval|setTimeout/.test(ART_CODE));
+  assert.ok(!/requestAnimationFrame|setInterval|setTimeout/.test(ART_V1_CODE));
   assert.equal(count(NOW, /worldArt\.update\(/g), 1);
 });
 

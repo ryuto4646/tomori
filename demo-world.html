@@ -972,8 +972,16 @@ function openPanel(id) {
 
 // ── Renderer / Scene / Camera ────────────────────────────────────
 const canvas   = document.getElementById('world-canvas');
+// WORLD-V2：ワールドV2を使うか・画質（起動時に一度だけ決める。?quality=high|low は品質確認用）
+const WORLD_V2_ENABLED = true;
+const WORLD_QUALITY = (() => {
+  const q = new URLSearchParams(location.search).get('quality');
+  if (q === 'high' || q === 'low') return q;
+  const coarse = matchMedia('(pointer: coarse)').matches, short = Math.min(screen.width, screen.height);
+  return coarse || short < 700 || (devicePixelRatio >= 2.5 && short < 900) ? 'low' : 'high';
+})();
 const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true });   // alpha：空は CSS で描く（WORLD-ART）
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(devicePixelRatio, WORLD_QUALITY === 'low' ? 1.25 : 2));   // 画質（WORLD-V2）
 renderer.setSize(innerWidth, innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.1;
@@ -1032,7 +1040,7 @@ function mkRock(x,z){
   m.rotation.set(Math.random(),Math.random(),Math.random());
   return m;
 }
-[[-4,-3],[5,-2],[-2,5],[6,4],[-6,6]].forEach(([x,z])=>scene.add(mkRock(x,z)));
+const v1Rocks=[[-4,-3],[5,-2],[-2,5],[6,4],[-6,6]].map(([x,z])=>{ const r=mkRock(x,z); scene.add(r); return r; });   // V2 では隠す（WORLD-V2）
 
 // ── つる障害物 ────────────────────────────────────────────────────
 const vineGroup = new THREE.Group(); scene.add(vineGroup);
@@ -1356,6 +1364,278 @@ const worldArt = (() => {
   // PER-FRAME-END
   return { group, pathMat, light, mpGlow, decorMat, softMat, shades, beam, beamMat, blobs, cones, blades, update };
 })();
+// WORLD-V2-BEGIN（test-world-v2.mjs がこの範囲を読み込んでテストする）
+// ワールドV2：Blender で作った TOMORI 専用の素材（assets/world-v2/tomori-world-kit.glb）と、起伏のある地形。
+// V1（上の WORLD-ART）は先に組み立てて表示しておき、V2 の準備がすべてそろったときだけ切り替える。
+// 読み込み・組み立てのどこかで失敗したら、何も変えずに V1 のまま続ける（画面にも console にも出さない）。
+// ?world=v1 は品質確認用（V1 を強制）。WebGL が使えないときは、ここへ来る前に止まるので GLB は取りに行かない
+const worldV2 = (() => {
+  const GLB_URL = 'assets/world-v2/tomori-world-kit.glb';
+  const LOAD_TIMEOUT_MS = 8000;
+  const HIGH = WORLD_QUALITY === 'high';
+  const wanted = WORLD_V2_ENABLED && new URLSearchParams(location.search).get('world') !== 'v1';
+  let active = false;
+
+  // TERRAIN-BEGIN（地形の高さ。test-world-v2.mjs がこの範囲だけを取り出して、傾き・平らさを確かめる）
+  // 歩ける範囲：だ円の内側。出発点・小道・祠・秘密の場所は高さ0で平ら。その外はゆるい起伏、さらに外へ行くほど丘が重なる
+  const WALK = { cx: 3, cz: -3.5, rx: 15, rz: 9.5 };
+  const GATE = { x: 7.0, z: -12.6 };                 // 根の門（歩ける範囲のふち。この先へは進めない）
+  const WORD_TREE = { x: 24, z: -43, scale: .85 };   // ことばの樹（根の門の先、谷の奥に見える目標）
+  const smooth = (a, b, x) => { const k = Math.min(1, Math.max(0, (x - a) / (b - a))); return k * k * (3 - 2 * k); };
+  const segDist = (x, z, ax, az, bx, bz) => {
+    const vx = bx - ax, vz = bz - az, t = Math.min(1, Math.max(0, ((x - ax) * vx + (z - az) * vz) / (vx * vx + vz * vz)));
+    return Math.hypot(x - ax - vx * t, z - az - vz * t);
+  };
+  // 平らにしておく場所（x, z, 平らな半径, なじませる幅）と、平らな帯（両端, 半径, なじませる幅）
+  const FLAT = [[0, 0, 3.4, 8], [1.5, -6.5, 4.4, 8], [16, -8, 5.6, 7]];
+  const FLAT_SEG = [[0, 0, 1.5, -6.5, 2.4, 8], [13.8, -2.5, 12.2, -17.5, 2.2, 7]];
+  // 盛り上がり（x, z, 高さ, 広がり）：歩ける範囲の中はゆるく、外は大きく
+  const INNER = [[-10.5, -3.5, .45, 6], [10, 2, .4, 5.5], [-6.5, 5, .25, 5], [10.5, -6.5, .3, 5], [-4, -12.5, .55, 6]];
+  const OUTER = [[-15, -15, 1.6, 6.5], [0, -21, 1.8, 7], [26, -12, 1.6, 6], [-19, 4, 1.4, 6], [25, 7, 1.2, 6]];
+  function heightAt(x, z) {
+    // やわらかな波（周期と向きをずらして重ね、等間隔の模様にしない）
+    let h = .13 * Math.sin(x * .19 + .7) * Math.cos(z * .23 - .4) + .1 * Math.sin((x + z * .6) * .11 + 1.9) + .05 * Math.cos((x * .7 - z) * .29 + .3);
+    for (const [bx, bz, a, s] of INNER) h += a * Math.exp(-((x - bx) ** 2 + (z - bz) ** 2) / (2 * s * s));
+    // 外周の丘：歩ける範囲の外へ行くほど高い。カメラのある手前側（+z）は低く、奥は高く
+    const e = Math.hypot((x - WALK.cx) / WALK.rx, (z - WALK.cz) / WALK.rz), out = smooth(1.0, 1.7, e);
+    for (const [bx, bz, a, s] of OUTER) h += out * a * Math.exp(-((x - bx) ** 2 + (z - bz) ** 2) / (2 * s * s));
+    let rim = smooth(1.0, 2.0, e) * (0.5 + 1.4 * smooth(6, -12, z)) + smooth(2.4, 4.5, e) * 1.6;
+    // 根の門の先は谷：ことばの樹の方向へ、丘が切れて道が続いて見える
+    const valley = Math.exp(-(segDist(x, z, GATE.x, GATE.z, WORD_TREE.x, WORD_TREE.z) ** 2) / (2 * 2.2 * 2.2));
+    h += rim * (1 - .8 * valley) - .25 * valley * smooth(1.6, .9, e);
+    // 平らにする場所
+    let flat = 0;
+    for (const [fx, fz, r, w] of FLAT) flat = Math.max(flat, smooth(r + w, r, Math.hypot(x - fx, z - fz)));
+    for (const [ax, az, bx, bz, r, w] of FLAT_SEG) flat = Math.max(flat, smooth(r + w, r, segDist(x, z, ax, az, bx, bz)));
+    return h * (1 - flat);
+  }
+  // TERRAIN-END
+
+  // 歩ける範囲の内側へ戻す（だ円の外に出た分だけ、中心の方向へ戻す。ふちに沿ってすべるので、壁へ瞬間移動しない）
+  function clampToWalkable(p, limit = 1) {
+    if (!active) return p;
+    const u = (p.x - WALK.cx) / WALK.rx, v = (p.z - WALK.cz) / WALK.rz, d = Math.hypot(u, v);
+    if (d > limit) { p.x = WALK.cx + u / d * limit * WALK.rx; p.z = WALK.cz + v / d * limit * WALK.rz; }
+    return p;
+  }
+  // ヒロリを歩ける範囲の内側・地面の高さへ（毎フレーム。新しい物は作らない）
+  // 仮ヒロリは毎フレーム、歩くときの小さな弾みを高さに書き込む（root.position.y = hop）。その上に地面の高さを足す。
+  // 正式GLB（mixer で動かす）のときは高さを書き込まないので、地面の高さそのものにする
+  function groundCharacter(c) {
+    if (!active || !c) return;
+    clampToWalkable(c.position, 1);
+    c.position.y = (mixer ? 0 : c.position.y) + heightAt(c.position.x, c.position.z);
+  }
+
+  // ── GLB を読む（この素材のために必要な分だけ：位置・法線・頂点色・三角形の番号・ノードの位置）──
+  const COMP = { 5121: Uint8Array, 5123: Uint16Array, 5125: Uint32Array, 5126: Float32Array };
+  const SIZE = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4 };
+  function readGlb(buf) {
+    const dv = new DataView(buf);
+    if (dv.getUint32(0, true) !== 0x46546C67 || dv.getUint32(4, true) !== 2) throw new Error('glb');
+    const jsonLen = dv.getUint32(12, true);
+    const json = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 20, jsonLen)));
+    const binStart = 20 + jsonLen + 8;
+    const attr = i => {
+      const a = json.accessors[i], bv = json.bufferViews[a.bufferView], T = COMP[a.componentType], n = SIZE[a.type];
+      if (!T || !n || (bv.byteStride && bv.byteStride !== n * T.BYTES_PER_ELEMENT)) throw new Error('accessor');
+      const arr = new T(buf.slice(binStart + (bv.byteOffset || 0) + (a.byteOffset || 0), binStart + (bv.byteOffset || 0) + (a.byteOffset || 0) + a.count * n * T.BYTES_PER_ELEMENT));
+      return new THREE.BufferAttribute(arr, n, !!a.normalized);
+    };
+    const geos = new Map(), out = new Map();
+    json.nodes.forEach(node => {
+      if (node.mesh === undefined) return;
+      if (!geos.has(node.mesh)) {
+        const pr = json.meshes[node.mesh].primitives[0], g = new THREE.BufferGeometry();
+        g.setAttribute('position', attr(pr.attributes.POSITION));
+        g.setAttribute('normal', attr(pr.attributes.NORMAL));
+        g.setAttribute('color', attr(pr.attributes.COLOR_0));
+        g.setIndex(attr(pr.indices));
+        g.computeBoundingSphere();
+        geos.set(node.mesh, g);
+      }
+      const m = new THREE.Matrix4().compose(
+        new THREE.Vector3().fromArray(node.translation || [0, 0, 0]),
+        new THREE.Quaternion().fromArray(node.rotation || [0, 0, 0, 1]),
+        new THREE.Vector3().fromArray(node.scale || [1, 1, 1]));
+      out.set(node.name, { geometry: geos.get(node.mesh), matrix: m });
+    });
+    return out;
+  }
+
+  // ── 組み立て（すべて新しいグループの中に作る。最後まで成功したときだけ、シーンを切り替える）──
+  let fruits = null, fruitMat = null;
+  function build(kit) {
+    const need = n => { const k = kit.get(n); if (!k) throw new Error('node ' + n); return k; };
+    let seed = 81726354;
+    const rnd = () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    const keep = i => HIGH || i % 20 < 11;           // スマホ（low）は植物などを 55% に間引く
+    const group = new THREE.Group(); group.name = 'worldV2';
+    const kitMat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
+    const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e3 = new THREE.Euler(0, 0, 0, 'YXZ'), p3 = new THREE.Vector3(), s3 = new THREE.Vector3(), c3 = new THREE.Color();
+    const lists = new Map();
+    // スマホ（low）は、同じ仲間の形を1種類にまとめて描く回数を減らす（null は置かない）
+    const LOW_ALIAS = { Tree_Tall_B: 'Tree_Tall_A', Grass_C: 'Grass_A', Flowers_C: 'Flowers_A', Bush_B: 'Bush_A', Rock_Medium_B: 'Rock_Medium_A', Stone_Standing_B: 'Stone_Standing_A', Rock_Pebbles: null };
+    const put = (name, x, z, s = 1, yaw = rnd() * 6.283, tint = 0xffffff, tilt = 0, dy = 0) => {
+      if (!HIGH && name in LOW_ALIAS) { name = LOW_ALIAS[name]; if (!name) return; }
+      if (!lists.has(name)) lists.set(name, []);
+      lists.get(name).push([x, heightAt(x, z) + dy, z, s, yaw, tint, tilt]);
+    };
+    // 奥行きで色を変える：手前は暖かく、奥は青みを足す
+    const depthTint = (x, z) => {
+      const far = smooth(-6, -26, z) + smooth(16, 30, Math.abs(x - 3)) * .6, near = smooth(2, 8, z);
+      return c3.setRGB(1 + near * .04 - far * .12, 1 - far * .03, 1 - near * .08 + far * .08).getHex();
+    };
+    const blocked = (x, z) => Math.hypot(x, z) < 2.6 || segDist(x, z, 0, 0, 1.5, -6.5) < 1.6 || Math.hypot(x - 1.5, z + 6.5) < 3.2
+      || segDist(x, z, 1.5, -6.5, GATE.x, GATE.z) < 1.4 || Math.hypot(x - 16, z + 8) < 5;
+
+    // 地形：中心ほど細かい格子（奥と外周は粗く）。頂点色で草原の色を混ぜる
+    const N = HIGH ? 72 : 36, SPAN = 78;
+    const g = new THREE.PlaneGeometry(2, 2, N, N); g.rotateX(-Math.PI / 2);
+    const gp = g.attributes.position, gc = new Float32Array(gp.count * 3);
+    const warp = u => SPAN * (.34 * u + .66 * Math.sign(u) * Math.abs(u) ** 2.1);
+    const cWarm = new THREE.Color(0x86ba4f), cMid = new THREE.Color(0x6aa646), cBlue = new THREE.Color(0x5f9c6c), cDry = new THREE.Color(0xa9b862), cFar = new THREE.Color(0x8fbf86), cPath = new THREE.Color(0xb2c56c), cLight = new THREE.Color(0x92c862);
+    for (let i = 0; i < gp.count; i++) {
+      const x = WALK.cx + warp(gp.getX(i)), z = WALK.cz + warp(gp.getZ(i)), h = heightAt(x, z);
+      gp.setXYZ(i, x, h, z);
+      const n1 = .5 + .5 * Math.sin(x * .09 + 1.3) * Math.cos(z * .07 - .6), n2 = .5 + .5 * Math.sin((x - z) * .05 + .4);
+      c3.copy(cMid).lerp(cWarm, n1 * .8).lerp(cBlue, n2 * .45).lerp(cDry, smooth(.8, 4, h) * .5);
+      c3.lerp(cLight, .5 * Math.exp(-(x * x + (z + 2) ** 2) / 22));
+      c3.lerp(cPath, .35 * Math.exp(-(segDist(x, z, 0, 0, 1.5, -6.5) ** 2) / 3) + .3 * Math.exp(-(segDist(x, z, 1.5, -6.5, GATE.x, GATE.z) ** 2) / 2.5));
+      c3.lerp(cFar, smooth(1.4, 3.2, Math.hypot((x - WALK.cx) / WALK.rx, (z - WALK.cz) / WALK.rz)) * .8);
+      gc[i * 3] = c3.r; gc[i * 3 + 1] = c3.g; gc[i * 3 + 2] = c3.b;
+    }
+    g.setAttribute('color', new THREE.BufferAttribute(gc, 3));
+    g.computeVertexNormals(); g.computeBoundingSphere();
+
+    // 木：今までの場所（TREE_SPOTS）＋外周の木立＋遠くの木
+    const TREES = ['Tree_Round_A', 'Tree_Round_B', 'Tree_Tall_A', 'Tree_Tall_B', 'Tree_Sapling_A'];
+    TREE_SPOTS.forEach(([x, z], k) => {
+      // ヒロリの頭のうしろ・祠から根の門への見通しをふさぐ場所は、低い若木にする（場所はカメラが木をよける計算でも使うので変えない）
+      const open = (Math.abs(x) < 2 && z < -8) || segDist(x, z, 1.5, -6.5, GATE.x, GATE.z) < 4 || Math.hypot(x - GATE.x, z - GATE.z) < 5;
+      const type = open ? 'Tree_Sapling_A' : TREES[(k * 7 + 3) % 4];
+      put(type, x, z, .85 + rnd() * .35, undefined, depthTint(x, z), (rnd() - .5) * .08);
+    });
+    // 外周の木立：歩ける範囲のふちの外側。門の前と、カメラ側（手前）はあける
+    for (let i = 0, n = HIGH ? 46 : 16; i < n; i++) {
+      const a = i / n * Math.PI * 2 + rnd() * .12, r = 1.14 + rnd() * .55;
+      const x = WALK.cx + Math.cos(a) * WALK.rx * r, z = WALK.cz + Math.sin(a) * WALK.rz * r;
+      if (z > 7 || segDist(x, z, GATE.x, GATE.z, WORD_TREE.x, WORD_TREE.z) < 3.2 || Math.hypot(x - 16, z + 8) < 6) continue;
+      put(TREES[i % 4], x, z, 1 + rnd() * .45, undefined, depthTint(x, z), (rnd() - .5) * .1);
+    }
+    // 遠くの木：丘の上に、まとまりで
+    [[-16, -17, 7], [2, -23, 6], [24, -14, 5], [-22, 2, 5], [11, -21, 4]].forEach(([cx, cz, n]) => {
+      for (let i = 0; i < (HIGH ? n : Math.floor(n / 3)); i++) put(i % 2 ? 'Tree_Tall_A' : 'Tree_Tall_B', cx + (rnd() - .5) * 8, cz + (rnd() - .5) * 5, 1.2 + rnd() * .5, undefined, depthTint(cx, cz - 10));
+    });
+
+    // 岩：V1 の岩と同じ場所に、苔のある岩。小石は小道のふちに少しだけ。門の左右と見晴らしの丘に立ち石
+    [[-4, -3], [5, -2], [-2, 5], [6, 4], [-6, 6]].forEach(([x, z], k) => put(k % 2 ? 'Rock_Medium_A' : 'Rock_Medium_B', x, z, .7 + rnd() * .3));
+    [[2.6, -4.6], [-3.4, -5.2]].forEach(([x, z]) => put('Rock_Pebbles', x, z, .9));
+    const gYaw = Math.atan2(1.5 - GATE.x, -6.5 - GATE.z);
+    const side = (d, f) => [GATE.x + Math.cos(gYaw) * d + Math.sin(gYaw) * f, GATE.z - Math.sin(gYaw) * d + Math.cos(gYaw) * f];
+    [[-2.7, .3, 'Stone_Standing_A'], [2.8, .1, 'Stone_Standing_B'], [-3.4, -.8, 'Rock_Medium_A'], [3.5, -.6, 'Rock_Medium_B']].forEach(([d, f, n]) => { const [x, z] = side(d, f); put(n, x, z, 1.1 + rnd() * .2); });
+    put('Stone_Standing_A', -4.6, -12.2, 1.2); put('Stone_Standing_B', -3.2, -13.2, .9);
+
+    // 植物：岩と木の根もと・小道のふち・祠の外周・門の左右・画面手前の左右（額縁）
+    let pi = 0;
+    const plant = (name, x, z, s = 1) => { if (!blocked(x, z) && keep(pi++)) put(name, x, z, s * (.85 + rnd() * .35), undefined, depthTint(x, z)); };
+    [[-4, -3], [5, -2], [-2, 5], [6, 4], [-6, 6]].forEach(([x, z]) => { plant('Grass_A', x + .7, z + .3); plant('Grass_B', x - .5, z + .6); });
+    TREE_SPOTS.forEach(([x, z], k) => { plant(k % 3 ? 'Grass_A' : 'Bush_A', x + .9, z + .6); if (k % 2) plant('Grass_C', x - .8, z + .4); });
+    for (let k = 0; k <= 10; k++) { const t = k / 10, x = 1.5 * t, z = -6.5 * t, s = k % 2 ? 1 : -1; plant(k % 3 ? 'Grass_B' : 'Flowers_A', x + s * (1.9 + rnd() * .5), z + (rnd() - .5)); }
+    [[-2.9, .8, 'Flowers_A'], [-3.0, -.9, 'Flowers_B'], [-2.2, -2.4, 'Grass_A'], [-.8, -3.0, 'Flowers_C'], [.9, -3.1, 'Grass_C'], [-2.6, 2.0, 'Bush_B']].forEach(([dx, dz, n]) => plant(n, 1.5 + dx, -6.5 + dz));
+    [[-1.8, .9], [1.9, .8], [-2.4, -.4], [2.5, -.5]].forEach(([d, f], k) => { const [x, z] = side(d, f); plant(k % 2 ? 'Bush_A' : 'Grass_C', x, z, 1.2); });
+    [[-4.8, 3.9], [5.0, 3.4], [-1.9, 3.8], [2.2, 4.6]].forEach(([cx, cz], k) => { for (let i = 0; i < 3; i++) plant(['Grass_A', 'Grass_C', 'Flowers_B'][i], cx + (rnd() - .5) * 1.6, cz + (rnd() - .5) * 1.2, k < 2 ? 1.2 : 1.0); });
+    [[-7, -8.5], [8, -2.5], [-9, 1], [10.5, -9], [-5.5, -1.5]].forEach(([cx, cz], k) => { plant(['Flowers_A', 'Flowers_B', 'Flowers_C'][k % 3], cx, cz); plant('Grass_A', cx + .8, cz + .4); plant(k % 2 ? 'Bush_B' : 'Grass_B', cx - .9, cz - .3); });
+
+    // InstancedMesh：形ごとに1つ。大きな木と岩だけが影を落とす（PC）
+    const CASTERS = new Set(['Tree_Round_A', 'Tree_Round_B', 'Tree_Tall_A', 'Tree_Tall_B', 'Rock_Medium_A', 'Rock_Medium_B', 'Stone_Standing_A', 'Stone_Standing_B']);
+    for (const [name, items] of lists) {
+      const k = need(name), im = new THREE.InstancedMesh(k.geometry, kitMat, items.length);
+      items.forEach(([x, y, z, s, yaw, tint, tilt], i) => {
+        e3.set(tilt, yaw, 0, 'YXZ'); q.setFromEuler(e3);
+        im.setMatrixAt(i, m4.compose(p3.set(x, y, z), q, s3.set(s, s, s)));
+        im.setColorAt(i, c3.set(tint));
+      });
+      im.instanceMatrix.needsUpdate = true; im.instanceColor.needsUpdate = true; im.computeBoundingSphere();
+      im.castShadow = HIGH && CASTERS.has(name); im.receiveShadow = false; im.name = name;
+      group.add(im);
+    }
+
+    // 祠・根の門・ことばの樹：1つずつ置く大きな素材
+    const place1 = (name, x, z, yaw, scale = 1) => {
+      const k = need(name), mesh = new THREE.Mesh(k.geometry, kitMat);
+      mesh.matrixAutoUpdate = false;
+      m4.compose(p3.set(x, heightAt(x, z), z), q.setFromEuler(e3.set(0, yaw, 0, 'YXZ')), s3.set(scale, scale, scale));
+      mesh.matrix.multiplyMatrices(m4, k.matrix); mesh.name = name; mesh.castShadow = HIGH; mesh.receiveShadow = HIGH;
+      group.add(mesh); return mesh;
+    };
+    place1('Shrine', MISSION_POS.x, MISSION_POS.z, 0);
+    const gate = ['RootGate_Left', 'RootGate_Right', 'RootGate_Top'].map(n => place1(n, GATE.x, GATE.z, gYaw));
+    const tree = place1('WordTree', WORD_TREE.x, WORD_TREE.z, -.4, WORD_TREE.scale);
+    tree.castShadow = false;
+    // 光の実：同じ形の5つ。今回は1つだけ淡く光り、残りは眠っている（Part 2 で灯せるように instanceColor で分ける）
+    fruitMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const fk = need('WordTree_Fruit_01');
+    fruits = new THREE.InstancedMesh(fk.geometry, fruitMat, 5); fruits.name = 'WordTree_Fruits';
+    m4.compose(p3.set(WORD_TREE.x, heightAt(WORD_TREE.x, WORD_TREE.z), WORD_TREE.z), q.setFromEuler(e3.set(0, -.4, 0, 'YXZ')), s3.set(WORD_TREE.scale, WORD_TREE.scale, WORD_TREE.scale));
+    for (let i = 0; i < 5; i++) {
+      fruits.setMatrixAt(i, new THREE.Matrix4().multiplyMatrices(m4, need('WordTree_Fruit_0' + (i + 1)).matrix));
+      fruits.setColorAt(i, c3.set(i === 0 ? 0xfff3cf : 0x9fb3a6));
+    }
+    fruits.instanceMatrix.needsUpdate = true; fruits.instanceColor.needsUpdate = true; fruits.computeBoundingSphere();
+    group.add(fruits);
+    return { group, terrain: g, gate, tree };
+  }
+
+  // ── 切り替え：V1 の装飾を隠し、地面を起伏のある地形へ替え、V1 の物を地面の高さへ ──
+  function activate(built) {
+    worldArt.group.children.forEach(o => { if (o !== worldArt.light && o !== worldArt.mpGlow && o !== worldArt.beam) o.visible = false; });
+    v1Rocks.forEach(r => { r.visible = false; });
+    ground.geometry.dispose(); ground.geometry = built.terrain; ground.rotation.set(0, 0, 0); ground.updateMatrixWorld(true);
+    vineGroup.children.forEach(o => { o.visible = false; });   // V2 では、閉じた根の門が通れない場所をあらわすので、V1 のつるは描かない
+    nextGroup.position.y = heightAt(nextGroup.position.x, nextGroup.position.z);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    if (HIGH) {
+      // 影は PC だけ。太陽の向きはそのまま、影を作る範囲を歩ける範囲＋門の周りに合わせる
+      renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      sun.target.position.set(3, 0, -5); scene.add(sun.target);
+      sun.position.set(3 + 12 * 2.2, 9 * 2.2, -5 + 4 * 2.2);
+      sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.03;
+      const sc = sun.shadow.camera; sc.left = -24; sc.right = 24; sc.top = 20; sc.bottom = -20; sc.near = 1; sc.far = 80; sc.updateProjectionMatrix();
+      ground.receiveShadow = true; ground.material.needsUpdate = true;
+    }
+    scene.add(built.group);
+    active = true;
+  }
+
+  // 読み込み：時間切れ・失敗のときは V1 のまま（ready は、どちらの場合も最後に終わる）
+  const ready = !wanted ? Promise.resolve(false) : new Promise(resolve => {
+    let done = false;
+    const finish = ok => { if (!done) { done = true; resolve(ok); } };
+    const timer = setTimeout(() => finish(false), LOAD_TIMEOUT_MS);
+    new THREE.FileLoader().setResponseType('arraybuffer').load(GLB_URL, buf => {
+      if (done) return;
+      try { activate(build(readGlb(buf))); clearTimeout(timer); finish(true); }
+      catch (e) { clearTimeout(timer); finish(false); }
+    }, undefined, () => { clearTimeout(timer); finish(false); });
+  });
+
+  // PER-FRAME-V2-BEGIN（毎フレームの処理。新しい物は作らない）
+  // ことばの樹の灯った実が、ゆっくり明滅する。祠の光が呼吸する。カメラが地面より下へ行かないようにする
+  const LIT = new THREE.Color(0xfff3cf), DIM = new THREE.Color(0xd8cfa8), fruitNow = new THREE.Color();
+  function update(t) {
+    if (!active) return;
+    const still = reduceMotionQuery.matches;
+    const k = still ? .5 : .5 + .5 * Math.sin(t * .9);
+    fruitNow.copy(DIM).lerp(LIT, k); fruits.setColorAt(0, fruitNow); fruits.instanceColor.needsUpdate = true;
+    worldArt.softMat.opacity = still ? .45 : .4 + .06 * Math.sin(t * .7);
+    const floor = heightAt(camera.position.x, camera.position.z) + 1.2;
+    if (camera.position.y < floor) camera.position.y = floor;
+  }
+  // PER-FRAME-V2-END
+  return { ready, update, groundCharacter, clampToWalkable, heightAt, isActive: () => active, quality: WORLD_QUALITY };
+})();
+// WORLD-V2-END
 // WORLD-ART-END
 
 // ── キャラクター ─────────────────────────────────────────────────
@@ -1641,7 +1921,7 @@ function onTap(e){
   raycaster.setFromCamera(ndc,camera);
   const hits=raycaster.intersectObject(ground);
   if(hits.length){
-    targetPos.copy(hits[0].point); targetPos.y=0;
+    targetPos.copy(hits[0].point); targetPos.y=0; worldV2.clampToWalkable(targetPos, 0.97);   // 歩ける範囲の内側へ（WORLD-V2）
     isMoving=true; playAnim('walk');
     document.getElementById('hint').style.opacity='0';
   }
@@ -2189,10 +2469,11 @@ function animate(){
         keys['ArrowUp']||keys['ArrowDown']||keys['ArrowLeft']||keys['ArrowRight']);
       updateHiroriMotion(character, dt, t, walking);
     }
+    worldV2.groundCharacter(character);   // 歩ける範囲の内側・地面の高さへ（WORLD-V2。仮ヒロリの上下の弾みのあとに足す）
 
     // 距離チェック（探索中のみ）
     if(state===S.EXPLORE){
-      const md=character.position.distanceTo(mpGroup.position);
+      const md=Math.hypot(character.position.x-mpGroup.position.x, character.position.z-mpGroup.position.z);   // 平面の距離（WORLD-V2：起伏で判定がぶれない）
       const mbar=document.getElementById('mbar-text');
       if(md<MISSION_RADIUS){
         if(!missionNeedsLeave) triggerMission();
@@ -2219,7 +2500,7 @@ function animate(){
 
   updateCamera(dt);
   updateLabel();
-  worldArt.update(t);   // 小道の光と光の柱を、ゆっくり動かす（WORLD-ART）
+  worldArt.update(t); worldV2.update(t);   // 小道の光・光の柱・ことばの樹の実を、ゆっくり動かす（WORLD-ART・WORLD-V2）
   renderer.render(scene,camera);
 }
 
@@ -2231,11 +2512,12 @@ window.addEventListener('resize',()=>{
 });
 
 // ── 起動 ─────────────────────────────────────────────────────────
-setTimeout(()=>{
+// ワールド（V2、または失敗したときの V1）の準備ができてから、読み込み画面を消す（最短でも 0.8 秒は見せる）
+Promise.all([new Promise(r=>setTimeout(r,800)), worldV2.ready]).then(()=>{
   const ld=document.getElementById('loading');
   ld.style.opacity='0';
   setTimeout(()=>ld.style.display='none',800);
-},800);
+});
 
 animate();
 if (DEBUG_LOG) {

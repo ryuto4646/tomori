@@ -1,0 +1,10 @@
+TOMORI World V2 kit (assets/world-v2/)
+
+tomori-world-kit.glb is original 3D content generated for TOMORI by
+tools/world-v2/generate_tomori_world.py with Blender (no textures, vertex colors only).
+
+External assets used: 0
+Third-party, redistributed, downloaded or Craftopia assets: 0
+
+TOMORI のために、このリポジトリのスクリプトで生成した独自素材です。
+外部素材・再配布素材・第三者素材・クラフトピアの素材は使っていません。

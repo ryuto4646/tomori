@@ -44,7 +44,8 @@ function glbJson(buf) {
 }
 const REQUIRED_NODES = ['Tree_Round_A', 'Tree_Round_B', 'Tree_Tall_A', 'Tree_Tall_B', 'Tree_Sapling_A', 'Grass_A', 'Grass_B', 'Grass_C',
   'Flowers_A', 'Flowers_B', 'Flowers_C', 'Bush_A', 'Bush_B', 'Rock_Pebbles', 'Rock_Medium_A', 'Rock_Medium_B', 'Stone_Standing_A', 'Stone_Standing_B',
-  'Shrine', 'RootGate_Left', 'RootGate_Right', 'RootGate_Top', 'WordTree', 'WordTree_Fruit_01', 'WordTree_Fruit_02', 'WordTree_Fruit_03', 'WordTree_Fruit_04', 'WordTree_Fruit_05'];
+  'Shrine', 'RootGate_Left', 'RootGate_Right', 'RootGate_Top', 'WordTree', 'WordTree_Fruit_01', 'WordTree_Fruit_02', 'WordTree_Fruit_03', 'WordTree_Fruit_04', 'WordTree_Fruit_05',
+  'WordSeed', 'WordSeed_Core', 'WordSeed_Glow'];
 
 // ── 素材 ─────────────────────────────────────────────────────────────
 test('1. GLB は glTF 2.0 の1ファイル（ヘッダー・version・JSON と BIN の区切り）', () => { glbJson(GLB); });
@@ -66,7 +67,7 @@ test('3. 必要なノード名がそろい、manifest のノード一覧と一�
   const j = glbJson(GLB), byName = Object.fromEntries(j.nodes.map(n => [n.name, n]));
   assert.notEqual(byName.RootGate_Left.mesh, byName.RootGate_Right.mesh);
   assert.equal(new Set(REQUIRED_NODES.filter(n => n.startsWith('WordTree_Fruit')).map(n => byName[n].mesh)).size, 1);
-  assert.ok(MANIFEST.nodes.every(n => n.triangles > 0 && n.triangles < 2000), 'triangles per node');
+  assert.ok(MANIFEST.nodes.every(n => n.type === 'group' ? n.triangles === 0 : n.triangles > 0 && n.triangles < 2000), 'triangles per node');
 });
 
 test('4. manifest の大きさ・SHA-256 が実際のファイルと一致し、外部素材は0件', () => {
@@ -170,8 +171,8 @@ test('13. 歩ける範囲の傾きは10°以下、外は丘で閉じる（起伏
   assert.ok(max <= 10, `max slope ${max.toFixed(2)}`);
   assert.ok(hi > .3, 'gentle rolling inside');
   assert.ok(T.heightAt(0, -24) > 1 && T.heightAt(-18, -14) > 1, 'hills outside');
-  // V2 のカメラ（横長：+z 8.2・+3.4、縦長：-x 2.4・+z 8.3・+3.8）が、歩ける範囲のどこでも地面より上にある
-  for (const [ox, oy, oz] of [[0, 3.4, 8.2], [-2.4, 3.8, 8.3]]) for (let a = 0; a < 360; a += 5) {
+  // V2 のカメラ（横長：+z 8.2・+3.4、縦長：-x 4.2・+z 7.6・+4.4）が、歩ける範囲のどこでも地面より上にある
+  for (const [ox, oy, oz] of [[0, 3.4, 8.2], [-4.2, 4.4, 7.6]]) for (let a = 0; a < 360; a += 5) {
     const x = T.WALK.cx + Math.cos(a * Math.PI / 180) * T.WALK.rx, z = T.WALK.cz + Math.sin(a * Math.PI / 180) * T.WALK.rz;
     assert.ok(T.heightAt(x, z) + oy - T.heightAt(x + ox, z + oz) > 1.5, 'camera above ground');
   }
@@ -272,8 +273,8 @@ test('21. カメラの構図は V2 だけで変わる（V1 の CAM_OFF・見る�
   assert.match(HTML, /^const CAM_LOOK = new THREE\.Vector3\(0, 1, 0\);/m);
   assert.match(HTML, /camTgt\.lerp\(character\.position\.clone\(\)\.add\(CAM_LOOK\),\.08\);/);
   const act = between(V2_CODE, 'function activate(built)', '\n  }\n');
-  assert.match(act, /CAM_OFF\.set\(portrait \? -2\.4 : 0, portrait \? 3\.8 : 3\.4, portrait \? 8\.3 : 8\.2\);/);
-  assert.match(act, /CAM_LOOK\.set\(0, 1\.6, 0\);/);
+  assert.match(act, /CAM_OFF\.set\(portrait \? -4\.2 : 0, portrait \? 4\.4 : 3\.4, portrait \? 7\.6 : 8\.2\);/);
+  assert.match(act, /CAM_LOOK\.set\(0, portrait \? 2\.3 : 1\.6, 0\);/);
   assert.equal(count(V2_CODE, /CAM_OFF\.set\(|CAM_LOOK\.set\(/g), 2, 'only in activate');
   assert.ok(!/CAM_OFF\.set|CAM_LOOK\.set/.test(V2_CODE.replace(act, '')));
 });
@@ -325,4 +326,19 @@ test('25. ことばの樹は門の先 15〜25m の谷の奥にあり、通常の
   assert.ok(h('WordTree') * T.WORD_TREE.scale >= normal * 2.5, `word tree ${h('WordTree')} vs ${normal}`);
   // 樹冠のまわりは遠くの木で埋めない（谷の奥はあける）
   assert.ok(!/\[11, -21, 4\]/.test(V2));
+});
+
+test('26. ことばのタネ：金色の実と水色の光の2つを、入れ物 WordSeed がまとめる。今回は世界に置かない（Part 2 で使う）', () => {
+  const j = glbJson(GLB), byName = Object.fromEntries(j.nodes.map(n => [n.name, n]));
+  const kids = (byName.WordSeed.children || []).map(i => j.nodes[i].name).sort();
+  assert.deepEqual(kids, ['WordSeed_Core', 'WordSeed_Glow']);
+  assert.equal(byName.WordSeed.mesh, undefined, 'group only');
+  const acc = j.accessors, size = n => { const a = acc[j.meshes[byName[n].mesh].primitives[0].attributes.POSITION]; return a.max[1] - a.min[1]; };
+  assert.ok(size('WordSeed_Glow') > size('WordSeed_Core'), 'glow wraps the core');
+  assert.ok(size('WordSeed_Core') < .3, 'fits in Hirori\'s hand');
+  assert.deepEqual(MANIFEST.not_placed_yet, ['WordSeed', 'WordSeed_Core', 'WordSeed_Glow']);
+  assert.ok(!/WordSeed/.test(V2_CODE), 'not placed in Part 1B');
+  // ことばの樹の実は金色と水色、灯った実は金色（白く光らせない）
+  assert.match(V2, /fruits\.setColorAt\(i, c3\.set\(i === 0 \? 0xffd978 : i % 2 \? 0x8fc6d8 : 0xd6b468\)\);/);
+  assert.match(V2, /const LIT = new THREE\.Color\(0xffe08a\), DIM = new THREE\.Color\(0xd6b468\)/);
 });

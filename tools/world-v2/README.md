@@ -32,6 +32,7 @@
 | 祠 | `Shrine`（台座と光の受け皿・不揃いな立ち石・石畳。入口は手前、右奥は根の門への出口） |
 | 根の門 | `RootGate_Left` `RootGate_Right` `RootGate_Top`（左右は根元が回転の中心。Part 2 で開ける） |
 | ことばの樹 | `WordTree`、光の実 `WordTree_Fruit_01`〜`05`（同じ形を共有。どれを灯すかを Three.js 側で決める） |
+| ことばのタネ | `WordSeed`（入れ物）の中に `WordSeed_Core`（金色の実と小さな芽）と `WordSeed_Glow`（外側の薄い水色）。Part 2 で使うので、今は世界に置かない |
 
 座標は Three.js と同じ向き（x＝右、y＝上、z＝手前）で書き、エクスポートで Blender の向きへ直しています。
 ノードは原点付近に置き、配置・大きさ・色の違いは `demo-world.html` 側（InstancedMesh）で決めます。

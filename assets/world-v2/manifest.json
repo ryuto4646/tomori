@@ -5,8 +5,8 @@
   "files": [
     {
       "path": "assets/world-v2/tomori-world-kit.glb",
-      "bytes": 172768,
-      "sha256": "de26685a5a7f61d7b310a5fbc2c8e6f73a77b506e533c9191fec4e838f384649",
+      "bytes": 178424,
+      "sha256": "8d0568e917c7fc887964e1dc2ee8f20eb118f1b9b274f75010a9c34c5a7d7c64",
       "format": "glTF 2.0 binary",
       "textures": 0,
       "external_uris": 0
@@ -102,6 +102,23 @@
       "triangles": 123
     },
     {
+      "name": "WordSeed",
+      "triangles": 0,
+      "type": "group",
+      "children": [
+        "WordSeed_Core",
+        "WordSeed_Glow"
+      ]
+    },
+    {
+      "name": "WordSeed_Core",
+      "triangles": 108
+    },
+    {
+      "name": "WordSeed_Glow",
+      "triangles": 80
+    },
+    {
       "name": "WordTree",
       "triangles": 1724
     },
@@ -127,5 +144,10 @@
     }
   ],
   "external_assets": 0,
+  "not_placed_yet": [
+    "WordSeed",
+    "WordSeed_Core",
+    "WordSeed_Glow"
+  ],
   "license": "TOMORI original: generated for TOMORI by this script. No third-party, redistributed or Craftopia assets."
 }

@@ -1587,7 +1587,7 @@ const worldV2 = (() => {
     m4.compose(p3.set(WORD_TREE.x, heightAt(WORD_TREE.x, WORD_TREE.z), WORD_TREE.z), q.setFromEuler(e3.set(0, -.4, 0, 'YXZ')), s3.set(WORD_TREE.scale, WORD_TREE.scale, WORD_TREE.scale));
     for (let i = 0; i < 5; i++) {
       fruits.setMatrixAt(i, new THREE.Matrix4().multiplyMatrices(m4, need('WordTree_Fruit_0' + (i + 1)).matrix));
-      fruits.setColorAt(i, c3.set(i === 0 ? 0xffe7a0 : 0xd9c48c));   // 灯った実は淡い金色、眠っている実は落ち着いた黄土色
+      fruits.setColorAt(i, c3.set(i === 0 ? 0xffd978 : i % 2 ? 0x8fc6d8 : 0xd6b468));   // 灯った実は金色。眠っている実は、落ち着いた金色と水色が交互
     }
     fruits.instanceMatrix.needsUpdate = true; fruits.instanceColor.needsUpdate = true; fruits.computeBoundingSphere();
     group.add(fruits);
@@ -1612,6 +1612,14 @@ const worldV2 = (() => {
         }
       }
     });
+    // ことばの樹の根元：地面にしみこむ淡いクリーム色の光（小道と同じ形・素材にまとめる）
+    const rootBase = pos.length / 3, RG = 16;
+    pos.push(WORD_TREE.x, heightAt(WORD_TREE.x, WORD_TREE.z) + .03, WORD_TREE.z); c3.set(0xfff0c8); colr.push(c3.r, c3.g, c3.b, .5);
+    for (let k = 0; k < RG; k++) {
+      const a = k / RG * Math.PI * 2, x = WORD_TREE.x + Math.cos(a) * 3.4, z = WORD_TREE.z + Math.sin(a) * 3.4;
+      pos.push(x, heightAt(x, z) + .03, z); colr.push(c3.r, c3.g, c3.b, 0);
+      idx.push(rootBase, rootBase + 1 + k, rootBase + 1 + (k + 1) % RG);
+    }
     const pathGeo = new THREE.BufferGeometry();
     pathGeo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     pathGeo.setAttribute('color', new THREE.Float32BufferAttribute(colr, 4)); pathGeo.setIndex(idx);
@@ -1635,8 +1643,8 @@ const worldV2 = (() => {
     // カメラを少し低く・近くして、空と遠くが見える構図にする（V2 だけ。横長と縦長で別の高さ）
     const portrait = camera.aspect < .8;
     // 縦長の画面は横の見える幅がせまいので、少し左うしろから見る（右奥の祠・門・ことばの樹が同じ画面に入る）
-    CAM_OFF.set(portrait ? -2.4 : 0, portrait ? 3.8 : 3.4, portrait ? 8.3 : 8.2);
-    CAM_LOOK.set(0, 1.6, 0);                                   // ヒロリの少し上を見る：ヒロリが画面の下寄りになり、上に祠・門・ことばの樹が抜ける
+    CAM_OFF.set(portrait ? -4.2 : 0, portrait ? 4.4 : 3.4, portrait ? 7.6 : 8.2);
+    CAM_LOOK.set(0, portrait ? 2.3 : 1.6, 0);   // 縦長は見る点を高めに：下にヒロリと草、中ほどに祠と小道、上に門と樹と空                                   // ヒロリの少し上を見る：ヒロリが画面の下寄りになり、上に祠・門・ことばの樹が抜ける
     if (character) camera.position.copy(character.position).add(CAM_OFF);
     v1Rocks.forEach(r => { r.visible = false; });
     ground.geometry.dispose(); ground.geometry = built.terrain; ground.rotation.set(0, 0, 0); ground.updateMatrixWorld(true);
@@ -1670,7 +1678,7 @@ const worldV2 = (() => {
 
   // PER-FRAME-V2-BEGIN（毎フレームの処理。新しい物は作らない）
   // ことばの樹の灯った実が、ゆっくり明滅する。祠の光が呼吸する。小道の光の点がゆっくり進む。カメラが地面より下へ行かないようにする
-  const LIT = new THREE.Color(0xffefb8), DIM = new THREE.Color(0xe8cf8a), fruitNow = new THREE.Color(), moteM = new THREE.Matrix4();
+  const LIT = new THREE.Color(0xffe08a), DIM = new THREE.Color(0xd6b468), fruitNow = new THREE.Color(), moteM = new THREE.Matrix4();
   function update(t) {
     if (!active) return;
     const still = reduceMotionQuery.matches;

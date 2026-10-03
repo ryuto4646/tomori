@@ -186,8 +186,9 @@ GRASS = lin(0x5f9d3f); GRASS_TIP = lin(0xb9d978); GRASS_DRY = lin(0xa7b763); GRA
 ROCK = lin(0xa8a090); ROCK_D = lin(0x8f887a); MOSS = lin(0x7f9a52)
 RUIN = lin(0xb8b0a0); RUIN_D = lin(0x9d9586)
 ROOT = lin(0x6b4a33); ROOT_L = lin(0x8a6447); ROOT_MOSS = lin(0x6f8a45)
-WT_BARK = lin(0xa08c74); WT_BARK_L = lin(0xc3b29a); WT_LEAF = lin(0x5fae96); WT_LEAF_L = lin(0xa2dcc2)
+WT_BARK = lin(0x8a6446); WT_BARK_L = lin(0xab875f); WT_LEAF = lin(0x4e9c88); WT_LEAF_L = lin(0xa9d465)   # 葉：影は青緑、日の当たる中心は若葉色
 FRUIT = lin(0xfff3cf)
+SEED_GOLD = lin(0xe9b84a); SEED_CREAM = lin(0xfff0c4); SEED_GLOW = lin(0xa6dcf2)   # ことばのタネ：中心は金色、外側は水色
 
 
 def build_all():
@@ -358,9 +359,9 @@ def build_all():
         k.tube(p, [.32, .2, .08], WT_BARK, sides=6, color_end=WT_BARK_L)
         tips.append(p[-1])
     for i, (x, y, z) in enumerate(tips):
-        k.blob((x, y + .5, z), (1.65, 1.0, 1.5), mix(WT_LEAF, WT_LEAF_L, .15 + .1 * (i % 3)), subdiv=1, rough=.16, shade_top=(WT_LEAF_L, .5))
-        k.blob((x * .78 + .3, y + 1.1, z * .78), (1.0, .7, .95), mix(WT_LEAF, WT_LEAF_L, .4), subdiv=1, rough=.18)
-    k.blob((0, 9.9, 0), (1.5, .9, 1.4), mix(WT_LEAF, WT_LEAF_L, .3), subdiv=1, rough=.15, shade_top=(WT_LEAF_L, .55))
+        k.blob((x, y + .5, z), (1.65, 1.0, 1.5), mix(WT_LEAF, WT_LEAF_L, .35 + .08 * (i % 3)), subdiv=1, rough=.16, shade_top=(WT_LEAF_L, .9))
+        k.blob((x * .78 + .3, y + 1.1, z * .78), (1.0, .7, .95), mix(WT_LEAF, WT_LEAF_L, .55), subdiv=1, rough=.18, shade_top=(WT_LEAF_L, .7))
+    k.blob((0, 9.9, 0), (1.5, .9, 1.4), mix(WT_LEAF, WT_LEAF_L, .45), subdiv=1, rough=.15, shade_top=(WT_LEAF_L, .9))
     objs.append(k.finish())
     # 光の実：同じ形を共有する5つ。樹冠の下に輪の形で並び、どの方向からも3つ前後がまとまって見える
     fk = Kit('WordTree_Fruit', rng)
@@ -374,6 +375,21 @@ def build_all():
         o.name = 'WordTree_Fruit_%02d' % (i + 1)
         o.location = P(*ring[i])
         bpy.context.scene.collection.objects.link(o)
+
+    # ── ことばのタネ（Part 2 で使う。今回は世界に置かない）──
+    # 自分の言葉から生まれた小さな命の種：金色の実（芽がひとつ）と、外側の薄い水色の光。ヒロリの手に収まる大きさ（高さ約0.2m）
+    # 「WordSeed」は入れ物（形なし）。中身の「WordSeed_Core」と「WordSeed_Glow」を、Part 2 で一緒に動かす
+    seed_root = bpy.data.objects.new('WordSeed', None)
+    bpy.context.scene.collection.objects.link(seed_root)
+    k = Kit('WordSeed_Core', rng)
+    k.blob((0, .07, 0), (.055, .075, .055), SEED_GOLD, subdiv=1, rough=.05, shade_top=(SEED_CREAM, .6))
+    k.blob((0, .125, 0), (.03, .03, .03), SEED_GOLD, subdiv=0, rough=.05)
+    k.blade((0, .14, 0), .6, .04, .07, .022, LEAF_WARM, LEAF_LIGHT, segs=2)
+    k.blade((0, .14, 0), 3.7, .03, .055, .018, LEAF_WARM, LEAF_LIGHT, segs=2)
+    core = k.finish(); core.parent = seed_root
+    k = Kit('WordSeed_Glow', rng)
+    k.blob((0, .08, 0), (.1, .12, .1), SEED_GLOW, subdiv=1, rough=.02)
+    glow = k.finish(); glow.parent = seed_root
     return objs
 
 
@@ -390,6 +406,9 @@ def export():
     data = open(GLB, 'rb').read()
     nodes = []
     for o in sorted(bpy.context.scene.objects, key=lambda o: o.name):
+        if o.data is None:                     # 入れ物（ことばのタネの親）。形は子のノードにある
+            nodes.append({'name': o.name, 'triangles': 0, 'type': 'group', 'children': sorted(c.name for c in o.children)})
+            continue
         o.data.calc_loop_triangles()
         nodes.append({'name': o.name, 'triangles': len(o.data.loop_triangles)})
     manifest = {
@@ -400,6 +419,8 @@ def export():
                    'format': 'glTF 2.0 binary', 'textures': 0, 'external_uris': 0}],
         'nodes': nodes,
         'external_assets': 0,
+        'not_placed_yet': ['WordSeed', 'WordSeed_Core', 'WordSeed_Glow'],   # ことばのタネ：Part 2 で表示・取得・移動する
+
         'license': 'TOMORI original: generated for TOMORI by this script. No third-party, redistributed or Craftopia assets.',
     }
     with open(os.path.join(OUT_DIR, 'manifest.json'), 'w', encoding='utf-8', newline='\n') as f:

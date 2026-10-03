@@ -5,8 +5,8 @@
   "files": [
     {
       "path": "assets/world-v2/tomori-world-kit.glb",
-      "bytes": 155196,
-      "sha256": "ffaa6bb5b7d144220292fc4bcc1e8f3dafb83cb181b69432e7c7858ea278b53e",
+      "bytes": 172768,
+      "sha256": "de26685a5a7f61d7b310a5fbc2c8e6f73a77b506e533c9191fec4e838f384649",
       "format": "glTF 2.0 binary",
       "textures": 0,
       "external_uris": 0
@@ -59,19 +59,19 @@
     },
     {
       "name": "RootGate_Left",
-      "triangles": 350
+      "triangles": 606
     },
     {
       "name": "RootGate_Right",
-      "triangles": 350
+      "triangles": 510
     },
     {
       "name": "RootGate_Top",
-      "triangles": 352
+      "triangles": 364
     },
     {
       "name": "Shrine",
-      "triangles": 664
+      "triangles": 578
     },
     {
       "name": "Stone_Standing_A",
@@ -103,7 +103,7 @@
     },
     {
       "name": "WordTree",
-      "triangles": 1540
+      "triangles": 1724
     },
     {
       "name": "WordTree_Fruit_01",

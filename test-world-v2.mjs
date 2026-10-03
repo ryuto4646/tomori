@@ -170,10 +170,10 @@ test('13. 歩ける範囲の傾きは10°以下、外は丘で閉じる（起伏
   assert.ok(max <= 10, `max slope ${max.toFixed(2)}`);
   assert.ok(hi > .3, 'gentle rolling inside');
   assert.ok(T.heightAt(0, -24) > 1 && T.heightAt(-18, -14) > 1, 'hills outside');
-  // カメラ（ヒロリの +z 8・+5）が、歩ける範囲のどこでも地面より上にある
-  for (let a = 0; a < 360; a += 5) {
+  // V2 のカメラ（横長：+z 8.2・+3.4、縦長：-x 2.4・+z 8.3・+3.8）が、歩ける範囲のどこでも地面より上にある
+  for (const [ox, oy, oz] of [[0, 3.4, 8.2], [-2.4, 3.8, 8.3]]) for (let a = 0; a < 360; a += 5) {
     const x = T.WALK.cx + Math.cos(a * Math.PI / 180) * T.WALK.rx, z = T.WALK.cz + Math.sin(a * Math.PI / 180) * T.WALK.rz;
-    assert.ok(T.heightAt(x, z) + 5 - T.heightAt(x, z + 8) > 2, 'camera above ground');
+    assert.ok(T.heightAt(x, z) + oy - T.heightAt(x + ox, z + oz) > 1.5, 'camera above ground');
   }
 });
 
@@ -207,7 +207,7 @@ test('15. タップ先とキーボード移動の両方を、歩ける範囲の�
   assert.deepEqual([inside.x, inside.z], [1, -2]);
 });
 
-test('16. 画質は起動時に一度だけ決まり、low は pixelRatio 1.25・影なし・植物 55%', () => {
+test('16. 画質は起動時に一度だけ決まり、low は pixelRatio 1.25・影なし・植物 50%', () => {
   assert.equal(count(HTML, /const WORLD_QUALITY = /g), 1);
   assert.ok(!/WORLD_QUALITY\s*=[^=]/.test(HTML.replace('const WORLD_QUALITY = ', '')), 'never reassigned');
   assert.ok(HTML.indexOf('const WORLD_QUALITY = ') < HTML.indexOf('const renderer = new THREE.WebGLRenderer('));
@@ -219,7 +219,7 @@ test('16. 画質は起動時に一度だけ決まり、low は pixelRatio 1.25�
   assert.equal(count(V2_CODE, /shadowMap\.enabled = true/g), 1);
   assert.ok(/castShadow = HIGH && CASTERS\.has\(name\)/.test(V2_CODE) && /mesh\.castShadow = HIGH;/.test(V2_CODE));
   assert.match(V2_CODE, /sun\.shadow\.mapSize\.set\(2048, 2048\)/);
-  assert.match(V2_CODE, /const keep = i => HIGH \|\| i % 20 < 11;/);
+  assert.match(V2_CODE, /const keep = i => HIGH \|\| i % 20 < 10;/);
   assert.ok(!/UnrealBloom|EffectComposer|Bloom/.test(HTML), 'no bloom');
 });
 
@@ -264,4 +264,65 @@ test('20. ヒロリの範囲（HIRORI-BEGIN〜END）・index.html・画像・起
     assert.ok(readFileSync(join(REPO, 'assets', 'tomori-world-gateway.webp')).equals(git('show', 'b2caa58:assets/tomori-world-gateway.webp')));
   }
   assert.equal(git('rev-parse', '--short', `${TAG}^{commit}`).toString().trim(), '1890884');
+});
+
+// ── Step 11I-B Part 1B（第一印象の仕上げ）─────────────────────────────────
+test('21. カメラの構図は V2 だけで変わる（V1 の CAM_OFF・見る高さは今までどおり）', () => {
+  assert.match(HTML, /^const CAM_OFF = new THREE\.Vector3\(0, 5, 8\);$/m);
+  assert.match(HTML, /^const CAM_LOOK = new THREE\.Vector3\(0, 1, 0\);/m);
+  assert.match(HTML, /camTgt\.lerp\(character\.position\.clone\(\)\.add\(CAM_LOOK\),\.08\);/);
+  const act = between(V2_CODE, 'function activate(built)', '\n  }\n');
+  assert.match(act, /CAM_OFF\.set\(portrait \? -2\.4 : 0, portrait \? 3\.8 : 3\.4, portrait \? 8\.3 : 8\.2\);/);
+  assert.match(act, /CAM_LOOK\.set\(0, 1\.6, 0\);/);
+  assert.equal(count(V2_CODE, /CAM_OFF\.set\(|CAM_LOOK\.set\(/g), 2, 'only in activate');
+  assert.ok(!/CAM_OFF\.set|CAM_LOOK\.set/.test(V2_CODE.replace(act, '')));
+});
+
+test('22. 四角い粒・V1 の小道と光の柱は、V2 のときだけ描かない（V1 の粒はそのまま）', () => {
+  const act = between(V2_CODE, 'function activate(built)', '\n  }\n');
+  assert.match(act, /scene\.children\.forEach\(o => \{ if \(o\.isPoints\) o\.visible = false; \}\);/);
+  assert.match(act, /worldArt\.group\.children\.forEach\(o => \{ if \(o !== worldArt\.mpGlow\) o\.visible = false; \}\);/);
+  const points = s => (s.match(/\/\/ ── パーティクル[\s\S]*?scene\.add\(new THREE\.Points\([^\n]*\n/) || [''])[0];
+  assert.ok(points(HTML).length > 0);
+  assert.equal(points(HTML), points(OLD), 'V1 particles unchanged');
+});
+
+test('23. 根の門：左右は根元が回転の中心（Part 2 で開ける）、上は別のノード。形は門の大きさ', () => {
+  const j = glbJson(GLB), byName = Object.fromEntries(j.nodes.map(n => [n.name, n]));
+  const tx = n => (byName[n].translation || [0, 0, 0]);
+  assert.ok(tx('RootGate_Left')[0] < -1 && tx('RootGate_Right')[0] > 1, 'pivots left and right');
+  assert.equal(tx('RootGate_Left')[1], 0); assert.equal(tx('RootGate_Right')[1], 0);
+  const acc = j.accessors, pos = n => acc[j.meshes[byName[n].mesh].primitives[0].attributes.POSITION];
+  // 柱は根元から高く（3m 前後）、上の弧はさらに上
+  assert.ok(pos('RootGate_Left').max[1] > 2.8 && pos('RootGate_Right').max[1] > 2.8);
+  assert.ok(pos('RootGate_Top').min[1] > 2 && pos('RootGate_Top').max[1] > 3.5);
+  // 柱どうしの間に通り道の幅がある（左右の柱の根元の距離）
+  assert.ok(tx('RootGate_Right')[0] - tx('RootGate_Left')[0] > 2.5);
+  for (const n of ['RootGate_Left', 'RootGate_Right', 'RootGate_Top']) assert.ok(MANIFEST.nodes.find(x => x.name === n).triangles >= 300, n);
+});
+
+test('24. 光る小道：足もとから祠の入口へ・祠の出口から門へ。地形に沿い、ふちは透明。光の点は reduced-motion で止まる', () => {
+  const r = V2.match(/const ROUTES = (\[\[\[[\s\S]*?\]\]\]);/);
+  const routes = new Function('return ' + r[1])();
+  const [a, b] = routes, first = a[0], endA = a[a.length - 1], startB = b[0], endB = b[b.length - 1];
+  assert.ok(Math.hypot(first[0], first[1]) < 1, 'starts at Hirori');
+  assert.ok(Math.hypot(endA[0] - 1.5, endA[1] + 6.5) < 1.8, 'ends at the shrine entrance');
+  assert.ok(Math.hypot(startB[0] - 1.5, startB[1] + 6.5) < 1.6 && Math.hypot(endB[0] - T.GATE.x, endB[1] - T.GATE.z) < 1, 'shrine to gate');
+  assert.match(V2, /pos\.push\(x, heightAt\(x, z\) \+ \.025, z\);/);
+  assert.match(V2, /PA = \[0, \.28, \.85, \.28, 0\]/);
+  assert.match(V2, /new THREE\.MeshBasicMaterial\(\{ vertexColors: true, transparent: true, depthWrite: false, side: THREE\.DoubleSide \}\)/);
+  const frame = stripComments(between(V2, '// PER-FRAME-V2-BEGIN', '// PER-FRAME-V2-END'));
+  assert.match(frame, /const u = still \? k \/ n \+ \.1 :/);
+  assert.match(frame, /moteSamples\[j \+ 1\] \+ \(still \? 0 :/);
+});
+
+test('25. ことばの樹は門の先 15〜25m の谷の奥にあり、通常の木より十分に大きい', () => {
+  const d = Math.hypot(T.WORD_TREE.x - T.GATE.x, T.WORD_TREE.z - T.GATE.z);
+  assert.ok(d >= 15 && d <= 25, `gate to tree ${d}`);
+  const j = glbJson(GLB), byName = Object.fromEntries(j.nodes.map(n => [n.name, n])), acc = j.accessors;
+  const h = n => acc[j.meshes[byName[n].mesh].primitives[0].attributes.POSITION].max[1];
+  const normal = Math.max(h('Tree_Round_A'), h('Tree_Round_B'), h('Tree_Tall_A'), h('Tree_Tall_B'));
+  assert.ok(h('WordTree') * T.WORD_TREE.scale >= normal * 2.5, `word tree ${h('WordTree')} vs ${normal}`);
+  // 樹冠のまわりは遠くの木で埋めない（谷の奥はあける）
+  assert.ok(!/\[11, -21, 4\]/.test(V2));
 });

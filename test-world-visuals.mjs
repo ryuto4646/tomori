@@ -94,7 +94,7 @@ test('5. カメラの動かし方・構図（CAM_OFF・追いかけ・注目・�
   assert.deepEqual(lines(noArt()), lines(OLD));
   assert.match(NOW, /const CAM_OFF = new THREE\.Vector3\(0, 5, 8\);/);
   // 美術はカメラの位置を読むだけで、動かさない
-  assert.ok(!/camera\.(position|rotation|quaternion)\.(set|copy|lerp|add)|camera\.lookAt|camera\.fov/.test(ART));
+  assert.ok(!/camera\.(position|rotation|quaternion)\.(set|copy|lerp|add)|camera\.lookAt|camera\.fov/.test(ART_V1));   // V2 のカメラは test-world-v2.mjs の 21 で調べる
 });
 
 test('6. 移動の速さ・キー操作・タップ移動（animate とキー入力）は収録版タグと同じ', () => {

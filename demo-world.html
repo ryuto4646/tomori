@@ -993,6 +993,7 @@ scene.fog = new THREE.Fog(0xd6ecef, 24, 88);
 
 const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 120);
 const CAM_OFF = new THREE.Vector3(0, 5, 8);
+const CAM_LOOK = new THREE.Vector3(0, 1, 0);   // カメラが見る高さ（ヒロリの足もとから。ワールドV2 で変える：WORLD-V2）
 camera.position.copy(CAM_OFF);
 camera.lookAt(0,0,0);
 
@@ -1380,7 +1381,7 @@ const worldV2 = (() => {
   // 歩ける範囲：だ円の内側。出発点・小道・祠・秘密の場所は高さ0で平ら。その外はゆるい起伏、さらに外へ行くほど丘が重なる
   const WALK = { cx: 3, cz: -3.5, rx: 15, rz: 9.5 };
   const GATE = { x: 7.0, z: -12.6 };                 // 根の門（歩ける範囲のふち。この先へは進めない）
-  const WORD_TREE = { x: 24, z: -43, scale: .85 };   // ことばの樹（根の門の先、谷の奥に見える目標）
+  const WORD_TREE = { x: 15.8, z: -28.3, scale: 1 }; // ことばの樹（根の門の先、谷の奥およそ18m。遠くからも見える目標）
   const smooth = (a, b, x) => { const k = Math.min(1, Math.max(0, (x - a) / (b - a))); return k * k * (3 - 2 * k); };
   const segDist = (x, z, ax, az, bx, bz) => {
     const vx = bx - ax, vz = bz - az, t = Math.min(1, Math.max(0, ((x - ax) * vx + (z - az) * vz) / (vx * vx + vz * vz)));
@@ -1391,7 +1392,9 @@ const worldV2 = (() => {
   const FLAT_SEG = [[0, 0, 1.5, -6.5, 2.4, 8], [13.8, -2.5, 12.2, -17.5, 2.2, 7]];
   // 盛り上がり（x, z, 高さ, 広がり）：歩ける範囲の中はゆるく、外は大きく
   const INNER = [[-10.5, -3.5, .45, 6], [10, 2, .4, 5.5], [-6.5, 5, .25, 5], [10.5, -6.5, .3, 5], [-4, -12.5, .55, 6]];
-  const OUTER = [[-15, -15, 1.6, 6.5], [0, -21, 1.8, 7], [26, -12, 1.6, 6], [-19, 4, 1.4, 6], [25, 7, 1.2, 6]];
+  // 外の丘は高さを3段階にして、地平線を一直線にしない（低い丘・中くらいの丘・遠くの高い丘）
+  const OUTER = [[-15, -15, 1.2, 6.5], [-2, -21, 2.2, 6], [26, -12, 1.6, 6], [-19, 4, 1.0, 6], [25, 7, 1.2, 6],
+    [-30, -34, 3.3, 9], [-9, -40, 2.4, 8], [36, -30, 3.1, 9], [-38, -12, 2.0, 8], [6, -46, 1.6, 7]];
   function heightAt(x, z) {
     // やわらかな波（周期と向きをずらして重ね、等間隔の模様にしない）
     let h = .13 * Math.sin(x * .19 + .7) * Math.cos(z * .23 - .4) + .1 * Math.sin((x + z * .6) * .11 + 1.9) + .05 * Math.cos((x * .7 - z) * .29 + .3);
@@ -1464,12 +1467,12 @@ const worldV2 = (() => {
   }
 
   // ── 組み立て（すべて新しいグループの中に作る。最後まで成功したときだけ、シーンを切り替える）──
-  let fruits = null, fruitMat = null;
+  let fruits = null, fruitMat = null, motes = null, moteSamples = null, moteN = 0, moteMain = 0, moteCount = 0;
   function build(kit) {
     const need = n => { const k = kit.get(n); if (!k) throw new Error('node ' + n); return k; };
     let seed = 81726354;
     const rnd = () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
-    const keep = i => HIGH || i % 20 < 11;           // スマホ（low）は植物などを 55% に間引く
+    const keep = i => HIGH || i % 20 < 10;           // スマホ（low）は植物などを 50% に間引く
     const group = new THREE.Group(); group.name = 'worldV2';
     const kitMat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
     const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e3 = new THREE.Euler(0, 0, 0, 'YXZ'), p3 = new THREE.Vector3(), s3 = new THREE.Vector3(), c3 = new THREE.Color();
@@ -1490,17 +1493,18 @@ const worldV2 = (() => {
       || segDist(x, z, 1.5, -6.5, GATE.x, GATE.z) < 1.4 || Math.hypot(x - 16, z + 8) < 5;
 
     // 地形：中心ほど細かい格子（奥と外周は粗く）。頂点色で草原の色を混ぜる
-    const N = HIGH ? 72 : 36, SPAN = 78;
+    const N = HIGH ? 72 : 26, SPAN = 78;
     const g = new THREE.PlaneGeometry(2, 2, N, N); g.rotateX(-Math.PI / 2);
     const gp = g.attributes.position, gc = new Float32Array(gp.count * 3);
     const warp = u => SPAN * (.34 * u + .66 * Math.sign(u) * Math.abs(u) ** 2.1);
-    const cWarm = new THREE.Color(0x86ba4f), cMid = new THREE.Color(0x6aa646), cBlue = new THREE.Color(0x5f9c6c), cDry = new THREE.Color(0xa9b862), cFar = new THREE.Color(0x8fbf86), cPath = new THREE.Color(0xb2c56c), cLight = new THREE.Color(0x92c862);
+    const cWarm = new THREE.Color(0x86ba4f), cMid = new THREE.Color(0x6aa646), cBlue = new THREE.Color(0x5f9c6c), cDry = new THREE.Color(0xa9b862), cFar = new THREE.Color(0x8fbf86), cPath = new THREE.Color(0xb2c56c), cLight = new THREE.Color(0x96cc64), cFore = new THREE.Color(0x58913f);
     for (let i = 0; i < gp.count; i++) {
       const x = WALK.cx + warp(gp.getX(i)), z = WALK.cz + warp(gp.getZ(i)), h = heightAt(x, z);
       gp.setXYZ(i, x, h, z);
       const n1 = .5 + .5 * Math.sin(x * .09 + 1.3) * Math.cos(z * .07 - .6), n2 = .5 + .5 * Math.sin((x - z) * .05 + .4);
       c3.copy(cMid).lerp(cWarm, n1 * .8).lerp(cBlue, n2 * .45).lerp(cDry, smooth(.8, 4, h) * .5);
-      c3.lerp(cLight, .5 * Math.exp(-(x * x + (z + 2) ** 2) / 22));
+      c3.lerp(cLight, .5 * Math.exp(-((x - .8) ** 2) / 40) * Math.exp(-((z + 4.5) ** 2) / 16));   // 中景（小道から祠）は明るく
+      c3.lerp(cFore, .38 * smooth(2.5, 8, z));                                                       // 画面の手前は少し暗く
       c3.lerp(cPath, .35 * Math.exp(-(segDist(x, z, 0, 0, 1.5, -6.5) ** 2) / 3) + .3 * Math.exp(-(segDist(x, z, 1.5, -6.5, GATE.x, GATE.z) ** 2) / 2.5));
       c3.lerp(cFar, smooth(1.4, 3.2, Math.hypot((x - WALK.cx) / WALK.rx, (z - WALK.cz) / WALK.rz)) * .8);
       gc[i * 3] = c3.r; gc[i * 3 + 1] = c3.g; gc[i * 3 + 2] = c3.b;
@@ -1517,20 +1521,20 @@ const worldV2 = (() => {
       put(type, x, z, .85 + rnd() * .35, undefined, depthTint(x, z), (rnd() - .5) * .08);
     });
     // 外周の木立：歩ける範囲のふちの外側。門の前と、カメラ側（手前）はあける
-    for (let i = 0, n = HIGH ? 46 : 16; i < n; i++) {
+    for (let i = 0, n = HIGH ? 46 : 10; i < n; i++) {
       const a = i / n * Math.PI * 2 + rnd() * .12, r = 1.14 + rnd() * .55;
       const x = WALK.cx + Math.cos(a) * WALK.rx * r, z = WALK.cz + Math.sin(a) * WALK.rz * r;
       if (z > 7 || segDist(x, z, GATE.x, GATE.z, WORD_TREE.x, WORD_TREE.z) < 3.2 || Math.hypot(x - 16, z + 8) < 6) continue;
       put(TREES[i % 4], x, z, 1 + rnd() * .45, undefined, depthTint(x, z), (rnd() - .5) * .1);
     }
     // 遠くの木：丘の上に、まとまりで
-    [[-16, -17, 7], [2, -23, 6], [24, -14, 5], [-22, 2, 5], [11, -21, 4]].forEach(([cx, cz, n]) => {
-      for (let i = 0; i < (HIGH ? n : Math.floor(n / 3)); i++) put(i % 2 ? 'Tree_Tall_A' : 'Tree_Tall_B', cx + (rnd() - .5) * 8, cz + (rnd() - .5) * 5, 1.2 + rnd() * .5, undefined, depthTint(cx, cz - 10));
+    // まとまりの大きさ・広がり・間隔をそろえない。ことばの樹のまわり（谷の奥）はあけて、空が見える切れ目を残す
+    [[-17, -18, 8, 9], [-3, -24, 4, 5], [5, -21, 3, 4], [27, -16, 6, 7], [-24, 3, 5, 6], [31, -3, 3, 5]].forEach(([cx, cz, n, sp]) => {
+      for (let i = 0; i < (HIGH ? n : 0); i++) put(i % 3 ? 'Tree_Tall_A' : 'Tree_Tall_B', cx + (rnd() - .5) * sp, cz + (rnd() - .5) * sp * .6, 1.1 + rnd() * .7, undefined, depthTint(cx, cz - 10));
     });
 
     // 岩：V1 の岩と同じ場所に、苔のある岩。小石は小道のふちに少しだけ。門の左右と見晴らしの丘に立ち石
     [[-4, -3], [5, -2], [-2, 5], [6, 4], [-6, 6]].forEach(([x, z], k) => put(k % 2 ? 'Rock_Medium_A' : 'Rock_Medium_B', x, z, .7 + rnd() * .3));
-    [[2.6, -4.6], [-3.4, -5.2]].forEach(([x, z]) => put('Rock_Pebbles', x, z, .9));
     const gYaw = Math.atan2(1.5 - GATE.x, -6.5 - GATE.z);
     const side = (d, f) => [GATE.x + Math.cos(gYaw) * d + Math.sin(gYaw) * f, GATE.z - Math.sin(gYaw) * d + Math.cos(gYaw) * f];
     [[-2.7, .3, 'Stone_Standing_A'], [2.8, .1, 'Stone_Standing_B'], [-3.4, -.8, 'Rock_Medium_A'], [3.5, -.6, 'Rock_Medium_B']].forEach(([d, f, n]) => { const [x, z] = side(d, f); put(n, x, z, 1.1 + rnd() * .2); });
@@ -1544,7 +1548,10 @@ const worldV2 = (() => {
     for (let k = 0; k <= 10; k++) { const t = k / 10, x = 1.5 * t, z = -6.5 * t, s = k % 2 ? 1 : -1; plant(k % 3 ? 'Grass_B' : 'Flowers_A', x + s * (1.9 + rnd() * .5), z + (rnd() - .5)); }
     [[-2.9, .8, 'Flowers_A'], [-3.0, -.9, 'Flowers_B'], [-2.2, -2.4, 'Grass_A'], [-.8, -3.0, 'Flowers_C'], [.9, -3.1, 'Grass_C'], [-2.6, 2.0, 'Bush_B']].forEach(([dx, dz, n]) => plant(n, 1.5 + dx, -6.5 + dz));
     [[-1.8, .9], [1.9, .8], [-2.4, -.4], [2.5, -.5]].forEach(([d, f], k) => { const [x, z] = side(d, f); plant(k % 2 ? 'Bush_A' : 'Grass_C', x, z, 1.2); });
-    [[-4.8, 3.9], [5.0, 3.4], [-1.9, 3.8], [2.2, 4.6]].forEach(([cx, cz], k) => { for (let i = 0; i < 3; i++) plant(['Grass_A', 'Grass_C', 'Flowers_B'][i], cx + (rnd() - .5) * 1.6, cz + (rnd() - .5) * 1.2, k < 2 ? 1.2 : 1.0); });
+    // 画面手前の左右（額縁）：横長の画面と縦長の画面で、映る範囲に合わせて置く。ヒロリのまわり（半径2.6）は空ける
+    const FRAME = camera.aspect < .8 ? [[-2.15, 3.9], [-0.3, 4.4], [-1.95, 3.0], [-0.05, 3.5]] : [[-3.3, 3.2], [3.5, 2.9], [-2.2, 4.4], [2.5, 4.6]];
+    FRAME.forEach(([cx, cz], k) => { for (let i = 0; i < 3; i++) plant(['Grass_A', 'Flowers_B', 'Grass_C'][(i + k) % 3], cx + (rnd() - .5) * 1.0, cz + (rnd() - .5) * .8, k < 2 ? 1.3 : 1.1); });
+    put('Rock_Medium_B', FRAME[0][0] - .6, FRAME[0][1] + .5, .8);
     [[-7, -8.5], [8, -2.5], [-9, 1], [10.5, -9], [-5.5, -1.5]].forEach(([cx, cz], k) => { plant(['Flowers_A', 'Flowers_B', 'Flowers_C'][k % 3], cx, cz); plant('Grass_A', cx + .8, cz + .4); plant(k % 2 ? 'Bush_B' : 'Grass_B', cx - .9, cz - .3); });
 
     // InstancedMesh：形ごとに1つ。大きな木と岩だけが影を落とす（PC）
@@ -1580,16 +1587,57 @@ const worldV2 = (() => {
     m4.compose(p3.set(WORD_TREE.x, heightAt(WORD_TREE.x, WORD_TREE.z), WORD_TREE.z), q.setFromEuler(e3.set(0, -.4, 0, 'YXZ')), s3.set(WORD_TREE.scale, WORD_TREE.scale, WORD_TREE.scale));
     for (let i = 0; i < 5; i++) {
       fruits.setMatrixAt(i, new THREE.Matrix4().multiplyMatrices(m4, need('WordTree_Fruit_0' + (i + 1)).matrix));
-      fruits.setColorAt(i, c3.set(i === 0 ? 0xfff3cf : 0x9fb3a6));
+      fruits.setColorAt(i, c3.set(i === 0 ? 0xffe7a0 : 0xd9c48c));   // 灯った実は淡い金色、眠っている実は落ち着いた黄土色
     }
     fruits.instanceMatrix.needsUpdate = true; fruits.instanceColor.needsUpdate = true; fruits.computeBoundingSphere();
     group.add(fruits);
+
+    // 光る小道：ヒロリの足もとから祠の入口へ（はっきり）、祠の出口から根の門へ（弱く）。中心だけ淡い金色、外は透明
+    // 地形の高さに合わせて細かく分け、地面から少しだけ浮かせる
+    const ROUTES = [[[0, -.55], [.6, -2.2], [.45, -3.8], [1.15, -4.95]], [[2.35, -7.45], [3.9, -9.0], [5.5, -10.9], [6.6, -12.1]]];
+    const STRENGTH = [1, .45], OFF = [-1.7, -.6, 0, .6, 1.7], PA = [0, .28, .85, .28, 0], PN = HIGH ? 40 : 26, pos = [], colr = [], idx = [];
+    const gold = new THREE.Color(0xffe29a), cream = new THREE.Color(0xfff3d0);
+    moteSamples = new Float32Array(2 * (PN + 1) * 3);
+    ROUTES.forEach((pts, r) => {
+      const curve = new THREE.CatmullRomCurve3(pts.map(([x, z]) => new THREE.Vector3(x, 0, z))), base = pos.length / 3;
+      for (let i = 0; i <= PN; i++) {
+        const u = i / PN, p = curve.getPointAt(u), tg = curve.getTangentAt(u), w = .15 + Math.sin(u * 7) * .025;
+        const fade = smooth(0, .15, u) * (1 - smooth(.85, 1, u) * .7) * STRENGTH[r];
+        moteSamples.set([p.x, heightAt(p.x, p.z) + .16, p.z], (r * (PN + 1) + i) * 3);
+        for (let c = 0; c < 5; c++) {
+          const x = p.x + tg.z * OFF[c] * w, z = p.z - tg.x * OFF[c] * w;
+          c3.copy(cream).lerp(gold, c === 2 ? 1 : .3);
+          pos.push(x, heightAt(x, z) + .025, z); colr.push(c3.r, c3.g, c3.b, PA[c] * fade);
+          if (i < PN && c < 4) { const v = base + i * 5 + c; idx.push(v, v + 1, v + 5, v + 1, v + 6, v + 5); }
+        }
+      }
+    });
+    const pathGeo = new THREE.BufferGeometry();
+    pathGeo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    pathGeo.setAttribute('color', new THREE.Float32BufferAttribute(colr, 4)); pathGeo.setIndex(idx);
+    const path = new THREE.Mesh(pathGeo, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide }));
+    path.renderOrder = 2; path.name = 'WorldV2_Path'; group.add(path);
+    // 小道の上を、小さな光の点がゆっくり進む（祠へ5つ、門へ2つ）。形は光の実と共有
+    // 光の点：high は祠へ5つ・門へ2つ、low は祠へ3つ・門へ1つ
+    moteMain = HIGH ? 5 : 3; moteCount = moteMain + (HIGH ? 2 : 1);
+    motes = new THREE.InstancedMesh(fk.geometry, fruitMat, moteCount); motes.name = 'WorldV2_Motes';
+    for (let i = 0; i < moteCount; i++) motes.setColorAt(i, c3.set(i < moteMain ? 0xfff0b8 : 0xffe9c4));
+    motes.instanceColor.needsUpdate = true; motes.frustumCulled = false;
+    group.add(motes);
+    moteN = PN;
     return { group, terrain: g, gate, tree };
   }
 
   // ── 切り替え：V1 の装飾を隠し、地面を起伏のある地形へ替え、V1 の物を地面の高さへ ──
   function activate(built) {
-    worldArt.group.children.forEach(o => { if (o !== worldArt.light && o !== worldArt.mpGlow && o !== worldArt.beam) o.visible = false; });
+    worldArt.group.children.forEach(o => { if (o !== worldArt.mpGlow) o.visible = false; });   // V1 の装飾・小道・光の柱は V2 では描かない
+    scene.children.forEach(o => { if (o.isPoints) o.visible = false; });                       // カメラの近くで四角く見える粒は V2 では描かない
+    // カメラを少し低く・近くして、空と遠くが見える構図にする（V2 だけ。横長と縦長で別の高さ）
+    const portrait = camera.aspect < .8;
+    // 縦長の画面は横の見える幅がせまいので、少し左うしろから見る（右奥の祠・門・ことばの樹が同じ画面に入る）
+    CAM_OFF.set(portrait ? -2.4 : 0, portrait ? 3.8 : 3.4, portrait ? 8.3 : 8.2);
+    CAM_LOOK.set(0, 1.6, 0);                                   // ヒロリの少し上を見る：ヒロリが画面の下寄りになり、上に祠・門・ことばの樹が抜ける
+    if (character) camera.position.copy(character.position).add(CAM_OFF);
     v1Rocks.forEach(r => { r.visible = false; });
     ground.geometry.dispose(); ground.geometry = built.terrain; ground.rotation.set(0, 0, 0); ground.updateMatrixWorld(true);
     vineGroup.children.forEach(o => { o.visible = false; });   // V2 では、閉じた根の門が通れない場所をあらわすので、V1 のつるは描かない
@@ -1621,14 +1669,21 @@ const worldV2 = (() => {
   });
 
   // PER-FRAME-V2-BEGIN（毎フレームの処理。新しい物は作らない）
-  // ことばの樹の灯った実が、ゆっくり明滅する。祠の光が呼吸する。カメラが地面より下へ行かないようにする
-  const LIT = new THREE.Color(0xfff3cf), DIM = new THREE.Color(0xd8cfa8), fruitNow = new THREE.Color();
+  // ことばの樹の灯った実が、ゆっくり明滅する。祠の光が呼吸する。小道の光の点がゆっくり進む。カメラが地面より下へ行かないようにする
+  const LIT = new THREE.Color(0xffefb8), DIM = new THREE.Color(0xe8cf8a), fruitNow = new THREE.Color(), moteM = new THREE.Matrix4();
   function update(t) {
     if (!active) return;
     const still = reduceMotionQuery.matches;
     const k = still ? .5 : .5 + .5 * Math.sin(t * .9);
     fruitNow.copy(DIM).lerp(LIT, k); fruits.setColorAt(0, fruitNow); fruits.instanceColor.needsUpdate = true;
     worldArt.softMat.opacity = still ? .45 : .4 + .06 * Math.sin(t * .7);
+    for (let i = 0; i < moteCount; i++) {
+      const r = i < moteMain ? 0 : 1, k = r ? i - moteMain : i, n = r ? moteCount - moteMain : moteMain;
+      const u = still ? k / n + .1 : (t * (r ? .035 : .05) + k / n) % 1, j = (r * (moteN + 1) + Math.floor(u * moteN)) * 3;
+      moteM.makeScale(.16, .16, .16).setPosition(moteSamples[j], moteSamples[j + 1] + (still ? 0 : .04 * Math.sin(t * 1.3 + i)), moteSamples[j + 2]);
+      motes.setMatrixAt(i, moteM);
+    }
+    motes.instanceMatrix.needsUpdate = true;
     const floor = heightAt(camera.position.x, camera.position.z) + 1.2;
     if (camera.position.y < floor) camera.position.y = floor;
   }
@@ -2389,7 +2444,7 @@ function updateCamera(dt){
   const focus=!canMove();
   if(!focus){
     camera.position.lerp(character.position.clone().add(CAM_OFF),.08);
-    camTgt.lerp(character.position.clone().add(new THREE.Vector3(0,1,0)),.08);
+    camTgt.lerp(character.position.clone().add(CAM_LOOK),.08);
   } else {
     // 0.3〜0.5秒でなめらかに移る。動きを減らす設定では、すぐに落ち着いた位置へ
     const k=reduceMotionQuery.matches?1:1-Math.exp(-dt/FOCUS_TAU);

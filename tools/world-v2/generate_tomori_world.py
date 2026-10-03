@@ -186,7 +186,7 @@ GRASS = lin(0x5f9d3f); GRASS_TIP = lin(0xb9d978); GRASS_DRY = lin(0xa7b763); GRA
 ROCK = lin(0xa8a090); ROCK_D = lin(0x8f887a); MOSS = lin(0x7f9a52)
 RUIN = lin(0xb8b0a0); RUIN_D = lin(0x9d9586)
 ROOT = lin(0x6b4a33); ROOT_L = lin(0x8a6447); ROOT_MOSS = lin(0x6f8a45)
-WT_BARK = lin(0x8a7563); WT_BARK_L = lin(0xa8957f); WT_LEAF = lin(0x6fb59a); WT_LEAF_L = lin(0xa9dcc4)
+WT_BARK = lin(0xa08c74); WT_BARK_L = lin(0xc3b29a); WT_LEAF = lin(0x5fae96); WT_LEAF_L = lin(0xa2dcc2)
 FRUIT = lin(0xfff3cf)
 
 
@@ -266,82 +266,113 @@ def build_all():
         k.blob((0, h * .5, 0), (.4, h * .55, .32), RUIN, subdiv=1, rough=.17, flat_base=0.0, shade_top=(MOSS, .4))
         objs.append(k.finish())
 
-    # ── 小さな祠（ミッション地点）：原点＝結晶の真下。入口は手前（+z 側）、右奥は根の門への出口 ──
+    # ── 小さな祠（ミッション地点）：原点＝結晶の真下。入口は手前（+z）、右奥（根の門の方向）は出口 ──
+    # 黄色い輪（半径0.9）は、低い円形の石の台（半径1.22）にはめこまれて見える高さ。結晶は石の受け皿の上に浮かぶ
     k = Kit('Shrine', rng)
-    # 台座と光の受け皿（結晶の輪の内側に収まる大きさ）
-    k.slab((0, 0, 0), (.62, .1, .62), 0, RUIN_D, segs=10, rough=.04)
-    k.slab((0, .1, 0), (.46, .05, .46), .3, RUIN, segs=10, rough=.04)
-    # 立ち石：奥と左に弧。高さ・太さ・傾きを不揃いに。手前と右奥は空ける
-    for (ang, r, h, w) in [(200, 2.2, .8, .36), (235, 2.35, 1.1, .42), (262, 2.25, 1.35, .44), (292, 2.4, .95, .38), (160, 2.3, .55, .34), (20, 2.25, .5, .3)]:
+    k.slab((0, 0, 0), (1.22, .045, 1.22), .2, mix(RUIN, MOSS, .12), segs=16, rough=.03)
+    ENTRANCE, EXIT = 90, 312                     # 度（x＝右、z＝手前。入口は手前、出口は根の門の方向）
+    def away(ang, center, width):
+        d = abs((ang - center + 180) % 360 - 180)
+        return d > width
+    for i in range(14):                          # 台のふちの石（入口と出口はあける）
+        ang = i * 360 / 14 + 6
+        if not (away(ang, ENTRANCE, 26) and away(ang, EXIT, 26)): continue
+        a = math.radians(ang)
+        k.slab((math.cos(a) * 1.33, -.01, math.sin(a) * 1.33), (.17, .085, .12), a, mix(RUIN_D, RUIN, rng.random() * .5), segs=6, rough=.15)
+    # 結晶の受け皿：低い柱と、浅い皿（結晶は皿の上に浮かぶ）
+    k.slab((0, .045, 0), (.24, .5, .24), .3, RUIN_D, segs=8, rough=.06)
+    k.slab((0, .545, 0), (.36, .07, .36), .1, RUIN, segs=10, rough=.04)
+    # 立ち石：左から奥へ、結晶の方へ少し傾いた弧。出口（右奥）と入口（手前）はあける
+    for (ang, r, h, w) in [(150, 2.15, .75, .3), (178, 2.3, 1.05, .34), (205, 2.35, 1.3, .36), (232, 2.4, 1.55, .38), (258, 2.35, 1.4, .36), (282, 2.25, 1.0, .32), (30, 2.2, .55, .26)]:
         a = math.radians(ang)
         x, z = math.cos(a) * r, math.sin(a) * r
-        tilt = (rng.random() - .5) * .12
-        k.blob((x + tilt, h * .48, z), (w, h * .55, w * .8), mix(RUIN, RUIN_D, rng.random() * .6), subdiv=1, rough=.17, flat_base=0.0, shade_top=(MOSS, .35))
-    # 草に半分埋もれた石畳：入口（手前）から台座へ、右奥の出口へ
-    for (x, z, s, yaw) in [(-.1, 2.4, .32, .3), (.25, 1.75, .28, 1.1), (-.35, 1.25, .26, 2.0), (1.05, -1.1, .27, .7), (1.55, -1.65, .3, 1.6), (2.05, -2.15, .26, .2), (-1.4, .9, .24, 1.2), (1.45, .7, .25, .4)]:
-        k.slab((x, -.02, z), (s, .05, s * .8), yaw, mix(RUIN, MOSS, .2), segs=6, rough=.18)
+        lean = .18 + rng.random() * .1
+        k.tube([(x, -.05, z), (x - math.cos(a) * lean * .45, h * .55, z - math.sin(a) * lean * .45), (x - math.cos(a) * lean, h, z - math.sin(a) * lean)],
+               [w, w * .92, w * .55], mix(RUIN, RUIN_D, rng.random() * .6), sides=6, color_end=mix(RUIN, MOSS, .35))
+    # 石畳：入口から台へ、台から出口（根の門の方向）へ。半分草に埋もれる
+    for (x, z, sz, yaw) in [(-.1, 2.9, .3, .3), (.2, 2.25, .28, 1.1), (-.15, 1.65, .26, 2.0)] + \
+            [(math.cos(math.radians(EXIT)) * r + (rng.random() - .5) * .25, math.sin(math.radians(EXIT)) * r, .27, rng.random() * 3) for r in (1.75, 2.35, 2.95, 3.55)]:
+        k.slab((x, -.02, z), (sz, .05, sz * .8), yaw, mix(RUIN, MOSS, .2), segs=6, rough=.18)
     objs.append(k.finish())
 
-    # ── 秘密の根の門（閉じた状態）：左・右・上の3つ。左右は根元を回転の中心にしてあり、Part 2 で開ける ──
-    def root_bundle(k, side):
-        s = 1 if side == 'R' else -1
-        # 根元の太い根株
-        k.blob((0, .35, 0), (.55, .55, .5), ROOT_L, subdiv=1, rough=.18, flat_base=0.0, shade_top=(ROOT_MOSS, .5))
-        for i in range(5):
-            y0 = .2 + i * .18
-            reach = 1.55 + rng.random() * .35
-            up = .9 + i * .38 + rng.random() * .25
-            sway = (rng.random() - .5) * .35
-            pts = [(0, y0, sway * .2), (-s * .35, y0 + .35, sway), (-s * reach * .6, up * .8, sway * .6 + .1), (-s * reach, up, -sway * .5), (-s * (reach + .35), up - .25, .1)]
-            k.tube(pts, [.17 - i * .015, .14, .11, .08, .05], ROOT, sides=6, color_end=ROOT_L)
+    # ── 秘密の根の門（閉じた状態）：根の柱が左右に立ち、上を根の弧が結ぶ。真ん中の通り道を細い根が交差してふさぐ ──
+    # 左右は根元（柱の足もと）が回転の中心。Part 2 で、左右を外へ回すと通り道があく
+    def pillar(k, height, strands, lean, phase):
+        for j in range(strands):
+            pts, radii = [], []
+            for i in range(9):
+                t = i / 8
+                ang = phase + j * math.tau / strands + t * 2.3
+                pts.append((math.cos(ang) * .2 + lean * t, t * height, math.sin(ang) * .2))
+                radii.append(.21 - .09 * t)
+            k.tube(pts, radii, ROOT, sides=6, tip=False, color_end=ROOT_L)
+        # 地面へもぐる太い根（外・前・後ろへ）
+        for (dx, dz) in [(-.9, .45), (-.7, -.6), (.15, .95), (.2, -.9)]:
+            k.tube([(0, .55, 0), (dx * .5, .3, dz * .5), (dx, .05, dz), (dx * 1.25, -.3, dz * 1.25)], [.17, .13, .09, .05], ROOT_L, sides=6)
+        k.blob((0, .25, 0), (.42, .32, .4), ROOT_L, subdiv=1, rough=.2, flat_base=-0.05, shade_top=(ROOT_MOSS, .45))
 
-    for side, x in [('L', -1.55), ('R', 1.55)]:
-        k = Kit('RootGate_' + ('Left' if side == 'L' else 'Right'), rng)
-        root_bundle(k, side)
-        objs.append(k.finish(location=(x, 0, 0)))
-    k = Kit('RootGate_Top', rng)
-    for i in range(4):
-        y = 2.45 + i * .12
-        sw = (rng.random() - .5) * .3
-        k.tube([(-1.9, y - .4, sw), (-.9, y + .15, -sw), (0, y + .05 + rng.random() * .2, sw), (.95, y + .2, -sw * .5), (1.9, y - .35, sw)], [.13, .12, .11, .12, .13], ROOT, sides=6, tip=False, color_end=ROOT_L)
-    k.blob((-.4, 2.85, 0), (.45, .3, .35), ROOT_MOSS, subdiv=1, rough=.2)
-    k.blob((.6, 2.95, .05), (.35, .25, .3), mix(ROOT_MOSS, LEAF_MID, .4), subdiv=1, rough=.2)
+    def crossing(k, sign, pairs):
+        # 柱から反対側の柱へ渡る細い根（通り道をふさぐ）
+        for (y0, y1, z0) in pairs:
+            span = 2.75
+            k.tube([(sign * .12, y0, z0), (sign * span * .35, y0 + (y1 - y0) * .35 + .15, z0 + .08), (sign * span * .7, y0 + (y1 - y0) * .7 + .1, z0 - .06), (sign * span, y1, z0)],
+                   [.075, .065, .055, .04], ROOT_L, sides=5)
+
+    k = Kit('RootGate_Left', rng)                 # 左の柱（根元が回転の中心）
+    pillar(k, 3.0, 3, .1, 0.4)
+    crossing(k, 1, [(.75, 2.05, .06), (1.95, 1.05, -.05)])
+    objs.append(k.finish(location=(-1.35, 0, 0)))
+    k = Kit('RootGate_Right', rng)                # 右の柱：少し細く、少し外へ傾く（左右対称にしない）
+    pillar(k, 3.25, 2, -.18, 1.7)
+    crossing(k, -1, [(1.05, 2.4, .02), (2.3, .7, -.07)])
+    objs.append(k.finish(location=(1.45, 0, 0)))
+    k = Kit('RootGate_Top', rng)                  # 上：2本の柱の頭を結ぶ根の弧と、通り道へ垂れる細い根
+    for (lift, zo, r0) in [(0, 0, .17), (.22, .12, .13), (-.12, -.14, .11)]:
+        k.tube([(-1.4, 2.75 + lift * .3, zo), (-.8, 3.45 + lift, zo - .05), (0, 3.7 + lift, zo + .04), (.85, 3.5 + lift * .8, zo), (1.35, 2.95 + lift * .3, zo)],
+               [r0, r0 * .9, r0 * .85, r0 * .9, r0], ROOT, sides=6, tip=False, color_end=ROOT_L)
+    for (x, l) in [(-.55, .55), (.1, .8), (.6, .45)]:
+        k.tube([(x, 3.55, .02), (x + .05, 3.55 - l * .5, .05), (x - .03, 3.55 - l, 0)], [.05, .04, .02], ROOT_L, sides=4)
+    k.blob((-.5, 3.75, 0), (.5, .26, .36), ROOT_MOSS, subdiv=1, rough=.2)
+    k.blob((.75, 3.6, .05), (.36, .22, .3), mix(ROOT_MOSS, LEAF_MID, .4), subdiv=1, rough=.2)
     objs.append(k.finish(location=(0, 0, 0)))
 
-    # ── ことばの樹：二本の幹がねじれて昇り、枝が広がり、葉のかたまりの間に空間がある ──
+    # ── ことばの樹：太い二本の幹がねじれて昇り、高いところで枝が大きく広がる。樹冠は離れた葉のかたまりの集まり ──
     k = Kit('WordTree', rng)
     for ph in (0, math.pi):
         pts, radii = [], []
-        for i in range(11):
-            t = i / 10
-            a = ph + t * 2.4
-            r = .55 * (1 - t) + .12
-            pts.append((math.cos(a) * r, t * 6.2, math.sin(a) * r)); radii.append(.62 * (1 - t) + .2)
+        for i in range(13):
+            t = i / 12
+            a = ph + t * 3.0
+            r = .7 * (1 - t) + .16
+            pts.append((math.cos(a) * r, t * 7.0, math.sin(a) * r)); radii.append(.78 * (1 - t) + .24)
         k.tube(pts, radii, WT_BARK, sides=8, tip=False, color_end=WT_BARK_L)
-    BR = [(0, 6.0, 3.8, 1.3), (70, 5.6, 3.3, 1.9), (140, 6.2, 3.9, 1.0), (205, 5.4, 3.5, 2.2), (275, 6.1, 3.6, 1.5), (330, 5.8, 2.9, 2.6)]
+    for ang in (20, 110, 200, 290):              # 根の張り出し
+        a = math.radians(ang)
+        k.tube([(math.cos(a) * .5, .9, math.sin(a) * .5), (math.cos(a) * 1.3, .3, math.sin(a) * 1.3), (math.cos(a) * 1.9, -.2, math.sin(a) * 1.9)], [.38, .24, .1], WT_BARK, sides=6)
+    BR = [(0, 6.6, 4.4, 1.6), (65, 6.2, 3.9, 2.3), (130, 6.8, 4.6, 1.2), (195, 6.0, 4.2, 2.6), (255, 6.7, 4.0, 1.8), (320, 6.4, 3.6, 2.9)]
     tips = []
     for (ang, y0, reach, rise) in BR:
         a = math.radians(ang)
         dx, dz = math.cos(a), math.sin(a)
-        p = [(dx * .3, y0, dz * .3), (dx * reach * .45, y0 + rise * .6, dz * reach * .45), (dx * reach, y0 + rise, dz * reach)]
-        k.tube(p, [.26, .16, .07], WT_BARK, sides=6, color_end=WT_BARK_L)
+        p = [(dx * .35, y0, dz * .35), (dx * reach * .45, y0 + rise * .65, dz * reach * .45), (dx * reach, y0 + rise, dz * reach)]
+        k.tube(p, [.32, .2, .08], WT_BARK, sides=6, color_end=WT_BARK_L)
         tips.append(p[-1])
     for i, (x, y, z) in enumerate(tips):
-        k.blob((x * .95, y + .45, z * .95), (1.75, 1.1, 1.6), mix(WT_LEAF, WT_LEAF_L, .15 + .1 * (i % 3)), subdiv=1, rough=.16, shade_top=(WT_LEAF_L, .5))
-        k.blob((x * .6, y + .2, z * .6), (1.1, .8, 1.0), WT_LEAF, subdiv=1, rough=.18)
-    k.blob((0, 8.3, 0), (1.9, 1.25, 1.8), WT_LEAF, subdiv=1, rough=.15, shade_top=(WT_LEAF_L, .55))
+        k.blob((x, y + .5, z), (1.65, 1.0, 1.5), mix(WT_LEAF, WT_LEAF_L, .15 + .1 * (i % 3)), subdiv=1, rough=.16, shade_top=(WT_LEAF_L, .5))
+        k.blob((x * .78 + .3, y + 1.1, z * .78), (1.0, .7, .95), mix(WT_LEAF, WT_LEAF_L, .4), subdiv=1, rough=.18)
+    k.blob((0, 9.9, 0), (1.5, .9, 1.4), mix(WT_LEAF, WT_LEAF_L, .3), subdiv=1, rough=.15, shade_top=(WT_LEAF_L, .55))
     objs.append(k.finish())
-    # 光の実：同じ形を共有する5つのノード。枝先の葉のかたまりの下にぶら下がる
+    # 光の実：同じ形を共有する5つ。樹冠の下に輪の形で並び、どの方向からも3つ前後がまとまって見える
     fk = Kit('WordTree_Fruit', rng)
-    fk.blob((0, 0, 0), (.2, .24, .2), FRUIT, subdiv=1, rough=.04)
+    fk.blob((0, 0, 0), (.3, .36, .3), FRUIT, subdiv=1, rough=.04)
     fruit = fk.finish()
     fruit.name = 'WordTree_Fruit_01'
-    fruit.location = P(tips[0][0] * .9, tips[0][1] - .35, tips[0][2] * .9)
+    ring = [(math.cos(math.radians(a)) * 2.5, 6.55 + .25 * (i % 2), math.sin(math.radians(a)) * 2.5) for i, a in enumerate((15, 87, 159, 231, 303))]
+    fruit.location = P(*ring[0])
     for i in range(1, 5):
         o = fruit.copy()                    # メッシュは共有（GLB の中でも1つ）
         o.name = 'WordTree_Fruit_%02d' % (i + 1)
-        x, y, z = tips[i]
-        o.location = P(x * .9, y - .35, z * .9)
+        o.location = P(*ring[i])
         bpy.context.scene.collection.objects.link(o)
     return objs
 

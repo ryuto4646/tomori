@@ -101,6 +101,13 @@ Promise.all([new Promise(r=>setTimeout(r,800)), worldV2.ready]).then(()=>{
   ld.style.opacity='0';
   setTimeout(()=>ld.style.display='none',800);
 });`],
+  [`const CAM_OFF = new THREE.Vector3(0, 5, 8);
+`,
+   `const CAM_OFF = new THREE.Vector3(0, 5, 8);
+const CAM_LOOK = new THREE.Vector3(0, 1, 0);   // カメラが見る高さ（ヒロリの足もとから。ワールドV2 で変える：WORLD-V2）
+`],
+  [`    camTgt.lerp(character.position.clone().add(new THREE.Vector3(0,1,0)),.08);`,
+   `    camTgt.lerp(character.position.clone().add(CAM_LOOK),.08);`],
 ];
 
 const ART_BLOCK = /\/\/ WORLD-ART-BEGIN[\s\S]*?\/\/ WORLD-ART-END\n\n/;

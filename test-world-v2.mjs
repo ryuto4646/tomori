@@ -44,7 +44,7 @@ function glbJson(buf) {
 }
 const REQUIRED_NODES = ['Tree_Round_A', 'Tree_Round_B', 'Tree_Tall_A', 'Tree_Tall_B', 'Tree_Sapling_A', 'Grass_A', 'Grass_B', 'Grass_C',
   'Flowers_A', 'Flowers_B', 'Flowers_C', 'Bush_A', 'Bush_B', 'Rock_Pebbles', 'Rock_Medium_A', 'Rock_Medium_B', 'Stone_Standing_A', 'Stone_Standing_B',
-  'Shrine', 'RootGate_Left', 'RootGate_Right', 'RootGate_Top', 'WordTree', 'WordTree_Fruit_01', 'WordTree_Fruit_02', 'WordTree_Fruit_03', 'WordTree_Fruit_04', 'WordTree_Fruit_05',
+  'Shrine', 'RootGate_Left', 'RootGate_Right', 'RootGate_Top', 'RootGate_Cross', 'WordTree', 'WordTree_Fruit_01', 'WordTree_Fruit_02', 'WordTree_Fruit_03', 'WordTree_Fruit_04', 'WordTree_Fruit_05',
   'WordSeed', 'WordSeed_Core', 'WordSeed_Glow'];
 
 // ── 素材 ─────────────────────────────────────────────────────────────
@@ -123,7 +123,8 @@ test('9. V2 は組み立てがすべて成功したときだけ切り替わり�
   // シーンを変えるのは activate の中だけ（組み立ては新しいグループの中で行う）
   const act = between(V2_CODE, 'function activate(built)', '\n  }\n');
   const rest = V2_CODE.replace(act, '');
-  assert.ok(!/scene\.add\(|ground\.geometry =|\.visible = false/.test(rest), 'scene changes only in activate');
+  // （ことばのタネだけは、組み立てで隠しておき、「デモを最初から」でも隠し直す：Step 11I-C）
+  assert.ok(!/scene\.add\(|ground\.geometry =|(?<!wordSeed)\.visible = false/.test(rest), 'scene changes only in activate');
   assert.match(act, /active = true;\s*$/);
   assert.ok(!/console\./.test(V2_CODE));
   // 読み込み画面は、V2 か V1 の準備ができてから消える
@@ -197,7 +198,7 @@ test('15. タップ先とキーボード移動の両方を、歩ける範囲の�
   // 到着判定は平面の距離
   assert.match(HTML, /const md=Math\.hypot\(character\.position\.x-mpGroup\.position\.x, character\.position\.z-mpGroup\.position\.z\);/);
   // だ円の外の点は、ふちの上へ戻る。内側の点は動かない
-  const clamp = new Function('let active = true;\n' + TERRAIN + between(V2, '  // 歩ける範囲の内側へ戻す', '  // ヒロリを歩ける範囲') + '\nreturn clampToWalkable;')();
+  const clamp = new Function('let active = true, gateOpen = false;\n' + TERRAIN + between(HTML, '// ADVENTURE-BEGIN', '// ADVENTURE-END') + between(V2, '  // 歩ける範囲の内側へ戻す', '  // ヒロリを歩ける範囲') + '\nreturn clampToWalkable;')();
   const e = p => Math.hypot((p.x - T.WALK.cx) / T.WALK.rx, (p.z - T.WALK.cz) / T.WALK.rz);
   for (const [x, z] of [[40, -40], [-30, 5], [3, 30], [T.WORD_TREE.x, T.WORD_TREE.z]]) {
     const p = clamp({ x, y: 0, z }, 1);
@@ -275,8 +276,13 @@ test('21. カメラの構図は V2 だけで変わる（V1 の CAM_OFF・見る�
   const act = between(V2_CODE, 'function activate(built)', '\n  }\n');
   assert.match(act, /CAM_OFF\.set\(portrait \? -4\.2 : 0, portrait \? 4\.4 : 3\.4, portrait \? 7\.6 : 8\.2\);/);
   assert.match(act, /CAM_LOOK\.set\(0, portrait \? 2\.3 : 1\.6, 0\);/);
-  assert.equal(count(V2_CODE, /CAM_OFF\.set\(|CAM_LOOK\.set\(/g), 2, 'only in activate');
-  assert.ok(!/CAM_OFF\.set|CAM_LOOK\.set/.test(V2_CODE.replace(act, '')));
+  // V2 の外（V1）では構図を変えない。冒険の途中で一時的に変えた構図は、元の構図（defOff・defLook）へ必ず戻す（Step 11I-C）
+  const outside = HTML.replace(V2, '');
+  assert.ok(!/CAM_OFF\.set|CAM_LOOK\.set/.test(outside));
+  assert.match(act, /defOff\.copy\(CAM_OFF\); defLook\.copy\(CAM_LOOK\);/);
+  assert.ok(count(V2_CODE, /CAM_OFF\.copy\(defOff\)/g) >= 1 && count(V2_CODE, /CAM_LOOK\.copy\(defLook\)/g) >= 3, 'restored');
+  // 秘密の道では、元の構図を水平にまわすだけ（高さ・距離は変えない）
+  assert.match(V2_CODE, /CAM_OFF\.set\(defOff\.x \* cs \+ defOff\.z \* sn, defOff\.y, -defOff\.x \* sn \+ defOff\.z \* cs\);/);
 });
 
 test('22. 四角い粒・V1 の小道と光の柱は、V2 のときだけ描かない（V1 の粒はそのまま）', () => {
@@ -328,7 +334,7 @@ test('25. ことばの樹は門の先 15〜25m の谷の奥にあり、通常の
   assert.ok(!/\[11, -21, 4\]/.test(V2));
 });
 
-test('26. ことばのタネ：金色の実と水色の光の2つを、入れ物 WordSeed がまとめる。今回は世界に置かない（Part 2 で使う）', () => {
+test('26. ことばのタネ：金色の実と水色の光の2つを、入れ物 WordSeed がまとめる。深掘りの問いのあとまで隠しておく', () => {
   const j = glbJson(GLB), byName = Object.fromEntries(j.nodes.map(n => [n.name, n]));
   const kids = (byName.WordSeed.children || []).map(i => j.nodes[i].name).sort();
   assert.deepEqual(kids, ['WordSeed_Core', 'WordSeed_Glow']);
@@ -336,8 +342,8 @@ test('26. ことばのタネ：金色の実と水色の光の2つを、入れ物
   const acc = j.accessors, size = n => { const a = acc[j.meshes[byName[n].mesh].primitives[0].attributes.POSITION]; return a.max[1] - a.min[1]; };
   assert.ok(size('WordSeed_Glow') > size('WordSeed_Core'), 'glow wraps the core');
   assert.ok(size('WordSeed_Core') < .3, 'fits in Hirori\'s hand');
-  assert.deepEqual(MANIFEST.not_placed_yet, ['WordSeed', 'WordSeed_Core', 'WordSeed_Glow']);
-  assert.ok(!/WordSeed/.test(V2_CODE), 'not placed in Part 1B');
+  assert.deepEqual(MANIFEST.shown_by_adventure, ['WordSeed', 'WordSeed_Core', 'WordSeed_Glow']);
+  assert.match(V2_CODE, /wordSeed = new THREE\.Group\(\); wordSeed\.name = 'WordSeed'; wordSeed\.visible = false;/, 'hidden until born');
   // ことばの樹の実は金色と水色、灯った実は金色（白く光らせない）
   assert.match(V2, /fruits\.setColorAt\(i, c3\.set\(i === 0 \? 0xffd978 : i % 2 \? 0x8fc6d8 : 0xd6b468\)\);/);
   assert.match(V2, /const LIT = new THREE\.Color\(0xffe08a\), DIM = new THREE\.Color\(0xd6b468\)/);

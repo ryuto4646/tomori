@@ -312,21 +312,23 @@ def build_all():
             k.tube([(0, .55, 0), (dx * .5, .3, dz * .5), (dx, .05, dz), (dx * 1.25, -.3, dz * 1.25)], [.17, .13, .09, .05], ROOT_L, sides=6)
         k.blob((0, .25, 0), (.42, .32, .4), ROOT_L, subdiv=1, rough=.2, flat_base=-0.05, shade_top=(ROOT_MOSS, .45))
 
-    def crossing(k, sign, pairs):
-        # 柱から反対側の柱へ渡る細い根（通り道をふさぐ）
+    def crossing(k, sign, pairs, ox):
+        # 柱から反対側の柱へ渡る細い根（通り道をふさぐ）。ox は柱の根元の位置（門の中心から）
         for (y0, y1, z0) in pairs:
             span = 2.75
-            k.tube([(sign * .12, y0, z0), (sign * span * .35, y0 + (y1 - y0) * .35 + .15, z0 + .08), (sign * span * .7, y0 + (y1 - y0) * .7 + .1, z0 - .06), (sign * span, y1, z0)],
+            k.tube([(ox + sign * .12, y0, z0), (ox + sign * span * .35, y0 + (y1 - y0) * .35 + .15, z0 + .08), (ox + sign * span * .7, y0 + (y1 - y0) * .7 + .1, z0 - .06), (ox + sign * span, y1, z0)],
                    [.075, .065, .055, .04], ROOT_L, sides=5)
 
     k = Kit('RootGate_Left', rng)                 # 左の柱（根元が回転の中心）
     pillar(k, 3.0, 3, .1, 0.4)
-    crossing(k, 1, [(.75, 2.05, .06), (1.95, 1.05, -.05)])
     objs.append(k.finish(location=(-1.35, 0, 0)))
     k = Kit('RootGate_Right', rng)                # 右の柱：少し細く、少し外へ傾く（左右対称にしない）
     pillar(k, 3.25, 2, -.18, 1.7)
-    crossing(k, -1, [(1.05, 2.4, .02), (2.3, .7, -.07)])
     objs.append(k.finish(location=(1.45, 0, 0)))
+    k = Kit('RootGate_Cross', rng)                # 通り道をふさぐ交差した細い根（門がひらくとき、地面へ引っこむ）
+    crossing(k, 1, [(.75, 2.05, .06), (1.95, 1.05, -.05)], -1.35)
+    crossing(k, -1, [(1.05, 2.4, .02), (2.3, .7, -.07)], 1.45)
+    objs.append(k.finish(location=(0, 0, 0)))
     k = Kit('RootGate_Top', rng)                  # 上：2本の柱の頭を結ぶ根の弧と、通り道へ垂れる細い根
     for (lift, zo, r0) in [(0, 0, .17), (.22, .12, .13), (-.12, -.14, .11)]:
         k.tube([(-1.4, 2.75 + lift * .3, zo), (-.8, 3.45 + lift, zo - .05), (0, 3.7 + lift, zo + .04), (.85, 3.5 + lift * .8, zo), (1.35, 2.95 + lift * .3, zo)],
@@ -419,7 +421,7 @@ def export():
                    'format': 'glTF 2.0 binary', 'textures': 0, 'external_uris': 0}],
         'nodes': nodes,
         'external_assets': 0,
-        'not_placed_yet': ['WordSeed', 'WordSeed_Core', 'WordSeed_Glow'],   # ことばのタネ：Part 2 で表示・取得・移動する
+        'shown_by_adventure': ['WordSeed', 'WordSeed_Core', 'WordSeed_Glow'],   # ことばのタネ：最初の冒険（深掘りの問いのあと）で生まれる。それまでは隠しておく
 
         'license': 'TOMORI original: generated for TOMORI by this script. No third-party, redistributed or Craftopia assets.',
     }

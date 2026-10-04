@@ -108,6 +108,11 @@ const CAM_LOOK = new THREE.Vector3(0, 1, 0);   // カメラが見る高さ（ヒ
 `],
   [`    camTgt.lerp(character.position.clone().add(new THREE.Vector3(0,1,0)),.08);`,
    `    camTgt.lerp(character.position.clone().add(CAM_LOOK),.08);`],
+  [`  if(character){ character.position.set(0,0,0); character.rotation.set(0,0,0); }
+`,
+   `  worldV2.reset();   // ことばのタネ・根の門・秘密の道・ことばの樹の実・カメラの構図を最初へ（WORLD-V2）
+  if(character){ character.position.set(0,0,0); character.rotation.set(0,0,0); }
+`],
 ];
 
 const ART_BLOCK = /\/\/ WORLD-ART-BEGIN[\s\S]*?\/\/ WORLD-ART-END\n\n/;

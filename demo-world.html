@@ -1376,6 +1376,7 @@ const worldV2 = (() => {
   const HIGH = WORLD_QUALITY === 'high';
   const wanted = WORLD_V2_ENABLED && new URLSearchParams(location.search).get('world') !== 'v1';
   let active = false;
+  let gateOpen = false;                // 根の門がひらいたか（ひらいたあとは、歩ける範囲が秘密の谷へ広がる）
 
   // TERRAIN-BEGIN（地形の高さ。test-world-v2.mjs がこの範囲だけを取り出して、傾き・平らさを確かめる）
   // 歩ける範囲：だ円の内側。出発点・小道・祠・秘密の場所は高さ0で平ら。その外はゆるい起伏、さらに外へ行くほど丘が重なる
@@ -1388,8 +1389,8 @@ const worldV2 = (() => {
     return Math.hypot(x - ax - vx * t, z - az - vz * t);
   };
   // 平らにしておく場所（x, z, 平らな半径, なじませる幅）と、平らな帯（両端, 半径, なじませる幅）
-  const FLAT = [[0, 0, 3.4, 8], [1.5, -6.5, 4.4, 8], [16, -8, 5.6, 7]];
-  const FLAT_SEG = [[0, 0, 1.5, -6.5, 2.4, 8], [13.8, -2.5, 12.2, -17.5, 2.2, 7]];
+  const FLAT = [[0, 0, 3.4, 8], [1.5, -6.5, 4.4, 8], [16, -8, 5.6, 7], [WORD_TREE.x, WORD_TREE.z, 5.4, 6]];   // 最後の1つは、ことばの樹のまわり（秘密の場所）
+  const FLAT_SEG = [[0, 0, 1.5, -6.5, 2.4, 8], [13.8, -2.5, 12.2, -17.5, 2.2, 7], [GATE.x, GATE.z, 14.4, -25.4, 1.4, 5]];   // 最後の1つは、門からことばの樹への秘密の道
   // 盛り上がり（x, z, 高さ, 広がり）：歩ける範囲の中はゆるく、外は大きく
   const INNER = [[-10.5, -3.5, .45, 6], [10, 2, .4, 5.5], [-6.5, 5, .25, 5], [10.5, -6.5, .3, 5], [-4, -12.5, .55, 6]];
   // 外の丘は高さを3段階にして、地平線を一直線にしない（低い丘・中くらいの丘・遠くの高い丘）
@@ -1414,12 +1415,75 @@ const worldV2 = (() => {
   }
   // TERRAIN-END
 
+  // ADVENTURE-BEGIN（最初の冒険の進み方と、歩ける範囲。THREE も画面も使わない計算だけ。test-world-adventure.mjs がこの範囲を取り出して確かめる）
+  // 進み方は一方向だけ。決まった出来事が、決まった順番で起きたときだけ次へ進む（連打しても二重に進まない）
+  const WORLD_PROGRESS = Object.freeze({
+    EXPLORING: 'exploring', MISSION: 'mission', SEED_BORN: 'seed-born', SEED_COLLECTED: 'seed-collected',
+    GATE_OPENING: 'gate-opening', SECRET_PATH: 'secret-path', TREE_REACHED: 'tree-reached', COMPLETE: 'complete',
+  });
+  const P = WORLD_PROGRESS;
+  // 出来事 → [その出来事を受け付ける状態, 次の状態]
+  const STEPS = {
+    missionStarted: [P.EXPLORING, P.MISSION],         // ミッションのパネルがひらいた
+    deepDone: [P.MISSION, P.SEED_BORN],               // 深掘りの問いまで終わった（DEMO_COMPLETE。care では来ない）
+    seedTouched: [P.SEED_BORN, P.SEED_COLLECTED],     // ヒロリがタネに近づいた
+    gateApproached: [P.SEED_COLLECTED, P.GATE_OPENING], // タネを持って門に近づいた
+    gateOpened: [P.GATE_OPENING, P.SECRET_PATH],      // 門がひらききった
+    treeApproached: [P.SECRET_PATH, P.TREE_REACHED],  // ことばの樹の根もとに着いた
+    treeLit: [P.TREE_REACHED, P.COMPLETE],            // 実がひとつ灯った
+  };
+  function advance(progress, event) {
+    const s = STEPS[event];
+    return s && s[0] === progress ? s[1] : progress;
+  }
+  const SEED_PICK_R = 1.25, GATE_OPEN_R = 3.6, TREE_REACH_R = 3.4;   // 樹は、根もとを軽くタップして止まった位置（タップ先の 0.6m 手前）でも届く距離
+
+  // 歩ける範囲：門が閉じているあいだは草原のだ円だけ。ひらいたあとは「だ円＋門を通る細い道＋ことばの樹のまわり」
+  // 細い道は、門からことばの樹の手前まで、ゆるく曲がる3つの線分（カプセルの連なり）
+  const PASSAGE = [[GATE.x, GATE.z], [10.4, -17.6], [12.6, -22.2], [14.4, -25.4]], PASSAGE_R = 1.05;
+  const TREE_AREA = { x: WORD_TREE.x, z: WORD_TREE.z, r: 4.8, trunk: 1.6 };
+  function inWalk(x, z, open) {
+    if (Math.hypot((x - WALK.cx) / WALK.rx, (z - WALK.cz) / WALK.rz) <= 1) return true;
+    if (!open) return false;
+    for (let i = 0; i < PASSAGE.length - 1; i++) if (segDist(x, z, PASSAGE[i][0], PASSAGE[i][1], PASSAGE[i + 1][0], PASSAGE[i + 1][1]) <= PASSAGE_R) return true;
+    const d = Math.hypot(x - TREE_AREA.x, z - TREE_AREA.z);
+    return d <= TREE_AREA.r && d >= TREE_AREA.trunk;
+  }
+  // 範囲の外の点を、いちばん近い範囲のふちへ戻す（limit < 1 で、ふちより少し内側。タップ先に使う）
+  // タップ先とキーボード移動は、この同じ関数を使う。p は {x, z} を持つ物（書きかえて返す）
+  function clampWalk(p, open, limit = 1) {
+    const tr = Math.hypot(p.x - TREE_AREA.x, p.z - TREE_AREA.z);
+    if (open && tr < TREE_AREA.trunk) {           // 幹の中には入らない
+      const k = TREE_AREA.trunk / Math.max(tr, 1e-6);
+      p.x = TREE_AREA.x + (p.x - TREE_AREA.x) * k; p.z = TREE_AREA.z + (p.z - TREE_AREA.z) * k;
+      return p;
+    }
+    const u = (p.x - WALK.cx) / WALK.rx, v = (p.z - WALK.cz) / WALK.rz, d = Math.hypot(u, v);
+    if (d <= limit) return p;
+    let bx = WALK.cx + u / d * limit * WALK.rx, bz = WALK.cz + v / d * limit * WALK.rz, best = (bx - p.x) ** 2 + (bz - p.z) ** 2;
+    if (open) {
+      for (let i = 0; i < PASSAGE.length - 1; i++) {
+        const [ax, az] = PASSAGE[i], [cx, cz] = PASSAGE[i + 1], vx = cx - ax, vz = cz - az;
+        const t = Math.min(1, Math.max(0, ((p.x - ax) * vx + (p.z - az) * vz) / (vx * vx + vz * vz)));
+        const qx = ax + vx * t, qz = az + vz * t, dd = Math.hypot(p.x - qx, p.z - qz), r = PASSAGE_R * limit;
+        if (dd <= r) return p;
+        const sx = qx + (p.x - qx) / dd * r, sz = qz + (p.z - qz) / dd * r, e = (sx - p.x) ** 2 + (sz - p.z) ** 2;
+        if (e < best) { best = e; bx = sx; bz = sz; }
+      }
+      const r = TREE_AREA.r * limit;
+      if (tr <= r) return p;
+      const sx = TREE_AREA.x + (p.x - TREE_AREA.x) / tr * r, sz = TREE_AREA.z + (p.z - TREE_AREA.z) / tr * r, e = (sx - p.x) ** 2 + (sz - p.z) ** 2;
+      if (e < best) { best = e; bx = sx; bz = sz; }
+    }
+    p.x = bx; p.z = bz;
+    return p;
+  }
+  // ADVENTURE-END
+
   // 歩ける範囲の内側へ戻す（だ円の外に出た分だけ、中心の方向へ戻す。ふちに沿ってすべるので、壁へ瞬間移動しない）
   function clampToWalkable(p, limit = 1) {
     if (!active) return p;
-    const u = (p.x - WALK.cx) / WALK.rx, v = (p.z - WALK.cz) / WALK.rz, d = Math.hypot(u, v);
-    if (d > limit) { p.x = WALK.cx + u / d * limit * WALK.rx; p.z = WALK.cz + v / d * limit * WALK.rz; }
-    return p;
+    return clampWalk(p, gateOpen, limit);
   }
   // ヒロリを歩ける範囲の内側・地面の高さへ（毎フレーム。新しい物は作らない）
   // 仮ヒロリは毎フレーム、歩くときの小さな弾みを高さに書き込む（root.position.y = hop）。その上に地面の高さを足す。
@@ -1467,7 +1531,10 @@ const worldV2 = (() => {
   }
 
   // ── 組み立て（すべて新しいグループの中に作る。最後まで成功したときだけ、シーンを切り替える）──
-  let fruits = null, fruitMat = null, motes = null, moteSamples = null, moteN = 0, moteMain = 0, moteCount = 0;
+  let fruits = null, fruitMat = null, motes = null, moteSamples = null, moteN = 0, moteMain = 0, moteCount = 0, moteSecret = 0, sparkN = 0;
+  let gateMat = null, gateMeshes = null, gateNode = null, gateYaw = 0, wordSeed = null, seedGlowMat = null;
+  let secretRibbonN = 0, secretPath = null, secretMat = null, secretColor = null, secretU = null, secretBase = null, sproutMesh = null, sproutName = '', sproutIndex = -1;
+  const gatePlace = new THREE.Matrix4(), fruitPos = [], fruitBase = [];
   function build(kit) {
     const need = n => { const k = kit.get(n); if (!k) throw new Error('node ' + n); return k; };
     let seed = 81726354;
@@ -1554,6 +1621,23 @@ const worldV2 = (() => {
     put('Rock_Medium_B', FRAME[0][0] - .6, FRAME[0][1] + .5, .8);
     [[-7, -8.5], [8, -2.5], [-9, 1], [10.5, -9], [-5.5, -1.5]].forEach(([cx, cz], k) => { plant(['Flowers_A', 'Flowers_B', 'Flowers_C'][k % 3], cx, cz); plant('Grass_A', cx + .8, cz + .4); plant(k % 2 ? 'Bush_B' : 'Grass_B', cx - .9, cz - .3); });
 
+    // 秘密の谷の草花：道の両側と、ことばの樹のまわり（歩ける道の幅より外に置く）
+    const VALLEY = HIGH ? ['Grass_A', 'Flowers_B', 'Grass_B', 'Flowers_A', 'Grass_C', 'Bush_A'] : ['Grass_A', 'Grass_B'];   // スマホ（low）は草だけ（三角形を増やしすぎない）
+    for (let i = 0, n = HIGH ? 12 : 4; i < n; i++) {
+      const u = (i + .5) / n, a = Math.floor(u * 3), k = u * 3 - a, A = PASSAGE[a], B = PASSAGE[a + 1];
+      const tx = B[0] - A[0], tz = B[1] - A[1], tl = Math.hypot(tx, tz), side = i % 2 ? 1 : -1, off = 1.8 + (i % 3) * .35;
+      put(VALLEY[i % VALLEY.length], A[0] + tx * k - tz / tl * off * side, A[1] + tz * k + tx / tl * off * side, .9 + (i % 4) * .1);
+    }
+    for (let i = 0, n = HIGH ? 12 : 4; i < n; i++) {
+      const a = i / n * 6.283 + .3, r = 5.4 + (i % 3) * .55;
+      put(VALLEY[(i + 2) % VALLEY.length], WORD_TREE.x + Math.cos(a) * r, WORD_TREE.z + Math.sin(a) * r, 1 + (i % 2) * .15);
+    }
+
+    // 秘密の道の途中にひとつだけ：水色に光る小さな芽（植物の形を使い、色だけ水色にする）
+    sproutName = HIGH ? 'Flowers_C' : 'Flowers_A';
+    put(sproutName, 11.75, -20.55, 1.35, .4, 0x9fd6ee);
+    sproutIndex = lists.get(sproutName).length - 1;
+
     // InstancedMesh：形ごとに1つ。大きな木と岩だけが影を落とす（PC）
     const CASTERS = new Set(['Tree_Round_A', 'Tree_Round_B', 'Tree_Tall_A', 'Tree_Tall_B', 'Rock_Medium_A', 'Rock_Medium_B', 'Stone_Standing_A', 'Stone_Standing_B']);
     for (const [name, items] of lists) {
@@ -1577,7 +1661,7 @@ const worldV2 = (() => {
       group.add(mesh); return mesh;
     };
     place1('Shrine', MISSION_POS.x, MISSION_POS.z, 0);
-    const gate = ['RootGate_Left', 'RootGate_Right', 'RootGate_Top'].map(n => place1(n, GATE.x, GATE.z, gYaw));
+    const gate = ['RootGate_Left', 'RootGate_Right', 'RootGate_Top', 'RootGate_Cross'].map(n => place1(n, GATE.x, GATE.z, gYaw));
     const tree = place1('WordTree', WORD_TREE.x, WORD_TREE.z, -.4, WORD_TREE.scale);
     tree.castShadow = false;
     // 光の実：同じ形の5つ。今回は1つだけ淡く光り、残りは眠っている（Part 2 で灯せるように instanceColor で分ける）
@@ -1597,7 +1681,7 @@ const worldV2 = (() => {
     const ROUTES = [[[0, -.55], [.6, -2.2], [.45, -3.8], [1.15, -4.95]], [[2.35, -7.45], [3.9, -9.0], [5.5, -10.9], [6.6, -12.1]]];
     const STRENGTH = [1, .45], OFF = [-1.7, -.6, 0, .6, 1.7], PA = [0, .28, .85, .28, 0], PN = HIGH ? 40 : 26, pos = [], colr = [], idx = [];
     const gold = new THREE.Color(0xffe29a), cream = new THREE.Color(0xfff3d0);
-    moteSamples = new Float32Array(2 * (PN + 1) * 3);
+    moteSamples = new Float32Array(3 * (PN + 1) * 3);   // 祠への道・門への道・秘密の道
     ROUTES.forEach((pts, r) => {
       const curve = new THREE.CatmullRomCurve3(pts.map(([x, z]) => new THREE.Vector3(x, 0, z))), base = pos.length / 3;
       for (let i = 0; i <= PN; i++) {
@@ -1612,14 +1696,6 @@ const worldV2 = (() => {
         }
       }
     });
-    // ことばの樹の根元：地面にしみこむ淡いクリーム色の光（小道と同じ形・素材にまとめる）
-    const rootBase = pos.length / 3, RG = 16;
-    pos.push(WORD_TREE.x, heightAt(WORD_TREE.x, WORD_TREE.z) + .03, WORD_TREE.z); c3.set(0xfff0c8); colr.push(c3.r, c3.g, c3.b, .5);
-    for (let k = 0; k < RG; k++) {
-      const a = k / RG * Math.PI * 2, x = WORD_TREE.x + Math.cos(a) * 3.4, z = WORD_TREE.z + Math.sin(a) * 3.4;
-      pos.push(x, heightAt(x, z) + .03, z); colr.push(c3.r, c3.g, c3.b, 0);
-      idx.push(rootBase, rootBase + 1 + k, rootBase + 1 + (k + 1) % RG);
-    }
     const pathGeo = new THREE.BufferGeometry();
     pathGeo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     pathGeo.setAttribute('color', new THREE.Float32BufferAttribute(colr, 4)); pathGeo.setIndex(idx);
@@ -1628,11 +1704,61 @@ const worldV2 = (() => {
     // 小道の上を、小さな光の点がゆっくり進む（祠へ5つ、門へ2つ）。形は光の実と共有
     // 光の点：high は祠へ5つ・門へ2つ、low は祠へ3つ・門へ1つ
     moteMain = HIGH ? 5 : 3; moteCount = moteMain + (HIGH ? 2 : 1);
-    motes = new THREE.InstancedMesh(fk.geometry, fruitMat, moteCount); motes.name = 'WorldV2_Motes';
-    for (let i = 0; i < moteCount; i++) motes.setColorAt(i, c3.set(i < moteMain ? 0xfff0b8 : 0xffe9c4));
+    moteSecret = HIGH ? 3 : 2; sparkN = HIGH ? 6 : 3;
+    motes = new THREE.InstancedMesh(fk.geometry, fruitMat, moteCount + moteSecret + sparkN); motes.name = 'WorldV2_Motes';
+    for (let i = 0; i < moteCount + moteSecret + sparkN; i++) motes.setColorAt(i, c3.set(i < moteMain ? 0xfff0b8 : i < moteCount + moteSecret ? 0xffe9c4 : (i % 2 ? 0xa6dcf2 : 0xffe08a)));
+    motes.count = moteCount;   // 秘密の道の点・光の粒は、出番のときだけ描く
     motes.instanceColor.needsUpdate = true; motes.frustumCulled = false;
     group.add(motes);
     moteN = PN;
+
+    // ── 最初の冒険で使う物 ──
+    // 根の門：自分の素材を持たせて、反応したときに金色の筋のように灯す。左右は根元を中心に、外（奥）へひらく
+    gateMat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
+    gate.forEach(m => { m.material = gateMat; });
+    gatePlace.compose(p3.set(GATE.x, heightAt(GATE.x, GATE.z), GATE.z), q.setFromEuler(e3.set(0, gYaw, 0, 'YXZ')), s3.set(1, 1, 1));
+    gateNode = ['RootGate_Left', 'RootGate_Right', 'RootGate_Top', 'RootGate_Cross'].map(n => need(n).matrix);
+    gateMeshes = gate; gateYaw = gYaw;
+    // ことばのタネ：金色の実（ふつうの素材）と、外側の薄い水色の光。生まれるまでは見せない
+    seedGlowMat = new THREE.MeshBasicMaterial({ color: 0xffffff, vertexColors: true, transparent: true, opacity: .35, depthWrite: false });
+    wordSeed = new THREE.Group(); wordSeed.name = 'WordSeed'; wordSeed.visible = false;
+    const seedCore = new THREE.Mesh(need('WordSeed_Core').geometry, kitMat), seedGlow = new THREE.Mesh(need('WordSeed_Glow').geometry, seedGlowMat);
+    seedCore.name = 'WordSeed_Core'; seedGlow.name = 'WordSeed_Glow'; seedGlow.renderOrder = 3;
+    wordSeed.add(seedCore, seedGlow); group.add(wordSeed);
+    // 秘密の道：門の中央から、ことばの樹の手前まで。門がひらくまでは消えていて、ひらくと手前から順に灯る
+    const sp = [], sc = [], si = [], SECRET_A = [0, .45, 1, .45, 0];
+    const scurve = new THREE.CatmullRomCurve3(PASSAGE.map(([x, z]) => new THREE.Vector3(x, 0, z)));
+    secretU = new Float32Array((PN + 1) * 5 + 17); secretBase = new Float32Array((PN + 1) * 5 + 17);
+    for (let i = 0; i <= PN; i++) {
+      const u = i / PN, p = scurve.getPointAt(u), tg = scurve.getTangentAt(u), w = .26 + Math.sin(u * 6) * .03;
+      moteSamples.set([p.x, heightAt(p.x, p.z) + .16, p.z], (2 * (PN + 1) + i) * 3);
+      for (let c = 0; c < 5; c++) {
+        const x = p.x + tg.z * OFF[c] * w, z = p.z - tg.x * OFF[c] * w, v = i * 5 + c;
+        c3.copy(cream).lerp(gold, c === 2 ? 1 : .45);
+        sp.push(x, heightAt(x, z) + .025, z); sc.push(c3.r, c3.g, c3.b, 0);
+        secretU[v] = u; secretBase[v] = SECRET_A[c] * smooth(0, .08, u) * (1 - smooth(.9, 1, u) * .5);
+        if (i < PN && c < 4) si.push(v, v + 1, v + 5, v + 1, v + 6, v + 5);
+      }
+    }
+    secretRibbonN = si.length;   // ここまでが秘密の道（門がひらくまでは描かない）。このあとの根元の光は、はじめから描く
+    // ことばの樹の根元：地面にしみこむ淡いクリーム色の光（はじめから見えている）
+    const rootBase = (PN + 1) * 5, RG = 16;
+    c3.set(0xfff0c8);
+    sp.push(WORD_TREE.x, heightAt(WORD_TREE.x, WORD_TREE.z) + .03, WORD_TREE.z); sc.push(c3.r, c3.g, c3.b, .5); secretU[rootBase] = -1; secretBase[rootBase] = .5;
+    for (let k = 0; k < RG; k++) {
+      const a = k / RG * Math.PI * 2, x = WORD_TREE.x + Math.cos(a) * 3.4, z = WORD_TREE.z + Math.sin(a) * 3.4;
+      sp.push(x, heightAt(x, z) + .03, z); sc.push(c3.r, c3.g, c3.b, 0); secretU[rootBase + 1 + k] = -1; secretBase[rootBase + 1 + k] = 0;
+      si.push(rootBase, rootBase + 1 + k, rootBase + 1 + (k + 1) % RG);
+    }
+    const sgeo = new THREE.BufferGeometry();
+    sgeo.setAttribute('position', new THREE.Float32BufferAttribute(sp, 3));
+    secretColor = new THREE.Float32BufferAttribute(sc, 4); sgeo.setAttribute('color', secretColor); sgeo.setIndex(si); sgeo.setDrawRange(secretRibbonN, Infinity);
+    secretMat = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide });
+    secretPath = new THREE.Mesh(sgeo, secretMat); secretPath.renderOrder = 2; secretPath.name = 'WorldV2_SecretPath'; group.add(secretPath);
+    // 道ばたの発見はひとつだけ：水色に光る小さな芽（近づくと少し明るくなる。取ったり数えたりはしない）
+    sproutMesh = group.getObjectByName(sproutName);
+    // ことばの樹の実：まだ灯っていない4つの位置（タネが入る実を、到着したときに1つだけ選ぶ）
+    for (let i = 0; i < 5; i++) { fruits.getMatrixAt(i, m4); fruitPos[i] = new THREE.Vector3().setFromMatrixPosition(m4); fruitBase[i] = new THREE.Matrix4().copy(m4); }
     return { group, terrain: g, gate, tree };
   }
 
@@ -1646,10 +1772,14 @@ const worldV2 = (() => {
     CAM_OFF.set(portrait ? -4.2 : 0, portrait ? 4.4 : 3.4, portrait ? 7.6 : 8.2);
     CAM_LOOK.set(0, portrait ? 2.3 : 1.6, 0);   // 縦長は見る点を高めに：下にヒロリと草、中ほどに祠と小道、上に門と樹と空                                   // ヒロリの少し上を見る：ヒロリが画面の下寄りになり、上に祠・門・ことばの樹が抜ける
     if (character) camera.position.copy(character.position).add(CAM_OFF);
+    defOff.copy(CAM_OFF); defLook.copy(CAM_LOOK);
     v1Rocks.forEach(r => { r.visible = false; });
     ground.geometry.dispose(); ground.geometry = built.terrain; ground.rotation.set(0, 0, 0); ground.updateMatrixWorld(true);
     vineGroup.children.forEach(o => { o.visible = false; });   // V2 では、閉じた根の門が通れない場所をあらわすので、V1 のつるは描かない
     nextGroup.position.y = heightAt(nextGroup.position.x, nextGroup.position.z);
+    nextGroup.children.forEach(o => { o.visible = false; });   // V2 では、ことばの樹が次の目標なので、V1 の遠くの結晶は描かない
+    demoEnd = document.getElementById('demo-end'); mbarText = document.getElementById('mbar-text');
+    demoEndOriginal = Array.from(demoEnd.childNodes);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     if (HIGH) {
       // 影は PC だけ。太陽の向きはそのまま、影を作る範囲を歩ける範囲＋門の周りに合わせる
@@ -1664,6 +1794,56 @@ const worldV2 = (() => {
     active = true;
   }
 
+  // ── 最初の冒険：画面の文字（既存の上部表示と、デモ終了の枠を使う）──
+  let demoEnd = null, mbarText = null, demoEndOriginal = null, finaleNodes = null;
+  const defOff = new THREE.Vector3(), defLook = new THREE.Vector3();
+  function showFinale() {
+    if (!finaleNodes) {
+      const l1 = document.createElement('div'), l2 = document.createElement('div'), more = document.createElement('button'), back = document.createElement('a');
+      l1.className = 'end-line1'; l1.textContent = 'きみのことばが、世界をひとつ灯した。';
+      l2.className = 'end-line2'; l2.textContent = 'ことばの樹には、まだ眠っている実がある。';
+      more.className = 'btn-secondary'; more.textContent = 'もう少し歩いてみる';
+      more.style.cssText = 'width:auto;display:inline-block;padding:10px 22px;margin:0 auto';
+      more.addEventListener('click', () => demoEnd.classList.remove('show'));
+      back.href = 'index.html'; back.textContent = 'スタートへ戻る';
+      back.style.cssText = 'display:block;margin-top:10px;font-size:13px;color:#7a6040';
+      finaleNodes = [l1, l2, more, back];
+    }
+    // 背の低い画面では、文字と余白を少し小さくして、ヒロリと灯った実にかからないようにする
+    const short = innerHeight < 700;
+    finaleNodes[0].style.fontSize = short ? '14px' : ''; finaleNodes[0].style.marginBottom = short ? '4px' : '';
+    finaleNodes[1].style.marginBottom = short ? '8px' : '';
+    finaleNodes[2].style.padding = short ? '8px 18px' : '10px 22px';
+    finaleNodes[3].style.marginTop = short ? '6px' : '10px';
+    demoEnd.replaceChildren(...finaleNodes);
+    const tall = innerWidth < innerHeight;
+    demoEnd.style.bottom = 'auto'; demoEnd.style.top = tall ? (short ? '31%' : '35%') : '44%'; demoEnd.style.left = tall ? '50%' : '78%'; demoEnd.style.width = 'min(300px, 86vw)';
+    if (short) demoEnd.style.padding = '12px 16px';
+    demoEnd.classList.add('show');
+  }
+  // 「デモを最初から」：冒険の物と状態を、すべて最初へ戻す（通信はしない）
+  function reset() {
+    if (!active) return;
+    progress = P.EXPLORING; gateOpen = false; seedFollowing = false; litFruit = -1;
+    birthT = collectT = openT = litT = -1; msgAt = -1; msgNext = ''; sparkT = -1;
+    wordSeed.visible = false; wordSeed.scale.setScalar(1); wordSeed.position.set(0, -10, 0); seedGlowMat.opacity = .35;
+    gateMat.emissive.setRGB(0, 0, 0); secretBase[(moteN + 1) * 5] = .5; treeX = treeZ = 0; treeFrame = false;
+    for (let i = 0; i < 4; i++) gateMeshes[i].matrix.multiplyMatrices(gatePlace, gateNode[i]);
+    gateMeshes[3].visible = true;
+    for (let i = 0; i < 5; i++) fruits.setMatrixAt(i, fruitBase[i]);
+    fruits.instanceMatrix.needsUpdate = true; finaleAt = -1;
+    demoEnd.style.removeProperty('top'); demoEnd.style.removeProperty('bottom'); demoEnd.style.removeProperty('left'); demoEnd.style.removeProperty('width'); demoEnd.style.removeProperty('padding');
+    for (let v = 0; v < secretBase.length; v++) secretColor.array[v * 4 + 3] = secretU[v] < 0 ? secretBase[v] : 0;
+    secretColor.needsUpdate = true; secretMat.opacity = 1; secretPath.geometry.setDrawRange(secretRibbonN, Infinity);
+    for (let i = 1; i < 5; i++) fruits.setColorAt(i, c3r.set(i % 2 ? 0x8fc6d8 : 0xd6b468));
+    fruits.instanceColor.needsUpdate = true;
+    sproutMesh.setColorAt(sproutIndex, c3r.set(0x9fd6ee)); sproutMesh.instanceColor.needsUpdate = true;
+    motes.count = moteCount;
+    if (demoEndOriginal) { demoEnd.replaceChildren(...demoEndOriginal); demoEnd.classList.remove('show'); }
+    CAM_OFF.copy(defOff); CAM_LOOK.copy(defLook);
+  }
+  const c3r = new THREE.Color();
+
   // 読み込み：時間切れ・失敗のときは V1 のまま（ready は、どちらの場合も最後に終わる）
   const ready = !wanted ? Promise.resolve(false) : new Promise(resolve => {
     let done = false;
@@ -1676,12 +1856,26 @@ const worldV2 = (() => {
     }, undefined, () => { clearTimeout(timer); finish(false); });
   });
 
+  // 冒険の状態（毎フレームの処理で使う。ページを読み込み直すと最初から。保存はしない）
+  let progress = P.EXPLORING, seedFollowing = false, litFruit = -1, lastT = 0, treeX = 0, treeZ = 0, treeFrame = false;
+  let birthT = -1, collectT = -1, openT = -1, litT = -1, msgAt = -1, msgNext = '', sparkT = -1, finaleAt = -1;
+  const SECRET_YAW = Math.atan2(GATE.x - PASSAGE[1][0], GATE.z - PASSAGE[1][1]);   // 秘密の道から門のほうを見た向き（カメラを置く側）
+  const GATE_SLIDE = .45, GATE_LEAN = .14, GATE_LIFT = .35, GATE_WIDEN = .6;   // 門がひらいたときの、根のずれ・傾き・持ち上がり・広がり
+  const SEED_HOME = new THREE.Vector3(), seedFrom = new THREE.Vector3(), seedTo = new THREE.Vector3(), tmpV = new THREE.Vector3(), tmpW = new THREE.Vector3();
+  const sparkAt = new THREE.Vector3(), gateRot = new THREE.Matrix4(), gateTmp = new THREE.Matrix4(), gateLift = new THREE.Matrix4();
+  const GOLD = new THREE.Color(0xffc23a), SKY = new THREE.Color(0x62c8f2), fruitLit = new THREE.Color(), emis = new THREE.Color(0x5a3a10), fruitM = new THREE.Matrix4();
+
   // PER-FRAME-V2-BEGIN（毎フレームの処理。新しい物は作らない）
   // ことばの樹の灯った実が、ゆっくり明滅する。祠の光が呼吸する。小道の光の点がゆっくり進む。カメラが地面より下へ行かないようにする
   const LIT = new THREE.Color(0xffe08a), DIM = new THREE.Color(0xd6b468), fruitNow = new THREE.Color(), moteM = new THREE.Matrix4();
+  function say(text) { mbarText.textContent = text; }
+  function sayLater(text, at) { msgNext = text; msgAt = at; }
+  const ease = x => x * x * (3 - 2 * x);
   function update(t) {
     if (!active) return;
     const still = reduceMotionQuery.matches;
+    const dt = Math.min(.1, Math.max(0, t - lastT)); lastT = t;
+    adventure(t, dt, still);
     const k = still ? .5 : .5 + .5 * Math.sin(t * .9);
     fruitNow.copy(DIM).lerp(LIT, k); fruits.setColorAt(0, fruitNow); fruits.instanceColor.needsUpdate = true;
     worldArt.softMat.opacity = still ? .45 : .4 + .06 * Math.sin(t * .7);
@@ -1691,12 +1885,174 @@ const worldV2 = (() => {
       moteM.makeScale(.16, .16, .16).setPosition(moteSamples[j], moteSamples[j + 1] + (still ? 0 : .04 * Math.sin(t * 1.3 + i)), moteSamples[j + 2]);
       motes.setMatrixAt(i, moteM);
     }
+    // 秘密の道の光の点：門がひらいたあと、ことばの樹のほうへ進む
+    if (gateOpen) for (let i = 0; i < moteSecret; i++) {
+      const u = still ? (i + .5) / moteSecret : (t * .045 + i / moteSecret) % 1, j = (2 * (moteN + 1) + Math.floor(u * moteN)) * 3;
+      moteM.makeScale(.15, .15, .15).setPosition(moteSamples[j], moteSamples[j + 1] + (still ? 0 : .05 * Math.sin(t * 1.5 + i)), moteSamples[j + 2]);
+      motes.setMatrixAt(moteCount + i, moteM);
+    }
     motes.instanceMatrix.needsUpdate = true;
+    guardCamera();
     const floor = heightAt(camera.position.x, camera.position.z) + 1.2;
     if (camera.position.y < floor) camera.position.y = floor;
   }
+  function adventure(t, dt, still) {
+    if (msgAt >= 0 && t >= msgAt) { say(msgNext); msgAt = -1; }
+    // ミッションが始まった・深掘りまで終わった（DEMO_COMPLETE は、深掘りの問いからしか来ない。care では来ない）
+    if (progress === P.EXPLORING && state !== S.EXPLORE) progress = advance(progress, 'missionStarted');
+    if (progress === P.MISSION && state === S.DEMO_COMPLETE) {
+      progress = advance(progress, 'deepDone'); birthT = t;
+      SEED_HOME.set(MISSION_POS.x - .8, heightAt(MISSION_POS.x, MISSION_POS.z) + 1.45, MISSION_POS.z - .25);
+      wordSeed.position.copy(SEED_HOME); wordSeed.visible = true; wordSeed.scale.setScalar(still ? 1.5 : .01);
+      say('ことばのタネが生まれた！'); sayLater('祠に近づいてみよう', t + 2.4);
+      sparkAt.copy(SEED_HOME); sparkT = t;
+    }
+    // 冒険のあいだは、V1 のデモ終了の枠を出さない（最後に、完了のことばとして使う）
+    if (state === S.DEMO_COMPLETE && progress !== P.COMPLETE && demoEnd.classList.contains('show')) demoEnd.classList.remove('show');
+    if (progress === P.EXPLORING || progress === P.MISSION || !character) return;
+    const cx = character.position.x, cz = character.position.z;
+    const gdx = cx - GATE.x, gdz = cz - GATE.z, front = gdx * Math.sin(gateYaw) + gdz * Math.cos(gateYaw);
+    if (gateOpen && !treeFrame) {
+      const a = SECRET_YAW - Math.atan2(defOff.x, defOff.z), w = smooth(.5, -2.5, front) * a, cs = Math.cos(w), sn = Math.sin(w);
+      CAM_OFF.set(defOff.x * cs + defOff.z * sn, defOff.y, -defOff.x * sn + defOff.z * cs);
+    }
+
+    // タネ：生まれる（ゆっくり大きくなって浮かぶ）→ ヒロリが近づくと受け取る → ヒロリのそばについてくる
+    if (progress === P.SEED_BORN) {
+      const b = still ? 1 : Math.min(1, (t - birthT) / 1.2);
+      wordSeed.scale.setScalar(1.5 * ease(b));
+      wordSeed.position.y = SEED_HOME.y + (still ? 0 : .06 * Math.sin(t * 1.6));
+      if (!still) { const w = Math.sin(Math.PI * Math.min(1, (t - birthT) / 2)); CAM_LOOK.set(defLook.x + (SEED_HOME.x - cx) * .3 * w, defLook.y + .4 * w, defLook.z + (SEED_HOME.z - cz) * .3 * w); }
+      if (b >= 1 && Math.hypot(cx - SEED_HOME.x, cz - SEED_HOME.z) <= SEED_PICK_R) {
+        progress = advance(progress, 'seedTouched'); collectT = t; seedFrom.copy(wordSeed.position); CAM_LOOK.copy(defLook);
+        say('ことばのタネを見つけた！'); sayLater('根の門が反応している…', t + 1.8);
+        sparkAt.copy(wordSeed.position); sparkT = t;
+      }
+    }
+    if (progress === P.SEED_COLLECTED || progress === P.GATE_OPENING || progress === P.SECRET_PATH) {
+      // ヒロリの胸の横（顔を隠さない側）に、少し離れてついてくる
+      const f = hiroriMotion.facing;
+      seedTo.set(cx + Math.cos(f) * .42 + Math.sin(f) * .18, character.position.y + 1.05, cz - Math.sin(f) * .42 + Math.cos(f) * .18);
+      const c = still ? 1 : Math.min(1, (t - collectT) / .9);
+      if (c < 1) { tmpV.copy(seedFrom).lerp(seedTo, ease(c)); tmpV.y += Math.sin(Math.PI * c) * .35; wordSeed.position.copy(tmpV); }
+      else wordSeed.position.lerp(seedTo, 1 - Math.exp(-dt * 6));
+      if (!still) wordSeed.position.y += .03 * Math.sin(t * 2.2);
+      wordSeed.scale.setScalar(1.1);
+    }
+    // 根の門：タネを持っているあいだ、金色にほのかに反応する。門の手前 3.6m 以内に入るとひらく（門の内側・奥にいるときは始めない）
+    if (progress === P.SEED_COLLECTED) {
+      gateMat.emissive.copy(emis).multiplyScalar(still ? .5 : .4 + .3 * Math.sin(t * 2.4));
+      if (Math.hypot(gdx, gdz) <= GATE_OPEN_R && front > .3) { progress = advance(progress, 'gateApproached'); openT = t; secretPath.geometry.setDrawRange(0, Infinity); sparkAt.set(GATE.x, heightAt(GATE.x, GATE.z) + 1.2, GATE.z); sparkT = t; }
+    }
+    if (progress === P.GATE_OPENING) {
+      const o = still ? 1 : Math.min(1, (t - openT) / 1.7), e = ease(o);
+      gateMat.emissive.copy(emis).multiplyScalar(1 - .6 * e);
+      for (let i = 0; i < 2; i++) {
+        const sd = i ? 1 : -1;
+        gateLift.makeTranslation(sd * GATE_SLIDE * e, 0, 0); gateRot.makeRotationZ(-sd * GATE_LEAN * e);
+        gateMeshes[i].matrix.multiplyMatrices(gatePlace, gateTmp.multiplyMatrices(gateLift, gateNode[i])).multiply(gateRot);
+      }
+      gateLift.makeTranslation(0, GATE_LIFT * e + .2 * Math.sin(Math.PI * e), 0); gateRot.makeScale(1 + GATE_WIDEN * e, 1, 1);
+      gateMeshes[2].matrix.multiplyMatrices(gatePlace, gateTmp.multiplyMatrices(gateLift, gateNode[2])).multiply(gateRot);
+      // 通り道をふさいでいた細い根は、地面へ引っこむ
+      gateLift.makeTranslation(0, -2.9 * e, 0); gateRot.makeScale(1, 1 - .5 * e, 1);
+      gateMeshes[3].matrix.multiplyMatrices(gatePlace, gateTmp.multiplyMatrices(gateLift, gateNode[3])).multiply(gateRot);
+      gateMeshes[3].visible = e < .999;
+      lightSecretPath(still ? 1 : o * .7, 1.6);
+      if (!still) CAM_LOOK.set(defLook.x + (GATE.x - cx) * .12, defLook.y + .2, defLook.z + (GATE.z - cz) * .12);
+      if (o >= 1) {
+        progress = advance(progress, 'gateOpened'); gateOpen = true; say('秘密の道がひらいた！');
+        CAM_LOOK.copy(defLook);
+      }
+    }
+    // 秘密の道：ひらいた直後は少し明るく、3秒ほどで落ち着く。道ばたの芽は、近づくと少し明るくなる
+    if (progress === P.SECRET_PATH || progress === P.TREE_REACHED || progress === P.COMPLETE) {
+      const after = still ? 99 : t - openT - 1.7;
+      if (after < 3.2) lightSecretPath(Math.min(1, .7 + after / 1.2), 1 + .6 * Math.max(0, 1 - after / 3));
+      const near = Math.max(0, 1 - Math.hypot(cx - 11.75, cz + 20.55) / 4);
+      c3r.setRGB(.62 + .5 * near, .84 + .45 * near, .93 + .45 * near); sproutMesh.setColorAt(sproutIndex, c3r); sproutMesh.instanceColor.needsUpdate = true;
+      motes.count = moteCount + moteSecret + (sparkT >= 0 && t - sparkT < 1.6 ? sparkN : 0);
+    }
+    // ことばの樹：根もとに着くと、タネがヒロリから離れて幹をのぼり、まだ眠っている実のひとつに入って灯る
+    if (progress === P.SECRET_PATH && Math.hypot(cx - WORD_TREE.x, cz - WORD_TREE.z) <= TREE_REACH_R) {
+      progress = advance(progress, 'treeApproached'); litT = t; seedFrom.copy(wordSeed.position);
+      let best = 1e9;
+      for (let i = 1; i < 5; i++) { const d = (fruitPos[i].x - cx) ** 2 + (fruitPos[i].z - cz) ** 2; if (d < best) { best = d; litFruit = i; } }
+      treeX = cx; treeZ = cz;
+      if (!still) {
+        tmpW.set(cx - WORD_TREE.x, 0, cz - WORD_TREE.z).normalize();
+        const gy = heightAt(WORD_TREE.x, WORD_TREE.z) - character.position.y;
+        CAM_OFF.set(WORD_TREE.x + tmpW.x * 11 - cx, gy + 2.0, WORD_TREE.z + tmpW.z * 11 - cz);
+        CAM_LOOK.set(WORD_TREE.x - cx, gy + 2.0 + 11 * Math.tan(camera.aspect < 1 ? .25 : .157), WORD_TREE.z - cz);   // 縦長の画面は少し多めに見上げる（ヒロリを下の3分の1へ）
+        treeFrame = true;
+      }
+    }
+    if (progress === P.TREE_REACHED) {
+      const l = still ? 1 : Math.min(1, (t - litT) / 2.6), fp = fruitPos[litFruit];
+      wordSeed.scale.setScalar(l < .85 ? 1.9 : 1.9 * (1 - (l - .85) / .15)); seedGlowMat.opacity = .6;
+      if (l < .2) { tmpV.set(WORD_TREE.x + (cx - WORD_TREE.x) * .45, heightAt(WORD_TREE.x, WORD_TREE.z) + .5, WORD_TREE.z + (cz - WORD_TREE.z) * .45); wordSeed.position.copy(seedFrom).lerp(tmpV, ease(l / .2)); }
+      else if (l < .85) {
+        const k = (l - .2) / .65, a = Math.atan2(cx - WORD_TREE.x, cz - WORD_TREE.z) + k * 2.4, r = 1.35;
+        tmpV.set(WORD_TREE.x + Math.sin(a) * r, heightAt(WORD_TREE.x, WORD_TREE.z) + .5 + k * (fp.y - .5 - heightAt(WORD_TREE.x, WORD_TREE.z)), WORD_TREE.z + Math.cos(a) * r);
+        tmpW.copy(tmpV).lerp(fp, ease(k) * ease(k)); wordSeed.position.copy(tmpW);
+      } else wordSeed.position.copy(fp);
+      if (l >= 1) {
+        progress = advance(progress, 'treeLit'); wordSeed.visible = false; sparkAt.copy(fp); sparkT = t;
+        say('きみのことばが、世界をひとつ灯した。'); finaleAt = t + (still ? 0 : 1.6);
+        secretBase[(moteN + 1) * 5] = .75;   // 根もとの光が少し強くなる
+        lightSecretPath(1, 1);
+      }
+    }
+    if (progress === P.COMPLETE) {
+      const sw = Math.sin((t - litT) * 1.6), w = still ? .3 : .5 + .5 * Math.sign(sw) * Math.pow(Math.abs(sw), .35);   // 金色と水色を、はっきり行き来する
+      fruitLit.copy(GOLD).lerp(SKY, w);
+      fruits.setColorAt(litFruit, fruitLit); fruits.instanceColor.needsUpdate = true;
+      const g = 1.45 + (still ? 0 : .08 * Math.sin((t - litT) * 3.2));
+      fruitM.copy(fruitBase[litFruit]); fruitM.elements[0] *= g; fruitM.elements[1] *= g; fruitM.elements[2] *= g; fruitM.elements[4] *= g; fruitM.elements[5] *= g; fruitM.elements[6] *= g; fruitM.elements[8] *= g; fruitM.elements[9] *= g; fruitM.elements[10] *= g;
+      fruits.setMatrixAt(litFruit, fruitM); fruits.instanceMatrix.needsUpdate = true;
+      if (finaleAt >= 0 && t >= finaleAt) { finaleAt = -1; showFinale(); }
+      // ヒロリが歩き出したら（灯った場所から 1.5m）、ふだんの構図へ戻す
+      if (treeFrame && Math.hypot(cx - treeX, cz - treeZ) > 1.5) { treeFrame = false; CAM_LOOK.copy(defLook); }
+    }
+    // 小さな光の粒：生まれる・受け取る・門・実のとき、少しだけ舞い上がる
+    if (sparkT >= 0 && t - sparkT < 1.6 && !still) {
+      const k = (t - sparkT) / 1.6;
+      for (let i = 0; i < sparkN; i++) {
+        const a = i / sparkN * 6.283 + k * 1.5, r = .25 + k * .55;
+        moteM.makeScale(.12 * (1 - k), .12 * (1 - k), .12 * (1 - k)).setPosition(sparkAt.x + Math.cos(a) * r, sparkAt.y + k * .8, sparkAt.z + Math.sin(a) * r);
+        motes.setMatrixAt(moteCount + moteSecret + i, moteM);
+      }
+      if (progress === P.SEED_BORN || progress === P.SEED_COLLECTED || progress === P.GATE_OPENING) motes.count = moteCount + moteSecret + sparkN;
+    } else if (progress === P.SEED_BORN || progress === P.SEED_COLLECTED || progress === P.GATE_OPENING) motes.count = moteCount;
+  }
+  // 秘密の道を、手前から u まで灯す（gain は明るさ。ひらいた直後だけ少し明るい）
+  function lightSecretPath(u, gain) {
+    for (let v = 0; v < secretBase.length; v++) {
+      if (secretU[v] < 0) { secretColor.array[v * 4 + 3] = secretBase[v]; continue; }
+      secretColor.array[v * 4 + 3] = Math.min(1, secretBase[v] * gain) * Math.min(1, Math.max(0, (u - secretU[v]) * 8));
+    }
+    secretColor.needsUpdate = true;
+  }
+  // 根の門のまわりのカメラ：閉じているあいだは門の手前に保つ。ひらいたあと、門を通るときは門の上を越える高さにする
+  function guardCamera() {
+    const lx = (camera.position.x - GATE.x) * Math.cos(gateYaw) - (camera.position.z - GATE.z) * Math.sin(gateYaw);
+    const lz = (camera.position.x - GATE.x) * Math.sin(gateYaw) + (camera.position.z - GATE.z) * Math.cos(gateYaw);
+    let moved = false;
+    // 閉じているあいだ：カメラは門の手前（祠の側）にとどまる
+    if (!gateOpen && Math.abs(lx) < 4.2 && lz < 1.6 && lz > -3) {
+      const push = 1.6 - lz;
+      camera.position.x += Math.sin(gateYaw) * push; camera.position.z += Math.cos(gateYaw) * push; moved = true;
+    }
+    // ひらいたあと：門を通りぬけるあいだだけ、カメラは門の上（上の根より高く）をなめらかに越える
+    if (gateOpen && Math.abs(lx) < 4.8) {
+      const need = heightAt(GATE.x, GATE.z) + 5.6, w = smooth(3.4, 1.2, Math.abs(lz)) * smooth(4.8, 3.6, Math.abs(lx));
+      const y = camera.position.y + (need - camera.position.y) * w;
+      if (camera.position.y < y) { camera.position.y = y; moved = true; }
+    }
+    if (moved) camera.lookAt(camTgt);
+  }
   // PER-FRAME-V2-END
-  return { ready, update, groundCharacter, clampToWalkable, heightAt, isActive: () => active, quality: WORLD_QUALITY };
+  return { ready, update, reset, groundCharacter, clampToWalkable, heightAt, isActive: () => active, progress: () => progress, quality: WORLD_QUALITY };
 })();
 // WORLD-V2-END
 // WORLD-ART-END
@@ -2359,6 +2715,7 @@ function doReset(){
   if (sqEl) sqEl.textContent = FALLBACK_FOLLOW_UP;
   if (stEl) stEl.textContent = FALLBACK_FOLLOW_UP;
 
+  worldV2.reset();   // ことばのタネ・根の門・秘密の道・ことばの樹の実・カメラの構図を最初へ（WORLD-V2）
   if(character){ character.position.set(0,0,0); character.rotation.set(0,0,0); }
   resetHiroriMotion();
   targetPos.set(0,0,0); isMoving=false;

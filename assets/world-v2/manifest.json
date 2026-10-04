@@ -5,8 +5,8 @@
   "files": [
     {
       "path": "assets/world-v2/tomori-world-kit.glb",
-      "bytes": 178424,
-      "sha256": "8d0568e917c7fc887964e1dc2ee8f20eb118f1b9b274f75010a9c34c5a7d7c64",
+      "bytes": 179240,
+      "sha256": "abd4b05851dd11214ccfe8f2212687ab0d0ed71c61b9aa89204838527539c20c",
       "format": "glTF 2.0 binary",
       "textures": 0,
       "external_uris": 0
@@ -58,12 +58,16 @@
       "triangles": 60
     },
     {
+      "name": "RootGate_Cross",
+      "triangles": 140
+    },
+    {
       "name": "RootGate_Left",
-      "triangles": 606
+      "triangles": 536
     },
     {
       "name": "RootGate_Right",
-      "triangles": 510
+      "triangles": 440
     },
     {
       "name": "RootGate_Top",
@@ -144,7 +148,7 @@
     }
   ],
   "external_assets": 0,
-  "not_placed_yet": [
+  "shown_by_adventure": [
     "WordSeed",
     "WordSeed_Core",
     "WordSeed_Glow"

@@ -113,6 +113,99 @@ const CAM_LOOK = new THREE.Vector3(0, 1, 0);   // カメラが見る高さ（ヒ
    `  worldV2.reset();   // ことばのタネ・根の門・秘密の道・ことばの樹の実・カメラの構図を最初へ（WORLD-V2）
   if(character){ character.position.set(0,0,0); character.rotation.set(0,0,0); }
 `],
+  [`#world-canvas { display:block; width:100%; height:100%; touch-action:none; }
+`,
+   `#world-canvas { display:block; width:100%; height:100%; touch-action:none; }
+
+/* 日本語の折り返し（TEXT-WRAP）：文節の切れ目（下のスクリプトが <wbr> を入れる）でだけ改行する。
+   句読点・小さい字を行頭に出さない（strict）。短すぎる最後の行を避ける（pretty。効かないブラウザでもそのまま読める）。
+   1つの文節が1行に入らないときだけ、文節の中で折り返す（break-word） */
+body { line-break:strict; word-break:keep-all; overflow-wrap:break-word; text-wrap:pretty; }
+textarea, input { word-break:normal; }
+.panel-title, .end-line1, #word-announce, #mbar-text { text-wrap:balance; }
+.nowrap { white-space:nowrap; }
+`],
+  [`#hint {
+  position:absolute; bottom:76px; left:50%; transform:translateX(-50%);
+`,
+   `#hint {
+  position:absolute; bottom:76px; left:50%; transform:translateX(-50%);
+  width:max-content; max-width:calc(100vw - 32px);
+`],
+  [`.btn-disabled { opacity:.38; pointer-events:none; }
+`,
+   `.btn-disabled { opacity:.38; pointer-events:none; }
+.btn-primary:focus-visible, .btn-secondary:focus-visible, .btn-care:focus-visible, .photo-opt:focus-visible, .word-card:focus-visible,
+#btn-reset:focus-visible, #btn-back:focus-visible, #btn-voice:focus-visible, #demo-end a:focus-visible { outline:3px solid #3a3328; outline-offset:3px; }
+`],
+  [`  padding:18px 22px; max-width:min(320px,88vw); text-align:center;`,
+   `  padding:18px 22px; width:max-content; max-width:min(320px, calc(100vw - 32px)); text-align:center;`],
+  [`.btn-care { flex:1; padding:10px 8px; border:none; border-radius:10px; cursor:pointer;`,
+   `.btn-care { flex:1; min-height:44px; padding:10px 8px; border:none; border-radius:10px; cursor:pointer;`],
+  [`  <div id="hint">タップした場所へ歩くよ！　パソコン：W A S D または 矢印キー</div>`,
+   `  <div id="hint"><span class="nowrap">タップした場所へ歩くよ！</span>　<span class="nowrap">パソコン：W A S D</span> <span class="nowrap">または 矢印キー</span></div>`],
+  [`<script type="importmap">`,
+   `<script>
+// TEXT-WRAP-BEGIN（日本語を文節の切れ目でだけ折り返す。test-text-layout.mjs がこの範囲を取り出して確かめる）
+// Intl.Segmenter で単語に分け、助詞・助動詞・句読点は前の語につなげて「文節」にする。文節の前にだけ <wbr> を入れる。
+// 文字そのもの（textContent）は変えない。Intl.Segmenter が無いブラウザでは何もしない（ふつうの折り返しのまま）
+(function () {
+  if (typeof Intl === 'undefined' || !Intl.Segmenter) { document.body.style.wordBreak = 'normal'; return; }
+  const seg = new Intl.Segmenter('ja', { granularity: 'word' });
+  // 前の語につなげる、ひらがなの短い語（助詞・助動詞・語尾）
+  const ATTACH = new Set(('が の を に へ と で や も は か ね よ な さ わ ぞ ぜ て た だ ば し り る れ ら う ん っ ' +
+    'です ます ました ません ない なく なかった たい たく よう そう いる いた いて います ある あった ' +
+    'から まで より ほど だけ しか こそ でも って とか など けど のに ので ながら たり らしい みたい ' +
+    'でしょう だろう かな かも じゃ ちゃ ても でも ては では には とは へは もの こと よね かい').split(' '));
+  const NO_HEAD = /^[、。，．！？!?」』）)…ーぁぃぅぇぉっゃゅょァィゥェォッャュョ・：〜]/;
+  const OPEN = /[「『（(]$/;
+  const HIRA = /^[ぁ-ゖー]+$/;
+  const cache = new Map();   // 同じ文（毎フレーム入れなおされる上の案内など）は、分け方を覚えておく
+  function phrases(text) {
+    const hit = cache.get(text); if (hit) return hit;
+    const out = []; let cur = '', prev = '';
+    for (const { segment } of seg.segment(text)) {
+      const join = !cur || NO_HEAD.test(segment) || OPEN.test(prev) || (HIRA.test(segment) && (ATTACH.has(segment) || segment.length === 1))
+        || /\\s$/.test(prev) || /^\\s/.test(segment) || (/^[A-Za-z0-9]/.test(segment) && /[A-Za-z0-9]$/.test(prev))
+        || segment === '"' || prev === '"'                                                  // "なにか" のような引用は割らない
+        || (/[一-龥々]$/.test(prev) && /^[ぁ-ゖ一-龥々]/.test(segment))                      // 漢字のあとの送りがな・漢字の続き（灯した・音声認識）
+        || (/[ァ-ヺー]$/.test(prev) && /^[ァ-ヺー]/.test(segment))                           // カタカナの語の中（トモリ）
+        || (/[ぁ-ゖ]$/.test(prev) && /^[ぁ-ゖ]/.test(segment) && !(ATTACH.has(prev) && segment.length >= 3) && (prev.length <= 2 || segment.length <= 2));   // ひらがなの切れはし（ひ｜らいた）
+      if (join) cur += segment; else { out.push(cur); cur = segment; }
+      prev = segment;
+    }
+    if (cur) out.push(cur);
+    if (cache.size < 500) cache.set(text, out);
+    return out;
+  }
+  const SKIP = 'SCRIPT,STYLE,TEXTAREA,INPUT,RUBY,RT,RP,SVG,OPTION,TITLE';
+  function wrapNode(node) {
+    const p = node.parentElement;
+    if (!p || p.closest(SKIP.split(',').map(t => t.toLowerCase()).join(',')) || p.closest('.nowrap')) return;
+    if (!/[ぁ-んァ-ン一-龥]/.test(node.data)) return;
+    const parts = phrases(node.data);
+    if (parts.length < 2) return;
+    const frag = document.createDocumentFragment();
+    parts.forEach((t, i) => { if (i) frag.appendChild(document.createElement('wbr')); frag.appendChild(document.createTextNode(t)); });
+    node.replaceWith(frag);
+  }
+  function wrapTree(root) {
+    const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT); const list = []; let n;
+    while ((n = w.nextNode())) list.push(n);
+    list.forEach(wrapNode);
+  }
+  wrapTree(document.body);
+  new MutationObserver(muts => {
+    for (const m of muts) {
+      if (m.type === 'characterData') { if (m.target.isConnected) wrapNode(m.target); continue; }
+      m.addedNodes.forEach(n => { if (n.nodeType === 3) { if (n.isConnected) wrapNode(n); } else if (n.nodeType === 1) wrapTree(n); });
+    }
+  }).observe(document.body, { childList: true, subtree: true, characterData: true });
+  window.__tomoriPhrases = phrases;   // テスト用（読むだけ）
+})();
+// TEXT-WRAP-END
+</script>
+<script type="importmap">`],
 ];
 
 const ART_BLOCK = /\/\/ WORLD-ART-BEGIN[\s\S]*?\/\/ WORLD-ART-END\n\n/;

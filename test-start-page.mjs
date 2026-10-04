@@ -267,9 +267,12 @@ test('24. AI スイッチは true、収録版タグは 1890884 のまま', () =>
 test('25. innerHTML への代入や console の出力を増やしていない', () => {
   const count = (s, re) => (s.match(re) || []).length;
   const then = normalize(atTag('demo-world.html'));
-  for (const re of [/\.innerHTML\s*=/g, /console\.[a-z]+\(/g, /<script\b/g, /onclick=/g]) {
+  for (const re of [/\.innerHTML\s*=/g, /console\.[a-z]+\(/g, /onclick=/g]) {
     assert.equal(count(DEMO_NOW(), re), count(then, re), String(re));
   }
+  // <script> は、日本語の折り返し（TEXT-WRAP、Step 11K）の1つだけ増えた
+  assert.equal(count(DEMO_NOW(), /<script\b/g), count(then, /<script\b/g) + 1);
+  assert.equal(count(DEMO_NOW(), /<script>\n\/\/ TEXT-WRAP-BEGIN/g), 1);
 });
 
 test('26. 非対応画面を出したときは、リンクへフォーカスを移す（WebGL チェックの catch の中だけ）', () => {

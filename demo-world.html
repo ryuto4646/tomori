@@ -1389,8 +1389,11 @@ const worldV2 = (() => {
     return Math.hypot(x - ax - vx * t, z - az - vz * t);
   };
   // 平らにしておく場所（x, z, 平らな半径, なじませる幅）と、平らな帯（両端, 半径, なじませる幅）
-  const FLAT = [[0, 0, 3.4, 8], [1.5, -6.5, 4.4, 8], [16, -8, 5.6, 7], [WORD_TREE.x, WORD_TREE.z, 5.4, 6]];   // 最後の1つは、ことばの樹のまわり（秘密の場所）
-  const FLAT_SEG = [[0, 0, 1.5, -6.5, 2.4, 8], [13.8, -2.5, 12.2, -17.5, 2.2, 7], [GATE.x, GATE.z, 14.4, -25.4, 1.4, 5]];   // 最後の1つは、門からことばの樹への秘密の道
+  // 秘密の道：門から、ゆるいS字でことばの樹へ（東へ出て岩をまわり、水色の芽のそばで折り返し、若木の陰を抜けると樹が開ける）
+  const SECRET_ROUTE = [[GATE.x, GATE.z], [9.8, -15.4], [15.6, -15.9], [17.8, -18.9], [16.4, -21.9], [10.8, -22.4], [8.8, -25.2], [10.4, -29.0], [13.0, -29.6]];
+  const routeDist = (x, z) => { let d = 1e9; for (let i = 0; i < SECRET_ROUTE.length - 1; i++) d = Math.min(d, segDist(x, z, SECRET_ROUTE[i][0], SECRET_ROUTE[i][1], SECRET_ROUTE[i + 1][0], SECRET_ROUTE[i + 1][1])); return d; };
+  const FLAT = [[0, 0, 3.4, 8], [1.5, -6.5, 4.4, 8], [16, -8, 5.6, 7], [WORD_TREE.x, WORD_TREE.z, 4.4, 3]];   // 最後の1つは、ことばの樹のまわり（秘密の場所）
+  const FLAT_SEG = [[0, 0, 1.5, -6.5, 2.4, 8], [13.8, -2.5, 12.2, -17.5, 2.2, 7]];
   // 盛り上がり（x, z, 高さ, 広がり）：歩ける範囲の中はゆるく、外は大きく
   const INNER = [[-10.5, -3.5, .45, 6], [10, 2, .4, 5.5], [-6.5, 5, .25, 5], [10.5, -6.5, .3, 5], [-4, -12.5, .55, 6]];
   // 外の丘は高さを3段階にして、地平線を一直線にしない（低い丘・中くらいの丘・遠くの高い丘）
@@ -1404,13 +1407,14 @@ const worldV2 = (() => {
     const e = Math.hypot((x - WALK.cx) / WALK.rx, (z - WALK.cz) / WALK.rz), out = smooth(1.0, 1.7, e);
     for (const [bx, bz, a, s] of OUTER) h += out * a * Math.exp(-((x - bx) ** 2 + (z - bz) ** 2) / (2 * s * s));
     let rim = smooth(1.0, 2.0, e) * (0.5 + 1.4 * smooth(6, -12, z)) + smooth(2.4, 4.5, e) * 1.6;
-    // 根の門の先は谷：ことばの樹の方向へ、丘が切れて道が続いて見える
-    const valley = Math.exp(-(segDist(x, z, GATE.x, GATE.z, WORD_TREE.x, WORD_TREE.z) ** 2) / (2 * 2.2 * 2.2));
+    // 根の門の先は谷：秘密の道に沿って丘が切れ、道のまわりだけ低くなる（曲がり角のあいだは丘が残る）
+    const rd = routeDist(x, z), valley = Math.exp(-(rd ** 2) / (2 * 2.2 * 2.2));
     h += rim * (1 - .8 * valley) - .25 * valley * smooth(1.6, .9, e);
     // 平らにする場所
     let flat = 0;
     for (const [fx, fz, r, w] of FLAT) flat = Math.max(flat, smooth(r + w, r, Math.hypot(x - fx, z - fz)));
     for (const [ax, az, bx, bz, r, w] of FLAT_SEG) flat = Math.max(flat, smooth(r + w, r, segDist(x, z, ax, az, bx, bz)));
+    flat = Math.max(flat, smooth(4.4, 1.9, rd));   // 秘密の道（両側は土手のように少し高い）
     return h * (1 - flat);
   }
   // TERRAIN-END
@@ -1438,10 +1442,12 @@ const worldV2 = (() => {
   }
   const SEED_PICK_R = 1.25, GATE_OPEN_R = 3.6, TREE_REACH_R = 3.4;   // 樹は、根もとを軽くタップして止まった位置（タップ先の 0.6m 手前）でも届く距離
 
-  // 歩ける範囲：門が閉じているあいだは草原のだ円だけ。ひらいたあとは「だ円＋門を通る細い道＋ことばの樹のまわり」
-  // 細い道は、門からことばの樹の手前まで、ゆるく曲がる3つの線分（カプセルの連なり）
-  const PASSAGE = [[GATE.x, GATE.z], [10.4, -17.6], [12.6, -22.2], [14.4, -25.4]], PASSAGE_R = 1.05;
-  const TREE_AREA = { x: WORD_TREE.x, z: WORD_TREE.z, r: 4.8, trunk: 1.6 };
+  // 歩ける範囲：門が閉じているあいだは草原のだ円だけ。ひらいたあとは「だ円＋門を通る道＋ことばの樹のまわり」
+  // 道は、門からことばの樹の手前まで、S字に曲がる線分の連なり（カプセル）。幅は約2.7m（少しだけ寄り道できる）
+  const PASSAGE = SECRET_ROUTE, PASSAGE_R = 1.35;
+  const TREE_AREA = { x: WORD_TREE.x, z: WORD_TREE.z, r: 3.8, trunk: 1.6 };
+  const ROUTE_LEN = []; let ROUTE_TOTAL = 0;
+  for (let i = 0; i < PASSAGE.length - 1; i++) { ROUTE_LEN.push(Math.hypot(PASSAGE[i + 1][0] - PASSAGE[i][0], PASSAGE[i + 1][1] - PASSAGE[i][1])); ROUTE_TOTAL += ROUTE_LEN[i]; }
   function inWalk(x, z, open) {
     if (Math.hypot((x - WALK.cx) / WALK.rx, (z - WALK.cz) / WALK.rz) <= 1) return true;
     if (!open) return false;
@@ -1454,7 +1460,8 @@ const worldV2 = (() => {
   function clampWalk(p, open, limit = 1) {
     const tr = Math.hypot(p.x - TREE_AREA.x, p.z - TREE_AREA.z);
     if (open && tr < TREE_AREA.trunk) {           // 幹の中には入らない
-      const k = TREE_AREA.trunk / Math.max(tr, 1e-6);
+      if (tr < 1e-6) { p.x = TREE_AREA.x - TREE_AREA.trunk; return p; }   // ちょうど幹の中心：門の側へ出す
+      const k = TREE_AREA.trunk / tr;
       p.x = TREE_AREA.x + (p.x - TREE_AREA.x) * k; p.z = TREE_AREA.z + (p.z - TREE_AREA.z) * k;
       return p;
     }
@@ -1477,6 +1484,41 @@ const worldV2 = (() => {
     }
     p.x = bx; p.z = bz;
     return p;
+  }
+  // タップで歩くとき：道の外へまっすぐ向かって角に引っかからないよう、道に沿って少し先の点を目指す
+  // （x, z）に近い道の上の点が、門から何 m 先か（routeAt.d は道の中心からの距離）
+  const routeAt = { s: 0, d: 0 };
+  function routeS(x, z) {
+    let best = 1e9, s = 0, acc = 0;
+    for (let i = 0; i < PASSAGE.length - 1; i++) {
+      const [ax, az] = PASSAGE[i], [bx, bz] = PASSAGE[i + 1], vx = bx - ax, vz = bz - az;
+      const t = Math.min(1, Math.max(0, ((x - ax) * vx + (z - az) * vz) / (vx * vx + vz * vz))), d = Math.hypot(x - ax - vx * t, z - az - vz * t);
+      if (d < best) { best = d; s = acc + t * ROUTE_LEN[i]; }
+      acc += ROUTE_LEN[i];
+    }
+    routeAt.s = s; routeAt.d = best;
+    return s;
+  }
+  function routePoint(s, out) {
+    let i = 0;
+    while (i < ROUTE_LEN.length - 1 && s > ROUTE_LEN[i]) { s -= ROUTE_LEN[i]; i++; }
+    const t = Math.min(1, Math.max(0, s / ROUTE_LEN[i]));
+    out.x = PASSAGE[i][0] + (PASSAGE[i + 1][0] - PASSAGE[i][0]) * t; out.z = PASSAGE[i][1] + (PASSAGE[i + 1][1] - PASSAGE[i][1]) * t;
+    return out;
+  }
+  // いまの場所（cx, cz）から目的地（gx, gz）へ向かうとき、次に目指す点を out に入れる（門がひらいているときだけ使う）
+  const STEER_AHEAD = 2.5;
+  function inTree(x, z) { return Math.hypot(x - TREE_AREA.x, z - TREE_AREA.z) <= TREE_AREA.r; }
+  function inMeadow(x, z) { return Math.hypot((x - WALK.cx) / WALK.rx, (z - WALK.cz) / WALK.rz) <= 1; }
+  function steerToward(cx, cz, gx, gz, out) {
+    const sc = inTree(cx, cz) ? ROUTE_TOTAL : inMeadow(cx, cz) && routeS(cx, cz) < .5 ? 0 : routeS(cx, cz);
+    const sg = inTree(gx, gz) ? ROUTE_TOTAL : inMeadow(gx, gz) && routeS(gx, gz) < .5 ? 0 : routeS(gx, gz);
+    out.x = gx; out.z = gz;
+    if (Math.abs(sg - sc) <= 1.5) return out;                                   // 同じあたり：そのまま
+    if (sc === 0 && Math.hypot(cx - GATE.x, cz - GATE.z) > STEER_AHEAD) { out.x = GATE.x; out.z = GATE.z; return out; }   // 草原から：まず門へ
+    const sn = sc + Math.sign(sg - sc) * STEER_AHEAD;
+    if ((sg > sc && sn >= sg) || (sg < sc && sn <= sg)) return out;             // もうすぐ目的地
+    return routePoint(Math.min(ROUTE_TOTAL, Math.max(0, sn)), out);
   }
   // ADVENTURE-END
 
@@ -1533,8 +1575,10 @@ const worldV2 = (() => {
   // ── 組み立て（すべて新しいグループの中に作る。最後まで成功したときだけ、シーンを切り替える）──
   let fruits = null, fruitMat = null, motes = null, moteSamples = null, moteN = 0, moteMain = 0, moteCount = 0, moteSecret = 0, sparkN = 0;
   let gateMat = null, gateMeshes = null, gateNode = null, gateYaw = 0, wordSeed = null, seedGlowMat = null;
-  let secretRibbonN = 0, secretPath = null, secretMat = null, secretColor = null, secretU = null, secretBase = null, sproutMesh = null, sproutName = '', sproutIndex = -1;
+  let secretRibbonN = 0, secretN = 0, secretRoot = 0, secretPath = null, secretMat = null, secretColor = null, secretU = null, secretBase = null, sproutMesh = null, sproutName = '', sproutIndex = -1;
   const gatePlace = new THREE.Matrix4(), fruitPos = [], fruitBase = [];
+  const FLOWER_MAX = 48; let flowerStem = null, flowerHead = null;
+  const flowerM = new THREE.Matrix4(), flowerPM = new THREE.Matrix4(), flowerFr = new THREE.Frustum(), flowerS = new THREE.Sphere(new THREE.Vector3(), .6);
   function build(kit) {
     const need = n => { const k = kit.get(n); if (!k) throw new Error('node ' + n); return k; };
     let seed = 81726354;
@@ -1547,6 +1591,7 @@ const worldV2 = (() => {
     // スマホ（low）は、同じ仲間の形を1種類にまとめて描く回数を減らす（null は置かない）
     const LOW_ALIAS = { Tree_Tall_B: 'Tree_Tall_A', Grass_C: 'Grass_A', Flowers_C: 'Flowers_A', Bush_B: 'Bush_A', Rock_Medium_B: 'Rock_Medium_A', Stone_Standing_B: 'Stone_Standing_A', Rock_Pebbles: null };
     const put = (name, x, z, s = 1, yaw = rnd() * 6.283, tint = 0xffffff, tilt = 0, dy = 0) => {
+      if (!s) return;   // 大きさ0は置かない（引数の乱数はもう使ったので、ほかの物の配置は変わらない）
       if (!HIGH && name in LOW_ALIAS) { name = LOW_ALIAS[name]; if (!name) return; }
       if (!lists.has(name)) lists.set(name, []);
       lists.get(name).push([x, heightAt(x, z) + dy, z, s, yaw, tint, tilt]);
@@ -1592,7 +1637,8 @@ const worldV2 = (() => {
       const a = i / n * Math.PI * 2 + rnd() * .12, r = 1.14 + rnd() * .55;
       const x = WALK.cx + Math.cos(a) * WALK.rx * r, z = WALK.cz + Math.sin(a) * WALK.rz * r;
       if (z > 7 || segDist(x, z, GATE.x, GATE.z, WORD_TREE.x, WORD_TREE.z) < 3.2 || Math.hypot(x - 16, z + 8) < 6) continue;
-      put(TREES[i % 4], x, z, 1 + rnd() * .45, undefined, depthTint(x, z), (rnd() - .5) * .1);
+      const clear = routeDist(x, z) < 3.4 || Math.hypot(x - WORD_TREE.x, z - WORD_TREE.z) < 5.5 ? 0 : 1;   // 秘密の道の上には置かない
+      put(TREES[i % 4], x, z, (1 + rnd() * .45) * clear, undefined, depthTint(x, z), (rnd() - .5) * .1);
     }
     // 遠くの木：丘の上に、まとまりで
     // まとまりの大きさ・広がり・間隔をそろえない。ことばの樹のまわり（谷の奥）はあけて、空が見える切れ目を残す
@@ -1623,11 +1669,20 @@ const worldV2 = (() => {
 
     // 秘密の谷の草花：道の両側と、ことばの樹のまわり（歩ける道の幅より外に置く）
     const VALLEY = HIGH ? ['Grass_A', 'Flowers_B', 'Grass_B', 'Flowers_A', 'Grass_C', 'Bush_A'] : ['Grass_A', 'Grass_B'];   // スマホ（low）は草だけ（三角形を増やしすぎない）
-    for (let i = 0, n = HIGH ? 12 : 4; i < n; i++) {
-      const u = (i + .5) / n, a = Math.floor(u * 3), k = u * 3 - a, A = PASSAGE[a], B = PASSAGE[a + 1];
+    const SEGS = PASSAGE.length - 1;
+    for (let i = 0, n = HIGH ? 18 : 3; i < n; i++) {
+      const u = (i + .5) / n, a = Math.floor(u * SEGS), k = u * SEGS - a, A = PASSAGE[a], B = PASSAGE[a + 1];
       const tx = B[0] - A[0], tz = B[1] - A[1], tl = Math.hypot(tx, tz), side = i % 2 ? 1 : -1, off = 1.8 + (i % 3) * .35;
-      put(VALLEY[i % VALLEY.length], A[0] + tx * k - tz / tl * off * side, A[1] + tz * k + tx / tl * off * side, .9 + (i % 4) * .1);
+      const x = A[0] + tx * k - tz / tl * off * side, z = A[1] + tz * k + tx / tl * off * side;
+      if (routeDist(x, z) > 1.7) put(VALLEY[i % VALLEY.length], x, z, .9 + (i % 4) * .1);
     }
+    // 曲がり角の内側の岩（1つ目と最後の曲がり）・若木（ことばの樹を少しだけ隠し、数歩先で全体が開ける）
+    for (const [i, name, sc] of HIGH ? [[2, 'Rock_Medium_A', 1.15], [6, 'Bush_A', 1.1]] : [[2, 'Rock_Medium_A', 1.15]]) {
+      const [vx, vz] = PASSAGE[i], [px, pz] = PASSAGE[i - 1], [nx, nz] = PASSAGE[i + 1];
+      let bx = (px - vx) / Math.hypot(px - vx, pz - vz) + (nx - vx) / Math.hypot(nx - vx, nz - vz), bz = (pz - vz) / Math.hypot(px - vx, pz - vz) + (nz - vz) / Math.hypot(nx - vx, nz - vz);
+      const bl = Math.hypot(bx, bz); put(name, vx + bx / bl * 2.4, vz + bz / bl * 2.4, sc);
+    }
+    if (HIGH) put('Tree_Round_B', 12.2, -26.0, .8, 1.1, depthTint(12.2, -26.0));   // スマホ（low）は置かない（三角形の上限のため）
     for (let i = 0, n = HIGH ? 12 : 4; i < n; i++) {
       const a = i / n * 6.283 + .3, r = 5.4 + (i % 3) * .55;
       put(VALLEY[(i + 2) % VALLEY.length], WORD_TREE.x + Math.cos(a) * r, WORD_TREE.z + Math.sin(a) * r, 1 + (i % 2) * .15);
@@ -1635,7 +1690,7 @@ const worldV2 = (() => {
 
     // 秘密の道の途中にひとつだけ：水色に光る小さな芽（植物の形を使い、色だけ水色にする）
     sproutName = HIGH ? 'Flowers_C' : 'Flowers_A';
-    put(sproutName, 11.75, -20.55, 1.35, .4, 0x9fd6ee);
+    put(sproutName, SPROUT[0], SPROUT[1], 1.35, .4, 0x9fd6ee);
     sproutIndex = lists.get(sproutName).length - 1;
 
     // InstancedMesh：形ごとに1つ。大きな木と岩だけが影を落とす（PC）
@@ -1681,7 +1736,8 @@ const worldV2 = (() => {
     const ROUTES = [[[0, -.55], [.6, -2.2], [.45, -3.8], [1.15, -4.95]], [[2.35, -7.45], [3.9, -9.0], [5.5, -10.9], [6.6, -12.1]]];
     const STRENGTH = [1, .45], OFF = [-1.7, -.6, 0, .6, 1.7], PA = [0, .28, .85, .28, 0], PN = HIGH ? 40 : 26, pos = [], colr = [], idx = [];
     const gold = new THREE.Color(0xffe29a), cream = new THREE.Color(0xfff3d0);
-    moteSamples = new Float32Array(3 * (PN + 1) * 3);   // 祠への道・門への道・秘密の道
+    secretN = HIGH ? 96 : 40;
+    moteSamples = new Float32Array((2 * (PN + 1) + secretN + 1) * 3);   // 祠への道・門への道・秘密の道
     ROUTES.forEach((pts, r) => {
       const curve = new THREE.CatmullRomCurve3(pts.map(([x, z]) => new THREE.Vector3(x, 0, z))), base = pos.length / 3;
       for (let i = 0; i <= PN; i++) {
@@ -1712,6 +1768,15 @@ const worldV2 = (() => {
     group.add(motes);
     moteN = PN;
 
+    // スマホ（low）：言葉で咲く花を、茎と花の2つの InstancedMesh にまとめる（形・色・咲き方はそのまま。描く回数だけ減らす）
+    if (!HIGH) {
+      const f0 = mainFlowers[0].children;
+      flowerStem = new THREE.InstancedMesh(f0[0].geometry, f0[0].material, FLOWER_MAX); flowerStem.name = 'WorldV2_FlowerStems';
+      flowerHead = new THREE.InstancedMesh(f0[1].geometry, new THREE.MeshLambertMaterial({ color: 0xffffff }), FLOWER_MAX); flowerHead.name = 'WorldV2_FlowerHeads';
+      flowerHead.setColorAt(0, c3.set(0xffffff));
+      for (const im of [flowerStem, flowerHead]) { im.count = 0; im.frustumCulled = false; group.add(im); }
+    }
+
     // ── 最初の冒険で使う物 ──
     // 根の門：自分の素材を持たせて、反応したときに金色の筋のように灯す。左右は根元を中心に、外（奥）へひらく
     gateMat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
@@ -1727,22 +1792,23 @@ const worldV2 = (() => {
     wordSeed.add(seedCore, seedGlow); group.add(wordSeed);
     // 秘密の道：門の中央から、ことばの樹の手前まで。門がひらくまでは消えていて、ひらくと手前から順に灯る
     const sp = [], sc = [], si = [], SECRET_A = [0, .45, 1, .45, 0];
-    const scurve = new THREE.CatmullRomCurve3(PASSAGE.map(([x, z]) => new THREE.Vector3(x, 0, z)));
-    secretU = new Float32Array((PN + 1) * 5 + 17); secretBase = new Float32Array((PN + 1) * 5 + 17);
-    for (let i = 0; i <= PN; i++) {
-      const u = i / PN, p = scurve.getPointAt(u), tg = scurve.getTangentAt(u), w = .26 + Math.sin(u * 6) * .03;
+    const scurve = new THREE.CatmullRomCurve3(PASSAGE.map(([x, z]) => new THREE.Vector3(x, 0, z)), false, 'centripetal');
+    const SN = secretN;
+    secretU = new Float32Array((SN + 1) * 5 + 17); secretBase = new Float32Array((SN + 1) * 5 + 17);
+    for (let i = 0; i <= SN; i++) {
+      const u = i / SN, p = scurve.getPointAt(u), tg = scurve.getTangentAt(u), w = .26 + Math.sin(u * 14) * .03;
       moteSamples.set([p.x, heightAt(p.x, p.z) + .16, p.z], (2 * (PN + 1) + i) * 3);
       for (let c = 0; c < 5; c++) {
         const x = p.x + tg.z * OFF[c] * w, z = p.z - tg.x * OFF[c] * w, v = i * 5 + c;
         c3.copy(cream).lerp(gold, c === 2 ? 1 : .45);
         sp.push(x, heightAt(x, z) + .025, z); sc.push(c3.r, c3.g, c3.b, 0);
         secretU[v] = u; secretBase[v] = SECRET_A[c] * smooth(0, .08, u) * (1 - smooth(.9, 1, u) * .5);
-        if (i < PN && c < 4) si.push(v, v + 1, v + 5, v + 1, v + 6, v + 5);
+        if (i < SN && c < 4) si.push(v, v + 1, v + 5, v + 1, v + 6, v + 5);
       }
     }
     secretRibbonN = si.length;   // ここまでが秘密の道（門がひらくまでは描かない）。このあとの根元の光は、はじめから描く
     // ことばの樹の根元：地面にしみこむ淡いクリーム色の光（はじめから見えている）
-    const rootBase = (PN + 1) * 5, RG = 16;
+    const rootBase = (SN + 1) * 5, RG = 16; secretRoot = rootBase;
     c3.set(0xfff0c8);
     sp.push(WORD_TREE.x, heightAt(WORD_TREE.x, WORD_TREE.z) + .03, WORD_TREE.z); sc.push(c3.r, c3.g, c3.b, .5); secretU[rootBase] = -1; secretBase[rootBase] = .5;
     for (let k = 0; k < RG; k++) {
@@ -1777,7 +1843,8 @@ const worldV2 = (() => {
     ground.geometry.dispose(); ground.geometry = built.terrain; ground.rotation.set(0, 0, 0); ground.updateMatrixWorld(true);
     vineGroup.children.forEach(o => { o.visible = false; });   // V2 では、閉じた根の門が通れない場所をあらわすので、V1 のつるは描かない
     nextGroup.position.y = heightAt(nextGroup.position.x, nextGroup.position.z);
-    nextGroup.children.forEach(o => { o.visible = false; });   // V2 では、ことばの樹が次の目標なので、V1 の遠くの結晶は描かない
+    nextGroup.children.forEach(o => { o.visible = false; });
+    if (flowerStem) flowerGroup.visible = false;   // low：花は InstancedMesh で描く（元の花は動きの計算にだけ使う）   // V2 では、ことばの樹が次の目標なので、V1 の遠くの結晶は描かない
     demoEnd = document.getElementById('demo-end'); mbarText = document.getElementById('mbar-text');
     demoEndOriginal = Array.from(demoEnd.childNodes);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -1827,7 +1894,7 @@ const worldV2 = (() => {
     progress = P.EXPLORING; gateOpen = false; seedFollowing = false; litFruit = -1;
     birthT = collectT = openT = litT = -1; msgAt = -1; msgNext = ''; sparkT = -1;
     wordSeed.visible = false; wordSeed.scale.setScalar(1); wordSeed.position.set(0, -10, 0); seedGlowMat.opacity = .35;
-    gateMat.emissive.setRGB(0, 0, 0); secretBase[(moteN + 1) * 5] = .5; treeX = treeZ = 0; treeFrame = false;
+    gateMat.emissive.setRGB(0, 0, 0); secretBase[secretRoot] = .5; treeX = treeZ = 0; treeFrame = false;
     for (let i = 0; i < 4; i++) gateMeshes[i].matrix.multiplyMatrices(gatePlace, gateNode[i]);
     gateMeshes[3].visible = true;
     for (let i = 0; i < 5; i++) fruits.setMatrixAt(i, fruitBase[i]);
@@ -1857,10 +1924,14 @@ const worldV2 = (() => {
   });
 
   // 冒険の状態（毎フレームの処理で使う。ページを読み込み直すと最初から。保存はしない）
+  let steerX = NaN, steerZ = NaN, navGX = 0, navGZ = 0;
+  const navOut = { x: 0, z: 0 };
   let progress = P.EXPLORING, seedFollowing = false, litFruit = -1, lastT = 0, treeX = 0, treeZ = 0, treeFrame = false;
   let birthT = -1, collectT = -1, openT = -1, litT = -1, msgAt = -1, msgNext = '', sparkT = -1, finaleAt = -1;
-  const SECRET_YAW = Math.atan2(GATE.x - PASSAGE[1][0], GATE.z - PASSAGE[1][1]);   // 秘密の道から門のほうを見た向き（カメラを置く側）
+  const SPROUT = [16.2, -20.0];   // 水色の芽（S字の2つ目の曲がりの内側。道の中心から約1m。タップで歩くと、すぐそばを通る）
+  const SECRET_YAW = Math.atan2(GATE.x - WORD_TREE.x, GATE.z - WORD_TREE.z);   // ことばの樹から門のほうを見た向き（カメラを置く側。S字の道でも向きを振らない）
   const GATE_SLIDE = .45, GATE_LEAN = .14, GATE_LIFT = .35, GATE_WIDEN = .6;   // 門がひらいたときの、根のずれ・傾き・持ち上がり・広がり
+  const treeCam = new THREE.Vector3(), treeLook = new THREE.Vector3();
   const SEED_HOME = new THREE.Vector3(), seedFrom = new THREE.Vector3(), seedTo = new THREE.Vector3(), tmpV = new THREE.Vector3(), tmpW = new THREE.Vector3();
   const sparkAt = new THREE.Vector3(), gateRot = new THREE.Matrix4(), gateTmp = new THREE.Matrix4(), gateLift = new THREE.Matrix4();
   const GOLD = new THREE.Color(0xffc23a), SKY = new THREE.Color(0x62c8f2), fruitLit = new THREE.Color(), emis = new THREE.Color(0x5a3a10), fruitM = new THREE.Matrix4();
@@ -1887,11 +1958,26 @@ const worldV2 = (() => {
     }
     // 秘密の道の光の点：門がひらいたあと、ことばの樹のほうへ進む
     if (gateOpen) for (let i = 0; i < moteSecret; i++) {
-      const u = still ? (i + .5) / moteSecret : (t * .045 + i / moteSecret) % 1, j = (2 * (moteN + 1) + Math.floor(u * moteN)) * 3;
+      const u = still ? (i + .5) / moteSecret : (t * .025 + i / moteSecret) % 1, j = (2 * (moteN + 1) + Math.floor(u * secretN)) * 3;
       moteM.makeScale(.15, .15, .15).setPosition(moteSamples[j], moteSamples[j + 1] + (still ? 0 : .05 * Math.sin(t * 1.5 + i)), moteSamples[j + 2]);
       motes.setMatrixAt(moteCount + i, moteM);
     }
     motes.instanceMatrix.needsUpdate = true;
+    // low：咲いている花（大きさが0でないもの）だけを、まとめて描く
+    if (flowerStem) {
+      const ch = flowerGroup.children; let n = 0;
+      flowerFr.setFromProjectionMatrix(flowerPM.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));   // 1本ずつの花と同じく、画面の外の花は描かない
+      for (let i = 0; i < ch.length && n < FLOWER_MAX; i++) {
+        const f = ch[i]; if (f.scale.x < .001) continue;
+        flowerS.center.copy(f.position); flowerS.center.y += .3; if (!flowerFr.intersectsSphere(flowerS)) continue;
+        f.updateMatrix();
+        f.children[0].updateMatrix(); flowerM.multiplyMatrices(f.matrix, f.children[0].matrix); flowerStem.setMatrixAt(n, flowerM);
+        f.children[1].updateMatrix(); flowerM.multiplyMatrices(f.matrix, f.children[1].matrix); flowerHead.setMatrixAt(n, flowerM);
+        flowerHead.setColorAt(n, f.children[1].material.color); n++;
+      }
+      flowerStem.count = n; flowerHead.count = n;
+      flowerStem.instanceMatrix.needsUpdate = true; flowerHead.instanceMatrix.needsUpdate = true; flowerHead.instanceColor.needsUpdate = true;
+    }
     guardCamera();
     const floor = heightAt(camera.position.x, camera.position.z) + 1.2;
     if (camera.position.y < floor) camera.position.y = floor;
@@ -1911,6 +1997,11 @@ const worldV2 = (() => {
     if (state === S.DEMO_COMPLETE && progress !== P.COMPLETE && demoEnd.classList.contains('show')) demoEnd.classList.remove('show');
     if (progress === P.EXPLORING || progress === P.MISSION || !character) return;
     const cx = character.position.x, cz = character.position.z;
+    if (gateOpen && isMoving) {
+      if (targetPos.x !== steerX || targetPos.z !== steerZ) { navGX = targetPos.x; navGZ = targetPos.z; }   // 新しくタップされた目的地
+      steerToward(cx, cz, navGX, navGZ, navOut);
+      targetPos.x = steerX = navOut.x; targetPos.z = steerZ = navOut.z;
+    }
     const gdx = cx - GATE.x, gdz = cz - GATE.z, front = gdx * Math.sin(gateYaw) + gdz * Math.cos(gateYaw);
     if (gateOpen && !treeFrame) {
       const a = SECRET_YAW - Math.atan2(defOff.x, defOff.z), w = smooth(.5, -2.5, front) * a, cs = Math.cos(w), sn = Math.sin(w);
@@ -1969,7 +2060,7 @@ const worldV2 = (() => {
     if (progress === P.SECRET_PATH || progress === P.TREE_REACHED || progress === P.COMPLETE) {
       const after = still ? 99 : t - openT - 1.7;
       if (after < 3.2) lightSecretPath(Math.min(1, .7 + after / 1.2), 1 + .6 * Math.max(0, 1 - after / 3));
-      const near = Math.max(0, 1 - Math.hypot(cx - 11.75, cz + 20.55) / 4);
+      const near = Math.max(0, 1 - Math.hypot(cx - SPROUT[0], cz - SPROUT[1]) / 4);
       c3r.setRGB(.62 + .5 * near, .84 + .45 * near, .93 + .45 * near); sproutMesh.setColorAt(sproutIndex, c3r); sproutMesh.instanceColor.needsUpdate = true;
       motes.count = moteCount + moteSecret + (sparkT >= 0 && t - sparkT < 1.6 ? sparkN : 0);
     }
@@ -1980,12 +2071,28 @@ const worldV2 = (() => {
       for (let i = 1; i < 5; i++) { const d = (fruitPos[i].x - cx) ** 2 + (fruitPos[i].z - cz) ** 2; if (d < best) { best = d; litFruit = i; } }
       treeX = cx; treeZ = cz;
       if (!still) {
-        tmpW.set(cx - WORD_TREE.x, 0, cz - WORD_TREE.z).normalize();
-        const gy = heightAt(WORD_TREE.x, WORD_TREE.z) - character.position.y;
-        CAM_OFF.set(WORD_TREE.x + tmpW.x * 11 - cx, gy + 2.0, WORD_TREE.z + tmpW.z * 11 - cz);
-        CAM_LOOK.set(WORD_TREE.x - cx, gy + 2.0 + 11 * Math.tan(camera.aspect < 1 ? .25 : .157), WORD_TREE.z - cz);   // 縦長の画面は少し多めに見上げる（ヒロリを下の3分の1へ）
+        // ヒロリの側から樹を見る向きを基本に、カメラの位置と視線の途中が低い（道と谷の上）向きを、近い順に探す（丘の上から見下ろさない）
+        // ヒロリがこのあと止まる場所（樹の近くをタップして歩いている途中なら、その目的地）を基準にする
+        const stopNear = isMoving && Math.hypot(navGX - WORD_TREE.x, navGZ - WORD_TREE.z) <= TREE_AREA.r + .5;
+        const th0 = Math.atan2((stopNear ? navGX : cx) - WORD_TREE.x, (stopNear ? navGZ : cz) - WORD_TREE.z);
+        for (let k = 0; k < 11; k++) {
+          const th = th0 + Math.ceil(k / 2) * .44 * (k % 2 ? 1 : -1), sx = Math.sin(th), sz = Math.cos(th);
+          tmpW.set(sx, 0, sz);
+          if (heightAt(WORD_TREE.x + sx * 11, WORD_TREE.z + sz * 11) < .6 && heightAt(WORD_TREE.x + sx * 7.5, WORD_TREE.z + sz * 7.5) < 1 && heightAt(WORD_TREE.x + sx * 5, WORD_TREE.z + sz * 5) < 1) break;
+          if (k === 10) tmpW.set(Math.sin(th0), 0, Math.cos(th0));
+        }
+        // カメラは樹から11m・高さ2mの1点に止める（ヒロリが到着の数歩を歩いても、構図は動かない）。縦長の画面は少し多めに見上げる（ヒロリを下の3分の1へ）
+        treeCam.set(WORD_TREE.x + tmpW.x * 11, heightAt(WORD_TREE.x, WORD_TREE.z) + 2.0, WORD_TREE.z + tmpW.z * 11);
+        treeLook.set(WORD_TREE.x, treeCam.y + 11 * Math.tan(camera.aspect < 1 ? .25 : .157), WORD_TREE.z);
         treeFrame = true;
       }
+    }
+    // 樹の構図のあいだは、カメラと見る点を世界の中で止めておく。到着の歩みが終わるまでは、そこを「歩き出した場所」の基準にする
+    if (treeFrame) {
+      if (isMoving && progress === P.TREE_REACHED) { treeX = cx; treeZ = cz; }
+      const cy = character.position.y;
+      CAM_OFF.set(treeCam.x - cx, treeCam.y - cy, treeCam.z - cz);
+      CAM_LOOK.set(treeLook.x - cx, treeLook.y - cy, treeLook.z - cz);
     }
     if (progress === P.TREE_REACHED) {
       const l = still ? 1 : Math.min(1, (t - litT) / 2.6), fp = fruitPos[litFruit];
@@ -1999,7 +2106,7 @@ const worldV2 = (() => {
       if (l >= 1) {
         progress = advance(progress, 'treeLit'); wordSeed.visible = false; sparkAt.copy(fp); sparkT = t;
         say('きみのことばが、世界をひとつ灯した。'); finaleAt = t + (still ? 0 : 1.6);
-        secretBase[(moteN + 1) * 5] = .75;   // 根もとの光が少し強くなる
+        secretBase[secretRoot] = .75;   // 根もとの光が少し強くなる
         lightSecretPath(1, 1);
       }
     }

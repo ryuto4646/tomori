@@ -23,7 +23,7 @@ const V2 = between(HTML, '// WORLD-V2-BEGIN', '// WORLD-V2-END');
 const V2_CODE = stripComments(V2);
 const TERRAIN = between(HTML, '// TERRAIN-BEGIN', '// TERRAIN-END');
 const ADV = between(HTML, '// ADVENTURE-BEGIN', '// ADVENTURE-END');
-const A = new Function(TERRAIN + ADV + '\nreturn { heightAt, WALK, GATE, WORD_TREE, WORLD_PROGRESS, advance, inWalk, clampWalk, PASSAGE, PASSAGE_R, TREE_AREA, SEED_PICK_R, GATE_OPEN_R, TREE_REACH_R };')();
+const A = new Function(TERRAIN + ADV + '\nreturn { heightAt, WALK, GATE, WORD_TREE, WORLD_PROGRESS, advance, inWalk, clampWalk, PASSAGE, PASSAGE_R, TREE_AREA, SEED_PICK_R, GATE_OPEN_R, TREE_REACH_R, ROUTE_TOTAL, steerToward, routeS, routeAt, WALK, SECRET_ROUTE };')();
 const P = A.WORLD_PROGRESS;
 const ORDER = ['exploring', 'mission', 'seed-born', 'seed-collected', 'gate-opening', 'secret-path', 'tree-reached', 'complete'];
 const EVENTS = ['missionStarted', 'deepDone', 'seedTouched', 'gateApproached', 'gateOpened', 'treeApproached', 'treeLit'];
@@ -96,11 +96,12 @@ test('8. 門がひらくと、草原・門を通る細い道・ことばの樹�
   const [ex, ez] = A.PASSAGE[A.PASSAGE.length - 1];
   assert.ok(Math.hypot(ex - A.TREE_AREA.x, ez - A.TREE_AREA.z) < A.TREE_AREA.r, 'passage reaches the tree area');
   assert.ok(A.inWalk(A.WORD_TREE.x + 3, A.WORD_TREE.z, true));
-  // 道の幅は約2m（中心から 0.8m 横も歩ける）。道の外（横）は歩けない
-  assert.ok(A.PASSAGE_R >= .9 && A.PASSAGE_R <= 1.3, `width ${A.PASSAGE_R}`);
-  const [mx, mz] = [(A.PASSAGE[1][0] + A.PASSAGE[2][0]) / 2, (A.PASSAGE[1][1] + A.PASSAGE[2][1]) / 2];
-  assert.ok(A.inWalk(mx + .8, mz + .35, true) || A.inWalk(mx - .8, mz - .35, true));
-  assert.ok(!A.inWalk(A.PASSAGE[1][0] + 3, A.PASSAGE[1][1], true));
+  // 道の幅は約2.7m（中心から 1.1m 横も歩ける＝少しだけ寄り道できる）。道の外（横）は歩けない
+  assert.ok(A.PASSAGE_R >= 1.1 && A.PASSAGE_R <= 1.5, `width ${A.PASSAGE_R}`);
+  const [ax, az] = A.PASSAGE[1], [bx, bz] = A.PASSAGE[2], tl = Math.hypot(bx - ax, bz - az), nx = -(bz - az) / tl, nz = (bx - ax) / tl;
+  const [mx, mz] = [(ax + bx) / 2, (az + bz) / 2];
+  assert.ok(A.inWalk(mx + nx * 1.1, mz + nz * 1.1, true) && A.inWalk(mx - nx * 1.1, mz - nz * 1.1, true), 'room to wander');
+  assert.ok(!A.inWalk(mx + nx * 2.2, mz + nz * 2.2, true) && !A.inWalk(mx - nx * 2.2, mz - nz * 2.2, true), 'corridor edge');
 });
 
 test('9. ことばの樹の幹の中には入らない。道の外の点は、いちばん近い道のふちへ戻る', () => {
@@ -116,12 +117,19 @@ test('9. ことばの樹の幹の中には入らない。道の外の点は、�
   }
   assert.ok(dd <= A.PASSAGE_R + 1e-9, 'pushed onto the path edge');
   assert.ok(Math.hypot(out.x - (A.PASSAGE[1][0] + 4), out.z - A.PASSAGE[1][1]) < 4, 'nearest edge');
-  const inside = A.clampWalk({ x: 11.5, z: -19.9 }, true);
-  assert.deepEqual([inside.x, inside.z], [11.5, -19.9]);
+  const [ix, iz] = [(A.PASSAGE[3][0] + A.PASSAGE[4][0]) / 2, (A.PASSAGE[3][1] + A.PASSAGE[4][1]) / 2];
+  const inside = A.clampWalk({ x: ix, z: iz }, true);
+  assert.deepEqual([inside.x, inside.z], [ix, iz]);
+  // ちょうど幹の中心をタップしても、幹の外の点になる（向きが決まらず止まらない）
+  const c = A.clampWalk({ x: A.WORD_TREE.x, z: A.WORD_TREE.z }, true);
+  assert.ok(Math.abs(Math.hypot(c.x - A.WORD_TREE.x, c.z - A.WORD_TREE.z) - A.TREE_AREA.trunk) < 1e-9);
 });
 
 test('10. タップ先（limit 0.97）は、道のふちより少し内側へ戻る。タップもキーボードも同じ関数を通る', () => {
-  const p = A.clampWalk({ x: A.PASSAGE[1][0] + 4, z: A.PASSAGE[1][1] }, true, .97);
+  // 道の区間の真ん中から、横へ 2.2m 外れた点（道の外）
+  const [qa, qb] = [A.PASSAGE[1], A.PASSAGE[2]], ql = Math.hypot(qb[0] - qa[0], qb[1] - qa[1]);
+  const p = A.clampWalk({ x: (qa[0] + qb[0]) / 2 - (qb[1] - qa[1]) / ql * 2.2, z: (qa[1] + qb[1]) / 2 + (qb[0] - qa[0]) / ql * 2.2 }, true, .97);
+  assert.ok(!A.inWalk((qa[0] + qb[0]) / 2 - (qb[1] - qa[1]) / ql * 2.2, (qa[1] + qb[1]) / 2 + (qb[0] - qa[0]) / ql * 2.2, true), 'start outside');
   let d = 1e9;
   for (let i = 0; i < A.PASSAGE.length - 1; i++) {
     const [ax, az] = A.PASSAGE[i], [bx, bz] = A.PASSAGE[i + 1], vx = bx - ax, vz = bz - az;
@@ -133,14 +141,29 @@ test('10. タップ先（limit 0.97）は、道のふちより少し内側へ戻
   assert.match(HTML, /worldV2\.clampToWalkable\(targetPos, 0\.97\);/);
 });
 
-test('11. 秘密の道とことばの樹のまわりは平ら（高さ0）。道の長さは約15m', () => {
-  for (const [x, z] of A.PASSAGE) assert.ok(Math.abs(A.heightAt(x, z)) < 1e-6, `${x},${z}`);
+test('11. 秘密の道（S字）は 28〜42m。SPEED 4.0 で計算上 7〜12秒。道とことばの樹のまわりは平ら', () => {
+  // 歩ける場所はすべて平ら（道のカプセルの中・樹のまわり）
+  for (let i = 0; i < A.PASSAGE.length - 1; i++) for (let k = 0; k <= 8; k++) for (const o of [-1.3, 0, 1.3]) {
+    const [ax, az] = A.PASSAGE[i], [bx, bz] = A.PASSAGE[i + 1], tl = Math.hypot(bx - ax, bz - az), x = ax + (bx - ax) * k / 8 - (bz - az) / tl * o, z = az + (bz - az) * k / 8 + (bx - ax) / tl * o;
+    if (A.inWalk(x, z, true) && !A.inWalk(x, z, false)) assert.ok(Math.abs(A.heightAt(x, z)) < 1e-6, `${x},${z}`);
+  }
   let max = 0;
-  for (let a = 0; a < 6.28; a += .2) for (const r of [2, 3.5, 4.8]) max = Math.max(max, Math.abs(A.heightAt(A.WORD_TREE.x + Math.cos(a) * r, A.WORD_TREE.z + Math.sin(a) * r)));
+  for (let a = 0; a < 6.28; a += .2) for (const r of [2, 3, A.TREE_AREA.r]) max = Math.max(max, Math.abs(A.heightAt(A.WORD_TREE.x + Math.cos(a) * r, A.WORD_TREE.z + Math.sin(a) * r)));
   assert.ok(max < 1e-6, `tree area height ${max}`);
-  let len = 0;
-  for (let i = 0; i < A.PASSAGE.length - 1; i++) len += Math.hypot(A.PASSAGE[i + 1][0] - A.PASSAGE[i][0], A.PASSAGE[i + 1][1] - A.PASSAGE[i][1]);
-  assert.ok(len > 13 && len < 18, `passage ${len}`);
+  assert.ok(A.ROUTE_TOTAL >= 28 && A.ROUTE_TOTAL <= 42, `route ${A.ROUTE_TOTAL}`);
+  const speed = +HTML.match(/const SPEED=([\d.]+), ARRIVE=0\.6;/)[1];
+  assert.equal(speed, 4);
+  assert.ok(A.ROUTE_TOTAL / speed >= 7 && A.ROUTE_TOTAL / speed <= 12, `time ${A.ROUTE_TOTAL / speed}`);
+  // 一本道の直線ではない：門から樹への直線より十分に長く、左右に曲がる（向きの変化が2回以上）
+  assert.ok(A.ROUTE_TOTAL > 1.5 * Math.hypot(A.WORD_TREE.x - A.GATE.x, A.WORD_TREE.z - A.GATE.z));
+  let turns = 0, last = 0;
+  for (let i = 1; i < A.PASSAGE.length - 1; i++) {
+    const [px, pz] = A.PASSAGE[i - 1], [vx, vz] = A.PASSAGE[i], [nx, nz] = A.PASSAGE[i + 1], cr = Math.sign((vx - px) * (nz - vz) - (vz - pz) * (nx - vx));
+    if (cr && cr !== last) { turns++; last = cr; }
+  }
+  assert.ok(turns >= 3, `S-curve turns ${turns}`);
+  // ことばの樹そのものは動かしていない（初期画面・門越しの構図はそのまま）
+  assert.deepEqual([A.WORD_TREE.x, A.WORD_TREE.z], [15.8, -28.3]);
 });
 
 test('12. 判定の距離：タネ 1.1〜1.4m・門 3〜4m・ことばの樹 2.5〜3.5m（平面の距離）', () => {
@@ -209,13 +232,15 @@ test('17. 秘密の道：門がひらくまでは見えない（透明度0）。
   assert.match(FRAME, /if \(gateOpen\) for \(let i = 0; i < moteSecret; i\+\+\)/);
 });
 
-test('18. 道ばたの発見はひとつだけ：水色の芽。近づくと明るくなるが、取ったり数えたりしない', () => {
-  assert.equal(count(V2_CODE, /sproutName/g) >= 3, true);
-  assert.match(V2_CODE, /put\(sproutName, 11\.75, -20\.55, 1\.35, \.4, 0x9fd6ee\);/);
-  assert.match(ADVENTURE_FN, /const near = Math\.max\(0, 1 - Math\.hypot\(cx - 11\.75, cz \+ 20\.55\) \/ 4\);/);
+test('18. 道ばたの発見はひとつだけ：水色の芽。道のすぐそば（1.5m以内）にあり、近づくと明るくなる。取ったり数えたりしない', () => {
+  assert.equal(count(V2_CODE, /put\(sproutName,/g), 1, 'only one sprout');
+  assert.match(V2_CODE, /put\(sproutName, SPROUT\[0\], SPROUT\[1\], 1\.35, \.4, 0x9fd6ee\);/);
+  assert.match(ADVENTURE_FN, /const near = Math\.max\(0, 1 - Math\.hypot\(cx - SPROUT\[0\], cz - SPROUT\[1\]\) \/ 4\);/);
   assert.ok(!/\bscore\b|\bpoints\b|collectedCount|sproutTaken/.test(V2_CODE));
-  // 道は芽の横を通る（芽は歩ける道の中か、すぐそば）
-  assert.ok(A.inWalk(11.75, -20.55, true) || Math.hypot(11.75 - 11.5, -20.55 + 19.9) < 1.5);
+  const [sx, sz] = V2_CODE.match(/const SPROUT = \[([-\d.]+), ([-\d.]+)\];/).slice(1).map(Number);
+  A.routeS(sx, sz);
+  assert.ok(A.routeAt.d < 1.5, `sprout ${A.routeAt.d} m from the path`);
+  assert.ok(A.routeAt.s > 5 && A.routeAt.s < A.ROUTE_TOTAL - 5, 'on the way, not at the ends');
 });
 
 test('19. ことばの樹：タネは幹の外をまわってのぼり、まだ眠っている実のひとつ（0番以外・いちばん近い実）に入って灯る', () => {
@@ -242,7 +267,9 @@ test('21. 小さなカメラの動き（生まれる・門・樹）は2秒以内
   assert.match(ADVENTURE_FN, /treeX = cx; treeZ = cz;\s*if \(!still\) \{/);
   assert.match(ADVENTURE_FN, /if \(treeFrame && Math\.hypot\(cx - treeX, cz - treeZ\) > 1\.5\) \{ treeFrame = false; CAM_LOOK\.copy\(defLook\); \}/);
   // 樹の構図：樹から 11m・高さ 2m、見上げる（縦長の画面は少し多め）
-  assert.match(ADVENTURE_FN, /CAM_OFF\.set\(WORD_TREE\.x \+ tmpW\.x \* 11 - cx, gy \+ 2\.0, WORD_TREE\.z \+ tmpW\.z \* 11 - cz\);/);
+  assert.match(ADVENTURE_FN, /treeCam\.set\(WORD_TREE\.x \+ tmpW\.x \* 11, heightAt\(WORD_TREE\.x, WORD_TREE\.z\) \+ 2\.0, WORD_TREE\.z \+ tmpW\.z \* 11\);/);
+  assert.match(ADVENTURE_FN, /CAM_OFF\.set\(treeCam\.x - cx, treeCam\.y - cy, treeCam\.z - cz\);/);
+  assert.match(ADVENTURE_FN, /if \(isMoving && progress === P\.TREE_REACHED\) \{ treeX = cx; treeZ = cz; \}/);
 });
 
 test('22. reduced-motion：タネはすぐ現れ、門はすぐひらき、道はすぐ灯り、完了のことばもすぐ出る', () => {
@@ -288,18 +315,125 @@ test('25. 毎フレームの冒険の処理で、新しい物・配列・関数�
   assert.equal(count(V2_CODE, /setTimeout\(/g), 1, 'only the load timeout');
 });
 
-test('26. 描く回数を増やしすぎない：秘密の谷の草花・芽・光の粒は、今ある InstancedMesh に足すだけ', () => {
+test('26. 描く回数を増やしすぎない：秘密の谷の草花・芽・目印・光の粒は、今ある InstancedMesh に足すだけ', () => {
   const build = between(V2_CODE, 'function build(', 'function activate(');
-  assert.equal(count(build, /new THREE\.InstancedMesh\(/g), 3, 'plants (per shape), fruits, motes');
+  assert.equal(count(build, /new THREE\.InstancedMesh\(/g), 5, 'plants (per shape), fruits, motes, low flower stems + heads');
   assert.match(build, /motes = new THREE\.InstancedMesh\(fk\.geometry, fruitMat, moteCount \+ moteSecret \+ sparkN\);/);
   assert.match(build, /moteSecret = HIGH \? 3 : 2; sparkN = HIGH \? 6 : 3;/);
-  assert.equal(count(build, /for \(let i = 0, n = HIGH \? 12 : 4; i < n; i\+\+\)/g), 2);
-  // スマホ（low）の秘密の谷は草だけ。秘密の道は、門がひらくまで描かない（根元の光だけ描く）
+  assert.match(build, /for \(let i = 0, n = HIGH \? 18 : 3; i < n; i\+\+\)/);
+  assert.match(build, /for \(let i = 0, n = HIGH \? 12 : 4; i < n; i\+\+\)/);
+  // スマホ（low）の秘密の谷は草だけ・若木なし・道の点は少なめ。秘密の道は、門がひらくまで描かない（根元の光だけ描く）
   assert.match(build, /const VALLEY = HIGH \? \[[^\]]+\] : \['Grass_A', 'Grass_B'\];/);
+  assert.match(build, /if \(HIGH\) put\('Tree_Round_B', 12\.2, -26\.0,/);
+  assert.match(build, /secretN = HIGH \? 96 : 40;/);
   assert.match(build, /sgeo\.setIndex\(si\); sgeo\.setDrawRange\(secretRibbonN, Infinity\);/);
   assert.match(ADVENTURE_FN, /openT = t; secretPath\.geometry\.setDrawRange\(0, Infinity\);/);
   assert.match(RESET, /secretPath\.geometry\.setDrawRange\(secretRibbonN, Infinity\);/);
-  // 冒険で増える Mesh は、タネ2つ・交差した根・秘密の道の4つだけ
-  assert.equal(count(build, /new THREE\.Mesh\(/g), count(build, /new THREE\.Mesh\(/g));
   assert.match(build, /secretPath = new THREE\.Mesh\(sgeo, secretMat\);/);
+  // 大きさ0は置かない（乱数を使い終えてから戻るので、ほかの物の配置は変わらない）
+  assert.match(build, /const put = \(name, x, z, s = 1, yaw = rnd\(\) \* 6\.283, tint = 0xffffff, tilt = 0, dy = 0\) => \{\s*if \(!s\) return;/);
+});
+
+// ── Step 11I-C2：秘密の道のテンポ・スマホの描く回数 ─────────────────────
+const simWalk = (sx, sz, gx, gz) => {
+  const T = { x: gx, z: gz }; A.clampWalk(T, true, .97);
+  const p = { x: sx, z: sz }, w = { x: 0, z: 0 }; let reach = -1;
+  for (let i = 0; i < 60 * 40; i++) {
+    if (reach < 0 && Math.hypot(p.x - A.WORD_TREE.x, p.z - A.WORD_TREE.z) <= A.TREE_REACH_R) reach = i / 60;
+    A.steerToward(p.x, p.z, T.x, T.z, w);
+    const dx = w.x - p.x, dz = w.z - p.z, d = Math.hypot(dx, dz);
+    if (d < .6 && w.x === T.x && w.z === T.z) return { arrived: i / 60, reach, p };
+    const st = Math.min(d, 4 / 60); p.x += dx / d * st; p.z += dz / d * st; A.clampWalk(p, true, 1);
+  }
+  return { arrived: -1, reach, p };
+};
+
+test('27. タップ1回で、門の先から道に沿って樹まで歩ける（7〜12秒・角で止まらない）。帰りも同じ', () => {
+  const g = simWalk(A.GATE.x - .4, A.GATE.z + .6, 15.0, -26.0);
+  assert.ok(g.arrived > 0, 'arrived');
+  assert.ok(g.reach >= 7 && g.reach <= 12, `gate to tree ${g.reach}s`);
+  const m = simWalk(1, -4, 15.0, -26.0);
+  assert.ok(m.arrived > 0 && m.reach > g.reach, `meadow to tree ${m.reach}s`);
+  const back = simWalk(14.6, -27.0, 2, -4);
+  assert.ok(back.arrived > 0, 'back to the meadow');
+  // 幹の中心をタップしても止まらずに着く
+  assert.ok(simWalk(A.GATE.x - .4, A.GATE.z + .6, A.WORD_TREE.x, A.WORD_TREE.z).arrived > 0);
+  // 道の途中の点へもタップで行ける
+  const mid = A.PASSAGE[4], r = simWalk(A.GATE.x - .4, A.GATE.z + .6, mid[0], mid[1]);
+  assert.ok(r.arrived > 0 && Math.hypot(r.p.x - mid[0], r.p.z - mid[1]) < .7);
+});
+
+test('28. 大きな近道はできない：S字の内側・道の外は歩けず、樹のまわりにつながるのは最後の区間だけ', () => {
+  let off = 0;
+  for (let x = 4; x <= 22; x += .25) for (let z = -34; z <= -10; z += .25) {
+    if (!A.inWalk(x, z, true) || A.inWalk(x, z, false)) continue;
+    A.routeS(x, z);
+    if (Math.hypot(x - A.TREE_AREA.x, z - A.TREE_AREA.z) > A.TREE_AREA.r && A.routeAt.d > A.PASSAGE_R + 1e-6) off++;
+  }
+  assert.equal(off, 0);
+  for (let i = 0; i < A.PASSAGE.length - 3; i++) {
+    const [ax, az] = A.PASSAGE[i], [bx, bz] = A.PASSAGE[i + 1]; let d = 1e9;
+    for (let k = 0; k <= 50; k++) d = Math.min(d, Math.hypot(ax + (bx - ax) * k / 50 - A.TREE_AREA.x, az + (bz - az) * k / 50 - A.TREE_AREA.z));
+    assert.ok(d - A.PASSAGE_R - A.TREE_AREA.r > .25, `segment ${i} touches the tree area`);
+  }
+  // 閉じているあいだは、道のどこにも入れない
+  for (const [x, z] of A.PASSAGE.slice(1)) assert.ok(!A.inWalk(x, z, false));
+});
+
+test('29. 門がひらいているとき、タップの目的地へ道に沿って向かう（キーボードはそのまま・閉門中は使わない）', () => {
+  assert.match(ADVENTURE_FN, /if \(gateOpen && isMoving\) \{\s*if \(targetPos\.x !== steerX \|\| targetPos\.z !== steerZ\) \{ navGX = targetPos\.x; navGZ = targetPos\.z; \}/);
+  assert.match(ADVENTURE_FN, /steerToward\(cx, cz, navGX, navGZ, navOut\);\s*targetPos\.x = steerX = navOut\.x; targetPos\.z = steerZ = navOut\.z;/);
+  // ADVENTURE の計算は、毎フレーム呼ばれても物を作らない
+  const steer = ADV.slice(ADV.indexOf('function steerToward('));
+  assert.ok(!/\bnew\b|=>|\[\s*\]|\{\s*x:/.test(steer), steer);
+  assert.ok(!/\bnew\b|=>/.test(between(ADV, 'function routeS(', 'function routePoint(')));
+});
+
+test('30. スマホ（low）だけ、言葉で咲く花を茎と花の2つの InstancedMesh で描く。咲き方・色・位置は元の花のまま', () => {
+  const build = between(V2_CODE, 'function build(', 'function activate(');
+  assert.match(build, /if \(!HIGH\) \{\s*const f0 = mainFlowers\[0\]\.children;/);
+  assert.match(build, /flowerStem = new THREE\.InstancedMesh\(f0\[0\]\.geometry, f0\[0\]\.material, FLOWER_MAX\);/);
+  assert.match(build, /flowerHead = new THREE\.InstancedMesh\(f0\[1\]\.geometry, new THREE\.MeshLambertMaterial\(\{ color: 0xffffff \}\), FLOWER_MAX\);/);
+  assert.match(V2_CODE, /if \(flowerStem\) flowerGroup\.visible = false;/);
+  const upd = between(FRAME, 'function update(t)', 'function adventure(');
+  assert.match(upd, /if \(f\.scale\.x < \.001\) continue;/);
+  assert.match(upd, /if \(!flowerFr\.intersectsSphere\(flowerS\)\) continue;/);
+  assert.match(upd, /flowerHead\.setColorAt\(n, f\.children\[1\]\.material\.color\);/);
+  // 元の花（V1 の作り方・数・咲かせ方）は変えていない。PC（high）は今までどおり1本ずつ描く
+  const mk = s => between(s, 'function mkFlower(x,z,red){', '\n}\n') + between(s, '// ミッション周囲の花', '// ── 秘密エリア');
+  assert.equal(mk(HTML), mk(OLD));
+  assert.match(HTML, /worldTimeout\(\(\)=>bloomSeq\(mainFlowers\.slice\(0,6\),null\), 300\);/);
+});
+
+test('31. PC（high）の見た目は、秘密の谷と道の向きだけが変わる（草原・祠・門の手前は同じ組み立て）', () => {
+  assert.match(V2_CODE, /const clear = routeDist\(x, z\) < 3\.4 \|\| Math\.hypot\(x - WORD_TREE\.x, z - WORD_TREE\.z\) < 5\.5 \? 0 : 1;/);
+  assert.match(V2_CODE, /put\(TREES\[i % 4\], x, z, \(1 \+ rnd\(\) \* \.45\) \* clear, undefined, depthTint\(x, z\), \(rnd\(\) - \.5\) \* \.1\);/);
+  // 門の位置・ことばの樹の位置・草原のだ円は変えていない
+  assert.deepEqual([A.GATE.x, A.GATE.z], [7, -12.6]);
+  assert.deepEqual([A.WALK.cx, A.WALK.cz, A.WALK.rx, A.WALK.rz], [3, -3.5, 15, 9.5]);
+  assert.deepEqual(A.SECRET_ROUTE[0], [A.GATE.x, A.GATE.z]);
+});
+
+test('32. 収集物を増やしていない：芽1つ・タネ1つ・灯る実1つだけ（コイン・宝箱・敵・ガチャ・新しい説明パネル・通信なし）', () => {
+  assert.ok(!/\bcoin|treasure|chest|gacha|enemy\b/i.test(V2_CODE));
+  assert.equal(count(V2_CODE, /createElement\(/g), 4, 'only the finale texts and buttons');
+  assert.equal(count(HTML, /class="panel"/g), count(OLD, /class="panel"/g), 'no new panel');
+  assert.equal(count(HTML, /\bfetch\(/g), 1);
+});
+
+test('33. ことばの樹の構図：カメラは丘の上ではなく、道と谷の低い所に置く（ヒロリがどの向きから着いても）', () => {
+  assert.match(ADVENTURE_FN, /for \(let k = 0; k < 11; k\+\+\) \{/);
+  // 向きは、ヒロリが止まる場所（樹の近くをタップして歩いている途中なら、その目的地）から決める
+  assert.match(ADVENTURE_FN, /const stopNear = isMoving && Math\.hypot\(navGX - WORD_TREE\.x, navGZ - WORD_TREE\.z\) <= TREE_AREA\.r \+ \.5;/);
+  assert.match(ADVENTURE_FN, /const th0 = Math\.atan2\(\(stopNear \? navGX : cx\) - WORD_TREE\.x, \(stopNear \? navGZ : cz\) - WORD_TREE\.z\);/);
+  const cond = ADVENTURE_FN.match(/if \((heightAt\(WORD_TREE\.x \+ sx \* 11[^\n]*?)\) break;/)[1];
+  const ok = new Function('heightAt', 'WORD_TREE', 'sx', 'sz', 'return ' + cond + ';');
+  for (const [x, z] of [[13.6, -28.5], [14.6, -26.0], [12.6, -27.5], [13.0, -29.6]]) {
+    const th0 = Math.atan2(x - A.WORD_TREE.x, z - A.WORD_TREE.z); let found = false;
+    for (let k = 0; k < 11 && !found; k++) { const th = th0 + Math.ceil(k / 2) * .44 * (k % 2 ? 1 : -1); found = ok(A.heightAt, A.WORD_TREE, Math.sin(th), Math.cos(th)); }
+    assert.ok(found, `no low camera spot for ${x},${z}`);
+  }
+  assert.ok(ok(() => 3, A.WORD_TREE, 1, 0) === false, 'hill tops are rejected');
+  assert.ok(ok(() => .9, A.WORD_TREE, 1, 0) === false, 'a camera spot 0.9m up the slope is rejected');
+  assert.ok(ok(() => 0, A.WORD_TREE, 1, 0) === true, 'flat ground is accepted');
 });

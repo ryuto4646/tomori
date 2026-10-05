@@ -1,7 +1,10 @@
 # ヒロリの見せ方：Field（探索）と Event（冒険の節目）
 
 TOMORI のヒロリを、2つの表現に分けて作るための方針。
-この文書は設計だけを決める。新しいヒロリはまだ作らず、ゲームにも入れていない（Step 11K-B・2026-10-06）。
+この文書は設計を決める（Step 11K-B・2026-10-06）。
+Field 版は Step 11L-A（2026-10-06）で作り、ゲームに入れた。生成スクリプトは `tools/hirori-field/generate_hirori_field.py`、GLB は `assets/hirori-field/hirori-field.glb`（2,758 三角形）。
+GLB を読めないときは、今までの仮ヒロリのまま進む。`demo-world.html?hirori=placeholder` で仮ヒロリに固定できる。
+Event 版はまだ作っていない。
 
 ## 1. 基本の考え方
 

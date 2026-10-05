@@ -673,7 +673,7 @@ report = {
     'origin': 'Hirori_Root at (0,0,0): between the feet, on the ground',
     'ground_height': round(mins[2], 5),
     'counts': {'crest': cnt('Hirori_Crest_'), 'wing': cnt('Hirori_Wing_'), 'leg': cnt('Hirori_Leg_'), 'foot': cnt('Hirori_Foot_'), 'eye': cnt('Hirori_Eye_'), **forbid},
-    'private_strings_in_glb': sum(raw.count(s) for s in ('C:\\Users', 'C:/Users', 'DELL', 'Users\\', '\\Users')),
+    'private_strings_in_glb': sum(raw.count(s) for s in ('C:\\Users', 'C:/Users', 'Users\\', '\\Users', '/home/')),
 }
 json.dump(report, open(os.path.join(OUT, 'model-report.json'), 'w', encoding='utf-8', newline='\n'), ensure_ascii=False, indent=2)
 # リポジトリに置く記録（GLB の中身の要約。撮影画像・.blend はリポジトリの外）

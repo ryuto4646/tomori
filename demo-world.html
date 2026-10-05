@@ -1655,7 +1655,7 @@ const worldV2 = (() => {
 
   // ── 組み立て（すべて新しいグループの中に作る。最後まで成功したときだけ、シーンを切り替える）──
   let fruits = null, fruitMat = null, motes = null, moteSamples = null, moteN = 0, moteMain = 0, moteCount = 0, moteSecret = 0, sparkN = 0;
-  let gateMat = null, gateMeshes = null, gateNode = null, gateYaw = 0, wordSeed = null, seedGlowMat = null;
+  let gateMat = null, gateMeshes = null, gateNode = null, gateYaw = 0, wordSeed = null, seedGlowMat = null, seedCoreMat = null, seedHalo = null, seedHaloMat = null, seedGround = null, seedGroundMat = null;
   let crystalMat = null, ringMat = null, bowlGlow = null, calm = 1;
   let secretRibbonN = 0, secretN = 0, secretRoot = 0, secretPath = null, secretMat = null, secretColor = null, secretU = null, secretBase = null, sproutMesh = null, sproutName = '', sproutIndex = -1;
   const gatePlace = new THREE.Matrix4(), fruitPos = [], fruitBase = [];
@@ -1889,11 +1889,24 @@ const worldV2 = (() => {
     gateNode = ['RootGate_Left', 'RootGate_Right', 'RootGate_Top', 'RootGate_Cross'].map(n => need(n).matrix);
     gateMeshes = gate; gateYaw = gYaw;
     // ことばのタネ：金色の実（ふつうの素材）と、外側の薄い水色の光。生まれるまでは見せない
-    seedGlowMat = new THREE.MeshBasicMaterial({ color: 0xffffff, vertexColors: true, transparent: true, opacity: .35, depthWrite: false });
+    seedGlowMat = new THREE.MeshBasicMaterial({ color: 0xb4e4ff, vertexColors: true, transparent: true, opacity: .35, depthWrite: false });   // 外側は、少しあざやかな水色
+    // 芯は、ほかの物と同じ色の付け方（頂点色）のまま、金色に自分で光らせる（点光源は使わない）。石や草の中でも浮いて見えるように
+    seedCoreMat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide, emissive: 0xe8a020, emissiveIntensity: .85, transparent: true });   // 透明の順で、水色の外側の後に描く
+    seedHaloMat = new THREE.MeshBasicMaterial({ color: 0xffd77a, transparent: true, opacity: .22, depthWrite: false });
     wordSeed = new THREE.Group(); wordSeed.name = 'WordSeed'; wordSeed.visible = false;
-    const seedCore = new THREE.Mesh(need('WordSeed_Core').geometry, kitMat), seedGlow = new THREE.Mesh(need('WordSeed_Glow').geometry, seedGlowMat);
-    seedCore.name = 'WordSeed_Core'; seedGlow.name = 'WordSeed_Glow'; seedGlow.renderOrder = 3;
-    wordSeed.add(seedCore, seedGlow); group.add(wordSeed);
+    const seedCore = new THREE.Mesh(need('WordSeed_Core').geometry, seedCoreMat), seedGlow = new THREE.Mesh(need('WordSeed_Glow').geometry, seedGlowMat);
+    seedCore.name = 'WordSeed_Core'; seedGlow.name = 'WordSeed_Glow'; seedGlow.renderOrder = 3; seedCore.renderOrder = 4;
+    // 待っているあいだだけ見せる、外側の淡い金色の光（外側の形を 1.4 倍にして、中心をそろえる）
+    seedHalo = new THREE.Mesh(need('WordSeed_Glow').geometry, seedHaloMat); seedHalo.name = 'WordSeed_Halo'; seedHalo.renderOrder = 2;
+    seedHalo.scale.setScalar(1.4); seedHalo.position.y = .08 * (1 - 1.4);
+    wordSeed.add(seedCore, seedGlow, seedHalo); group.add(wordSeed);
+    // タネの下の地面に落ちる、淡い金色の光（画像は使わない。頂点の透明度で、中心から外へ消す）
+    const sgGeo = new THREE.CircleGeometry(.75, 24), sgN = sgGeo.attributes.position.count, sgCol = new Float32Array(sgN * 4);
+    for (let i = 0; i < sgN; i++) { sgCol[i * 4] = 1; sgCol[i * 4 + 1] = .8; sgCol[i * 4 + 2] = .36; sgCol[i * 4 + 3] = i === 0 ? 1 : 0; }
+    sgGeo.setAttribute('color', new THREE.BufferAttribute(sgCol, 4));
+    seedGroundMat = new THREE.MeshBasicMaterial({ color: 0xffffff, vertexColors: true, transparent: true, opacity: .6, depthWrite: false });
+    seedGround = new THREE.Mesh(sgGeo, seedGroundMat); seedGround.name = 'WordSeed_GroundLight'; seedGround.rotation.x = -Math.PI / 2;
+    seedGround.renderOrder = 2; seedGround.visible = false; group.add(seedGround);
     // 秘密の道：門の中央から、ことばの樹の手前まで。門がひらくまでは消えていて、ひらくと手前から順に灯る
     const sp = [], sc = [], si = [], SECRET_A = [0, .12, .42, 1, .42, .12, 0], SOFF = [-2.7, -1.75, -.7, 0, .7, 1.75, 2.7], SC = SECRET_A.length;
     const sky = new THREE.Color(0x9fd6ee), uSprout = routeS(SPROUT[0], SPROUT[1]) / ROUTE_TOTAL;
@@ -2003,6 +2016,7 @@ const worldV2 = (() => {
     progress = P.EXPLORING; gateOpen = false; seedFollowing = false; litFruit = -1;
     birthT = collectT = openT = litT = -1; msgAt = -1; msgNext = ''; sparkT = -1;
     wordSeed.visible = false; wordSeed.scale.setScalar(1); wordSeed.position.set(0, -10, 0); seedGlowMat.opacity = .35;
+    seedGround.visible = false; seedGroundMat.opacity = .75; seedCoreMat.emissiveIntensity = .85; seedHalo.visible = true; sparkIn = false;
     gateMat.emissive.setRGB(0, 0, 0); calm = 1; secretBase[secretRoot] = .5; treeX = treeZ = 0; treeFrame = false;
     for (let i = 0; i < 4; i++) gateMeshes[i].matrix.multiplyMatrices(gatePlace, gateNode[i]);
     gateMeshes[3].visible = true;
@@ -2036,7 +2050,9 @@ const worldV2 = (() => {
   let steerX = NaN, steerZ = NaN, navGX = 0, navGZ = 0;
   const navOut = { x: 0, z: 0 };
   let progress = P.EXPLORING, seedFollowing = false, litFruit = -1, lastT = 0, treeX = 0, treeZ = 0, treeFrame = false;
-  let birthT = -1, collectT = -1, openT = -1, litT = -1, msgAt = -1, msgNext = '', sparkT = -1, finaleAt = -1;
+  let birthT = -1, collectT = -1, openT = -1, litT = -1, msgAt = -1, msgNext = '', sparkT = -1, finaleAt = -1, sparkIn = false;
+  // ことばのタネ（Step 11K-B）：生まれたときの大きさ（GLB の全高 0.249m × 2.0 ＝ 約0.5m）と、地面からの高さ（ヒロリの目線より少し上）
+  const SEED_S = 2.0, SEED_LIFT = .8;
   const SPROUT = [16.2, -20.0];   // 水色の芽（S字の2つ目の曲がりの内側。道の中心から約1m。タップで歩くと、すぐそばを通る）
   const SECRET_YAW = Math.atan2(GATE.x - WORD_TREE.x, GATE.z - WORD_TREE.z);   // ことばの樹から門のほうを見た向き（カメラを置く側。S字の道でも向きを振らない）
   const GATE_SLIDE = .45, GATE_LEAN = .14, GATE_LIFT = .35, GATE_WIDEN = .6;   // 門がひらいたときの、根のずれ・傾き・持ち上がり・広がり
@@ -2101,10 +2117,11 @@ const worldV2 = (() => {
     if (progress === P.EXPLORING && state !== S.EXPLORE) progress = advance(progress, 'missionStarted');
     if (progress === P.MISSION && state === S.DEMO_COMPLETE) {
       progress = advance(progress, 'deepDone'); birthT = t;
-      SEED_HOME.set(MISSION_POS.x - .8, heightAt(MISSION_POS.x, MISSION_POS.z) + 1.45, MISSION_POS.z - .25);
-      wordSeed.position.copy(SEED_HOME); wordSeed.visible = true; wordSeed.scale.setScalar(still ? 1.5 : .01);
-      say('ことばのタネが生まれた！'); sayLater('祠に近づいてみよう', t + 2.4);
-      sparkAt.copy(SEED_HOME); sparkT = t;
+      SEED_HOME.set(MISSION_POS.x - .8, heightAt(MISSION_POS.x - .8, MISSION_POS.z - .25) + SEED_LIFT, MISSION_POS.z - .25);
+      wordSeed.position.copy(SEED_HOME); wordSeed.visible = true; wordSeed.scale.setScalar(still ? SEED_S : .01);
+      say('ことばのタネが生まれた！'); sayLater('光っているタネに近づいてみよう', t + 1.6);
+      seedGround.position.set(SEED_HOME.x, SEED_HOME.y - SEED_LIFT + .04, SEED_HOME.z); seedGround.visible = true; seedGroundMat.opacity = still ? .75 : 0; seedHalo.visible = true;
+      sparkAt.copy(SEED_HOME); sparkAt.y += .1 * SEED_S; sparkT = t; sparkIn = true;   // 祠のまわりから、小さな光がタネへ集まる
     }
     // 冒険のあいだは、V1 のデモ終了の枠を出さない（最後に、完了のことばとして使う）
     if (state === S.DEMO_COMPLETE && progress !== P.COMPLETE && demoEnd.classList.contains('show')) demoEnd.classList.remove('show');
@@ -2124,13 +2141,17 @@ const worldV2 = (() => {
     // タネ：生まれる（ゆっくり大きくなって浮かぶ）→ ヒロリが近づくと受け取る → ヒロリのそばについてくる
     if (progress === P.SEED_BORN) {
       const b = still ? 1 : Math.min(1, (t - birthT) / 1.2);
-      wordSeed.scale.setScalar(1.5 * ease(b));
-      wordSeed.position.y = SEED_HOME.y + (still ? 0 : .06 * Math.sin(t * 1.6));
+      wordSeed.scale.setScalar(SEED_S * (ease(Math.min(1, b * 1.4)) + (still ? 0 : .2 * Math.sin(Math.PI * b))));   // すばやく育ち、少し大きくなって戻る
+      wordSeed.position.y = SEED_HOME.y + (still ? 0 : .07 * Math.sin((t - birthT) * 1.4));
+      const br = still ? .5 : .5 + .5 * Math.sin((t - birthT) * 1.8);   // 水色の外側と、地面の金色が、交互に少し明るくなる
+      seedGlowMat.opacity = .45 + .25 * br; seedCoreMat.emissiveIntensity = .7 + .4 * (1 - br); seedGroundMat.opacity = (.9 - .3 * br) * ease(b);
+      seedHaloMat.opacity = (.14 + .14 * (1 - br)) * ease(b);
       if (!still) { const w = Math.sin(Math.PI * Math.min(1, (t - birthT) / 2)); CAM_LOOK.set(defLook.x + (SEED_HOME.x - cx) * .3 * w, defLook.y + .4 * w, defLook.z + (SEED_HOME.z - cz) * .3 * w); }
       if (b >= 1 && Math.hypot(cx - SEED_HOME.x, cz - SEED_HOME.z) <= SEED_PICK_R) {
         progress = advance(progress, 'seedTouched'); collectT = t; seedFrom.copy(wordSeed.position); CAM_LOOK.copy(defLook);
+        seedGround.visible = false; seedHalo.visible = false; seedGlowMat.opacity = .35; seedCoreMat.emissiveIntensity = .85;
         say('ことばのタネを見つけた！'); sayLater('根の門が反応している…', t + 1.8);
-        sparkAt.copy(wordSeed.position); sparkT = t;
+        sparkAt.copy(wordSeed.position); sparkT = t; sparkIn = false;
       }
     }
     if (progress === P.SEED_COLLECTED || progress === P.GATE_OPENING || progress === P.SECRET_PATH) {
@@ -2146,7 +2167,7 @@ const worldV2 = (() => {
     // 根の門：タネを持っているあいだ、金色にほのかに反応する。門の手前 3.6m 以内に入るとひらく（門の内側・奥にいるときは始めない）
     if (progress === P.SEED_COLLECTED) {
       gateMat.emissive.copy(emis).multiplyScalar(still ? .5 : .4 + .3 * Math.sin(t * 2.4));
-      if (Math.hypot(gdx, gdz) <= GATE_OPEN_R && front > .3) { progress = advance(progress, 'gateApproached'); openT = t; secretPath.geometry.setDrawRange(0, Infinity); sparkAt.set(GATE.x, heightAt(GATE.x, GATE.z) + 1.2, GATE.z); sparkT = t; }
+      if (Math.hypot(gdx, gdz) <= GATE_OPEN_R && front > .3) { progress = advance(progress, 'gateApproached'); openT = t; secretPath.geometry.setDrawRange(0, Infinity); sparkAt.set(GATE.x, heightAt(GATE.x, GATE.z) + 1.2, GATE.z); sparkT = t; sparkIn = false; }
     }
     if (progress === P.GATE_OPENING) {
       const o = still ? 1 : Math.min(1, (t - openT) / 1.7), e = ease(o);
@@ -2217,7 +2238,7 @@ const worldV2 = (() => {
         tmpW.copy(tmpV).lerp(fp, ease(k) * ease(k)); wordSeed.position.copy(tmpW);
       } else wordSeed.position.copy(fp);
       if (l >= 1) {
-        progress = advance(progress, 'treeLit'); wordSeed.visible = false; sparkAt.copy(fp); sparkT = t;
+        progress = advance(progress, 'treeLit'); wordSeed.visible = false; sparkAt.copy(fp); sparkT = t; sparkIn = false;
         say('きみのことばが、世界をひとつ灯した。'); finaleAt = t + (still ? 0 : 1.6);
         secretBase[secretRoot] = .75;   // 根もとの光が少し強くなる
         lightSecretPath(1, 1);
@@ -2238,8 +2259,8 @@ const worldV2 = (() => {
     if (sparkT >= 0 && t - sparkT < 1.6 && !still) {
       const k = (t - sparkT) / 1.6;
       for (let i = 0; i < sparkN; i++) {
-        const a = i / sparkN * 6.283 + k * 1.5, r = .25 + k * .55;
-        moteM.makeScale(.12 * (1 - k), .12 * (1 - k), .12 * (1 - k)).setPosition(sparkAt.x + Math.cos(a) * r, sparkAt.y + k * .8, sparkAt.z + Math.sin(a) * r);
+        const a = i / sparkN * 6.283 + k * 1.5, r = sparkIn ? .1 + (1 - k) * .9 : .25 + k * .55, sz = sparkIn ? .1 * (1 - k * k) : .12 * (1 - k);
+        moteM.makeScale(sz, sz, sz).setPosition(sparkAt.x + Math.cos(a) * r, sparkAt.y + (sparkIn ? -(1 - k) * .7 : k * .8), sparkAt.z + Math.sin(a) * r);
         motes.setMatrixAt(moteCount + moteSecret + i, moteM);
       }
       if (progress === P.SEED_BORN || progress === P.SEED_COLLECTED || progress === P.GATE_OPENING) motes.count = moteCount + moteSecret + sparkN;

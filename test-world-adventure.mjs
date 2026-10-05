@@ -176,10 +176,11 @@ test('12. 判定の距離：タネ 1.1〜1.4m・門 3〜4m・ことばの樹 2.5
 });
 
 // ── 画面のことば ──────────────────────────────────────────────────
-test('13. 上部の案内は5つ（＋祠へのひとこと）。どれも一度だけ出す', () => {
+test('13. 上部の案内は5つ（＋タネへのひとこと）。どれも一度だけ出す', () => {
   const MSGS = ['ことばのタネが生まれた！', 'ことばのタネを見つけた！', '根の門が反応している…', '秘密の道がひらいた！', 'きみのことばが、世界をひとつ灯した。'];
   for (const m of MSGS) assert.ok(V2_CODE.includes(`'${m}'`), m);
-  assert.ok(V2_CODE.includes("'祠に近づいてみよう'"));
+  assert.ok(V2_CODE.includes("sayLater('光っているタネに近づいてみよう', t + 1.6);"));
+  assert.ok(!V2_CODE.includes('祠に近づいてみよう'));
   assert.equal(count(ADVENTURE_FN, /\bsay\(/g), 5, '4 direct + the delayed one');
   assert.equal(count(ADVENTURE_FN, /sayLater\(/g), 2);
   // 一度だけ：どの案内も、一方向の状態が切りかわる場所でだけ出す
@@ -203,9 +204,14 @@ test('14. 完了のことばは既存の枠を使い、textContent で作る。�
 });
 
 // ── タネ・門・道・樹 ──────────────────────────────────────────────
-test('15. ことばのタネ：GLB の WordSeed_Core（ふつうの素材）と WordSeed_Glow（透ける水色）。生まれるまでは隠す', () => {
+test('15. ことばのタネ：GLB の WordSeed_Core（頂点色＋金色に自分で光る素材）と WordSeed_Glow（透ける水色）。生まれるまでは隠す', () => {
   assert.match(V2_CODE, /wordSeed = new THREE\.Group\(\); wordSeed\.name = 'WordSeed'; wordSeed\.visible = false;/);
-  assert.match(V2_CODE, /new THREE\.Mesh\(need\('WordSeed_Core'\)\.geometry, kitMat\)/);
+  assert.match(V2_CODE, /new THREE\.Mesh\(need\('WordSeed_Core'\)\.geometry, seedCoreMat\)/);
+  assert.match(V2_CODE, /seedCoreMat = new THREE\.MeshLambertMaterial\(\{ vertexColors: true, side: THREE\.DoubleSide, emissive: 0xe8a020, emissiveIntensity: \.85, transparent: true \}\);/);
+  // 芯は水色の外側より後に描く（金色がにごらない）。外の淡い金色の光は、外側の形を 1.4 倍にしたもの（新しい形・画像は作らない）
+  assert.match(V2_CODE, /seedGlow\.renderOrder = 3; seedCore\.renderOrder = 4;/);
+  assert.match(V2_CODE, /seedHalo = new THREE\.Mesh\(need\('WordSeed_Glow'\)\.geometry, seedHaloMat\);/);
+  assert.match(V2_CODE, /seedHalo\.scale\.setScalar\(1\.4\); seedHalo\.position\.y = \.08 \* \(1 - 1\.4\);/);
   assert.match(V2_CODE, /new THREE\.Mesh\(need\('WordSeed_Glow'\)\.geometry, seedGlowMat\)/);
   assert.match(V2_CODE, /seedGlowMat = new THREE\.MeshBasicMaterial\(\{[^}]*transparent: true[^}]*depthWrite: false/);
   assert.match(ADVENTURE_FN, /wordSeed\.visible = true;/);
@@ -276,7 +282,7 @@ test('21. 小さなカメラの動き（生まれる・門・樹）は2秒以内
 });
 
 test('22. reduced-motion：タネはすぐ現れ、門はすぐひらき、道はすぐ灯り、完了のことばもすぐ出る', () => {
-  assert.match(ADVENTURE_FN, /wordSeed\.scale\.setScalar\(still \? 1\.5 : \.01\)/);
+  assert.match(ADVENTURE_FN, /wordSeed\.scale\.setScalar\(still \? SEED_S : \.01\)/);
   assert.match(ADVENTURE_FN, /const b = still \? 1 : Math\.min\(1, \(t - birthT\) \/ 1\.2\);/);
   assert.match(ADVENTURE_FN, /const o = still \? 1 : Math\.min\(1, \(t - openT\) \/ 1\.7\)/);
   assert.match(ADVENTURE_FN, /lightSecretPath\(still \? 1 : o \* \.7, 1\.6\);/);
@@ -439,4 +445,50 @@ test('33. ことばの樹の構図：カメラは丘の上ではなく、道と�
   assert.ok(ok(() => 3, A.WORD_TREE, 1, 0) === false, 'hill tops are rejected');
   assert.ok(ok(() => .9, A.WORD_TREE, 1, 0) === false, 'a camera spot 0.9m up the slope is rejected');
   assert.ok(ok(() => 0, A.WORD_TREE, 1, 0) === true, 'flat ground is accepted');
+});
+
+// ── Step 11K-B：ことばのタネを見つけやすくする（取る条件・状態の進み方は変えない）─────────
+const SEED_GLB_H = 0.249;   // GLB の WordSeed（芯と外側の光）の全高
+const num = re => +V2_CODE.match(re)[1];
+
+test('34. タネの大きさと高さ：全高 約0.45〜0.55m（以前の1.5倍表示から拡大）・地面から0.8〜1.1m・取る距離は1.25mのまま', () => {
+  const S = num(/const SEED_S = ([\d.]+), SEED_LIFT/), LIFT = num(/SEED_LIFT = (\.?[\d.]+);/);
+  assert.ok(SEED_GLB_H * S >= .45 && SEED_GLB_H * S <= .55, `seed height ${SEED_GLB_H * S}`);
+  assert.ok(S > 1.5, 'larger than before');
+  assert.ok(LIFT >= .8 && LIFT <= 1.1);
+  assert.equal(A.SEED_PICK_R, 1.25);
+  // 位置は祠のそば（xz は以前と同じ）。地面の高さは、タネの真下で測る
+  assert.match(ADVENTURE_FN, /SEED_HOME\.set\(MISSION_POS\.x - \.8, heightAt\(MISSION_POS\.x - \.8, MISSION_POS\.z - \.25\) \+ SEED_LIFT, MISSION_POS\.z - \.25\);/);
+  // 生まれるのは深掘りのあと（deepDone）だけ。取るのは、生まれ終わって 1.25m 以内に入ったとき（以前と同じ）
+  assert.match(ADVENTURE_FN, /if \(b >= 1 && Math\.hypot\(cx - SEED_HOME\.x, cz - SEED_HOME\.z\) <= SEED_PICK_R\) \{/);
+});
+
+test('35. タネの動き：一度だけ少し大きくなって戻る・ゆっくり浮く・金色と水色が呼吸する。reduced-motion では止まったまま目立つ', () => {
+  assert.match(ADVENTURE_FN, /wordSeed\.scale\.setScalar\(SEED_S \* \(ease\(Math\.min\(1, b \* 1\.4\)\) \+ \(still \? 0 : \.2 \* Math\.sin\(Math\.PI \* b\)\)\)\);/);
+  assert.match(ADVENTURE_FN, /wordSeed\.position\.y = SEED_HOME\.y \+ \(still \? 0 : \.07 \* Math\.sin\(\(t - birthT\) \* 1\.4\)\);/);
+  assert.match(ADVENTURE_FN, /const br = still \? \.5 : \.5 \+ \.5 \* Math\.sin\(\(t - birthT\) \* 1\.8\);/);
+  assert.match(ADVENTURE_FN, /seedGlowMat\.opacity = \.45 \+ \.25 \* br; seedCoreMat\.emissiveIntensity = \.7 \+ \.4 \* \(1 - br\); seedGroundMat\.opacity = \(\.9 - \.3 \* br\) \* ease\(b\);/);
+  assert.match(ADVENTURE_FN, /seedHaloMat\.opacity = \(\.14 \+ \.14 \* \(1 - br\)\) \* ease\(b\);/);
+  // 大きくなって戻る：b=1 で ちょうど SEED_S（sin(π)=0）。途中は最大で約1.1〜1.2倍
+  const ease = x => x * x * (3 - 2 * x);
+  const k = b => ease(Math.min(1, b * 1.4)) + .2 * Math.sin(Math.PI * b);
+  let peak = 0; for (let b = 0; b <= 1.0001; b += .01) peak = Math.max(peak, k(b));
+  assert.ok(peak > 1.1 && peak < 1.2, `peak ${peak}`);
+  assert.ok(Math.abs(k(1) - 1) < 1e-9);
+});
+
+test('36. タネの下の地面の光：画像を使わない円（頂点の透明度）。生まれているあいだだけ見せ、取ったとき・リセットで消す', () => {
+  const build = between(V2_CODE, 'function build(', 'function activate(');
+  assert.match(build, /const sgGeo = new THREE\.CircleGeometry\(\.75, 24\)/);
+  assert.match(build, /sgGeo\.setAttribute\('color', new THREE\.BufferAttribute\(sgCol, 4\)\);/);
+  assert.match(build, /seedGround\.renderOrder = 2; seedGround\.visible = false; group\.add\(seedGround\);/);
+  assert.ok(!/PointLight|Texture|TextureLoader/.test(V2_CODE));
+  assert.match(ADVENTURE_FN, /seedGround\.visible = true;/);
+  assert.match(ADVENTURE_FN, /seedGround\.visible = false; seedHalo\.visible = false; seedGlowMat\.opacity = \.35; seedCoreMat\.emissiveIntensity = \.85;/);
+  assert.match(ADVENTURE_FN, /seedGround\.visible = true; seedGroundMat\.opacity = still \? \.75 : 0; seedHalo\.visible = true;/);
+  assert.match(RESET, /seedGround\.visible = false; seedGroundMat\.opacity = \.75; seedCoreMat\.emissiveIntensity = \.85; seedHalo\.visible = true; sparkIn = false;/);
+  // 光の粒：生まれるときだけ、祠のまわりからタネへ集まる（ほかは今までどおり外へ広がる。数は増やさない）
+  assert.match(ADVENTURE_FN, /sparkT = t; sparkIn = true;/);
+  assert.equal(count(ADVENTURE_FN, /sparkIn = false;/g), 3);
+  assert.match(build, /moteSecret = HIGH \? 3 : 2; sparkN = HIGH \? 6 : 3;/);
 });

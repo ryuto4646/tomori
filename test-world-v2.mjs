@@ -123,8 +123,8 @@ test('9. V2 は組み立てがすべて成功したときだけ切り替わり�
   // シーンを変えるのは activate の中だけ（組み立ては新しいグループの中で行う）
   const act = between(V2_CODE, 'function activate(built)', '\n  }\n');
   const rest = V2_CODE.replace(act, '');
-  // （ことばのタネだけは、組み立てで隠しておき、「デモを最初から」でも隠し直す：Step 11I-C）
-  assert.ok(!/scene\.add\(|ground\.geometry =|(?<!wordSeed)\.visible = false/.test(rest), 'scene changes only in activate');
+  // （ことばのタネと、その外の光・下の地面の光だけは、組み立てで隠しておき、「デモを最初から」でも隠し直す：Step 11I-C・11K-B）
+  assert.ok(!/scene\.add\(|ground\.geometry =|(?<!wordSeed|seedGround|seedHalo)\.visible = false/.test(rest), 'scene changes only in activate');
   assert.match(act, /active = true;\s*$/);
   assert.ok(!/console\./.test(V2_CODE));
   // 読み込み画面は、V2 か V1 の準備ができてから消える

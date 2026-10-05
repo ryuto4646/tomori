@@ -148,10 +148,6 @@ textarea, input { word-break:normal; }
 .word-title { font-size:17px; font-weight:bold; color:#3a7a28; margin-bottom:3px; }
 .word-desc { font-size:13px; color:#6a6048; line-height:1.5; }
 
-/* ── ルビ共通 ─────────────────────── */
-ruby { ruby-align:center; }
-rt { font-size:0.55em; color:#7a8060; }
-
 /* ── 音声入力 ─────────────────────── */
 #btn-voice {
   display:flex; align-items:center; justify-content:center; gap:8px;
@@ -2860,19 +2856,11 @@ function buildWords(input){
     card.dataset.wordReading = reading;
     card.dataset.wordDesc    = description;
 
-    // タイトル：<ruby> をDOM APIで構築。ひらがなだけの語（読みと同じ）にはルビを付けない
+    // タイトル：textContent で安全に。ルビは付けない（Step 11K-B：一部の語だけに付いて不統一だったため。
+    // 読み（reading）はデータとして残す。学年別・ルビあり／なしの切り替えは別の Step で検討する）
     const titleEl = document.createElement('div');
     titleEl.className = 'word-title';
-    if (reading === word) {
-      titleEl.appendChild(document.createTextNode(word));
-    } else {
-      const ruby = document.createElement('ruby');
-      const rt = document.createElement('rt');
-      rt.textContent = reading;
-      ruby.appendChild(document.createTextNode(word));
-      ruby.appendChild(rt);
-      titleEl.appendChild(ruby);
-    }
+    titleEl.textContent = word;
 
     // 説明：textContent で安全に
     const descEl = document.createElement('div');

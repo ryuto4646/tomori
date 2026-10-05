@@ -224,6 +224,36 @@ textarea, input { word-break:normal; }
 }
 // SOFT-DOTS-END
 `],
+  [`.word-desc { font-size:13px; color:#6a6048; line-height:1.5; }
+
+/* ── ルビ共通 ─────────────────────── */
+ruby { ruby-align:center; }
+rt { font-size:0.55em; color:#7a8060; }
+
+/* ── 音声入力`,
+   `.word-desc { font-size:13px; color:#6a6048; line-height:1.5; }
+
+/* ── 音声入力`],
+  [`    // タイトル：<ruby> をDOM APIで構築。ひらがなだけの語（読みと同じ）にはルビを付けない
+    const titleEl = document.createElement('div');
+    titleEl.className = 'word-title';
+    if (reading === word) {
+      titleEl.appendChild(document.createTextNode(word));
+    } else {
+      const ruby = document.createElement('ruby');
+      const rt = document.createElement('rt');
+      rt.textContent = reading;
+      ruby.appendChild(document.createTextNode(word));
+      ruby.appendChild(rt);
+      titleEl.appendChild(ruby);
+    }
+`,
+   `    // タイトル：textContent で安全に。ルビは付けない（Step 11K-B：一部の語だけに付いて不統一だったため。
+    // 読み（reading）はデータとして残す。学年別・ルビあり／なしの切り替えは別の Step で検討する）
+    const titleEl = document.createElement('div');
+    titleEl.className = 'word-title';
+    titleEl.textContent = word;
+`],
 ];
 
 const ART_BLOCK = /\/\/ WORLD-ART-BEGIN[\s\S]*?\/\/ WORLD-ART-END\n\n/;

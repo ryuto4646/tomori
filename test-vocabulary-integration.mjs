@@ -215,15 +215,14 @@ test('15. care なのに語彙が入っている応答は不正', () => {
 });
 
 // ── 4. 画面の構築（安全なDOM） ─────────────────────────────────
-test('16. AI語彙で3枚のカードができ、ルビはDOMで組み立てる', () => {
+test('16. AI語彙で3枚のカードができ、見出しはルビなしの文字だけ（読みはデータに残す）', () => {
   const doc = makeDocument();
   loadDom(doc, { vocabResult: NORMAL }).buildWords('やばい');
   const cards = doc.byId['word-cards'].children;
   assert.equal(cards.length, 3);
-  const ruby = cards[1].all().find(n => n.tagName === 'ruby');
-  const rt = ruby.children.find(n => n.tagName === 'rt');
-  assert.equal(rt.textContent, 'あざやか');
-  assert.equal(ruby.children[0].textContent, '鮮やか');
+  assert.ok(!cards.some(c => c.all().some(n => n.tagName === 'ruby' || n.tagName === 'rt')));
+  assert.equal(cards[1].all().find(n => n.className === 'word-title').textContent, '鮮やか');
+  assert.equal(cards[1].dataset.wordReading, 'あざやか');
 });
 
 test('17. AIの文字列にHTMLが混ざっても文字として扱い、innerHTMLは使わない', () => {
@@ -655,7 +654,7 @@ test('57. ページ全体で innerHTML への代入が0件、console.log は DEB
   assert.equal((stripped.match(/console\.log/g) || []).length, 0);
 });
 
-test('58. ひらがなだけの語（読みと同じ）にはルビを付けず、漢字の語には付ける', () => {
+test('58. ひらがなの語にも漢字の語にもルビを付けない（不統一の解消）', () => {
   const doc = makeDocument();
   const c = loadCore(okFetch(NORMAL), { core: CORE_SHIPPED });
   loadDom(doc, { vocabResult: c.buildLocalVocabularyFallback('むかつく', 'm'), vocabFallback: true }).buildWords('むかつく');
@@ -665,8 +664,10 @@ test('58. ひらがなだけの語（読みと同じ）にはルビを付けず�
   assert.ok(!b.all().some(n => n.tagName === 'ruby'), 'もどかしい');
   doc.byId['word-cards'].textContent = '';
   loadDom(doc, { vocabResult: c.buildLocalVocabularyFallback('木', 'm'), vocabFallback: true }).buildWords('木');
-  const rt = doc.byId['word-cards'].children[1].all().find(n => n.tagName === 'rt');
-  assert.equal(rt.textContent, 'りんかく');
+  const card = doc.byId['word-cards'].children[1];
+  assert.ok(!card.all().some(n => n.tagName === 'ruby' || n.tagName === 'rt'));
+  assert.equal(card.all().find(n => n.className === 'word-title').textContent, '輪郭');
+  assert.equal(card.dataset.wordReading, 'りんかく');
 });
 
 // ── Step 9G：「やばい」単独の中立化と、存在文の扱い ─────────────────

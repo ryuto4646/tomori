@@ -170,14 +170,15 @@ test('4. リセット後の2回目では、花がそれぞれ1回だけ咲く', 
   assert.equal(env.app.stateLog.filter(s => s === 'SECRET_QUESTION').length, 1);
 });
 
-test('5. 端末内の語・通常の表示・ルビは今までどおり', () => {
+test('5. 端末内の語・通常の表示は今までどおり（ルビは付けない）', () => {
   const env = load();
   env.app.setResult(null); env.app.buildWords('きれい');
   const cards = env.doc.ids['word-cards'].children;
   assert.deepEqual(cards.map(c => c.dataset.wordText), ['目を奪われる', '息をのむ', '心が動く']);
-  const ruby = cards[0].all().find(n => n.tagName === 'ruby');
-  assert.equal(ruby.children[0].textContent, '目を奪われる');
-  assert.equal(ruby.children.find(n => n.tagName === 'rt').textContent, 'めをうばわれる');
+  // Step 11K-B：ルビは付けない。見出しは漢字のまま、読みはデータに残る
+  assert.ok(!cards[0].all().some(n => n.tagName === 'ruby' || n.tagName === 'rt'));
+  assert.equal(cards[0].all().find(n => n.className === 'word-title').textContent, '目を奪われる');
+  assert.equal(cards[0].dataset.wordReading, 'めをうばわれる');
   pickFirstCard(env); env.clock.advance(500);
   assert.equal(env.doc.ids['word-announce'].textContent, '『目を奪われる』が、世界をひらいた。');
 });

@@ -117,3 +117,40 @@ test('10. 新しく 13px 未満の文字を作っていない（Step 11K で足�
   const added = between(CSS, '/* 日本語の折り返し（TEXT-WRAP）', '.nowrap { white-space:nowrap; }');
   assert.ok(!/font-size:\s*(\d+)px/.test(added) || [...added.matchAll(/font-size:\s*(\d+)px/g)].every(m => +m[1] >= 13));
 });
+
+// ── Step 11K-B：ルビの統一（一部の語だけに付いていたルビを外す。読みはデータに残す）──
+// 以前ルビが付いていた語（端末内の候補のうち、表記と読みが違う20語）
+const FORMER_RUBY = ['目を奪われる', '息をのむ', '心が動く', '心がはずむ', '苦手', '不安', '穏やか', '落ち着く', '心細い', '気になった',
+  '心が動いた', '表情', '色合い', '輪郭', '色', '形', '動き', '様子', '変化', '流れ'];
+const VOCAB = [...HTML.matchAll(/\{ word:'([^']+)',\s*reading:'([^']+)',\s*description:'([^']+)' \}/g)].map(m => ({ word: m[1], reading: m[2], description: m[3] }));
+
+test('11. ルビ：表示する HTML・JavaScript・CSS にルビの仕組みが無い', () => {
+  assert.equal(count(HTML, /<ruby\b|<rt\b|<\/ruby>|<\/rt>/gi), 0);
+  assert.equal(count(HTML, /createElement\(\s*['"](ruby|rt|rp)['"]\s*\)/g), 0);
+  assert.equal(count(CSS, /(^|[\s,}])(ruby|rt|rp)\s*[{,]/gm), 0);
+  // 言葉カードの見出しは textContent だけで作る（外から来た文字を HTML として入れない）
+  const DOM = between(HTML, '// VOCAB-DOM-BEGIN', '// VOCAB-DOM-END');
+  assert.match(DOM, /titleEl\.textContent = word;/);
+  assert.equal(count(DOM, /\.(innerHTML|outerHTML)\s*=|insertAdjacentHTML\(/g), 0);
+});
+
+test('12. ルビ：以前ルビがあった語は、漢字・語句・読み・意味がそのまま残っている', () => {
+  assert.equal(VOCAB.length, 36);
+  const byWord = new Map(VOCAB.map(v => [v.word, v]));
+  for (const w of FORMER_RUBY) {
+    assert.ok(byWord.has(w), w);
+    assert.notEqual(byWord.get(w).reading, w, w);   // 読みはデータに残る（AI の通信の形も変えない）
+  }
+  assert.equal(VOCAB.filter(v => v.reading !== v.word).length, FORMER_RUBY.length);
+  assert.match(HTML, /typeof w\.reading !== 'string'/);   // AI 応答の検査（reading 必須）は今までどおり
+});
+
+test('13. ルビ：語句・説明に二重の空白や、ルビ由来の改行が無い', () => {
+  for (const v of VOCAB) {
+    for (const s of [v.word, v.description]) {
+      assert.doesNotMatch(s, /  |　　|\n|^\s|\s$/, s);
+    }
+  }
+  // 見出しの行の高さは、ルビの有無で変わらない（ルビ専用の行間の指定も無い）
+  assert.match(CSS, /\.word-title \{ font-size:17px; font-weight:bold; color:#3a7a28; margin-bottom:3px; \}/);
+});

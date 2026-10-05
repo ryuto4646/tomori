@@ -225,7 +225,10 @@ test('16. 根の門：左右の根はずれて外へ傾き、上の根は持ち�
 test('17. 秘密の道：門がひらくまでは見えない（透明度0）。ひらくと手前から灯り、約3秒で落ち着く', () => {
   const build = between(V2_CODE, 'const sp = [], sc = [], si = [], SECRET_A', 'const sgeo = new THREE.BufferGeometry();');
   assert.match(build, /sp\.push\(x, heightAt\(x, z\) \+ \.025, z\); sc\.push\(c3\.r, c3\.g, c3\.b, 0\);/);
-  assert.match(V2_CODE, /SECRET_A = \[0, \.45, 1, \.45, 0\]/);
+  // Step 11K：中心は淡い金色、ふちは広く淡く（地面にしみこむ光）。樹へ近づくほど・芽のそばで水色が増える
+  assert.match(V2_CODE, /SECRET_A = \[0, \.12, \.42, 1, \.42, \.12, 0\], SOFF = \[-2\.7, -1\.75, -\.7, 0, \.7, 1\.75, 2\.7\]/);
+  assert.match(build, /const toSky = \.42 \* smooth\(\.45, 1, u\) \+ \.5 \* Math\.exp\(-\(\(\(u - uSprout\) \/ \.045\) \*\* 2\)\);/);
+  assert.match(build, /c3\.copy\(cream\)\.lerp\(gold, c === 3 \? 1 : \.4\)\.lerp\(sky, Math\.min\(\.7, toSky\)\);/);
   assert.match(ADVENTURE_FN, /if \(after < 3\.2\) lightSecretPath\(Math\.min\(1, \.7 \+ after \/ 1\.2\), 1 \+ \.6 \* Math\.max\(0, 1 - after \/ 3\)\);/);
   assert.match(FRAME, /secretColor\.array\[v \* 4 \+ 3\] = Math\.min\(1, secretBase\[v\] \* gain\) \* Math\.min\(1, Math\.max\(0, \(u - secretU\[v\]\) \* 8\)\);/);
   // 樹へ向かって進む光の点（門がひらいたあとだけ）

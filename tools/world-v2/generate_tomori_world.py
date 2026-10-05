@@ -124,7 +124,7 @@ class Kit:
             t = i / segs
             bend = lean * t * t
             cx, cy, cz = x0 + dx * bend, y0 + h * t, z0 + dz * bend
-            ww = w * (1 - t) + .004
+            ww = w * (1 - t ** 2.2) + .006                     # 先まで幅を残して、先を丸く（鋭い三角形に見せない）
             left.append(self.bm.verts.new(P(cx + px * ww, cy, cz + pz * ww)))
             right.append(self.bm.verts.new(P(cx - px * ww, cy, cz - pz * ww)))
             c = mix(color, tip_color, t)
@@ -195,15 +195,23 @@ def build_all():
     rng = random.Random(SEED)
     objs = []
 
-    # ── 丸い樹冠の木（2種類）──────────────────────────────────────────
-    for name, blobs, h in [('Tree_Round_A', [((0, 2.35, 0), (1.35, 1.05, 1.25)), ((.75, 1.95, .35), (.85, .7, .85)), ((-.6, 2.05, -.35), (.8, .72, .8))], 1.9),
-                           ('Tree_Round_B', [((0, 2.6, 0), (1.15, 1.0, 1.1)), ((-.55, 2.15, .45), (.75, .66, .75)), ((.5, 2.95, -.3), (.62, .55, .6))], 2.1)]:
+    # ── 丸い樹冠の木（2種類）：大きな葉の塊1つ・中くらい1つ・小さな塊いくつか。幹から2本の枝が分かれて、塊を支える ──
+    # Step 11K：同じ丸の繰り返しに見えないよう、塊の大きさ（大・中・小）と位置をそろえない。小さな塊は細かくしない（三角形を増やさない）
+    for name, h, branches, blobs in [
+        ('Tree_Round_A', 1.9, [(.55, .2), (-.5, -.25)],
+         [((.05, 2.35, 0), (1.25, .95, 1.15), 1), ((.8, 2.0, .3), (.8, .64, .78), 1),
+          ((-.75, 1.98, -.3), (.52, .44, .5), 0), ((.25, 2.95, -.35), (.48, .4, .46), 0), ((-.35, 2.6, .55), (.42, .36, .42), 0)]),
+        ('Tree_Round_B', 2.05, [(-.6, .3), (.45, -.2)],
+         [((-.1, 2.55, .05), (1.32, .82, 1.2), 1), ((.62, 2.3, -.3), (.74, .6, .72), 1),
+          ((-.85, 2.25, .4), (.5, .42, .48), 0), ((.3, 2.0, .7), (.44, .38, .44), 0)])]:
         k = Kit(name, rng)
         lean = rng.uniform(-.12, .12)
         k.tube([(0, 0, 0), (lean * .3, h * .45, 0), (lean, h * .8, .05), (lean * 1.2, h, 0)], [.2, .15, .12, .08], BARK_D, sides=6, tip=False, color_end=BARK)
-        k.tube([(lean * .6, h * .62, 0), (.45, h * .85, .15), (.62, h * 1.0, .3)], [.07, .05, .03], BARK, sides=5)
-        for i, (c, s) in enumerate(blobs):
-            k.blob(c, s, mix(LEAF_MID, LEAF_WARM, .35 + .2 * i), subdiv=1, rough=.14, shade_top=(LEAF_LIGHT, .55))
+        for bx, bz in branches:                                   # 幹から上へ分かれる2本の枝（樹冠の中へ消える）
+            k.tube([(lean * .6, h * .6, 0), (bx * .6, h * .86, bz * .6), (bx, h * 1.02, bz)], [.07, .05, .03], BARK, sides=5)
+        for i, (c, sz, sub) in enumerate(blobs):
+            col = mix(LEAF_MID, LEAF_WARM, .25 + .14 * i) if sub else mix(LEAF_WARM, LEAF_LIGHT, .25)
+            k.blob(c, sz, col, subdiv=sub, rough=.14, shade_top=(LEAF_LIGHT, .55))
         objs.append(k.finish())
 
     # ── 縦に伸びる木（2種類）：段の数・ずれ・垂れ方を変える ──────────────────

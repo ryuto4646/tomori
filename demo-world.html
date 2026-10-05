@@ -1212,6 +1212,20 @@ const pPos=new Float32Array(80*3);
 for(let i=0;i<80;i++){pPos[i*3]=(Math.random()-.5)*55;pPos[i*3+1]=Math.random()*7;pPos[i*3+2]=(Math.random()-.5)*55;}
 pGeo.setAttribute('position',new THREE.BufferAttribute(pPos,3));
 scene.add(new THREE.Points(pGeo,new THREE.PointsMaterial({color:0xe0f0c0,size:.14,transparent:true,opacity:.5})));
+// SOFT-DOTS-BEGIN（Step 11K）：上の粒は、カメラの近くで四角い板のように大きく見えていた。丸くやわらかな光の点にする。
+// 画面の大きさは 1.5〜10 ピクセルにおさえ、カメラのすぐ近く（2.5m より手前）と遠く（70m より先）では消える。テクスチャ・通信は使わない
+{
+  const dots = scene.children[scene.children.length - 1];
+  dots.material = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false,
+    uniforms: { color: { value: new THREE.Color(0xfff3cc) }, opacity: { value: .6 }, scale: { value: innerHeight * Math.min(devicePixelRatio, 2) / 2 } },
+    vertexShader: 'uniform float scale; varying float vFade; void main() { vec4 mv = modelViewMatrix * vec4(position, 1.0); float d = -mv.z;'
+      + ' gl_PointSize = clamp(0.14 * scale / max(d, 0.1), 1.5, 10.0); vFade = smoothstep(2.5, 6.0, d) * (1.0 - smoothstep(45.0, 70.0, d)); gl_Position = projectionMatrix * mv; }',
+    fragmentShader: 'uniform vec3 color; uniform float opacity; varying float vFade; void main() { float r = length(gl_PointCoord - 0.5) * 2.0;'
+      + ' float a = 1.0 - smoothstep(0.0, 1.0, r); a *= a; if (a * vFade < 0.01) discard; gl_FragColor = vec4(color, a * opacity * vFade); }',
+  });
+}
+// SOFT-DOTS-END
 
 // WORLD-ART-BEGIN（test-world-visuals.mjs がこの範囲を読み込んでテストする）
 // 朝の草原の美術。形は8種類の共有ジオメトリと InstancedMesh だけで作り、テクスチャ・外部素材は使わない。
@@ -1646,6 +1660,7 @@ const worldV2 = (() => {
   // ── 組み立て（すべて新しいグループの中に作る。最後まで成功したときだけ、シーンを切り替える）──
   let fruits = null, fruitMat = null, motes = null, moteSamples = null, moteN = 0, moteMain = 0, moteCount = 0, moteSecret = 0, sparkN = 0;
   let gateMat = null, gateMeshes = null, gateNode = null, gateYaw = 0, wordSeed = null, seedGlowMat = null;
+  let crystalMat = null, ringMat = null, bowlGlow = null, calm = 1;
   let secretRibbonN = 0, secretN = 0, secretRoot = 0, secretPath = null, secretMat = null, secretColor = null, secretU = null, secretBase = null, sproutMesh = null, sproutName = '', sproutIndex = -1;
   const gatePlace = new THREE.Matrix4(), fruitPos = [], fruitBase = [];
   const FLOWER_MAX = 48; let flowerStem = null, flowerHead = null;
@@ -1680,7 +1695,7 @@ const worldV2 = (() => {
     const g = new THREE.PlaneGeometry(2, 2, N, N); g.rotateX(-Math.PI / 2);
     const gp = g.attributes.position, gc = new Float32Array(gp.count * 3);
     const warp = u => SPAN * (.34 * u + .66 * Math.sign(u) * Math.abs(u) ** 2.1);
-    const cWarm = new THREE.Color(0x86ba4f), cMid = new THREE.Color(0x6aa646), cBlue = new THREE.Color(0x5f9c6c), cDry = new THREE.Color(0xa9b862), cFar = new THREE.Color(0x8fbf86), cPath = new THREE.Color(0xb2c56c), cLight = new THREE.Color(0x96cc64), cFore = new THREE.Color(0x58913f);
+    const cWarm = new THREE.Color(0x86ba4f), cMid = new THREE.Color(0x6aa646), cBlue = new THREE.Color(0x5f9c6c), cDry = new THREE.Color(0xa9b862), cFar = new THREE.Color(0x8fbf86), cPath = new THREE.Color(0xb2c56c), cLight = new THREE.Color(0x96cc64), cFore = new THREE.Color(0x58913f), cHillSun = new THREE.Color(0xb7d684), cHaze = new THREE.Color(0x9fc8bd);
     for (let i = 0; i < gp.count; i++) {
       const x = WALK.cx + warp(gp.getX(i)), z = WALK.cz + warp(gp.getZ(i)), h = heightAt(x, z);
       gp.setXYZ(i, x, h, z);
@@ -1689,7 +1704,13 @@ const worldV2 = (() => {
       c3.lerp(cLight, .5 * Math.exp(-((x - .8) ** 2) / 40) * Math.exp(-((z + 4.5) ** 2) / 16));   // 中景（小道から祠）は明るく
       c3.lerp(cFore, .38 * smooth(2.5, 8, z));                                                       // 画面の手前は少し暗く
       c3.lerp(cPath, .35 * Math.exp(-(segDist(x, z, 0, 0, 1.5, -6.5) ** 2) / 3) + .3 * Math.exp(-(segDist(x, z, 1.5, -6.5, GATE.x, GATE.z) ** 2) / 2.5));
-      c3.lerp(cFar, smooth(1.4, 3.2, Math.hypot((x - WALK.cx) / WALK.rx, (z - WALK.cz) / WALK.rz)) * .8);
+      const eDist = Math.hypot((x - WALK.cx) / WALK.rx, (z - WALK.cz) / WALK.rz);
+      c3.lerp(cFar, smooth(1.4, 3.2, eDist) * .8);
+      // Step 11K：丘の上は明るく、谷は少し濃く。いちばん遠い丘は霧の青緑へ（空との境に帯を作らない）
+      c3.lerp(cHillSun, smooth(.9, 3.6, h) * .32 * smooth(1.0, 1.6, eDist));
+      c3.lerp(cHaze, smooth(2.0, 3.6, eDist) * .42);
+      const n3 = .5 + .5 * Math.sin(x * .13 + z * .07 + 1.1) * Math.cos(z * .11 - x * .05);
+      c3.multiplyScalar(1 + (n3 - .5) * .1 * smooth(1.2, 2.0, eDist));
       gc[i * 3] = c3.r; gc[i * 3 + 1] = c3.g; gc[i * 3 + 2] = c3.b;
     }
     g.setAttribute('color', new THREE.BufferAttribute(gc, 3));
@@ -1726,7 +1747,8 @@ const worldV2 = (() => {
 
     // 植物：岩と木の根もと・小道のふち・祠の外周・門の左右・画面手前の左右（額縁）
     let pi = 0;
-    const plant = (name, x, z, s = 1) => { if (!blocked(x, z) && keep(pi++)) put(name, x, z, s * (.85 + rnd() * .35), undefined, depthTint(x, z)); };
+    const depthSize = (x, z) => 1 + .14 * smooth(1, 6, z) - .16 * smooth(-8, -22, z) - .08 * smooth(12, 22, Math.abs(x - 3));   // 手前は大きく、奥は小さく
+    const plant = (name, x, z, s = 1) => { if (!blocked(x, z) && keep(pi++)) put(name, x, z, s * (.85 + rnd() * .35) * depthSize(x, z), undefined, depthTint(x, z)); };
     [[-4, -3], [5, -2], [-2, 5], [6, 4], [-6, 6]].forEach(([x, z]) => { plant('Grass_A', x + .7, z + .3); plant('Grass_B', x - .5, z + .6); });
     TREE_SPOTS.forEach(([x, z], k) => { plant(k % 3 ? 'Grass_A' : 'Bush_A', x + .9, z + .6); if (k % 2) plant('Grass_C', x - .8, z + .4); });
     for (let k = 0; k <= 10; k++) { const t = k / 10, x = 1.5 * t, z = -6.5 * t, s = k % 2 ? 1 : -1; plant(k % 3 ? 'Grass_B' : 'Flowers_A', x + s * (1.9 + rnd() * .5), z + (rnd() - .5)); }
@@ -1764,14 +1786,22 @@ const worldV2 = (() => {
     put(sproutName, SPROUT[0], SPROUT[1], 1.35, .4, 0x9fd6ee);
     sproutIndex = lists.get(sproutName).length - 1;
 
+    // 形と色に少しずつ差をつける素材（同じ素材を並べただけに見せない）。水色の芽は変えない
+    const VARY = new Set(['Tree_Round_A', 'Tree_Round_B', 'Tree_Tall_A', 'Tree_Tall_B', 'Tree_Sapling_A', 'Bush_A', 'Bush_B', 'Rock_Medium_A', 'Rock_Medium_B', 'Grass_A', 'Grass_B', 'Grass_C']);
+    const frac = v => v - Math.floor(v);
+    const hash2 = (x, z) => frac(Math.sin(x * 12.9898 + z * 78.233) * 43758.5453);
     // InstancedMesh：形ごとに1つ。大きな木と岩だけが影を落とす（PC）
     const CASTERS = new Set(['Tree_Round_A', 'Tree_Round_B', 'Tree_Tall_A', 'Tree_Tall_B', 'Rock_Medium_A', 'Rock_Medium_B', 'Stone_Standing_A', 'Stone_Standing_B']);
     for (const [name, items] of lists) {
       const k = need(name), im = new THREE.InstancedMesh(k.geometry, kitMat, items.length);
+      const vary = VARY.has(name);
       items.forEach(([x, y, z, s, yaw, tint, tilt], i) => {
         e3.set(tilt, yaw, 0, 'YXZ'); q.setFromEuler(e3);
-        im.setMatrixAt(i, m4.compose(p3.set(x, y, z), q, s3.set(s, s, s)));
-        im.setColorAt(i, c3.set(tint));
+        const hs = vary ? hash2(x, z) : 0;
+        if (vary) s3.set(s * (.9 + .2 * hs), s * (.88 + .26 * frac(hs * 7.31)), s * (.9 + .2 * frac(hs * 3.71)));
+        else s3.set(s, s, s);
+        im.setMatrixAt(i, m4.compose(p3.set(x, y, z), q, s3));
+        im.setColorAt(i, vary ? c3.set(tint).multiplyScalar(.92 + .14 * frac(hs * 5.13)) : c3.set(tint));
       });
       im.instanceMatrix.needsUpdate = true; im.instanceColor.needsUpdate = true; im.computeBoundingSphere();
       im.castShadow = HIGH && CASTERS.has(name); im.receiveShadow = false; im.name = name;
@@ -1848,6 +1878,13 @@ const worldV2 = (() => {
       for (const im of [flowerStem, flowerHead]) { im.count = 0; im.frustumCulled = false; group.add(im); }
     }
 
+    // 祠の結晶と輪（Step 11K）：黄色い単色の目印を、祠の石になじむ金色・クリーム色の光にする。受け皿の上に光がしみる
+    crystalMat = new THREE.MeshLambertMaterial({ color: 0xf4d58c, emissive: 0x9a6c1c, flatShading: true });
+    ringMat = new THREE.MeshBasicMaterial({ color: 0xffe2a0, transparent: true, opacity: .6, depthWrite: false });
+    bowlGlow = new THREE.Mesh(new THREE.CircleGeometry(.42, 24), new THREE.MeshBasicMaterial({ color: 0xfff1c2, transparent: true, opacity: .55, depthWrite: false }));
+    bowlGlow.rotation.x = -Math.PI / 2; bowlGlow.position.set(MISSION_POS.x, heightAt(MISSION_POS.x, MISSION_POS.z) + .62, MISSION_POS.z); bowlGlow.renderOrder = 2; bowlGlow.name = 'WorldV2_BowlGlow';
+    group.add(bowlGlow);
+
     // ── 最初の冒険で使う物 ──
     // 根の門：自分の素材を持たせて、反応したときに金色の筋のように灯す。左右は根元を中心に、外（奥）へひらく
     gateMat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
@@ -1862,24 +1899,26 @@ const worldV2 = (() => {
     seedCore.name = 'WordSeed_Core'; seedGlow.name = 'WordSeed_Glow'; seedGlow.renderOrder = 3;
     wordSeed.add(seedCore, seedGlow); group.add(wordSeed);
     // 秘密の道：門の中央から、ことばの樹の手前まで。門がひらくまでは消えていて、ひらくと手前から順に灯る
-    const sp = [], sc = [], si = [], SECRET_A = [0, .45, 1, .45, 0];
+    const sp = [], sc = [], si = [], SECRET_A = [0, .12, .42, 1, .42, .12, 0], SOFF = [-2.7, -1.75, -.7, 0, .7, 1.75, 2.7], SC = SECRET_A.length;
+    const sky = new THREE.Color(0x9fd6ee), uSprout = routeS(SPROUT[0], SPROUT[1]) / ROUTE_TOTAL;
     const scurve = new THREE.CatmullRomCurve3(PASSAGE.map(([x, z]) => new THREE.Vector3(x, 0, z)), false, 'centripetal');
     const SN = secretN;
-    secretU = new Float32Array((SN + 1) * 5 + 17); secretBase = new Float32Array((SN + 1) * 5 + 17);
+    secretU = new Float32Array((SN + 1) * SC + 17); secretBase = new Float32Array((SN + 1) * SC + 17);
     for (let i = 0; i <= SN; i++) {
       const u = i / SN, p = scurve.getPointAt(u), tg = scurve.getTangentAt(u), w = .26 + Math.sin(u * 14) * .03;
       moteSamples.set([p.x, heightAt(p.x, p.z) + .16, p.z], (2 * (PN + 1) + i) * 3);
-      for (let c = 0; c < 5; c++) {
-        const x = p.x + tg.z * OFF[c] * w, z = p.z - tg.x * OFF[c] * w, v = i * 5 + c;
-        c3.copy(cream).lerp(gold, c === 2 ? 1 : .45);
+      const toSky = .42 * smooth(.45, 1, u) + .5 * Math.exp(-(((u - uSprout) / .045) ** 2));   // 樹へ近づくほど・芽のそばで水色
+      for (let c = 0; c < SC; c++) {
+        const x = p.x + tg.z * SOFF[c] * w, z = p.z - tg.x * SOFF[c] * w, v = i * SC + c;
+        c3.copy(cream).lerp(gold, c === 3 ? 1 : .4).lerp(sky, Math.min(.7, toSky));
         sp.push(x, heightAt(x, z) + .025, z); sc.push(c3.r, c3.g, c3.b, 0);
         secretU[v] = u; secretBase[v] = SECRET_A[c] * smooth(0, .08, u) * (1 - smooth(.9, 1, u) * .5);
-        if (i < SN && c < 4) si.push(v, v + 1, v + 5, v + 1, v + 6, v + 5);
+        if (i < SN && c < SC - 1) si.push(v, v + 1, v + SC, v + 1, v + SC + 1, v + SC);
       }
     }
     secretRibbonN = si.length;   // ここまでが秘密の道（門がひらくまでは描かない）。このあとの根元の光は、はじめから描く
     // ことばの樹の根元：地面にしみこむ淡いクリーム色の光（はじめから見えている）
-    const rootBase = (SN + 1) * 5, RG = 16; secretRoot = rootBase;
+    const rootBase = (SN + 1) * SC, RG = 16; secretRoot = rootBase;
     c3.set(0xfff0c8);
     sp.push(WORD_TREE.x, heightAt(WORD_TREE.x, WORD_TREE.z) + .03, WORD_TREE.z); sc.push(c3.r, c3.g, c3.b, .5); secretU[rootBase] = -1; secretBase[rootBase] = .5;
     for (let k = 0; k < RG; k++) {
@@ -1902,7 +1941,7 @@ const worldV2 = (() => {
   // ── 切り替え：V1 の装飾を隠し、地面を起伏のある地形へ替え、V1 の物を地面の高さへ ──
   function activate(built) {
     worldArt.group.children.forEach(o => { if (o !== worldArt.mpGlow) o.visible = false; });   // V1 の装飾・小道・光の柱は V2 では描かない
-    scene.children.forEach(o => { if (o.isPoints) o.visible = false; });                       // カメラの近くで四角く見える粒は V2 では描かない
+    scene.children.forEach(o => { if (o.isPoints && !HIGH) o.geometry.setDrawRange(0, 48); });   // 光の粒（SOFT-DOTS で丸くやわらかくした）。スマホ（low）は数を減らす
     // カメラを少し低く・近くして、空と遠くが見える構図にする（V2 だけ。横長と縦長で別の高さ）
     const portrait = camera.aspect < .8;
     // 縦長の画面は横の見える幅がせまいので、少し左うしろから見る（右奥の祠・門・ことばの樹が同じ画面に入る）
@@ -1911,6 +1950,9 @@ const worldV2 = (() => {
     if (character) camera.position.copy(character.position).add(CAM_OFF);
     defOff.copy(CAM_OFF); defLook.copy(CAM_LOOK);
     v1Rocks.forEach(r => { r.visible = false; });
+    // 結晶は金色の面で光を受け、輪は台にきざまれた淡い光の線にする（台の上に低く、平たく）
+    mpCrystal.material = crystalMat;
+    mpRing.material = ringMat; mpRing.scale.set(1.08, 1.08, .32); mpRing.position.y = heightAt(MISSION_POS.x, MISSION_POS.z) + .1;
     ground.geometry.dispose(); ground.geometry = built.terrain; ground.rotation.set(0, 0, 0); ground.updateMatrixWorld(true);
     vineGroup.children.forEach(o => { o.visible = false; });   // V2 では、閉じた根の門が通れない場所をあらわすので、V1 のつるは描かない
     nextGroup.position.y = heightAt(nextGroup.position.x, nextGroup.position.z);
@@ -1965,7 +2007,7 @@ const worldV2 = (() => {
     progress = P.EXPLORING; gateOpen = false; seedFollowing = false; litFruit = -1;
     birthT = collectT = openT = litT = -1; msgAt = -1; msgNext = ''; sparkT = -1;
     wordSeed.visible = false; wordSeed.scale.setScalar(1); wordSeed.position.set(0, -10, 0); seedGlowMat.opacity = .35;
-    gateMat.emissive.setRGB(0, 0, 0); secretBase[secretRoot] = .5; treeX = treeZ = 0; treeFrame = false;
+    gateMat.emissive.setRGB(0, 0, 0); calm = 1; secretBase[secretRoot] = .5; treeX = treeZ = 0; treeFrame = false;
     for (let i = 0; i < 4; i++) gateMeshes[i].matrix.multiplyMatrices(gatePlace, gateNode[i]);
     gateMeshes[3].visible = true;
     for (let i = 0; i < 5; i++) fruits.setMatrixAt(i, fruitBase[i]);
@@ -2018,6 +2060,10 @@ const worldV2 = (() => {
     const still = reduceMotionQuery.matches;
     const dt = Math.min(.1, Math.max(0, t - lastT)); lastT = t;
     adventure(t, dt, still);
+    // 祠の光：探しているあいだは呼びかけるように、到着したあとは落ち着かせる
+    calm += ((state === S.EXPLORE ? 1 : .4) - calm) * Math.min(1, dt * 3);
+    crystalMat.emissiveIntensity = .55 + .45 * calm; ringMat.opacity = .25 + .35 * calm; bowlGlow.material.opacity = .25 + .3 * calm;
+    mpLight.intensity *= .35 + .3 * calm;
     const k = still ? .5 : .5 + .5 * Math.sin(t * .9);
     fruitNow.copy(DIM).lerp(LIT, k); fruits.setColorAt(0, fruitNow); fruits.instanceColor.needsUpdate = true;
     worldArt.softMat.opacity = still ? .45 : .4 + .06 * Math.sin(t * .7);

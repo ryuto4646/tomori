@@ -285,9 +285,16 @@ test('21. カメラの構図は V2 だけで変わる（V1 の CAM_OFF・見る�
   assert.match(V2_CODE, /CAM_OFF\.set\(defOff\.x \* cs \+ defOff\.z \* sn, defOff\.y, -defOff\.x \* sn \+ defOff\.z \* cs\);/);
 });
 
-test('22. 四角い粒・V1 の小道と光の柱は、V2 のときだけ描かない（V1 の粒はそのまま）', () => {
+test('22. V1 の小道と光の柱は V2 では描かない。光の粒（V1 と同じ作り方・数）は丸くやわらかい点にして、V2 でも描く（low は数を減らす）', () => {
   const act = between(V2_CODE, 'function activate(built)', '\n  }\n');
-  assert.match(act, /scene\.children\.forEach\(o => \{ if \(o\.isPoints\) o\.visible = false; \}\);/);
+  assert.match(act, /scene\.children\.forEach\(o => \{ if \(o\.isPoints && !HIGH\) o\.geometry\.setDrawRange\(0, 48\); \}\);/);
+  assert.ok(!/isPoints\) o\.visible = false/.test(act));
+  const dots = between(HTML, '// SOFT-DOTS-BEGIN', '// SOFT-DOTS-END');
+  assert.match(dots, /dots\.material = new THREE\.ShaderMaterial\(/);
+  assert.match(dots, /gl_PointSize = clamp\(0\.14 \* scale \/ max\(d, 0\.1\), 1\.5, 10\.0\)/);   // カメラの近くでも 10px まで
+  assert.match(dots, /vFade = smoothstep\(2\.5, 6\.0, d\)/);                                       // カメラのすぐ近くでは消える
+  assert.match(dots, /length\(gl_PointCoord - 0\.5\)/);                                              // 丸い点
+  assert.ok(!/Texture|fetch\(/.test(dots));
   assert.match(act, /worldArt\.group\.children\.forEach\(o => \{ if \(o !== worldArt\.mpGlow\) o\.visible = false; \}\);/);
   const points = s => (s.match(/\/\/ ── パーティクル[\s\S]*?scene\.add\(new THREE\.Points\([^\n]*\n/) || [''])[0];
   assert.ok(points(HTML).length > 0);
@@ -347,4 +354,25 @@ test('26. ことばのタネ：金色の実と水色の光の2つを、入れ物
   // ことばの樹の実は金色と水色、灯った実は金色（白く光らせない）
   assert.match(V2, /fruits\.setColorAt\(i, c3\.set\(i === 0 \? 0xffd978 : i % 2 \? 0x8fc6d8 : 0xd6b468\)\);/);
   assert.match(V2, /const LIT = new THREE\.Color\(0xffe08a\), DIM = new THREE\.Color\(0xd6b468\)/);
+});
+
+test('27. Step 11K の美術：祠の結晶と輪は金色・クリーム色（位置・到着判定は同じ）。到着後は光を落ち着かせる', () => {
+  const act = between(V2_CODE, 'function activate(built)', '\n  }\n');
+  assert.match(V2_CODE, /crystalMat = new THREE\.MeshLambertMaterial\(\{ color: 0xf4d58c, emissive: 0x9a6c1c, flatShading: true \}\);/);
+  assert.match(act, /mpCrystal\.material = crystalMat;/);
+  assert.match(act, /mpRing\.material = ringMat; mpRing\.scale\.set\(1\.08, 1\.08, \.32\);/);
+  assert.ok(!/mpGroup\.position|MISSION_RADIUS|MISSION_POS\.set/.test(act), 'no change to the mission point');
+  const upd = between(V2, '  function update(t)', '  function adventure(');
+  assert.match(upd, /calm \+= \(\(state === S\.EXPLORE \? 1 : \.4\) - calm\) \* Math\.min\(1, dt \* 3\);/);
+  assert.match(V2_CODE, /gateMat\.emissive\.setRGB\(0, 0, 0\); calm = 1;/);   // リセットで最初の明るさへ
+});
+
+test('28. Step 11K の美術：木・茂み・岩・草は、場所から決めた差で形と色を変える（乱数の順番・数は変えない）。草花は手前ほど大きい', () => {
+  assert.match(V2_CODE, /const hash2 = \(x, z\) => frac\(Math\.sin\(x \* 12\.9898 \+ z \* 78\.233\) \* 43758\.5453\);/);
+  const loop = between(V2_CODE, 'const vary = VARY.has(name);', 'im.instanceMatrix.needsUpdate');
+  assert.ok(!/rnd\(\)/.test(loop), 'no extra random draws');
+  assert.ok(!/Flowers/.test(between(V2_CODE, 'const VARY = new Set(', ']);')), 'the sky-blue sprout color stays exact');
+  assert.match(V2_CODE, /put\(name, x, z, s \* \(\.85 \+ rnd\(\) \* \.35\) \* depthSize\(x, z\), undefined, depthTint\(x, z\)\)/);
+  // 遠くの丘：日の当たる明るい色と、霧の青緑
+  assert.match(V2_CODE, /c3\.lerp\(cHaze, smooth\(2\.0, 3\.6, eDist\) \* \.42\);/);
 });

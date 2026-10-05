@@ -5,8 +5,8 @@
   "files": [
     {
       "path": "assets/world-v2/tomori-world-kit.glb",
-      "bytes": 179240,
-      "sha256": "abd4b05851dd11214ccfe8f2212687ab0d0ed71c61b9aa89204838527539c20c",
+      "bytes": 181396,
+      "sha256": "060093c48c3ae042084ae0522da23289938bbd441a66b344600e59084f281ca5",
       "format": "glTF 2.0 binary",
       "textures": 0,
       "external_uris": 0
@@ -87,11 +87,11 @@
     },
     {
       "name": "Tree_Round_A",
-      "triangles": 301
+      "triangles": 306
     },
     {
       "name": "Tree_Round_B",
-      "triangles": 301
+      "triangles": 286
     },
     {
       "name": "Tree_Sapling_A",

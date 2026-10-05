@@ -206,6 +206,24 @@ textarea, input { word-break:normal; }
 // TEXT-WRAP-END
 </script>
 <script type="importmap">`],
+  [`scene.add(new THREE.Points(pGeo,new THREE.PointsMaterial({color:0xe0f0c0,size:.14,transparent:true,opacity:.5})));
+`,
+   `scene.add(new THREE.Points(pGeo,new THREE.PointsMaterial({color:0xe0f0c0,size:.14,transparent:true,opacity:.5})));
+// SOFT-DOTS-BEGIN（Step 11K）：上の粒は、カメラの近くで四角い板のように大きく見えていた。丸くやわらかな光の点にする。
+// 画面の大きさは 1.5〜10 ピクセルにおさえ、カメラのすぐ近く（2.5m より手前）と遠く（70m より先）では消える。テクスチャ・通信は使わない
+{
+  const dots = scene.children[scene.children.length - 1];
+  dots.material = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false,
+    uniforms: { color: { value: new THREE.Color(0xfff3cc) }, opacity: { value: .6 }, scale: { value: innerHeight * Math.min(devicePixelRatio, 2) / 2 } },
+    vertexShader: 'uniform float scale; varying float vFade; void main() { vec4 mv = modelViewMatrix * vec4(position, 1.0); float d = -mv.z;'
+      + ' gl_PointSize = clamp(0.14 * scale / max(d, 0.1), 1.5, 10.0); vFade = smoothstep(2.5, 6.0, d) * (1.0 - smoothstep(45.0, 70.0, d)); gl_Position = projectionMatrix * mv; }',
+    fragmentShader: 'uniform vec3 color; uniform float opacity; varying float vFade; void main() { float r = length(gl_PointCoord - 0.5) * 2.0;'
+      + ' float a = 1.0 - smoothstep(0.0, 1.0, r); a *= a; if (a * vFade < 0.01) discard; gl_FragColor = vec4(color, a * opacity * vFade); }',
+  });
+}
+// SOFT-DOTS-END
+`],
 ];
 
 const ART_BLOCK = /\/\/ WORLD-ART-BEGIN[\s\S]*?\/\/ WORLD-ART-END\n\n/;

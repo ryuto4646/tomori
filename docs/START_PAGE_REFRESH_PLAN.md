@@ -4,7 +4,7 @@
 この Step では調べて設計しただけで、`index.html` は変えていません。
 
 - 調べた版：ブランチ `feature/tomori-start-page-refresh`（収録版タグ `tv-recording-candidate-20260928` = `1890884` から作成）
-- 今の画面の撮影：`C:\Users\DELL\Documents\tomori-start-page-audit-20260928\`（`current-start-pc.png`・`current-start-mobile.png`。Git には入れていない）
+- 今の画面の撮影：`%USERPROFILE%\Documents\tomori-start-page-audit-20260928\`（`current-start-pc.png`・`current-start-mobile.png`。Git には入れていない）
 
 ---
 

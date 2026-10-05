@@ -8,7 +8,7 @@
 リポジトリのルートで、次を実行します。
 
 ```
-"C:\Users\DELL\Tools\Blender-5.2.1\blender.exe" --background --factory-startup --python tools/world-v2/generate_tomori_world.py
+"%USERPROFILE%\Tools\Blender-5.2.1\blender.exe" --background --factory-startup --python tools/world-v2/generate_tomori_world.py
 ```
 
 `assets/world-v2/` に3つのファイルができます。

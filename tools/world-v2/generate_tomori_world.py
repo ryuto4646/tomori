@@ -1,7 +1,7 @@
 # TOMORI World V2 のワールドキットを Blender で生成する（外部素材なし・テクスチャなし・頂点色だけ）
 #
 # 実行（リポジトリのルートで）:
-#   "C:\Users\DELL\Tools\Blender-5.2.1\blender.exe" --background --factory-startup --python tools/world-v2/generate_tomori_world.py
+#   "%USERPROFILE%\Tools\Blender-5.2.1\blender.exe" --background --factory-startup --python tools/world-v2/generate_tomori_world.py
 #
 # 出力:
 #   assets/world-v2/tomori-world-kit.glb   … 素材ひとそろい（glTF 2.0・1ファイルで完結）

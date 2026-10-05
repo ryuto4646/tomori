@@ -9,7 +9,7 @@ import { join, dirname } from 'node:path';
 import { createHash } from 'node:crypto';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { inspect, LIMITS, EXPECTED_PARTS } from './tools/validate-hirori-v3.mjs';
+import { inspect, LIMITS, EXPECTED_PARTS, PROFILES } from './tools/validate-hirori-v3.mjs';
 
 const REPO = dirname(fileURLToPath(import.meta.url));
 const DIR = mkdtempSync(join(tmpdir(), 'hirori-v3-test-'));
@@ -102,4 +102,53 @@ test('8. 検査はファイルを書きかえない（前後で SHA-256 が同�
   assert.equal(bad.status, 1);
   const src = readFileSync(join(REPO, 'tools', 'validate-hirori-v3.mjs'), 'utf8');
   assert.ok(!/writeFileSync|appendFileSync|unlinkSync|rmSync|fetch\(|https?:\/\//.test(src.replace(/\/\/.*$/gm, '')), 'read-only, no network');
+});
+
+// ── Step 11K-B：Field（探索用の低ポリ）と Event（重要な場面の精巧な表現）の2つの基準 ──
+const CLI = (...a) => spawnSync(process.execPath, [join(REPO, 'tools', 'validate-hirori-v3.mjs'), ...a], { encoding: 'utf8' });
+
+test('9. 基準の数値：field は 2,000〜5,000 目標・8,000 上限、event は 25,000 目標・40,000 上限。指定しないときは event', () => {
+  assert.deepEqual([PROFILES.field.triangles_min_target, PROFILES.field.triangles_target, PROFILES.field.triangles_max], [2000, 5000, 8000]);
+  assert.deepEqual([PROFILES.event.triangles_target, PROFILES.event.triangles_max], [25000, 40000]);
+  const p = glb('prof-9000.glb', { tris: 9000 });
+  assert.equal(inspect(p).profile, 'event');
+  assert.deepEqual(failed(inspect(p)), []);
+  assert.deepEqual(failed(inspect(p, { profile: 'event' })), []);
+  assert.deepEqual(failed(inspect(p, { profile: 'field' })), ['triangles_max']);
+  assert.throws(() => inspect(p, { profile: 'bogus' }));
+});
+
+test('10. field：3,000 は合格、1,000 は少なすぎて注意（不合格ではない）、8,000 ちょうどは合格で目標こえの注意', () => {
+  const r3 = inspect(glb('f3000.glb', { tris: 3000 }), { profile: 'field' });
+  assert.deepEqual(failed(r3), []); assert.deepEqual(warned(r3), []);
+  const r1 = inspect(glb('f1000.glb', { tris: 1000 }), { profile: 'field' });
+  assert.deepEqual(failed(r1), []); assert.deepEqual(warned(r1), ['triangles_target']);
+  const r8 = inspect(glb('f8000.glb', { tris: 8000 }), { profile: 'field' });
+  assert.deepEqual(failed(r8), []); assert.deepEqual(warned(r8), ['triangles_target']);
+});
+
+test('11. コマンド：--profile field|event を前にも後ろにも書ける。知らない基準・ファイルなしは終了コード2', () => {
+  const p = glb('cli-9000.glb', { tris: 9000 });
+  assert.equal(CLI('--profile', 'event', p).status, 0);
+  assert.equal(CLI(p, '--profile', 'event').status, 0);
+  const f = CLI('--profile', 'field', p);
+  assert.equal(f.status, 1); assert.match(f.stdout, /Field（探索用の低ポリ）：上限 8000/);
+  assert.equal(CLI(p, '--profile', 'field').status, 1);
+  assert.equal(CLI('--profile', 'bogus', p).status, 2);
+  assert.equal(CLI('--profile', 'field').status, 2);
+  assert.equal(CLI(p).status, 0);
+});
+
+test('12. 設計書と仕様書の数値・コマンドが、検査ツールの基準と同じ', () => {
+  const art = readFileSync(join(REPO, 'docs', 'HIRORI_FIELD_AND_EVENT_ART_DIRECTION.md'), 'utf8');
+  const spec = readFileSync(join(REPO, 'docs', 'HIRORI_V3_EXTERNAL_MODEL_SPEC.md'), 'utf8');
+  const fmt = n => n.toLocaleString('en-US');
+  for (const doc of [art, spec]) {
+    assert.ok(doc.includes('node tools/validate-hirori-v3.mjs --profile field <ファイル.glb>'));
+    assert.ok(doc.includes('node tools/validate-hirori-v3.mjs --profile event <ファイル.glb>'));
+    assert.ok(doc.includes(`${fmt(PROFILES.field.triangles_min_target)}〜${fmt(PROFILES.field.triangles_target)}`));
+    assert.ok(doc.includes(fmt(PROFILES.field.triangles_max)) && doc.includes(fmt(PROFILES.event.triangles_max)) && doc.includes(fmt(PROFILES.event.triangles_target)));
+  }
+  // 5つの場面・読み込み失敗・reduced-motion を書いてある
+  for (const s of ['ことばのタネ誕生', 'タネ取得', '根の門開放', 'ことばの樹点灯', '冒険完了', '読み込みに失敗したとき', 'reduced-motion']) assert.ok(art.includes(s), s);
 });

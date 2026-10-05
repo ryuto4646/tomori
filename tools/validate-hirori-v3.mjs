@@ -1,18 +1,25 @@
 #!/usr/bin/env node
 // 外部で作ったヒロリV3（GLB）を受け入れる前の検査。ファイルは読むだけで、書きかえない。通信もしない
-// 使い方: node tools/validate-hirori-v3.mjs <ファイル.glb> [--json]
+// 使い方: node tools/validate-hirori-v3.mjs [--profile field|event] <ファイル.glb> [--json]
+//   field：探索用の低ポリヒロリ（三角形 2,000〜5,000 目標・8,000 上限）
+//   event：重要な場面の精巧なヒロリ（三角形 25,000 目標・40,000 上限）。--profile を付けないときは event
 // 結果: 合格（終了コード0）／不合格（1）／ファイルが読めない（2）。利用規約・ライセンスの確認は、この検査に含まない（人が確かめる）
 import { readFileSync, statSync, existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 
 // docs/HIRORI_V3_EXTERNAL_MODEL_SPEC.md の「GLB の条件」と同じ数値
 export const LIMITS = {
-  triangles_target: 25000, triangles_max: 40000,
+  triangles_target: 25000, triangles_max: 40000,   // event（既定）の値。field は PROFILES で上書きする
   bytes_target: 3 * 1024 * 1024, bytes_max: 8 * 1024 * 1024,
   materials_max: 8,
   height_min: 0.9, height_max: 1.1,          // 全高 約1.0（とさかの先まで）
   sole_tolerance: 0.02,                      // 足裏は Y=0（±2cm）
   center_tolerance: 0.05,                    // 左右の中心は X=0（±5cm）
+};
+// docs/HIRORI_FIELD_AND_EVENT_ART_DIRECTION.md の「三角形の数」と同じ数値
+export const PROFILES = {
+  field: { label: 'Field（探索用の低ポリ）', triangles_min_target: 2000, triangles_target: 5000, triangles_max: 8000 },
+  event: { label: 'Event（重要な場面の精巧な表現）', triangles_min_target: 0, triangles_target: LIMITS.triangles_target, triangles_max: LIMITS.triangles_max },
 };
 const FORBIDDEN_NAMES = /tail|arm(?!ature)|hand|finger|claw|ear(?!th)|horn|nose|尻尾|腕|手|指|爪|耳|角|鼻/i;
 const UNNEEDED_NAMES = /^(camera|light|lamp|sun|plane|cube|empty|backdrop|ground|floor)(\.\d+)?$/i;
@@ -31,8 +38,10 @@ function nodeMatrix(n) {
     2 * (x * z + y * w) * sz, 2 * (y * z - x * w) * sz, (1 - 2 * (x * x + y * y)) * sz, 0, tx, ty, tz, 1];
 }
 
-export function inspect(path) {
-  const out = { file: path, checks: [], facts: {} };
+export function inspect(path, { profile = 'event' } = {}) {
+  const P = PROFILES[profile];
+  if (!P) throw new Error(`知らない profile: ${profile}（field か event）`);
+  const out = { file: path, profile, checks: [], facts: {} };
   const add = (id, ok, detail, level = 'error') => out.checks.push({ id, ok, level: ok ? 'ok' : level, detail });
   if (!existsSync(path)) { add('file_exists', false, 'ファイルがありません'); return out; }
   const buf = readFileSync(path);
@@ -106,8 +115,9 @@ export function inspect(path) {
   out.facts.height = +(max[1] - min[1]).toFixed(4);
   out.facts.sole_y = +min[1].toFixed(4);
   out.facts.center_x = +((min[0] + max[0]) / 2).toFixed(4);
-  add('triangles_target', tris <= LIMITS.triangles_target, `三角形 ${tris}（目標 ${LIMITS.triangles_target} 以下）`, 'warn');
-  add('triangles_max', tris <= LIMITS.triangles_max, `三角形 ${tris}（上限 ${LIMITS.triangles_max}）`);
+  add('triangles_target', tris >= P.triangles_min_target && tris <= P.triangles_target,
+    `三角形 ${tris}（${P.label}：目標 ${P.triangles_min_target ? P.triangles_min_target + '〜' : ''}${P.triangles_target}${P.triangles_min_target ? '' : ' 以下'}）`, 'warn');
+  add('triangles_max', tris <= P.triangles_max, `三角形 ${tris}（${P.label}：上限 ${P.triangles_max}）`);
   add('height_about_1', out.facts.height >= LIMITS.height_min && out.facts.height <= LIMITS.height_max, `全高 ${out.facts.height}（${LIMITS.height_min}〜${LIMITS.height_max}）`);
   add('sole_at_y0', Math.abs(out.facts.sole_y) <= LIMITS.sole_tolerance, `足裏の高さ ${out.facts.sole_y}（Y=0 ±${LIMITS.sole_tolerance}）`);
   add('center_x0', Math.abs(out.facts.center_x) <= LIMITS.center_tolerance, `左右の中心 ${out.facts.center_x}（X=0 ±${LIMITS.center_tolerance}）`, 'warn');
@@ -130,14 +140,16 @@ export function inspect(path) {
 
 const isMain = process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/').split('/').pop());
 if (isMain) {
-  const file = process.argv[2];
-  if (!file) { console.error('使い方: node tools/validate-hirori-v3.mjs <ファイル.glb> [--json]'); process.exit(2); }
+  const args = process.argv.slice(2), USAGE = '使い方: node tools/validate-hirori-v3.mjs [--profile field|event] <ファイル.glb> [--json]';
+  const pi = args.indexOf('--profile'), profile = pi >= 0 ? args[pi + 1] : 'event';
+  const file = args.find((a, i) => !a.startsWith('--') && !(pi >= 0 && i === pi + 1));
+  if (!file || !PROFILES[profile]) { console.error(USAGE); process.exit(2); }
   let r;
-  try { r = inspect(file); } catch (e) { console.error('読めませんでした: ' + e.message); process.exit(2); }
+  try { r = inspect(file, { profile }); } catch (e) { console.error('読めませんでした: ' + e.message); process.exit(2); }
   const errors = r.checks.filter(c => c.level === 'error'), warns = r.checks.filter(c => c.level === 'warn');
   if (process.argv.includes('--json')) console.log(JSON.stringify({ ...r, pass: errors.length === 0 }, null, 2));
   else {
-    console.log(`ヒロリV3 受け入れ検査: ${file}`);
+    console.log(`ヒロリV3 受け入れ検査: ${file}（${PROFILES[profile].label}）`);
     for (const c of r.checks) console.log(`  ${c.level === 'ok' ? '合格' : c.level === 'warn' ? '注意' : '不合格'}  ${c.id}  ${c.detail}`);
     console.log(`  SHA-256 ${r.facts.sha256 || '-'}`);
     console.log(errors.length === 0 ? `結果: 合格（注意 ${warns.length} 件）` : `結果: 不合格 ${errors.length} 件（注意 ${warns.length} 件）`);

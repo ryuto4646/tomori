@@ -52,7 +52,8 @@ TOMORI のキャラクター「ヒロリ」の3Dモデルを、外部のサー�
 | 左右の中心 | X = 0 |
 | 上方向 | +Y |
 | 前方向 | +Z（glTF の標準。Three.js にそのまま読み込むと、カメラの側を向く） |
-| 三角形 | 25,000 以下を目標。40,000 が上限 |
+| 三角形（Event 版） | 25,000 以下を目標。40,000 が上限 |
+| 三角形（Field 版） | 2,000〜5,000 を目標。8,000 が上限（`HIRORI_FIELD_AND_EVENT_ART_DIRECTION.md`） |
 | ファイルの大きさ | 3MB 以下を目標。8MB が上限 |
 | マテリアル | 8 以下 |
 | 入れないもの | カメラ・ライト・床・背景の板 |
@@ -82,8 +83,11 @@ TOMORI のキャラクター「ヒロリ」の3Dモデルを、外部のサー�
 2. 検査ツールを実行する
 
    ```
-   node tools/validate-hirori-v3.mjs <ファイル.glb>
+   node tools/validate-hirori-v3.mjs --profile field <ファイル.glb>
+   node tools/validate-hirori-v3.mjs --profile event <ファイル.glb>
    ```
+
+   - 探索用の低ポリは `field`、節目の場面の精巧な3Dは `event` で検査する（付けないときは `event`）
 
    - 「不合格」が1つでもあれば受け入れない
    - 「注意」は、内容を見て判断する（部位の名前が足りない場合は、対応表があればよい）

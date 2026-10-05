@@ -217,7 +217,8 @@ test('14. 既存の移動・到着・リセット・描画ループにつなが�
   assert.match(HTML, /character = createHiroriPlaceholder\(\);/);
   assert.match(HTML, /function triggerMission\(\)\{[\s\S]*?if\(!mixer\) startHiroriArrival\(\);[\s\S]*?setState\(S\.MISSION_FOUND\);/);
   assert.match(HTML, /function doReset\(\)\{[\s\S]*?resetHiroriMotion\(\);/);
-  assert.match(HTML, /if\(!mixer\)\{[\s\S]*?updateHiroriMotion\(character, dt, t, walking\);/);
+  // Step 11L-A：Field ヒロリを読み込めたときはその動き、読み込めないときは仮ヒロリの動き
+  assert.match(HTML, /if\(!mixer\)\{[\s\S]*?\(fieldHirori\.active\(\) \? fieldHirori\.update : updateHiroriMotion\)\(character, dt, t, walking\);/);
   assert.match(HTML, /turnToward\(character, hiroriMotion\.facing, dt\);/);
   assert.ok(!/mkPlaceholder/.test(HTML));
 });

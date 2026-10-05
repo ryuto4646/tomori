@@ -82,7 +82,7 @@ const WORLD_QUALITY = (() => {
 
     // 距離チェック（探索中のみ）
 `,
-   `      updateHiroriMotion(character, dt, t, walking);
+   `      (fieldHirori.active() ? fieldHirori.update : updateHiroriMotion)(character, dt, t, walking);   // Field ヒロリを読み込めたら、その動き（Step 11L-A）
     }
     worldV2.groundCharacter(character);   // 歩ける範囲の内側・地面の高さへ（WORLD-V2。仮ヒロリの上下の弾みのあとに足す）
 
@@ -253,6 +253,130 @@ rt { font-size:0.55em; color:#7a8060; }
     const titleEl = document.createElement('div');
     titleEl.className = 'word-title';
     titleEl.textContent = word;
+`],
+  [`character = createHiroriPlaceholder();
+scene.add(character);
+`,
+   `character = createHiroriPlaceholder();
+scene.add(character);
+// FIELD-HIRORI-BEGIN（Step 11L-A：探索用の低ポリヒロリ。test-field-hirori.mjs がこの範囲を読み込んでテストする）
+// assets/hirori-field/hirori-field.glb（tools/hirori-field/generate_hirori_field.py で作る）を同じ場所から読み込み、
+// 読み込みがすべて成功したときだけ、仮ヒロリの見た目と入れかえる。失敗・8秒をこえたときは仮ヒロリのまま。
+// 位置・向き・影・カメラ・名前の表示は仮ヒロリ（character）のものをそのまま使う。?hirori=placeholder で仮ヒロリに固定できる
+const fieldHirori = (() => {
+  const URL_GLB = 'assets/hirori-field/hirori-field.glb', TIMEOUT_MS = 8000, SCALE = 2.0;   // GLB は全高約1.0。仮ヒロリ（約2.0）にそろえる
+  let active = false, P = null;
+  const wanted = new URLSearchParams(location.search).get('hirori') !== 'placeholder';
+  // GLB を読む：ノードの階層（位置・回転・大きさ）と、形（位置・法線・頂点色・番号）と、素材の色だけ。画像は使わない
+  function parse(buf) {
+    const dv = new DataView(buf);
+    if (dv.getUint32(0, true) !== 0x46546C67 || dv.getUint32(4, true) !== 2) throw new Error('not glb2');
+    const jlen = dv.getUint32(12, true);
+    const json = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 20, jlen)));
+    const binOff = 20 + jlen + 8;
+    if ((json.images || []).length || (json.textures || []).length || (json.buffers || []).some(b => b.uri)) throw new Error('external data');
+    const TYPES = { 5121: Uint8Array, 5123: Uint16Array, 5125: Uint32Array, 5126: Float32Array }, N = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4 };
+    const read = i => {
+      const a = json.accessors[i], v = json.bufferViews[a.bufferView], T = TYPES[a.componentType], n = N[a.type];
+      if (!T || !n || (v.byteStride && v.byteStride !== n * T.BYTES_PER_ELEMENT)) throw new Error('accessor');
+      return new THREE.BufferAttribute(new T(buf.slice(binOff + (v.byteOffset || 0) + (a.byteOffset || 0), binOff + (v.byteOffset || 0) + (a.byteOffset || 0) + a.count * n * T.BYTES_PER_ELEMENT)), n, !!a.normalized);
+    };
+    const mats = (json.materials || []).map(m => {
+      const f = (m.pbrMetallicRoughness && m.pbrMetallicRoughness.baseColorFactor) || [1, 1, 1, 1];
+      return new THREE.MeshStandardMaterial({ color: new THREE.Color().setRGB(f[0], f[1], f[2], THREE.LinearSRGBColorSpace), roughness: .86, metalness: 0 });
+    });
+    const nodes = json.nodes.map(nd => {
+      const o = new THREE.Group(); o.name = nd.name || '';
+      if (nd.translation) o.position.fromArray(nd.translation);
+      if (nd.rotation) o.quaternion.fromArray(nd.rotation);
+      if (nd.scale) o.scale.fromArray(nd.scale);
+      if (nd.mesh !== undefined) for (const pr of json.meshes[nd.mesh].primitives) {
+        const g = new THREE.BufferGeometry();
+        g.setAttribute('position', read(pr.attributes.POSITION));
+        if (pr.attributes.NORMAL !== undefined) g.setAttribute('normal', read(pr.attributes.NORMAL));
+        let mat = mats[pr.material] || mats[0];
+        // 頂点色：Blender の書き出しは、白いだけの COLOR_0 の後に、塗った色（目・口）を COLOR_1 として入れる。いちばん後ろの色を使う
+        const ck = Object.keys(pr.attributes).filter(k => /^COLOR_\\d+$/.test(k)).sort().pop();
+        if (ck) { g.setAttribute('color', read(pr.attributes[ck])); mat = mat.userData.vc || (mat.userData.vc = Object.assign(mat.clone(), { vertexColors: true })); }
+        if (pr.indices !== undefined) g.setIndex(read(pr.indices));
+        const me = new THREE.Mesh(g, mat); me.name = o.name; o.add(me);
+      }
+      return o;
+    });
+    json.nodes.forEach((nd, i) => (nd.children || []).forEach(c => nodes[i].add(nodes[c])));
+    const top = new THREE.Group(); top.name = 'FieldHirori';
+    for (const i of json.scenes[json.scene || 0].nodes) top.add(nodes[i]);
+    const get = n => { const o = top.getObjectByName(n); if (!o) throw new Error('node ' + n); return o; };
+    // 動かす部位（毎フレーム探さない）。とさかは顔側から 01〜04
+    const parts = { top, body: get('Hirori_Body'), legL: get('Hirori_Leg_L'), legR: get('Hirori_Leg_R'), wingL: get('Hirori_Wing_L'), wingR: get('Hirori_Wing_R'),
+      crest: [1, 2, 3, 4].map(k => get('Hirori_Crest_0' + k)), eyes: ['Hirori_Eye_L', 'Hirori_Eye_R', 'Hirori_EyeHighlight_L', 'Hirori_EyeHighlight_R'].map(get), upper: new THREE.Group() };
+    // 脚と足以外（頭・胴・顔・とさか・羽）を1つにまとめ、呼吸と歩く上下動をまとめて付ける
+    const root = get('Hirori_Root');
+    for (const o of root.children.slice()) if (o !== parts.legL && o !== parts.legR) parts.upper.add(o);
+    root.add(parts.upper);
+    parts.wingBase = [parts.wingL.rotation.z, parts.wingR.rotation.z];
+    top.scale.setScalar(SCALE);
+    top.traverse(o => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; } });
+    return parts;
+  }
+  // 入れかえ：仮ヒロリの体（影の円のほか）を隠し、Field ヒロリを足す。位置と向きは character のまま
+  function attach(root, parts) {
+    const pp = root.userData.parts;
+    for (const o of root.children) if (o !== pp.shadow) o.visible = false;
+    root.add(parts.top); P = parts; active = true;
+  }
+  function load(root) {
+    if (!wanted) return Promise.resolve(false);
+    return new Promise(resolve => {
+      let done = false;
+      const finish = ok => { if (!done) { done = true; resolve(ok); } };
+      const timer = setTimeout(() => finish(false), TIMEOUT_MS);
+      new THREE.FileLoader().setResponseType('arraybuffer').load(URL_GLB, buf => {
+        if (done) return;
+        try { const parts = parse(buf); clearTimeout(timer); if (!done) { attach(root, parts); finish(true); } }
+        catch (e) { clearTimeout(timer); finish(false); }
+      }, undefined, () => { clearTimeout(timer); finish(false); });
+    });
+  }
+  // 動き：待機は小さな呼吸、歩くときは左右の脚が交互に動き、羽が小さく揺れ、とさかが少し遅れて揺れる。上下の弾みは仮ヒロリと同じ
+  // reduced-motion では、羽・とさかの揺れと上下動を止める（脚は歩いていることが分かる小ささで動かす）
+  function update(root, dt, t, moving) {
+    const m = hiroriMotion, reduce = reduceMotionQuery.matches, deco = reduce ? 0 : 1, lift = reduce ? 0 : 1;
+    m.walkBlend += ((moving ? 1 : 0) - m.walkBlend) * (1 - Math.exp(-10 * dt));
+    const w = m.walkBlend;
+    if (moving) m.phase += dt * SPEED * (Math.PI * 2) / STRIDE_UNITS;
+    const s = Math.sin(m.phase);
+    P.legL.rotation.x = s * (reduce ? .3 : .55) * w;
+    P.legR.rotation.x = -s * (reduce ? .3 : .55) * w;
+    const breath = Math.sin(t * 2.0);
+    P.upper.position.y = (breath * .006 * (1 - w) + Math.abs(s) * .02 * w) * lift;
+    P.upper.scale.y = 1 + breath * .012 * (1 - w) * deco;
+    P.upper.rotation.z = s * .035 * w * deco;
+    P.wingL.rotation.z = P.wingBase[0] + (Math.sin(t * 1.6) * .03 * (1 - w) + s * .14 * w) * deco;
+    P.wingR.rotation.z = P.wingBase[1] - (Math.sin(t * 1.6) * .03 * (1 - w) - s * .14 * w) * deco;
+    for (let i = 0; i < 4; i++) P.crest[i].rotation.x = (Math.sin(t * 1.2 - .5 - i * .35) * .04 * (1 - w) + Math.sin(m.phase * 2 - 1.1 - i * .4) * .07 * w) * deco;
+    // 到着：小さく跳ね、羽が少し開く（1回だけ）
+    let hop = 0;
+    if (m.arrivalT >= 0) {
+      m.arrivalT += dt;
+      const u = Math.min(m.arrivalT / ARRIVAL_SEC, 1), k = Math.sin(Math.PI * u);
+      hop = k * .22 * lift;
+      P.wingL.rotation.z += k * .35 * deco; P.wingR.rotation.z -= k * .35 * deco;
+      if (u >= 1) m.arrivalT = -1;
+    }
+    root.position.y = hop;
+    const sh = root.userData.parts.shadow;
+    sh.position.y = .012 - hop; sh.scale.setScalar(.42 * (1 - hop));
+    // まばたき：数秒に一度（目とハイライトを縦につぶす）
+    if (m.blinkT < 0) { m.blinkIn -= dt; if (m.blinkIn <= 0) { m.blinkT = 0; m.blinkIn = 2.5 + Math.random() * 3; } }
+    let eyeY = 1;
+    if (m.blinkT >= 0) { m.blinkT += dt; eyeY = m.blinkT < .14 ? Math.max(.12, Math.abs(1 - m.blinkT / .07)) : 1; if (m.blinkT >= .14) m.blinkT = -1; }
+    for (let i = 0; i < 4; i++) P.eyes[i].scale.y = eyeY;
+  }
+  return { load, update, active: () => active, parse };
+})();
+fieldHirori.ready = fieldHirori.load(character);
+// FIELD-HIRORI-END
 `],
 ];
 

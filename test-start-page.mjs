@@ -83,8 +83,8 @@ test('3. demo-world.html は WebGL 非対応画面の3か所とワールド美�
   for (const f of ['start-tv-demo.cmd', 'docs/TV_RECORDING_RUNBOOK.md']) {
     assert.equal(normalize(readFileSync(join(REPO, f), 'utf8')), normalize(atTag(f)), f);
   }
-  // 「← アプリへ」は index.html を指したまま（新しいスタートページへ戻る）
-  assert.match(readFileSync(join(REPO, 'demo-world.html'), 'utf8'), /id="btn-back"\s+onclick="window\.location\.href='index\.html'"/);
+  // 上部のボタンは、紹介ページ（LP）へ戻る（テレビ向けの導線。古いスタートページ index.html は残すが、ここからは進まない）
+  assert.match(readFileSync(join(REPO, 'demo-world.html'), 'utf8'), /id="btn-back"\s+onclick="window\.location\.href='\.\.\/tomori-lp\/'"/);
 });
 
 test('3b. 収録版タグは 1890884 を指したまま・AI スイッチは true のまま', () => {
@@ -247,8 +247,8 @@ test('21b. 非対応画面に「😢」「3Dを使わずに続ける」「通常
   assert.ok(!DEMO_NOW().includes('通常モードで続ける'));
 });
 
-test('22. ふだんの「← アプリへ」は index.html、新しい index の CTA は ./demo-world.html のまま', () => {
-  assert.match(DEMO_NOW(), /<button id="btn-back"\s+onclick="window\.location\.href='index\.html'">← アプリへ<\/button>/);
+test('22. 上部の「← 紹介ページへ」は紹介ページ（LP）へ戻る。新しい index の CTA は ./demo-world.html のまま', () => {
+  assert.match(DEMO_NOW(), /<button id="btn-back"\s+onclick="window\.location\.href='\.\.\/tomori-lp\/'">← 紹介ページへ<\/button>/);
   if (ROOT === REPO) assert.ok(HTML.includes('<a class="cta" href="./demo-world.html">冒険をはじめる</a>'));
 });
 

@@ -294,7 +294,7 @@ textarea, input { word-break:normal; }
 
 <div id="ui">
   <button id="btn-reset" onclick="window.confirmReset()">デモを最初から</button>
-  <button id="btn-back"  onclick="window.location.href='index.html'">← アプリへ</button>
+  <button id="btn-back"  onclick="window.location.href='../tomori-lp/'">← 紹介ページへ</button>
   <div id="mission-bar"><span id="mbar-text">光るポイントを探して歩こう！</span></div>
   <div id="hint"><span class="nowrap">タップした場所へ歩くよ！</span>　<span class="nowrap">パソコン：W A S D</span> <span class="nowrap">または 矢印キー</span></div>
   <div id="overlay-world"><div id="word-announce"></div></div>
@@ -2018,7 +2018,7 @@ const worldV2 = (() => {
       more.className = 'btn-secondary'; more.textContent = 'もう少し歩いてみる';
       more.style.cssText = 'width:auto;display:inline-block;min-height:44px;padding:10px 22px;margin:0 auto';
       more.addEventListener('click', () => demoEnd.classList.remove('show'));
-      back.href = 'index.html'; back.textContent = 'スタートへ戻る';
+      back.href = '../tomori-lp/'; back.textContent = '紹介ページへ戻る';   // テレビ向けの導線：紹介ページ（LP。同じサイトの tomori-lp）へ戻る
       back.style.cssText = 'display:flex;align-items:center;justify-content:center;min-height:44px;margin-top:10px;font-size:13px;color:#7a6040';   // 指で押しやすい高さ（44px）
       finaleNodes = [l1, l2, more, back];
     }

@@ -192,11 +192,12 @@ test('13. 上部の案内は5つ（＋タネへのひとこと）。どれも一
   assert.match(V2_CODE, /function say\(text\) \{ mbarText\.textContent = text; \}/);
 });
 
-test('14. 完了のことばは既存の枠を使い、textContent で作る。「もう少し歩いてみる」と「スタートへ戻る」', () => {
+test('14. 完了のことばは既存の枠を使い、textContent で作る。「もう少し歩いてみる」と「紹介ページへ戻る」', () => {
   const fin = between(V2_CODE, 'function showFinale()', 'function reset()');
-  for (const s of ["'きみのことばが、世界をひとつ灯した。'", "'ことばの樹には、まだ眠っている実がある。'", "'もう少し歩いてみる'", "'スタートへ戻る'"]) assert.ok(fin.includes(s), s);
+  for (const s of ["'きみのことばが、世界をひとつ灯した。'", "'ことばの樹には、まだ眠っている実がある。'", "'もう少し歩いてみる'", "'紹介ページへ戻る'"]) assert.ok(fin.includes(s), s);
   assert.match(fin, /document\.createElement\('button'\)/);
-  assert.match(fin, /back\.href = 'index\.html';/);
+  // テレビ向けの導線：紹介ページ（LP。Pages では https://ryuto4646.github.io/tomori-lp/）へ戻る
+  assert.match(fin, /back\.href = '\.\.\/tomori-lp\/';/);
   assert.match(fin, /more\.addEventListener\('click', \(\) => demoEnd\.classList\.remove\('show'\)\);/);
   assert.match(fin, /demoEnd\.replaceChildren\(\.\.\.finaleNodes\);/);
   // 冒険のあいだは V1 のデモ終了（遠くの光）を出さない

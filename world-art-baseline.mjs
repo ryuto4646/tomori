@@ -612,6 +612,8 @@ document.getElementById('secret-input').addEventListener('input',function(){`],
 .secret-insight { font-size:16px; }
 .secret-choice { display:block; width:100%; text-align:left; font-size:16px; font-weight:bold; color:#3a7a28; margin-bottom:10px; font-family:inherit; }
 `],
+  [`  <button id="btn-back"  onclick="window.location.href='index.html'">← アプリへ</button>`,
+   `  <button id="btn-back"  onclick="window.location.href='../tomori-lp/'">← 紹介ページへ</button>`],
 ];
 
 const ART_BLOCK = /\/\/ WORLD-ART-BEGIN[\s\S]*?\/\/ WORLD-ART-END\n\n/;

@@ -57,7 +57,7 @@ test('2. 部位：とさか4枚・羽2枚・脚と足が2つずつ・目2つ。�
   for (const s of [raw, man, gen]) assert.ok(!/mouth|tongue/i.test(s), 'no mouth');
   assert.ok(!/nose/i.test(raw) && !/nose/i.test(man), 'no nose part');
   // 目は正面から正円（横の半径と縦の半径が同じ）
-  assert.match(gen, /eye_r=\(0\.0387, 0\.016, 0\.0387\)/);
+  assert.match(gen, /eye_r=\(0\.01935, 0\.008, 0\.01935\)/);
   assert.equal(names.filter(n => /^Hirori_Crest_0[1-4]$/.test(n)).length, 4);
   assert.equal(names.filter(n => /Crest/.test(n)).length, 4);
   assert.ok(!names.some(n => /nose|tail|arm(?!ature)|hand|finger|claw|ear(?!th)|horn/i.test(n)));

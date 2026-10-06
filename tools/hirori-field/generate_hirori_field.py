@@ -65,7 +65,7 @@ P = dict(
     wing_len=0.225, wing_w=0.115, wing_back_deg=8.0, wing_face_deg=40.0, wing_open_min=14.0, wing_open_max=30.0,
     leg_x=0.056, hip_z=0.110, ankle_z=0.040, leg_r_top=0.046, leg_r_bot=0.036,     # 脚の上はおなかの中。見える長さは修正前の約半分
     foot_len=0.148, foot_w=0.094, foot_h=0.050, foot_out_deg=8.0,                  # 足は修正前の約88%（3本指・しっかり踏む）
-    eye_x=0.086 * HEAD_K * 0.92, eye_z=hz(0.592), eye_r=(0.0387, 0.016, 0.0387), eye_proud=0.0115,
+    eye_x=0.086 * HEAD_K * 0.92 * 0.85, eye_z=hz(0.592), eye_r=(0.01935, 0.008, 0.01935), eye_proud=0.0068,   # 目の直径は前の50%（正円）
     crest_len=tuple(v * CREST_K for v in (0.235, 0.200, 0.168, 0.136)), crest_w=tuple(v * CREST_K for v in (0.080, 0.070, 0.060, 0.050)),
     crest_t=tuple(v * CREST_K for v in (0.104, 0.090, 0.076, 0.062)),
     crest_root_deg=(-4.0, 18.0, 40.0, 62.0), crest_dir_deg=(36.0, 62.0, 88.0, 114.0), crest_bend=0.34,
@@ -348,9 +348,9 @@ def eye(side):
     bmesh.ops.transform(b, matrix=aim, verts=b.verts)
     bmesh.ops.translate(b, verts=b.verts, vec=center)
     ob = mesh_obj('Hirori_Eye_' + nm, b, [MAT['eye']], center, root)
-    hb = ellipsoid_bm((0.0072, 0.0035, 0.0072), 8, 5)                          # ハイライト：瞳の上、少し外側（左右で同じ向き）
+    hb = ellipsoid_bm((0.0036, 0.0018, 0.0036), 8, 5)                          # ハイライト：瞳の上、少し外側（左右で同じ向き）
     paint(hb, lambda co: lin(COL['hilite']))
-    hp = center + aim @ V(-0.013 * EYE_K, -r[1] * 1.05, 0.018 * EYE_K)
+    hp = center + aim @ V(-0.0065 * EYE_K, -r[1] * 1.05, 0.009 * EYE_K)
     bmesh.ops.translate(hb, verts=hb.verts, vec=hp)
     mesh_obj('Hirori_EyeHighlight_' + nm, hb, [MAT['eye']], hp, root)
     return ob

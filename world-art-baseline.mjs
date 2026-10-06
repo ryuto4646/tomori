@@ -382,6 +382,67 @@ const fieldHirori = (() => {
 fieldHirori.ready = fieldHirori.load(character);
 // FIELD-HIRORI-END
 `],
+  [`  padding:20px 20px 36px; pointer-events:all;
+  transform:translateY(100%); transition:transform .4s cubic-bezier(.22,.68,0,1.2);
+  max-height:82vh; overflow-y:auto; box-shadow:0 -4px 24px rgba(0,0,0,.14);
+}
+.panel.show { transform:translateY(0); }`,
+   `  padding:20px 20px calc(36px + env(safe-area-inset-bottom, 0px)); pointer-events:all;
+  transform:translateY(100%); transition:transform .4s cubic-bezier(.22,.68,0,1.2), visibility 0s linear .4s;
+  max-height:82vh; overflow-y:auto; box-shadow:0 -4px 24px rgba(0,0,0,.14);
+  /* PANEL-HIDE（Step 11L-C）：iPhone はキーボードを出すときページを上へずらすので、下へずらしただけのパネルが画面に入ってしまう。
+     出ていないパネルは見えなくする（下へ戻る動きの 0.4 秒のあとに消える） */
+  visibility:hidden;
+}
+.panel.show { transform:translateY(0); visibility:visible; transition:transform .4s cubic-bezier(.22,.68,0,1.2), visibility 0s; }`],
+  [`function applyUI() {
+  stopVoice();
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('show'));`,
+   `function applyUI() {
+  stopVoice();
+  document.querySelectorAll('.panel').forEach(p => { p.classList.remove('show'); p.inert = true; p.setAttribute('aria-hidden', 'true'); });   // PANEL-HIDE（Step 11L-C）
+  resetPageScroll();`],
+  [`function openPanel(id) {
+  requestAnimationFrame(() => document.getElementById(id).classList.add('show'));
+}`,
+   `function openPanel(id) {
+  const el = document.getElementById(id), at = state;
+  el.inert = false; el.removeAttribute('aria-hidden');
+  requestAnimationFrame(() => { if (state === at) el.classList.add('show'); });   // PANEL-HIDE（Step 11L-C）：状態が先へ進んでいたら出さない
+}
+
+// PANEL-HIDE（Step 11L-C）：iPhone のキーボードでずれたページを、元の位置（いちばん上）へ戻す。3D の画面とパネルの位置をそろえる
+function resetPageScroll() {
+  if (window.scrollY || document.scrollingElement.scrollTop) { window.scrollTo(0, 0); document.scrollingElement.scrollTop = 0; }
+}
+// 入力欄からフォーカスが外れたら（キーボードが閉じたら）、ずれたページを戻す。別の入力欄へ移っただけのときは戻さない
+document.addEventListener('focusout', e => {
+  if (!e.target || !/^(TEXTAREA|INPUT)$/.test(e.target.tagName)) return;
+  setTimeout(() => { const a = document.activeElement; if (!a || !/^(TEXTAREA|INPUT)$/.test(a.tagName)) resetPageScroll(); }, 60);
+});`],
+  [`window.toSecretText = ()=>setState(S.SECRET_UNLOCKED);`,
+   `let secretSent = false;   // 深掘りの答えを送ったか（二重に送らない：Step 11L-C）
+window.toSecretText = ()=>{ secretSent = false; setState(S.SECRET_UNLOCKED); };`],
+  [`window.revealSecret = ()=>{
+  if(!document.getElementById('secret-input').value.trim()) return;`,
+   `window.revealSecret = ()=>{
+  if(!document.getElementById('secret-input').value.trim()) return;
+  if(state !== S.SECRET_UNLOCKED || secretSent) return;   // 1回だけ（連打・Enter と押す の重なりを受けない）
+  secretSent = true;
+  const sp = document.getElementById('panel-secret-t');   // 質問パネルは、ここですぐ閉じる
+  sp.classList.remove('show'); sp.inert = true; sp.setAttribute('aria-hidden', 'true');
+  document.getElementById('secret-input').blur(); document.getElementById('btn-secret-next').classList.add('btn-disabled');
+  resetPageScroll();`],
+  [`document.getElementById('secret-input').addEventListener('input',function(){`,
+   `document.getElementById('secret-input').addEventListener('keydown', e => {   // Enter で送る。日本語の変換を確定する Enter では送らない
+  if (e.key !== 'Enter' || e.shiftKey || e.isComposing || e.keyCode === 229) return;
+  e.preventDefault(); window.revealSecret();
+});
+document.getElementById('secret-input').addEventListener('input',function(){`],
+  [`  document.getElementById('btn-secret-next').classList.add('btn-disabled');
+  document.getElementById('inp-cam').value='';`,
+   `  document.getElementById('btn-secret-next').classList.add('btn-disabled'); secretSent = false;
+  document.getElementById('inp-cam').value='';`],
 ];
 
 const ART_BLOCK = /\/\/ WORLD-ART-BEGIN[\s\S]*?\/\/ WORLD-ART-END\n\n/;

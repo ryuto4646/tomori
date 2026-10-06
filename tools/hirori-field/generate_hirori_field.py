@@ -62,7 +62,7 @@ EYE_K, CREST_K = 0.72, 0.50                         # 目の縮小率・とさ�
 P = dict(
     head_c=(0.0, -0.020 * HEAD_K, hz(0.600)),
     shoulder_x=0.145, shoulder_y=0.004, shoulder_z=0.420,
-    wing_len=0.225, wing_w=0.115, wing_back_deg=8.0, wing_face_deg=40.0, wing_open_min=14.0, wing_open_max=30.0,
+    wing_len=0.430, wing_w=0.138, wing_back_deg=8.0, wing_face_deg=40.0, wing_open_min=14.0, wing_open_max=18.0,   # Step 11L-B：羽先が足の横から地面近くまで届く長さ（約1.9倍）・幅は約1.2倍。外へ14〜18°
     leg_x=0.056, hip_z=0.110, ankle_z=0.040, leg_r_top=0.046, leg_r_bot=0.036,     # 脚の上はおなかの中。見える長さは修正前の約半分
     foot_len=0.148, foot_w=0.094, foot_h=0.050, foot_out_deg=8.0,                  # 足は修正前の約88%（3本指・しっかり踏む）
     eye_x=0.086 * HEAD_K * 0.92 * 0.85, eye_z=hz(0.592), eye_r=(0.01935, 0.008, 0.01935), eye_proud=0.0068,   # 目の直径は前の50%（正円）
@@ -464,7 +464,7 @@ def wing(side):
             for s in (-1, -0.5, 0, 0.5, 1):
                 x, zt, zb = shape(t, s)
                 p = sh - D * 0.02 + D * (t * L) + X * x + Out * zb
-                if t > 0.30 and inside_body(p, 0.006): ok = False
+                if t > 0.30 and inside_body(p, 0.030): ok = False   # 羽の中ほどから先は、胴から少し離す
         if ok: break
         open_deg += 1.0
     D, Out, X = wing_frame(side, open_deg)

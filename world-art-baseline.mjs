@@ -340,7 +340,7 @@ const fieldHirori = (() => {
   }
   // 動き：よちよち歩き。歩幅は仮ヒロリの75%（移動速度は同じなので、足を速く小さく動かす）。脚は小さく振り、体は左右へ少しだけ重心を移す
   // 待機は小さな呼吸。羽は小さく揺れ、とさかは少し遅れて揺れる。reduced-motion では、左右の揺れ・飾りの上下動・羽・とさかを止める
-  const STRIDE = STRIDE_UNITS * .75;
+  const STRIDE = STRIDE_UNITS * .75, WING_FLAP = .17, WING_IDLE = .03;   // 羽：歩くときの上・外への振れ（約10°）、待機の呼吸（約1.7°）
   function update(root, dt, t, moving) {
     const m = hiroriMotion, reduce = reduceMotionQuery.matches, deco = reduce ? 0 : 1, lift = reduce ? 0 : 1;
     m.walkBlend += ((moving ? 1 : 0) - m.walkBlend) * (1 - Math.exp(-10 * dt));
@@ -354,8 +354,10 @@ const fieldHirori = (() => {
     P.upper.scale.y = 1 + breath * .012 * (1 - w) * deco;
     P.upper.rotation.z = s * .07 * w * deco;          // 左右へ少しだけ重心を移す（よちよち）
     P.upper.position.x = s * .008 * w * deco;
-    P.wingL.rotation.z = P.wingBase[0] + (Math.sin(t * 1.6) * .03 * (1 - w) + s * .14 * w) * deco;
-    P.wingR.rotation.z = P.wingBase[1] - (Math.sin(t * 1.6) * .03 * (1 - w) - s * .14 * w) * deco;
+    // 羽：歩くあいだだけ、左右いっしょに上・外へ小さくパタパタ（約10°。待機の角度より下へは振らない）。待機中は呼吸ほど（2°以下）
+    const flap = (.5 - .5 * Math.cos(m.phase * 2)) * WING_FLAP * w + (.5 - .5 * Math.cos(t * 1.6)) * WING_IDLE * (1 - w);
+    P.wingL.rotation.z = P.wingBase[0] + flap * deco;
+    P.wingR.rotation.z = P.wingBase[1] - flap * deco;
     for (let i = 0; i < 4; i++) P.crest[i].rotation.x = (Math.sin(t * 1.2 - .5 - i * .35) * .04 * (1 - w) + Math.sin(m.phase * 2 - 1.1 - i * .4) * .07 * w) * deco;
     // 到着：小さく跳ね、羽が少し開く（1回だけ）
     let hop = 0;

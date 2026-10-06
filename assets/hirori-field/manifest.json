@@ -1,8 +1,8 @@
 {
   "name": "TOMORI Field Hirori (low-poly, static, no rig)",
   "file": "hirori-field.glb",
-  "bytes": 151548,
-  "sha256": "98b8b6269788a704470778444ef72ef072d9ff1a4a57b08f2cc2115970acc9ad",
+  "bytes": 151608,
+  "sha256": "56b7c92a6186d974ff27892e9a9258b967f0f76e6037b1e3301956dca963ca17",
   "generator": "tools/hirori-field/generate_hirori_field.py (Blender 5.2.1 LTS)",
   "triangles": 3238,
   "materials": [

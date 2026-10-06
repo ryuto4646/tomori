@@ -134,3 +134,31 @@ test('7. 動き：毎フレームの処理で新しい物を作らない。新�
   const urls = s => new Set((s.match(/https?:\/\/[^'"\s)]+/g) || []).filter(u => !/w3\.org/.test(u)));
   for (const u of urls(HTML)) assert.ok(urls(OLD).has(u) || /workers\.dev/.test(u), u);
 });
+
+test('8. 羽（Step 11L-B）：左右同じ大きさで肩から下・うしろへ。待機で地面から0.04m以上、歩いても地面より下へ行かない', () => {
+  const wl = box('Hirori_Wing_L'), wr = box('Hirori_Wing_R');
+  const pl = node('Hirori_Wing_L').translation, pr = node('Hirori_Wing_R').translation;
+  // 回転の中心（ノードの位置）は肩：生成スクリプトの shoulder_x=0.145・shoulder_z=0.42 に根の大きさを掛けた位置
+  assert.ok(Math.abs(pl[0] * ROOT_S - .145 * ROOT_S) < .03 && Math.abs(pl[1] * ROOT_S - .42 * ROOT_S) < .06, 'pivot at the shoulder');
+  assert.ok(Math.abs(pl[0] + pr[0]) < 1e-6 && Math.abs(pl[1] - pr[1]) < 1e-6, 'symmetric pivots');
+  for (let i = 0; i < 3; i++) assert.ok(Math.abs(wl.size[i] - wr.size[i]) < 1e-4, 'same size');
+  // 待機：羽先は地面から0.04〜0.08m（全高1.0）。地面にふれない
+  assert.ok(wl.mn[1] >= .04 && wl.mn[1] <= .08, `idle clearance ${wl.mn[1].toFixed(3)}`);
+  // 歩くとき：羽は待機より上・外へだけ動く。体の左右の傾き（0.07rad）と上下（最大 -0.006）を足しても、地面より上
+  const tipX = Math.max(Math.abs(wl.mn[0]), Math.abs(wl.mx[0]));
+  assert.ok(wl.mn[1] - Math.sin(.07) * tipX - .006 > 0, 'stays above the ground while walking');
+  // 羽は肩の高さより下まで長い（地面近くまで届く）
+  assert.ok(wl.size[1] > .4);
+});
+
+test('9. 羽の動き：歩くあいだだけ左右いっしょに上・外へ約10°。待機は2°以下。reduced-motion では止める。目の大きさと位置は前のまま', () => {
+  assert.match(FH, /WING_FLAP = \.17, WING_IDLE = \.03;/);
+  const flap = between(FH, 'const flap =', ';');
+  assert.match(flap, /\(\.5 - \.5 \* Math\.cos\(m\.phase \* 2\)\) \* WING_FLAP \* w \+ \(\.5 - \.5 \* Math\.cos\(t \* 1\.6\)\) \* WING_IDLE \* \(1 - w\)/);
+  // (.5 - .5cos) は 0〜1：待機の角度より下へは振らない。上限は 0.17rad（約9.7°）・待機は 0.03rad（約1.7°）
+  assert.ok(.17 * 180 / Math.PI >= 8 && .17 * 180 / Math.PI <= 12 && .03 * 180 / Math.PI <= 2);
+  assert.match(FH, /P\.wingL\.rotation\.z = P\.wingBase\[0\] \+ flap \* deco;\s*P\.wingR\.rotation\.z = P\.wingBase\[1\] - flap \* deco;/);
+  assert.match(FH, /deco = reduce \? 0 : 1/);
+  const gen = readFileSync(join(REPO, 'tools', 'hirori-field', 'generate_hirori_field.py'), 'utf8');
+  assert.match(gen, /eye_x=0\.086 \* HEAD_K \* 0\.92 \* 0\.85, eye_z=hz\(0\.592\), eye_r=\(0\.01935, 0\.008, 0\.01935\)/);
+});

@@ -28,7 +28,7 @@ def smoothstep(a, b, x):
 # 胴は修正前より約12%横に広く、背も高い卵形。頭は修正前の頭を 0.82 倍にして、首（z=0.40 → 0.50）の上に置く
 HEAD_K, NECK0, NECK1 = 0.78, 0.400, 0.490          # 頭の縮小率・修正前の首の高さ・修正後の首の高さ
 def head_row(z, rx, ryF, ryB, yc):
-    return (NECK1 + (z - NECK0) * HEAD_K, rx * HEAD_K, ryF * HEAD_K, ryB * HEAD_K, yc * HEAD_K)
+    return (NECK1 + (z - NECK0) * HEAD_K, rx * HEAD_K, ryF * HEAD_K * 1.06, ryB * HEAD_K, yc * HEAD_K)   # 顔の側は少し深く
 BODY = [  # z,     rx,    ryF,   ryB,   yc     （前は -y）
     (0.066, 0.046, 0.042, 0.038, 0.004),
     (0.080, 0.116, 0.106, 0.096, 0.002),
@@ -65,15 +65,14 @@ P = dict(
     wing_len=0.225, wing_w=0.115, wing_back_deg=8.0, wing_face_deg=40.0, wing_open_min=14.0, wing_open_max=30.0,
     leg_x=0.056, hip_z=0.110, ankle_z=0.040, leg_r_top=0.046, leg_r_bot=0.036,     # 脚の上はおなかの中。見える長さは修正前の約半分
     foot_len=0.148, foot_w=0.094, foot_h=0.050, foot_out_deg=8.0,                  # 足は修正前の約88%（3本指・しっかり踏む）
-    eye_x=0.086 * HEAD_K * 0.92, eye_z=hz(0.592), eye_r=(0.048 * EYE_K, 0.014 * EYE_K, 0.060 * EYE_K), eye_proud=0.0015,
-    mouth_z=hz(0.505), mouth_w=0.026 * HEAD_K, mouth_h=0.024 * HEAD_K,
+    eye_x=0.086 * HEAD_K * 0.92, eye_z=hz(0.592), eye_r=(0.0387, 0.016, 0.0387), eye_proud=0.0115,
     crest_len=tuple(v * CREST_K for v in (0.235, 0.200, 0.168, 0.136)), crest_w=tuple(v * CREST_K for v in (0.080, 0.070, 0.060, 0.050)),
     crest_t=tuple(v * CREST_K for v in (0.104, 0.090, 0.076, 0.062)),
     crest_root_deg=(-4.0, 18.0, 40.0, 62.0), crest_dir_deg=(36.0, 62.0, 88.0, 114.0), crest_bend=0.34,
 )
 COL = dict(  # sRGB の16進（Blender にはリニアにして渡す）
     coral=0xEE8471, cream=0xF7EBDB, blue=0xBCCAEA, eye_out=0x2A160E, iris=0x8C5228, pupil=0x0D0705, hilite=0xFFFFFF,
-    mouth=0x3A1518, tongue=0xE07C84,
+
 )
 
 def lin(hexv):
@@ -134,7 +133,6 @@ MAT = dict(
     cream=material('MAT_Cream', COL['cream']),
     blue=material('MAT_SoftBlue', COL['blue']),
     eye=material('MAT_Eye', 0xFFFFFF, rough=0.3, sheen=0.0, vcol=True),
-    mouth=material('MAT_Mouth', 0xFFFFFF, rough=0.6, sheen=0.0, vcol=True),
 )
 
 def link(obj, parent=None):
@@ -183,10 +181,21 @@ root = link(bpy.data.objects.new('Hirori_Root', None))
 
 # ── 体：頭・首・胴・腰を、断面をつないだ1つのなめらかな形にする ─────────────────
 # クリーム色との境目は、境目の線の近くの頂点を線の上へ動かしてから分ける（ギザギザにしない・段差もない）
+FACE_EYE_LOW, FACE_TIP, FACE_CHIN = hz(0.552), hz(0.537), hz(0.497)   # 目の少し下・鼻先にあたる高さ・あご
+def face_push(a, z):
+    """顔の前へのふくらみ（正面のまんなかほど大きく、横へなめらかに消える）。鼻そのものではなく、顔の骨格の立体感"""
+    c = math.cos(a)
+    if c <= 0: return 0.0
+    g = lambda u, s: math.exp(-(u / s) ** 2)
+    fill = 0.005 * g(z - FACE_EYE_LOW, 0.026) * c ** 4          # 目の下：少しふっくら
+    tip = 0.016 * g(z - FACE_TIP, 0.030) * c ** 8               # 鼻先にあたる所：頭の奥行きの約6%だけ、小さく丸く前へ
+    chin = -0.004 * g(z - FACE_CHIN, 0.018) * c ** 4             # あご：鼻先より後ろへ戻す
+    return fill + tip + chin
+
 def body_xyz(a, z):
     rx, ryF, ryB, yc = (interp_table(BODY, z, c) for c in (1, 2, 3, 4))
     ry = ryF if math.cos(a) > 0 else ryB
-    return V(rx * math.sin(a), yc - ry * math.cos(a), z)
+    return V(rx * math.sin(a), yc - ry * math.cos(a) - face_push(a, z), z)
 
 def build_body():
     C = 18                                       # 一周の点の数（低ポリ）（j=0 が正面、+ は体の左＝+X）
@@ -322,24 +331,24 @@ def paint(b, fn):
 def eye(side):
     nm = 'L' if side > 0 else 'R'
     hit = surface_point(V(side * P['eye_x'], -0.5, P['eye_z']), V(0, 1, 0))
-    n = hit[1]; yaw = math.atan2(n.x, -n.y); pitch = math.atan2(n.z, math.hypot(n.x, n.y))
+    n = hit[1]; yaw = 0.35 * math.atan2(n.x, -n.y); pitch = 0.5 * math.atan2(n.z, math.hypot(n.x, n.y))   # ほぼ正面を向ける（左右の目が外を向かない）
     aim = Matrix.Rotation(yaw, 4, 'Z') @ Matrix.Rotation(-pitch, 4, 'X')   # 顔の表面の向きにそろえる（外向き・上向きの傾きも）
     r = P['eye_r']
     center = hit[0] + aim @ V(0, r[1] - P['eye_proud'], 0)                     # 顔にうめ、前へ少しだけ出す
-    b = ellipsoid_bm((r[0], r[2], r[1]), 14, 10)                                  # 奥行きの軸を極にして作り、正面（-Y）へ向ける
+    b = ellipsoid_bm((r[0], r[2], r[1]), 20, 12)                                  # 奥行きの軸を極にして作り、正面（-Y）へ向ける
     bmesh.ops.rotate(b, verts=b.verts, cent=V(0, 0, 0), matrix=Matrix.Rotation(math.radians(90), 3, 'X'))
     out, iris, pupil = Vector(lin(COL['eye_out'])[:3]), Vector(lin(COL['iris'])[:3]), Vector(lin(COL['pupil'])[:3])
     def col_fn(co):
         d = Vector((co.x / r[0], co.z / r[2])).length if co.y < 0 else 2.0   # 正面（-Y）の中心からの距離
-        if d < 0.66: c = pupil                    # 黒い瞳が主体。茶色は細い虹彩
-        elif d < 0.78: c = iris
+        if d < 0.70: c = pupil                    # 黒い瞳が主体。茶色は細い円の輪
+        elif d < 0.80: c = iris
         else: c = out
         return (c.x, c.y, c.z, 1.0)
     paint(b, col_fn)
     bmesh.ops.transform(b, matrix=aim, verts=b.verts)
     bmesh.ops.translate(b, verts=b.verts, vec=center)
     ob = mesh_obj('Hirori_Eye_' + nm, b, [MAT['eye']], center, root)
-    hb = ellipsoid_bm((0.0085 * EYE_K * 1.1, 0.004, 0.0095 * EYE_K * 1.1), 6, 4)                          # ハイライト：瞳の上、少し外側（左右で同じ向き）
+    hb = ellipsoid_bm((0.0072, 0.0035, 0.0072), 8, 5)                          # ハイライト：瞳の上、少し外側（左右で同じ向き）
     paint(hb, lambda co: lin(COL['hilite']))
     hp = center + aim @ V(-0.013 * EYE_K, -r[1] * 1.05, 0.018 * EYE_K)
     bmesh.ops.translate(hb, verts=hb.verts, vec=hp)
@@ -347,34 +356,6 @@ def eye(side):
     return ob
 eye(1); eye(-1)
 
-# ── 口：小さく開いた笑顔（上は平ら・下が丸い）。中に舌 ───────────────────
-def mouth():
-    """小さく開いた笑顔：顔の表面にのせた濃い色の口と、その下側の小さな舌（どちらも表面のすぐ前。くぼみは作らない）"""
-    hit = surface_point(V(0, -0.5, P['mouth_z']), V(0, 1, 0))
-    c = hit[0]
-    w, h = P['mouth_w'], P['mouth_h']
-    def on_face(q, lift):
-        sp = surface_point(V(c.x + q.x, -0.5, c.z + q.z), V(0, 1, 0))
-        return sp[0] - V(0, lift, 0)
-    def fan(points, center, lift, color, name, origin):
-        b = bmesh.new()
-        vs = [b.verts.new(on_face(q, lift)) for q in points]
-        cv = b.verts.new(on_face(center, lift))
-        for i in range(len(vs)): b.faces.new((vs[i], vs[(i + 1) % len(vs)], cv))
-        for f in b.faces:
-            if f.normal.y > 0: f.normal_flip()                                    # 表を正面（-Y）へ
-        paint(b, lambda co: lin(color))
-        return mesh_obj(name, b, [MAT['mouth']], origin, root)
-    N = 8
-    ring = [V(-w * math.cos(math.pi * i / N), 0, -h * math.sin(math.pi * i / N)) for i in range(N + 1)]
-    top = [V(lerp(w, -w, i / N), 0, 0.0035 * math.sin(math.pi * i / N)) for i in range(1, N)]   # 上の線は少しだけ持ち上がる（口角が上がって見える）
-    ob = fan(ring + top, V(0, 0, -h * 0.45), 0.0008, COL['mouth'], 'Hirori_Mouth', c)
-    M = 8
-    tongue = [V(w * 0.56 * math.cos(2 * math.pi * k / M), 0, -h * 0.66 + h * 0.30 * math.sin(2 * math.pi * k / M)) for k in range(M)]
-    tongue = [V(q.x, 0, max(q.z, -h * 0.96)) for q in tongue]                    # 口の下のふちからはみ出さない
-    fan(tongue, V(0, 0, -h * 0.66), 0.0016, COL['tongue'], 'Hirori_MouthInner', c + V(0, 0, -h * 0.66))
-    return ob
-mouth()
 
 # ── とさか：4枚。頭のまんなかの線（x=0）の上に、頭頂から後頭部へ前後に並ぶ ─────────
 # Step 11J-B：棒・へらではなく、ふっくらした涙滴形（断面は楕円）。根元が太く、先へ薄くなり、先は丸い
@@ -599,6 +580,8 @@ def render_all(outdir):
         'rear-three-quarter': ((2.6, 3.0, 1.35), (76, 0, 139), 1.22),
         'top': ((0, -0.02, 4.0), (0, 0, 0), 1.22),                # 真上（顔＝正面が画面の下）
         'face-closeup': ((-0.9, -3.9, 0.66), (90, 0, -13), 0.40),
+        'face-front': ((0, -4, 0.70), (90, 0, 0), 0.30),
+        'face-side': ((-4, -0.10, 0.70), (90, 0, -90), 0.42),
         'crest-closeup': ((-4, 0.08, 0.83), (90, 0, -90), 0.52),
     }
     for name, (loc, rot, scale) in views.items():

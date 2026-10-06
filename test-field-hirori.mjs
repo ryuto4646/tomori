@@ -51,7 +51,13 @@ test('1. GLB：glTF 2.0・1ファイル・外部 URI なし・テクスチャな
 
 test('2. 部位：とさか4枚・羽2枚・脚と足が2つずつ・目2つ。鼻・尻尾・腕・手・指・爪・耳・角はない', () => {
   const names = json.nodes.map(n => n.name);
-  for (const n of ['Hirori_Root', 'Hirori_Body', 'Hirori_CreamPatch', 'Hirori_Wing_L', 'Hirori_Wing_R', 'Hirori_Leg_L', 'Hirori_Leg_R', 'Hirori_Foot_L', 'Hirori_Foot_R', 'Hirori_Eye_L', 'Hirori_Eye_R', 'Hirori_Mouth']) assert.ok(names.includes(n), n);
+  for (const n of ['Hirori_Root', 'Hirori_Body', 'Hirori_CreamPatch', 'Hirori_Wing_L', 'Hirori_Wing_R', 'Hirori_Leg_L', 'Hirori_Leg_R', 'Hirori_Foot_L', 'Hirori_Foot_R', 'Hirori_Eye_L', 'Hirori_Eye_R']) assert.ok(names.includes(n), n);
+  // 口は作らない（Step 11L-A 顔修正）：口・口の中・舌の部品も素材も、GLB・manifest・生成スクリプトに残っていない
+  const raw = buf.toString('latin1'), man = readFileSync(join(ROOT, 'assets', 'hirori-field', 'manifest.json'), 'utf8'), gen = readFileSync(join(REPO, 'tools', 'hirori-field', 'generate_hirori_field.py'), 'utf8');
+  for (const s of [raw, man, gen]) assert.ok(!/mouth|tongue/i.test(s), 'no mouth');
+  assert.ok(!/nose/i.test(raw) && !/nose/i.test(man), 'no nose part');
+  // 目は正面から正円（横の半径と縦の半径が同じ）
+  assert.match(gen, /eye_r=\(0\.0387, 0\.016, 0\.0387\)/);
   assert.equal(names.filter(n => /^Hirori_Crest_0[1-4]$/.test(n)).length, 4);
   assert.equal(names.filter(n => /Crest/.test(n)).length, 4);
   assert.ok(!names.some(n => /nose|tail|arm(?!ature)|hand|finger|claw|ear(?!th)|horn/i.test(n)));

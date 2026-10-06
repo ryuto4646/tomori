@@ -24,41 +24,51 @@ def smoothstep(a, b, x):
 # ── 形の数値（全高はとさかの先まで約1.0。原点は両足の中央・地面） ─────────────
 # Step 11J-B：頭を大きく（幅 約+20%）、首は細い筒にせず頭から胴へ連続、胴は短く横にふっくら（洋梨形）、脚は短く
 # 体（頭から腰まで1つのなめらかな形）の断面：高さ z ごとに、左右の半径・前の半径・後ろの半径・前後の中心
-BODY = [  # z,     rx,    ryF,   ryB,   yc     （Field：大きな頭・小さな胴。前は -y）
-    (0.112, 0.036, 0.032, 0.030, 0.006),
-    (0.128, 0.084, 0.076, 0.070, 0.004),
-    (0.165, 0.118, 0.104, 0.094, 0.000),
-    (0.215, 0.128, 0.114, 0.100, -0.004),
-    (0.275, 0.122, 0.122, 0.096, -0.010),     # 胸：少し前へ出す
-    (0.330, 0.108, 0.118, 0.090, -0.016),
-    (0.372, 0.102, 0.104, 0.088, -0.020),
-    (0.398, 0.108, 0.100, 0.090, -0.022),     # 首（短く太め。頬から細くなって胸へ）
-    (0.424, 0.134, 0.114, 0.108, -0.024),
+# ── 形の数値（Step 11L-A 修正：ひよこ型。丸い卵形の胴が頭より大きく、脚はほとんど見えない）──────────
+# 胴は修正前より約12%横に広く、背も高い卵形。頭は修正前の頭を 0.82 倍にして、首（z=0.40 → 0.50）の上に置く
+HEAD_K, NECK0, NECK1 = 0.78, 0.400, 0.490          # 頭の縮小率・修正前の首の高さ・修正後の首の高さ
+def head_row(z, rx, ryF, ryB, yc):
+    return (NECK1 + (z - NECK0) * HEAD_K, rx * HEAD_K, ryF * HEAD_K, ryB * HEAD_K, yc * HEAD_K)
+BODY = [  # z,     rx,    ryF,   ryB,   yc     （前は -y）
+    (0.066, 0.046, 0.042, 0.038, 0.004),
+    (0.080, 0.116, 0.106, 0.096, 0.002),
+    (0.115, 0.166, 0.150, 0.136, 0.000),
+    (0.170, 0.188, 0.168, 0.152, -0.004),     # 胴のいちばん広い所（幅 約0.38。頭の幅 約0.32 より広い）
+    (0.240, 0.190, 0.172, 0.154, -0.008),
+    (0.310, 0.182, 0.166, 0.148, -0.012),     # 胸：丸く前へ
+    (0.375, 0.162, 0.150, 0.134, -0.015),
+    (0.430, 0.136, 0.126, 0.112, -0.017),     # 肩：羽の付け根
+    (0.470, 0.118, 0.110, 0.098, -0.018),
+    (0.490, 0.112, 0.104, 0.094, -0.018),     # 首（短く太い。頭から胸へ段差なくつなぐ）
+] + [head_row(*r) for r in [
+    (0.428, 0.134, 0.114, 0.108, -0.024),
     (0.470, 0.168, 0.138, 0.134, -0.024),
-    (0.530, 0.200, 0.160, 0.160, -0.022),     # 頬：横へやわらかく広げる
-    (0.590, 0.206, 0.164, 0.168, -0.020),     # 頭のいちばん広い所（幅 約0.41）
+    (0.530, 0.200, 0.160, 0.160, -0.022),     # 頬
+    (0.590, 0.206, 0.164, 0.168, -0.020),
     (0.650, 0.196, 0.158, 0.166, -0.018),
     (0.710, 0.168, 0.138, 0.148, -0.016),
     (0.760, 0.122, 0.100, 0.110, -0.014),
     (0.792, 0.066, 0.056, 0.060, -0.012),
     (0.806, 0.026, 0.022, 0.024, -0.012),
-]
-BODY_BOTTOM, BODY_TOP = 0.108, 0.810
-# クリーム色の範囲：左右の広がり（正面から何度まで、高さごと）と、顔の上端（額のまんなかが浅く下がるハート形）
-# 顔は目の外側に珊瑚色の頬を残し、首では細い帯になって胸・おなかの楕円へつながる
-CREAM_SIDE = [(0.140, 0), (0.165, 34), (0.215, 48), (0.280, 50), (0.340, 42), (0.385, 28), (0.410, 24), (0.440, 26),
-              (0.480, 33), (0.530, 39), (0.590, 42), (0.640, 40), (0.672, 34), (0.700, 24)]   # 顔は目のまわりだけ。目の外側に珊瑚色の頬を残す
+]]
+BODY_BOTTOM, BODY_TOP = 0.066, BODY[-1][0] + 0.004
+# クリーム色：胸・おなかの卵形と、顔（目のまわり）。顔の範囲は、修正前の顔を頭と同じ割合で縮めた位置
+hz = lambda z: NECK1 + (z - NECK0) * HEAD_K
+CREAM_SIDE = [(0.150, 0), (0.175, 24), (0.220, 33), (0.280, 35), (0.340, 31), (0.390, 24), (0.440, 17), (0.470, 16), (hz(0.410), 24), (hz(0.440), 26),
+              (hz(0.480), 33), (hz(0.530), 39), (hz(0.590), 42), (hz(0.640), 40), (hz(0.672), 34), (hz(0.700), 24)]
 def cream_top(a):
-    return 0.700 - 0.026 * math.exp(-(a / 0.30) ** 2)      # 額の上端：まんなかで浅く下がるハート形
+    return hz(0.700) - 0.026 * HEAD_K * math.exp(-(a / 0.30) ** 2)      # 額の上端：まんなかで浅く下がるハート形
+EYE_K, CREST_K = 0.72, 0.50                         # 目の縮小率・とさかの縮小率（根もとを中心に）
 P = dict(
-    head_c=(0.0, -0.020, 0.600),
-    shoulder_x=0.092, shoulder_y=0.004, shoulder_z=0.365,
-    wing_len=0.275, wing_w=0.142, wing_back_deg=8.0, wing_face_deg=40.0, wing_open_min=22.0, wing_open_max=30.0,
-    leg_x=0.062, hip_z=0.130, ankle_z=0.045, leg_r_top=0.046, leg_r_bot=0.034,
-    foot_len=0.168, foot_w=0.104, foot_h=0.052, foot_out_deg=8.0,
-    eye_x=0.086, eye_z=0.592, eye_r=(0.048, 0.014, 0.060), eye_proud=0.002,
-    mouth_z=0.505, mouth_w=0.026, mouth_h=0.024,
-    crest_len=(0.235, 0.200, 0.168, 0.136), crest_w=(0.080, 0.070, 0.060, 0.050), crest_t=(0.104, 0.090, 0.076, 0.062),
+    head_c=(0.0, -0.020 * HEAD_K, hz(0.600)),
+    shoulder_x=0.145, shoulder_y=0.004, shoulder_z=0.420,
+    wing_len=0.225, wing_w=0.115, wing_back_deg=8.0, wing_face_deg=40.0, wing_open_min=14.0, wing_open_max=30.0,
+    leg_x=0.056, hip_z=0.110, ankle_z=0.040, leg_r_top=0.046, leg_r_bot=0.036,     # 脚の上はおなかの中。見える長さは修正前の約半分
+    foot_len=0.148, foot_w=0.094, foot_h=0.050, foot_out_deg=8.0,                  # 足は修正前の約88%（3本指・しっかり踏む）
+    eye_x=0.086 * HEAD_K * 0.92, eye_z=hz(0.592), eye_r=(0.048 * EYE_K, 0.014 * EYE_K, 0.060 * EYE_K), eye_proud=0.0015,
+    mouth_z=hz(0.505), mouth_w=0.026 * HEAD_K, mouth_h=0.024 * HEAD_K,
+    crest_len=tuple(v * CREST_K for v in (0.235, 0.200, 0.168, 0.136)), crest_w=tuple(v * CREST_K for v in (0.080, 0.070, 0.060, 0.050)),
+    crest_t=tuple(v * CREST_K for v in (0.104, 0.090, 0.076, 0.062)),
     crest_root_deg=(-4.0, 18.0, 40.0, 62.0), crest_dir_deg=(36.0, 62.0, 88.0, 114.0), crest_bend=0.34,
 )
 COL = dict(  # sRGB の16進（Blender にはリニアにして渡す）
@@ -183,7 +193,7 @@ def build_body():
     zs = []
     for i in range(len(BODY) - 1):               # 表の行のあいだを分ける（頭と顔は細かく）
         z0, z1 = BODY[i][0], BODY[i + 1][0]
-        n = max(1, round((z1 - z0) / (0.030 if z0 >= 0.42 else 0.040)))
+        n = max(1, round((z1 - z0) / (0.026 if z0 >= NECK1 else 0.040)))
         for k in range(n): zs.append(lerp(z0, z1, k / n))
     zs.append(BODY[-1][0])
     # 媒介変数（角度 a, 高さ z）の格子。境目をまたぐ辺ごとに、境目に近いほうの頂点を1つだけ、境目の線の上へ動かす
@@ -329,9 +339,9 @@ def eye(side):
     bmesh.ops.transform(b, matrix=aim, verts=b.verts)
     bmesh.ops.translate(b, verts=b.verts, vec=center)
     ob = mesh_obj('Hirori_Eye_' + nm, b, [MAT['eye']], center, root)
-    hb = ellipsoid_bm((0.0085, 0.004, 0.0095), 6, 4)                          # ハイライト：瞳の上、少し外側（左右で同じ向き）
+    hb = ellipsoid_bm((0.0085 * EYE_K * 1.1, 0.004, 0.0095 * EYE_K * 1.1), 6, 4)                          # ハイライト：瞳の上、少し外側（左右で同じ向き）
     paint(hb, lambda co: lin(COL['hilite']))
-    hp = center + aim @ V(-0.013, -r[1] * 1.05, 0.018)
+    hp = center + aim @ V(-0.013 * EYE_K, -r[1] * 1.05, 0.018 * EYE_K)
     bmesh.ops.translate(hb, verts=hb.verts, vec=hp)
     mesh_obj('Hirori_EyeHighlight_' + nm, hb, [MAT['eye']], hp, root)
     return ob
@@ -373,7 +383,7 @@ def petal(i):
     L, W, T = P['crest_len'][i], P['crest_w'][i], P['crest_t'][i]
     th = math.radians(P['crest_root_deg'][i]); ph = math.radians(P['crest_dir_deg'][i])
     hit = surface_point(hc, V(0, math.sin(th), math.cos(th)))
-    root_p = hit[0] - V(0, math.sin(th), math.cos(th)) * 0.022                    # 根元は頭の中へうめる（こぶを作らない）
+    root_p = hit[0] - V(0, math.sin(th), math.cos(th)) * 0.022 * CREST_K                    # 根元は頭の中へうめる（こぶを作らない）
     d0 = V(0, math.sin(ph), math.cos(ph))                                          # 出ていく向き（上→後ろ）
     nrm = V(0, math.cos(ph), -math.sin(ph))                                        # 面の中で、向きに直角（下・前側）
     S, C = 7, 8
@@ -621,6 +631,12 @@ def render_all(outdir):
 os.makedirs(OUT, exist_ok=True); os.makedirs(ASSET_DIR, exist_ok=True)
 BLEND = os.path.join(OUT, 'hirori-field.blend')
 GLB = os.path.join(ASSET_DIR, 'hirori-field.glb')
+# 全高（とさかの先まで）を 1.0 にそろえる：ひよこ型で背が低くなったぶん、全体を同じ割合で大きくする（根の大きさで調整）
+_dg = bpy.context.evaluated_depsgraph_get(); _top = 0.0
+for _o in [o for o in scene.objects if o.type == 'MESH']:
+    _top = max(_top, max((_o.matrix_world @ v.co).z for v in _o.data.vertices))
+root.scale = (1.0 / _top,) * 3
+bpy.context.view_layer.update()
 if RENDER:
     render_all(RENDER_DIR)
 

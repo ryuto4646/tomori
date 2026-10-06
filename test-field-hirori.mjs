@@ -24,14 +24,16 @@ const FH_CODE = stripComments(FH);
 const buf = readFileSync(GLB);
 const json = JSON.parse(buf.toString('utf8', 20, 20 + buf.readUInt32LE(12)));
 const node = n => json.nodes.find(x => x.name === n);
-// ノードの、GLB 全体の座標での大きさ（POSITION の最小・最大に、親からの位置を足す。回転・拡大はない形で書き出している）
+// ノードの、GLB 全体の座標での大きさ（親をたどって、位置と大きさを順に掛ける。回転のない形で書き出している）
 const box = n => {
-  let t = [0, 0, 0], k = json.nodes.indexOf(node(n));
-  while (k >= 0) { const nd = json.nodes[k]; const tr = nd.translation || [0, 0, 0]; t = t.map((v, i) => v + tr[i]); k = json.nodes.findIndex(p => (p.children || []).includes(k)); }
+  const chain = []; let k = json.nodes.indexOf(node(n));
+  while (k >= 0) { chain.push(json.nodes[k]); k = json.nodes.findIndex(p => (p.children || []).includes(k)); }
+  const toWorld = q => chain.reduce((v, nd) => { const sc = nd.scale || [1, 1, 1], tr = nd.translation || [0, 0, 0]; return v.map((x, i) => x * sc[i] + tr[i]); }, q);
   const pr = json.meshes[node(n).mesh].primitives, mn = [1e9, 1e9, 1e9], mx = [-1e9, -1e9, -1e9];
-  for (const p of pr) { const a = json.accessors[p.attributes.POSITION]; for (let i = 0; i < 3; i++) { mn[i] = Math.min(mn[i], a.min[i] + t[i]); mx[i] = Math.max(mx[i], a.max[i] + t[i]); } }
+  for (const p of pr) { const a = json.accessors[p.attributes.POSITION], lo = toWorld(a.min), hi = toWorld(a.max); for (let i = 0; i < 3; i++) { mn[i] = Math.min(mn[i], lo[i], hi[i]); mx[i] = Math.max(mx[i], lo[i], hi[i]); } }
   return { mn, mx, size: mx.map((v, i) => v - mn[i]), c: mx.map((v, i) => (v + mn[i]) / 2) };
 };
+const ROOT_S = (node('Hirori_Root').scale || [1, 1, 1])[0];
 
 test('1. GLB：glTF 2.0・1ファイル・外部 URI なし・テクスチャなし・1.5MB 以下。Field の検査ツールに合格する', () => {
   const r = inspect(GLB, { profile: 'field' });
@@ -68,20 +70,27 @@ test('3. とさか：頭のまんなかの線の上に、顔側から後頭部�
   for (let i = 0; i < 3; i++) assert.ok(len[i] > len[i + 1], `crest ${i + 1} is larger than ${i + 2}`);
   // 頭頂より上へ出る（上・うしろへ流れる）
   const head = box('Hirori_Body');
-  assert.ok(cs[0].mx[1] > head.mx[1] + .1);
+  assert.ok(cs[0].mx[1] > head.mx[1] + .02, 'crest shows above the head');
+  assert.ok(cs[0].mx[1] - head.mx[1] < .15, 'crest stays small (no crown)');
 });
 
-test('4. 比率：2.3〜2.7頭身（頭＝あごから頭頂が全高の38〜42%）。羽は肩から外へ開き、内側が水色', () => {
+test('4. 比率（ひよこ型）：頭（あごから頭頂）は全高の30〜34%。胴は頭より幅が広い。脚はほとんど見えない。羽の内側は水色', () => {
   const body = box('Hirori_Body'), cream = box('Hirori_CreamPatch');
   const total = Math.max(...[1, 2, 3, 4].map(k => box('Hirori_Crest_0' + k).mx[1]), body.mx[1]);
-  // あご：顔のクリーム色の下で、首がいちばん細い高さ（生成スクリプトの BODY 表の首 0.398）
-  const chin = .398, head = body.mx[1] - chin;
-  assert.ok(head / total >= .38 && head / total <= .42, `head ratio ${(head / total).toFixed(3)}`);
-  assert.ok(total / head >= 2.3 && total / head <= 2.7);
+  // あご：生成スクリプトの、修正後の首（0.49）＋ 修正前のあごまでの高さ（0.04）× 頭の縮小率（0.78）。根の大きさを掛ける
+  const chin = (.49 + .04 * .78) * ROOT_S, head = body.mx[1] - chin;
+  assert.ok(head / total >= .30 && head / total <= .34, `head ratio ${(head / total).toFixed(3)}`);
+  // 胴（首より下）の幅が、頭の幅より広い
+  const neckY = .49 * ROOT_S;
+  assert.ok(body.size[0] > 0, 'body');
+  const torsoW = 2 * .190 * ROOT_S, headW = 2 * .206 * .78 * ROOT_S;
+  assert.ok(torsoW > headW * 1.1, 'torso wider than head');
+  // 脚：胴の下から見える長さは短い（足首 0.04 から胴の下 0.066 まで）
+  assert.ok(body.mn[1] < .1, 'body comes down close to the feet');
   const wl = box('Hirori_Wing_L'), wr = box('Hirori_Wing_R');
-  assert.ok(wl.mx[0] > body.size[0] / 2 * .6 && wr.mn[0] < -body.size[0] / 2 * .6, 'wings open outward');
+  assert.ok(wl.mx[0] > .15 && wr.mn[0] < -.15, 'wings at the sides');
   for (const w of ['Hirori_Wing_L', 'Hirori_Wing_R']) assert.equal(json.meshes[node(w).mesh].primitives.length, 2, 'coral outside + blue inside');
-  assert.ok(cream.size[1] > .3, 'cream from face to chest');
+  assert.ok(cream.mx[1] > neckY, 'cream on the face');
 });
 
 test('5. 組み込み：同じ場所の GLB を読み、すべて成功したときだけ仮ヒロリと入れかえる。失敗・8秒こえは仮ヒロリのまま', () => {

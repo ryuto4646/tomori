@@ -2616,20 +2616,22 @@ const fieldHirori = (() => {
       }, undefined, () => { clearTimeout(timer); finish(false); });
     });
   }
-  // 動き：待機は小さな呼吸、歩くときは左右の脚が交互に動き、羽が小さく揺れ、とさかが少し遅れて揺れる。上下の弾みは仮ヒロリと同じ
-  // reduced-motion では、羽・とさかの揺れと上下動を止める（脚は歩いていることが分かる小ささで動かす）
+  // 動き：よちよち歩き。歩幅は仮ヒロリの75%（移動速度は同じなので、足を速く小さく動かす）。脚は小さく振り、体は左右へ少しだけ重心を移す
+  // 待機は小さな呼吸。羽は小さく揺れ、とさかは少し遅れて揺れる。reduced-motion では、左右の揺れ・飾りの上下動・羽・とさかを止める
+  const STRIDE = STRIDE_UNITS * .75;
   function update(root, dt, t, moving) {
     const m = hiroriMotion, reduce = reduceMotionQuery.matches, deco = reduce ? 0 : 1, lift = reduce ? 0 : 1;
     m.walkBlend += ((moving ? 1 : 0) - m.walkBlend) * (1 - Math.exp(-10 * dt));
     const w = m.walkBlend;
-    if (moving) m.phase += dt * SPEED * (Math.PI * 2) / STRIDE_UNITS;
+    if (moving) m.phase += dt * SPEED * (Math.PI * 2) / STRIDE;
     const s = Math.sin(m.phase);
-    P.legL.rotation.x = s * (reduce ? .3 : .55) * w;
-    P.legR.rotation.x = -s * (reduce ? .3 : .55) * w;
+    P.legL.rotation.x = s * (reduce ? .2 : .3) * w;
+    P.legR.rotation.x = -s * (reduce ? .2 : .3) * w;
     const breath = Math.sin(t * 2.0);
-    P.upper.position.y = (breath * .006 * (1 - w) + Math.abs(s) * .02 * w) * lift;
+    P.upper.position.y = (breath * .006 * (1 - w) + Math.abs(s) * .01 * w) * lift;
     P.upper.scale.y = 1 + breath * .012 * (1 - w) * deco;
-    P.upper.rotation.z = s * .035 * w * deco;
+    P.upper.rotation.z = s * .07 * w * deco;          // 左右へ少しだけ重心を移す（よちよち）
+    P.upper.position.x = s * .008 * w * deco;
     P.wingL.rotation.z = P.wingBase[0] + (Math.sin(t * 1.6) * .03 * (1 - w) + s * .14 * w) * deco;
     P.wingR.rotation.z = P.wingBase[1] - (Math.sin(t * 1.6) * .03 * (1 - w) - s * .14 * w) * deco;
     for (let i = 0; i < 4; i++) P.crest[i].rotation.x = (Math.sin(t * 1.2 - .5 - i * .35) * .04 * (1 - w) + Math.sin(m.phase * 2 - 1.1 - i * .4) * .07 * w) * deco;
@@ -2638,7 +2640,7 @@ const fieldHirori = (() => {
     if (m.arrivalT >= 0) {
       m.arrivalT += dt;
       const u = Math.min(m.arrivalT / ARRIVAL_SEC, 1), k = Math.sin(Math.PI * u);
-      hop = k * .22 * lift;
+      hop = k * .16 * lift;
       P.wingL.rotation.z += k * .35 * deco; P.wingR.rotation.z -= k * .35 * deco;
       if (u >= 1) m.arrivalT = -1;
     }

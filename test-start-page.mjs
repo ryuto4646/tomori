@@ -278,7 +278,9 @@ test('25. innerHTML への代入や console の出力を増やしていない', 
 test('26. 非対応画面を出したときは、リンクへフォーカスを移す（WebGL チェックの catch の中だけ）', () => {
   const check = DEMO_NOW().match(/\/\/ ── WebGL チェック[\s\S]*?\}\)\(\);/)[0];
   assert.match(check, /catch \{[\s\S]*style\.display = 'flex';[\s\S]*document\.querySelector\('#no-webgl a'\)\.focus\(\);[\s\S]*throw new Error\('no webgl'\);/);
-  assert.equal((DEMO_NOW().match(/\.focus\(\)/g) || []).length - (normalize(atTag('demo-world.html')).match(/\.focus\(\)/g) || []).length, 1);
+  // Step 11L-D：深掘りの答えを広げる段階（WORD-EXPAND-UI）で、例を選んだあと入力欄へ戻すフォーカスは除いて数える
+  const ui = (DEMO_NOW().match(/\/\/ WORD-EXPAND-UI[\s\S]*?\nfunction restoreSecretPanel/) || [''])[0];
+  assert.equal((DEMO_NOW().match(/\.focus\(\)/g) || []).length - (ui.match(/\.focus\(\)/g) || []).length - (normalize(atTag('demo-world.html')).match(/\.focus\(\)/g) || []).length, 1);
 });
 
 test('27. 非対応画面は 3D 用の UI（z-index:10）より前に出る', () => {

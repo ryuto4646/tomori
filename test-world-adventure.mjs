@@ -67,7 +67,8 @@ test('4. 同じ出来事が何度起きても二重に進まず、戻りもし�
 test('5. タネが生まれるのは深掘りの問いのあと（DEMO_COMPLETE）だけ。care からは来ない。2つの出口の両方で生まれる', () => {
   assert.match(ADVENTURE_FN, /if \(progress === P\.MISSION && state === S\.DEMO_COMPLETE\) \{\s*progress = advance\(progress, 'deepDone'\);/);
   assert.match(HTML, /window\.toDemoEnd   = \(\)=>\{ nextGroup\.visible=true; setState\(S\.DEMO_COMPLETE\); \};/);
-  assert.match(between(HTML, 'window.revealSecret = ()=>{', '\n};'), /setState\(S\.DEMO_COMPLETE\)/);
+  // Step 11L-D：答える出口は、ことばを広げて決めたあと（finishSecret）に DEMO_COMPLETE へ進む
+  assert.match(between(HTML, 'function finishSecret(){', '\n}\n'), /setState\(S\.DEMO_COMPLETE\)/);
   for (const fn of ['window.careRewrite = () => {', 'window.careBack = () => {']) assert.ok(!/DEMO_COMPLETE/.test(between(HTML, fn, '\n};')), fn);
   assert.equal(count(V2_CODE, /'deepDone'/g), 1);
 });

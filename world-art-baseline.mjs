@@ -421,17 +421,174 @@ document.addEventListener('focusout', e => {
   setTimeout(() => { const a = document.activeElement; if (!a || !/^(TEXTAREA|INPUT)$/.test(a.tagName)) resetPageScroll(); }, 60);
 });`],
   [`window.toSecretText = ()=>setState(S.SECRET_UNLOCKED);`,
-   `let secretSent = false;   // 深掘りの答えを送ったか（二重に送らない：Step 11L-C）
-window.toSecretText = ()=>{ secretSent = false; setState(S.SECRET_UNLOCKED); };`],
+   `// WORD-EXPAND-BEGIN（Step 11L-D：深掘りの答えを受けとめて、ことばを一段広げる。test-word-expansion.mjs がこの範囲を取り出して確かめる）
+// 端末の中だけで考える（通信しない・保存しない）。子どもの答えを復唱して終わらず、見る観点・程度・理由へ一段深める
+const EXPAND_ONE_KNOWN = {   // 意味のある1文字：ことばを足す例
+  '赤': ['赤い色', '明るい赤', '燃えるような赤'], '青': ['青い色', '澄んだ青', '深い青'], '黄': ['黄色い色', '明るい黄色', 'やさしい黄色'],
+  '白': ['白い色', 'まっ白', 'やわらかな白'], '黒': ['黒い色', 'つやのある黒', '深い黒'], '緑': ['緑の色', '明るい緑', '深い緑'],
+  '丸': ['丸い形', 'ころんと丸い', 'やわらかく丸い'], '光': ['やさしい光', 'きらきらした光', 'あたたかい光'], '色': ['明るい色', 'あたたかい色', '目をひく色'],
+  '形': ['丸い形', 'ふっくらした形', 'すっきりした形'], '目': ['大きな目', 'まんまるの目', 'やさしい目'], '花': ['小さな花', '明るい花', 'ひらいた花'],
+  '空': ['青い空', '広い空', '明るい空'], '星': ['光る星', '小さな星', 'きらきらした星'], '羽': ['大きな羽', 'ふわふわの羽', 'きれいな羽'],
+};
+const EXPAND_START = [['色を足す', '色が'], ['形を足す', '形が'], ['気持ちを足す', '見ていると']];   // 読みとれない1文字のとき：続きの書き出し
+const EXPAND_PLACEHOLDER = '思ったことを書いてみよう';
+const EXPAND_ASPECTS = {   // 観点ごとの、考えを一段深めるひとこと（復唱しない）と、ふつうの候補
+  color: { insight: '色の明るさやあたたかさまで見ると、もっと詳しく伝えられそう。', move: 'detail', words: ['明るい色', 'あたたかみのある色', '目をひく色合い'] },
+  shape: { insight: '輪郭や大きさに注目すると、形の特徴が見えてきそう。', move: 'detail', words: ['ころんと丸い', 'やわらかな輪郭', 'ふっくらした形'] },
+  motion: { insight: '速さや動き方を加えると、見た様子が浮かんでくるよ。', move: 'detail', words: ['軽やかに動く', 'ふわりと揺れる', '元気よく動く'] },
+  feeling: { insight: 'そう感じた理由を探すと、自分だけの発見になるよ。', move: 'reason', words: ['心がはずむ', 'ほっとする', '見ているとうれしくなる'] },
+  story: { insight: '見えたことと想像したことを分けると、物語がもっと伝わるよ。', move: 'imagination', words: ['今にも動き出しそう', '何かを伝えたそう', 'この先に物語がありそう'] },
+};
+const EXPAND_KEYS = [   // 入力のことばから観点を読む（上から順に見る）
+  ['story', /そう|みたい|ように|気がする|想像|かも/], ['motion', /動|走|歩|飛|揺|跳|ゆっくり|はや|速|のんびり|そっと/],
+  ['color', /赤|青|黄|白|黒|緑|ピンク|色|明る|暗|きらきら|光/], ['shape', /丸|形|大き|小さ|長|細|太|ふわ|ふっくら|輪郭|とが/],
+  ['feeling', /うれし|楽し|寂し|さびし|悲し|かなし|怖|こわ|安心|好き|嫌|ほっと|ドキドキ|わくわく/],
+];
+const EXPAND_SPECIAL = [   // とくに、そのことばに合わせた一歩
+  [/寝|眠/, { insight: '姿から気持ちを想像できているね。見たことと考えたことを分けると、もっと伝わるよ。', move: 'evidence', words: ['体を丸めて眠っていた', '安心して休んでいるようだ', '静かな寝姿に見えた'] }],
+  [/寂し|さびし|悲し|かなし/, { insight: '表情や姿勢のどこから、そう感じたのだろう？', move: 'evidence', words: ['うつむいて見えた', 'ひとりで心細そう', '静かな表情に見えた'] }],
+  [/ゆっくり|のんびり/, { insight: '速さに気づくと、その生き物の気分まで想像できそう。', move: 'detail', words: ['のんびり動いていた', 'そっと進んでいた', '落ち着いて歩いていた'] }],
+  [/赤/, { insight: '同じ赤でも、明るさや深さで印象が変わるよ。', move: 'compare', words: ['明るく鮮やかな赤', 'あたたかみのある赤', '深く落ち着いた赤'] }],
+  [/青/, { insight: '同じ青でも、明るさや深さで印象が変わるよ。', move: 'compare', words: ['空のように明るい青', '澄んだ青', '深く落ち着いた青'] }],
+  [/丸.*(可愛|かわい)|(可愛|かわい).*丸/, { insight: '丸さが、やわらかく親しみやすい印象を作っているのかも。', move: 'detail', words: ['ころんと丸くて可愛い', 'ふっくらして愛らしい', 'やわらかな輪郭が可愛い'] }],
+];
+// 感想だけの答え（何がそう感じさせたのか、観点へ戻す）
+const EXPAND_VAGUE = /^(とても|すごく|すっごく|めっちゃ|超|ちょっと)?(可愛い|かわいい|カワイイ|きれい|綺麗|キレイ|すごい|スゴイ|やばい|ヤバい|いい|よい|好き|すき|面白い|おもしろい|かっこいい|カッコいい|素敵|すてき)(と思った|かった|な|ね|！|!)*$/;
+const EXPAND_ASK = [['shape', '形が'], ['color', '色が'], ['motion', '動きや様子が']];
+
+// 答えを見分ける：送らせない／ことばを足してもらう／観点を聞く／広げる
+function classifyAnswer(text) {
+  const t = String(text == null ? '' : text).trim(), chars = Array.from(t);
+  if (!t) return { kind: 'empty' };
+  if (t === EXPAND_PLACEHOLDER) return { kind: 'placeholder' };
+  if (!/[\\p{L}\\p{N}]/u.test(t)) return { kind: 'symbol' };                         // 記号・句読点・絵文字だけ
+  const letters = chars.filter(ch => /[\\p{L}\\p{N}]/u.test(ch));
+  if (letters.length >= 2 && new Set(letters).size === 1) return { kind: 'repeat' };  // 同じ文字だけ
+  if (letters.length === 1) return EXPAND_ONE_KNOWN[letters[0]] ? { kind: 'one-known', ch: letters[0], words: EXPAND_ONE_KNOWN[letters[0]] } : { kind: 'one-unknown' };
+  if (EXPAND_VAGUE.test(t.replace(/\\s/g, ''))) return { kind: 'vague', text: t };
+  return { kind: 'ok', text: t };
+}
+// 観点を決める：入力のことば → 選んだカードの種類（feeling / observation / story）
+function aspectOf(text, mode) {
+  for (const [k, re] of EXPAND_KEYS) if (re.test(text)) return k;
+  return mode === 'feeling' ? 'feeling' : mode === 'story' ? 'story' : 'shape';
+}
+// 一歩深めることばと、3つの候補
+function expandAnswer(text, mode, aspect) {
+  for (const [re, v] of EXPAND_SPECIAL) if (re.test(text) && (!aspect || aspect === aspectOf(text, mode))) return v;
+  const a = EXPAND_ASPECTS[aspect || aspectOf(text, mode)];
+  // 感想（可愛い・きれい など）があれば、観点の候補に足す（例：ころんと丸い → ころんと丸くて可愛い）
+  const fm = text.match(/可愛|かわい|きれい|綺麗|素敵|すてき/);
+  if (fm && (aspect === 'shape' || aspect === 'color')) {
+    const tail = /可愛|かわい/.test(fm[0]) ? '可愛い' : /素敵|すてき/.test(fm[0]) ? '素敵' : 'きれい';
+    const words = aspect === 'shape' ? ['ころんと丸くて' + tail, 'ふっくらして' + tail, 'やわらかな輪郭が' + tail] : ['明るい色が' + tail, 'あたたかい色が' + tail, '目をひく色合いが' + tail];
+    return { insight: a.insight, move: a.move, words };
+  }
+  return a;
+}
+// 決めたあとのことば
+function finalLine(original, chosen) {
+  const o = Array.from(original), short = o.length > 22 ? o.slice(0, 22).join('') + '…' : original;
+  return chosen ? '「' + short + '」から「' + chosen + '」へ、ことばが広がった！' : '「' + short + '」。きみが見つけた、大切なことばだね。';
+}
+// WORD-EXPAND-END
+// WORD-EXPAND-UI（Step 11L-D）：同じパネルの中で、問い → 受けとめと候補 → 決定 の順に切りかえる（同時に2つの問いを出さない）。文字はすべて textContent
+let secretDone = false;   // ことばを決めて、タネへ進んだか（二重に進まない）
+const secretEl = id => document.getElementById(id);
+const secretQuestionParts = () => [secretEl('secret-t-title'), document.querySelector('#panel-secret-t .panel-desc'), secretEl('secret-input'), secretEl('btn-secret-next')];
+function secretBox(id) {   // パネルの中の、入れかえる場所（はじめて使うときに作る）
+  let b = secretEl(id);
+  if (!b) { b = document.createElement('div'); b.id = id; secretEl('panel-secret-t').appendChild(b); }
+  return b;
+}
+function secretChip(text, cls, onPick) {
+  const b = document.createElement('button'); b.type = 'button'; b.className = cls; b.textContent = text;
+  b.addEventListener('click', onPick); return b;
+}
+// 送らせないときの、やさしい案内（エラーとは言わない）。入力欄の下に出す
+function showSecretHint(c) {
+  const box = secretBox('secret-hint'); box.replaceChildren(); box.className = 'secret-hint';
+  const line = (t, cls) => { const d = document.createElement('div'); d.className = cls; d.textContent = t; box.appendChild(d); };
+  const input = secretEl('secret-input');
+  const fill = v => () => { input.value = v; input.dispatchEvent(new Event('input', { bubbles: true })); input.focus(); };
+  if (c.kind === 'one-known') {
+    line('「' + c.ch + '」って感じたんだね。もうひとこと足すと、もっと伝わりそう！', 'secret-hint-text');
+    const row = document.createElement('div'); row.className = 'secret-chips';
+    c.words.forEach(w => row.appendChild(secretChip(w, 'secret-chip', fill(w)))); box.appendChild(row);
+  } else {
+    line('もうひとことだけ、教えてほしいな。色・形・動き・気持ちのどれかを足してみよう。', 'secret-hint-text');
+    const row = document.createElement('div'); row.className = 'secret-chips';
+    EXPAND_START.forEach(([label, start]) => row.appendChild(secretChip(label, 'secret-chip', fill(start)))); box.appendChild(row);
+  }
+  box.style.display = '';
+}
+// 受けとめて、ことばを広げる：観点がまだ無い感想だけの答えは、先に「どこが？」を選んでもらう
+function showExpansion(text, c) {
+  secretQuestionParts().forEach(e => { if (e) e.style.display = 'none'; });
+  const hint = secretEl('secret-hint'); if (hint) hint.style.display = 'none';
+  const box = secretBox('secret-expand'); box.style.display = ''; box.replaceChildren();
+  const mode = (_vocabResult && _vocabResult.responseMode) || 'observation';
+  const add = (tag, cls, t) => { const e = document.createElement(tag); e.className = cls; e.textContent = t; box.appendChild(e); return e; };
+  if (c.kind === 'vague') {
+    add('div', 'panel-title secret-insight', 'どんなところが、そう感じさせたのかな？');
+    add('div', 'panel-desc', '形、色、動きのどれに近い？');
+    EXPAND_ASK.forEach(([aspect, label]) => box.appendChild(secretChip(label + text.replace(/[！!。]+$/, ''), 'word-card secret-choice', () => showCandidates(text, mode, aspect))));
+    return;
+  }
+  showCandidates(text, mode, null);
+}
+function showCandidates(text, mode, aspect) {
+  const box = secretBox('secret-expand'); box.replaceChildren();
+  const ex = expandAnswer(text, mode, aspect);
+  const add = (tag, cls, t) => { const e = document.createElement(tag); e.className = cls; e.textContent = t; box.appendChild(e); return e; };
+  add('div', 'panel-title secret-insight', ex.insight);
+  add('div', 'panel-desc', 'こんな言い方もできそう。いちばん近いものはある？');
+  let picked = null;
+  const ok = secretChip('これにする', 'btn-primary btn-disabled', () => { if (picked) confirmSecretWord(text, picked.word); });
+  const options = ex.words.map(w => ({ word: w, label: w })).concat([{ word: null, label: '自分の言葉のまま' }]);
+  options.forEach(o => {
+    const b = secretChip(o.label, 'word-card secret-choice', () => {
+      box.querySelectorAll('.secret-choice').forEach(x => x.classList.remove('selected'));
+      b.classList.add('selected'); picked = o; ok.classList.remove('btn-disabled');
+    });
+    box.appendChild(b);
+  });
+  box.appendChild(ok);
+}
+// 決めた：ことばが広がったことを伝えてから、パネルを閉じてタネへ進む
+function confirmSecretWord(text, chosen) {
+  if (secretDone || state !== S.SECRET_UNLOCKED) return;
+  const box = secretBox('secret-expand'); box.replaceChildren();
+  const d = document.createElement('div'); d.className = 'panel-title secret-insight'; d.textContent = finalLine(text, chosen); box.appendChild(d);
+  worldTimeout(finishSecret, 1600);
+}
+// 問いの画面を最初の形へ戻す（答える画面へ入るたび・リセット）
+function restoreSecretPanel() {
+  secretSent = false; secretDone = false;
+  secretQuestionParts().forEach(e => { if (e) e.style.display = ''; });
+  for (const id of ['secret-hint', 'secret-expand']) { const b = secretEl(id); if (b) { b.replaceChildren(); b.style.display = 'none'; } }
+}
+let secretSent = false;   // 深掘りの答えを送ったか（二重に送らない：Step 11L-C）
+window.toSecretText = ()=>{ restoreSecretPanel(); setState(S.SECRET_UNLOCKED); };`],
   [`window.revealSecret = ()=>{
   if(!document.getElementById('secret-input').value.trim()) return;`,
    `window.revealSecret = ()=>{
-  if(!document.getElementById('secret-input').value.trim()) return;
+  const text = document.getElementById('secret-input').value.trim();
+  if(!text) return;
   if(state !== S.SECRET_UNLOCKED || secretSent) return;   // 1回だけ（連打・Enter と押す の重なりを受けない）
+  const c = classifyAnswer(text);
+  if(c.kind !== 'ok' && c.kind !== 'vague'){ showSecretHint(c); return; }   // まだ進まない：ことばを足してもらう（エラーとは言わない）
   secretSent = true;
-  const sp = document.getElementById('panel-secret-t');   // 質問パネルは、ここですぐ閉じる
-  sp.classList.remove('show'); sp.inert = true; sp.setAttribute('aria-hidden', 'true');
   document.getElementById('secret-input').blur(); document.getElementById('btn-secret-next').classList.add('btn-disabled');
+  resetPageScroll();
+  showExpansion(text, c);   // 受けとめて、ことばを一段広げる。タネは、ことばを決めたあとに生まれる（finishSecret）
+};
+// ことばを決めたあと：質問パネルを閉じ、花を咲かせて、タネへ進む（1回だけ）
+function finishSecret(){
+  if(state !== S.SECRET_UNLOCKED || secretDone) return;
+  secretDone = true;
+  const sp = document.getElementById('panel-secret-t');
+  sp.classList.remove('show'); sp.inert = true; sp.setAttribute('aria-hidden', 'true');
   resetPageScroll();`],
   [`document.getElementById('secret-input').addEventListener('input',function(){`,
    `document.getElementById('secret-input').addEventListener('keydown', e => {   // Enter で送る。日本語の変換を確定する Enter では送らない
@@ -441,8 +598,20 @@ window.toSecretText = ()=>{ secretSent = false; setState(S.SECRET_UNLOCKED); };`
 document.getElementById('secret-input').addEventListener('input',function(){`],
   [`  document.getElementById('btn-secret-next').classList.add('btn-disabled');
   document.getElementById('inp-cam').value='';`,
-   `  document.getElementById('btn-secret-next').classList.add('btn-disabled'); secretSent = false;
+   `  document.getElementById('btn-secret-next').classList.add('btn-disabled'); restoreSecretPanel();
   document.getElementById('inp-cam').value='';`],
+  [`.panel-note { font-size:11px; color:#9a8860; text-align:center; margin-top:6px; }
+`,
+   `.panel-note { font-size:11px; color:#9a8860; text-align:center; margin-top:6px; }
+
+/* WORD-EXPAND（Step 11L-D）：深掘りの答えを広げる段階の、案内・候補・選んだしるし */
+.secret-hint-text { font-size:14px; color:#6a5840; text-align:center; line-height:1.6; margin:2px 0 8px; }
+.secret-chips { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:12px; }
+.secret-chip { min-height:44px; padding:8px 14px; border:2px solid #c8b87a; border-radius:22px; background:#fff; color:#5a4830; font-size:14px; cursor:pointer; }
+.secret-chip:focus-visible, .secret-choice:focus-visible { outline:3px solid #3a3328; outline-offset:3px; }
+.secret-insight { font-size:16px; }
+.secret-choice { display:block; width:100%; text-align:left; font-size:16px; font-weight:bold; color:#3a7a28; margin-bottom:10px; font-family:inherit; }
+`],
 ];
 
 const ART_BLOCK = /\/\/ WORLD-ART-BEGIN[\s\S]*?\/\/ WORLD-ART-END\n\n/;

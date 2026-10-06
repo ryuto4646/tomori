@@ -13,21 +13,23 @@ const between = (s, a, b) => { const i = s.indexOf(a), j = s.indexOf(b, i + 1); 
 const APPLY = between(HTML, 'function applyUI() {', '\nfunction openPanel(');
 const OPEN = between(HTML, 'function openPanel(id) {', '\n}\n');
 const REVEAL = between(HTML, 'window.revealSecret = ()=>{', '\n};');
+const FINISH = between(HTML, 'function finishSecret(){', '\n}\n');
 const RESET = between(HTML, 'function doReset(){', '\n}\n');
 
-// 深掘りの答えを送る処理を、画面の代わりの小さな部品で動かす
-function makeEnv(stateName = 'SECRET_UNLOCKED') {
-  const els = {}, log = { timeouts: [], blooms: 0, scrolls: 0 };
+// 深掘りの答えを送る処理と、決めたあとの処理を、画面の代わりの小さな部品で動かす（判定・広げる処理は呼んだ回数だけ数える）
+function makeEnv(stateName = 'SECRET_UNLOCKED', kind = 'ok') {
+  const els = {}, log = { timeouts: [], blooms: 0, scrolls: 0, expands: 0, hints: 0 };
   const el = id => els[id] || (els[id] = { id, value: '', inert: false, attrs: {}, blurred: 0, classes: new Set(['show']),
     classList: { add: c => els[id].classes.add(c), remove: c => els[id].classes.delete(c), contains: c => els[id].classes.has(c), toggle: (c, on) => on ? els[id].classes.add(c) : els[id].classes.delete(c) },
     setAttribute: (k, v) => { els[id].attrs[k] = v; }, blur: () => { els[id].blurred++; } });
   const S = { SECRET_UNLOCKED: 'SECRET_UNLOCKED', DEMO_COMPLETE: 'DEMO_COMPLETE' };
-  const ctx = { state: S[stateName] || stateName, secretSent: false };
-  const fn = new Function('document', 'S', 'ctx', 'worldTimeout', 'mkFlower', 'flowerGroup', 'bloomSeq', 'resetPageScroll', 'nextGroup', 'setState',
-    `let state = ctx.state; let secretSent = ctx.secretSent; const window = {};
+  const fn = new Function('document', 'S', 'ctxState', 'worldTimeout', 'mkFlower', 'flowerGroup', 'bloomSeq', 'resetPageScroll', 'nextGroup', 'setState', 'classifyAnswer', 'showSecretHint', 'showExpansion',
+    `let state = ctxState; let secretSent = false, secretDone = false; const window = {};
      ${REVEAL}\n};
-     return { send: () => { window.revealSecret(); ctx.secretSent = secretSent; }, sent: () => secretSent };`);
-  const api = fn({ getElementById: el }, S, ctx, (f, ms) => log.timeouts.push(ms), () => ({}), { add: () => {} }, () => { log.blooms++; }, () => { log.scrolls++; }, {}, () => {});
+     ${FINISH}\n}
+     return { send: () => window.revealSecret(), finish: () => finishSecret(), sent: () => secretSent, done: () => secretDone };`);
+  const api = fn({ getElementById: el }, S, S[stateName] || stateName, (f, ms) => log.timeouts.push(ms), () => ({}), { add: () => {} }, () => { log.blooms++; }, () => { log.scrolls++; }, {}, () => {},
+    () => ({ kind }), () => { log.hints++; }, () => { log.expands++; });
   return { els, el, log, api };
 }
 
@@ -49,30 +51,38 @@ test('2. 状態が変わるたびに、すべてのパネルを閉じて、さ�
   for (const c of cases) assert.ok((c.match(/openPanel\(/g) || []).length <= 1, c.slice(0, 30));
 });
 
-test('3. 送るとすぐ質問パネルを閉じる（花が咲き終わるのを待たない）。キーボードを閉じ、ずれたページを戻す', () => {
-  const env = makeEnv(); env.el('secret-input').value = '可愛い';
+test('3. 送ると、同じパネルの中で受けとめと候補へ切りかえる（問いを2つ出さない）。決めたら、すぐパネルを閉じてタネへ進む', () => {
+  const env = makeEnv(); env.el('secret-input').value = '丸いところが可愛い';
   env.api.send();
-  const p = env.el('panel-secret-t');
-  assert.ok(!p.classes.has('show') && p.inert && p.attrs['aria-hidden'] === 'true', 'panel closed');
+  assert.equal(env.log.expands, 1, 'expansion step shown');
   assert.equal(env.el('secret-input').blurred, 1);
   assert.equal(env.log.scrolls, 1);
-  assert.ok(env.el('btn-secret-next').classes.has('btn-disabled'));
+  assert.equal(env.log.blooms, 0, 'no seed before the word is decided');
+  env.api.finish();
+  const p = env.el('panel-secret-t');
+  assert.ok(!p.classes.has('show') && p.inert && p.attrs['aria-hidden'] === 'true', 'panel closed');
+  assert.equal(env.log.blooms, 1); assert.deepEqual(env.log.timeouts, [900]);
 });
 
-test('4. 連打・Enter と押すの重なりでも、送るのは1回だけ（花も状態の切りかえも1回）', () => {
-  const env = makeEnv(); env.el('secret-input').value = '可愛い';
+test('4. 連打・Enter と押すの重なりでも、広げる段階も、タネへ進むのも1回だけ', () => {
+  const env = makeEnv(); env.el('secret-input').value = '丸いところが可愛い';
   env.api.send(); env.api.send(); env.api.send();
-  assert.equal(env.log.blooms, 1);
-  assert.deepEqual(env.log.timeouts, [900]);
-  assert.equal(env.api.sent(), true);
+  assert.equal(env.log.expands, 1);
+  env.api.finish(); env.api.finish();
+  assert.equal(env.log.blooms, 1); assert.deepEqual(env.log.timeouts, [900]);
 });
 
-test('5. 空の答え・ほかの状態では送らない', () => {
+test('5. 空の答え・ほかの状態では送らない。短すぎる・記号だけの答えは、案内を出して進まない', () => {
   const empty = makeEnv(); empty.el('secret-input').value = '   ';
-  empty.api.send(); assert.equal(empty.log.blooms, 0); assert.ok(empty.el('panel-secret-t').classes.has('show'));
+  empty.api.send(); assert.equal(empty.log.expands + empty.log.hints, 0);
   const other = makeEnv('DEMO_COMPLETE'); other.el('secret-input').value = 'ある';
-  other.api.send(); assert.equal(other.log.blooms, 0);
+  other.api.send(); assert.equal(other.log.expands, 0);
+  for (const kind of ['symbol', 'repeat', 'placeholder', 'one-known', 'one-unknown']) {
+    const e = makeEnv('SECRET_UNLOCKED', kind); e.el('secret-input').value = 'x';
+    e.api.send(); assert.equal(e.log.hints, 1, kind); assert.equal(e.log.expands, 0, kind); assert.equal(e.api.sent(), false, kind);
+  }
 });
+
 
 test('6. Enter で送る。日本語の変換を確定する Enter（isComposing・229）と Shift+Enter では送らない', () => {
   const kd = between(HTML, "document.getElementById('secret-input').addEventListener('keydown', e => {", '\n});');
@@ -93,15 +103,15 @@ test('7. ずれたページを戻す：状態が変わったとき・入力欄�
   assert.match(HTML, /if \(!a \|\| !\/\^\(TEXTAREA\|INPUT\)\$\/\.test\(a\.tagName\)\) resetPageScroll\(\);/);
 });
 
-test('8. 答える画面へ入るたび・リセットで、送った印を戻す（2回目の冒険でも送れる。古い質問は残らない）', () => {
-  assert.match(HTML, /window\.toSecretText = \(\)=>\{ secretSent = false; setState\(S\.SECRET_UNLOCKED\); \};/);
-  assert.match(RESET, /secretSent = false;/);
+test('8. 答える画面へ入るたび・リセットで、問いの画面を最初の形へ戻す（答え・候補・選んだしるしを消す）', () => {
+  assert.match(HTML, /window\.toSecretText = \(\)=>\{ restoreSecretPanel\(\); setState\(S\.SECRET_UNLOCKED\); \};/);
+  assert.match(RESET, /restoreSecretPanel\(\);/);
   assert.match(RESET, /setState\(S\.EXPLORE\);/);
+  assert.match(HTML, /function restoreSecretPanel\(\) \{\s*secretSent = false; secretDone = false;/);
 });
 
-test('9. care・429・端末内の候補の流れは、同じパネルと同じ閉じ方を使う（ほかの変更はない）', () => {
-  // care も言葉カードも panel-words（1つ）。状態が変わると applyUI がすべて閉じる
-  assert.match(APPLY, /case S\.WORDS_READY:\s*openPanel\('panel-words'\);/);
-  assert.match(REVEAL, /worldTimeout\(\(\)=>\{ nextGroup\.visible=true; setState\(S\.DEMO_COMPLETE\); \},900\);/);
+test('9. care・429・端末内の候補の流れは、同じパネルと同じ閉じ方を使う（通信は増やさない）', () => {
+  assert.match(between(HTML, 'function applyUI() {', '\nfunction openPanel('), /case S\.WORDS_READY:\s*openPanel\('panel-words'\);/);
+  assert.match(FINISH, /worldTimeout\(\(\)=>\{ nextGroup\.visible=true; setState\(S\.DEMO_COMPLETE\); \},900\);/);
   assert.equal((HTML.match(/\bfetch\(/g) || []).length, 1, 'no new network');
 });

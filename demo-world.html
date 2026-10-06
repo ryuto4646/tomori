@@ -844,6 +844,85 @@ async function fetchVocabulary(expression) {
   }
 }
 // VOCAB-CORE-END
+// EXPAND-AI-BEGIN（Step 11L-F：深掘りの答えを Worker の /expand へ1回だけ送り、受けとめのひとことと3つの言い方をもらう。
+// 3秒で返らない・429・通信の失敗・JSON でない・決まりに合わない ときは、作り直さずに null を返す（画面は端末内の処理を使う）。
+// 送るのは、最初の入力・選んだ語彙カード・深掘りの問い・深掘りの答えだけ。写真・名前・端末の情報は送らない。test-expand-ai.mjs が確かめる）
+const EXPAND_API_URL = VOCABULARY_API_URL.replace(/\/vocabulary$/, '/expand');
+const EXPAND_AI_TIMEOUT_MS = 3000;
+const EXPAND_AI_LIMITS = { expression: 200, word: 20, question: 60, answer: 200 };
+const EXPAND_AI_AXES = new Set(['detail', 'reason', 'compare', 'evidence', 'imagination']);
+const EXPAND_AI_MARKUP = /[<>]|https?:|www\.|:\/\/|&[a-z#0-9]+;/i;
+const EXPAND_AI_BANNED = /正解|不正解|間違|まちが|ちがうよ|違うよ|ダメ|だめ|点数|写真|写って|うつって|画像|AI|ＡＩ/;
+const EXPAND_AI_PRAISE_ONLY = /^((すごい|いい|えらい|さすが|すてき|素敵)(ね|よ|な|です|だね)?)+$/;
+const EXPAND_AI_BREAK = new RegExp('[\r\n' + String.fromCharCode(0x2028, 0x2029) + ']');
+let _expandAbort = null;   // 送っている途中の AbortController
+let _expandGen = 0;        // 答える画面へ入るたび・リセットのたびに増える。古い応答で画面を書き換えないため
+
+function cancelExpansion() {
+  if (_expandAbort) { try { _expandAbort.abort(); } catch (e) {} _expandAbort = null; }
+}
+
+// Worker と同じ決まりで確かめる。合っていれば { reflection, candidates, axis }、合わなければ null
+function validateExpandResponse(data, fields) {
+  if (!data || typeof data !== 'object' || Array.isArray(data) || data.safetyLevel !== 'normal') return null;
+  if (!EXPAND_AI_AXES.has(data.axis)) return null;
+  const key = s => normalizeForSafety(String(s));
+  const inputs = [fields.answer, fields.word, fields.expression].map(key);
+  if (typeof data.reflection !== 'string' || EXPAND_AI_BREAK.test(data.reflection)) return null;
+  const reflection = data.reflection.trim(), rKey = key(reflection);
+  if (!reflection || Array.from(reflection).length > 45) return null;
+  if (!rKey || EXPAND_AI_PRAISE_ONLY.test(rKey)) return null;
+  if (rKey === inputs[0] || (Array.from(inputs[0]).length >= 4 && rKey.includes(inputs[0]))) return null;
+  if (!Array.isArray(data.candidates) || data.candidates.length !== 3) return null;
+  const candidates = [];
+  for (const c of data.candidates) {
+    if (typeof c !== 'string' || EXPAND_AI_BREAK.test(c)) return null;
+    const t = c.trim(), len = Array.from(t).length;
+    if (len === 0 || len > 18 || /[、。]/.test(t) || inputs.includes(key(t))) return null;
+    candidates.push(t);
+  }
+  if (new Set(candidates.map(key)).size !== 3) return null;
+  for (const t of [reflection, ...candidates]) {
+    if (EXPAND_AI_MARKUP.test(t) || EXPAND_AI_BANNED.test(t) || detectDeterministicCare(t)) return null;
+  }
+  return { reflection, candidates, axis: data.axis };
+}
+
+async function fetchExpansion(fields) {
+  cancelExpansion();
+  if (!VOCABULARY_AI_ENABLED) return null;
+  const body = {};
+  for (const [k, max] of Object.entries(EXPAND_AI_LIMITS)) {
+    const v = String(fields[k] == null ? '' : fields[k]).trim().slice(0, max);
+    if (!v) return null;
+    body[k] = v;
+  }
+  // 明示的な表現は送らない（端末内の処理のまま）
+  if (Object.values(body).some(v => detectDeterministicCare(v))) return null;
+  const sessionId = getVocabSessionId();
+  if (!sessionId) return null;
+  const abort = new AbortController();
+  _expandAbort = abort;
+  const timeoutId = setTimeout(() => abort.abort(), EXPAND_AI_TIMEOUT_MS);
+  try {
+    const res = await fetch(EXPAND_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Tomori-Session': sessionId },
+      body: JSON.stringify({ ...body, age: 'grade_3_4', language: 'ja' }),
+      signal: abort.signal,
+    });
+    if (!res.ok) return null;
+    let data;
+    try { data = await res.json(); } catch (e) { return null; }
+    return validateExpandResponse(data, body);
+  } catch (e) {
+    return null;
+  } finally {
+    clearTimeout(timeoutId);
+    if (_expandAbort === abort) _expandAbort = null;
+  }
+}
+// EXPAND-AI-END
 
 // ミッションまわりの文面を定数から入れる。「、」のあとで改行する（textContent と DOM だけで組み立てる）
 function applyMissionCopy() {
@@ -3154,7 +3233,7 @@ function showSecretHint(c) {
   box.style.display = '';
 }
 // 受けとめて、ことばを広げる：観点がまだ無い感想だけの答えは、先に「どこが？」を選んでもらう
-function showExpansion(text, c) {
+function showExpansion(text, c, ai) {
   secretQuestionParts().forEach(e => { if (e) e.style.display = 'none'; });
   const hint = secretEl('secret-hint'); if (hint) hint.style.display = 'none';
   const box = secretBox('secret-expand'); box.style.display = ''; box.replaceChildren();
@@ -3166,11 +3245,12 @@ function showExpansion(text, c) {
     EXPAND_ASK.forEach(([aspect, label]) => box.appendChild(secretChip(label + text.replace(/[！!。]+$/, ''), 'word-card secret-choice', () => showCandidates(text, mode, aspect))));
     return;
   }
-  showCandidates(text, mode, null);
+  showCandidates(text, mode, null, ai);
 }
-function showCandidates(text, mode, aspect) {
+// ai があれば AI の受けとめと3つの言い方、なければ端末内の処理。画面の形（ボタンの数・順番）はどちらも同じ
+function showCandidates(text, mode, aspect, ai) {
   const box = secretBox('secret-expand'); box.replaceChildren();
-  const ex = expandAnswer(text, mode, aspect);
+  const ex = ai ? { insight: ai.reflection, move: ai.axis, words: ai.candidates } : expandAnswer(text, mode, aspect);
   const add = (tag, cls, t) => { const e = document.createElement(tag); e.className = cls; e.textContent = t; box.appendChild(e); return e; };
   add('div', 'panel-title secret-insight', ex.insight);
   add('div', 'panel-desc', 'こんな言い方もできそう。いちばん近いものはある？');
@@ -3196,6 +3276,7 @@ function confirmSecretWord(text, chosen) {
 // 問いの画面を最初の形へ戻す（答える画面へ入るたび・リセット）
 function restoreSecretPanel() {
   secretSent = false; secretDone = false;
+  _expandGen++; cancelExpansion(); secretEl('secret-input').readOnly = false;   // 送っている途中の答えは、もう画面に出さない
   secretQuestionParts().forEach(e => { if (e) e.style.display = ''; });
   for (const id of ['secret-hint', 'secret-expand']) { const b = secretEl(id); if (b) { b.replaceChildren(); b.style.display = 'none'; } }
 }
@@ -3218,9 +3299,19 @@ window.revealSecret = ()=>{
   const c = classifyAnswer(text);
   if(c.kind !== 'ok' && c.kind !== 'vague'){ showSecretHint(c); return; }   // まだ進まない：ことばを足してもらう（エラーとは言わない）
   secretSent = true;
-  document.getElementById('secret-input').blur(); document.getElementById('btn-secret-next').classList.add('btn-disabled');
+  const input = document.getElementById('secret-input');
+  input.blur(); document.getElementById('btn-secret-next').classList.add('btn-disabled');
   resetPageScroll();
-  showExpansion(text, c);   // 受けとめて、ことばを一段広げる。タネは、ことばを決めたあとに生まれる（finishSecret）
+  // 受けとめて、ことばを一段広げる。タネは、ことばを決めたあとに生まれる（finishSecret）
+  if(c.kind !== 'ok'){ showExpansion(text, c); return; }   // 感想だけの答えは、端末内で先に「どこが？」を聞く
+  // くわしい答えは AI へ1回だけ送る（最大3秒）。待つ間も問いの画面のまま（「考え中」は出さない）。失敗したら端末内の処理
+  const gen = _expandGen;
+  input.readOnly = true;
+  fetchExpansion({ expression: enteredText, word: chosenWord, question: document.getElementById('secret-t-title').textContent, answer: text }).then(ai => {
+    if(gen !== _expandGen || state !== S.SECRET_UNLOCKED || secretDone) return;   // リセット・やり直しのあとに届いた答えは使わない
+    input.readOnly = false;
+    showExpansion(text, c, ai);
+  });
 };
 // ことばを決めたあと：質問パネルを閉じ、花を咲かせて、タネへ進む（1回だけ）
 function finishSecret(){

@@ -94,7 +94,8 @@ test('11. 子どもの答え・候補・ひとことは textContent で出す（
   assert.ok(!/fetch\(|XMLHttpRequest|localStorage|sessionStorage|console\./.test(code));
   assert.match(UI, /b\.textContent = text;/);
   assert.match(UI, /d\.textContent = finalLine\(text, chosen\);/);
-  assert.equal((HTML.match(/\bfetch\(/g) || []).length, 1);
+  // 通信は WORD-EXPAND の外（EXPAND-AI・Step 11L-F）にだけ足す。全体では語彙カードと /expand の2か所
+  assert.equal((HTML.match(/\bfetch\(/g) || []).length, 2);
 });
 
 test('12. 決めたあとのことば：広げたことばを選んだときと、自分の言葉のままのとき（長い答えは22文字で切る）', () => {

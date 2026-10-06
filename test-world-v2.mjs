@@ -243,7 +243,7 @@ test('18. 外部 URL・CDN・通信は増えていない（GLB は同じ場所�
   const urls = s => [...new Set(s.match(/https?:\/\/[^\s'"`)<>]+/g) || [])].sort();
   assert.deepEqual(urls(HTML), urls(OLD));
   assert.ok(!/https?:\/\/|import\(|fetch\(|XMLHttpRequest|GLTFLoader|DRACOLoader|KTX2Loader/.test(V2_CODE));
-  assert.equal(count(stripComments(HTML), /\bfetch\(/g), 1, 'only the vocabulary fetch');
+  assert.equal(count(stripComments(HTML), /\bfetch\(/g), 2, 'only the vocabulary fetch and the expand fetch (Step 11L-F)');
   const importmap = s => (s.match(/<script type="importmap">[\s\S]*?<\/script>/) || [''])[0];
   assert.equal(importmap(HTML), importmap(OLD));
 });

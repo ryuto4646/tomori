@@ -75,7 +75,7 @@ test('5. タネが生まれるのは深掘りの問いのあと（DEMO_COMPLETE�
 
 test('6. 冒険の進み方は保存しない（読み込み直すと最初から）。通信もしない', () => {
   assert.ok(!/localStorage|sessionStorage|indexedDB|document\.cookie/.test(V2_CODE));
-  assert.equal(count(HTML, /\bfetch\(/g), 1, 'only the GLB loader / vocabulary fetch stays single');
+  assert.equal(count(HTML, /\bfetch\(/g), 2, 'only the vocabulary fetch and the expand fetch (Step 11L-F)');
   assert.ok(!/console\./.test(V2_CODE));
   assert.ok(!/innerHTML|outerHTML|insertAdjacentHTML/.test(V2_CODE));
 });
@@ -429,7 +429,7 @@ test('32. 収集物を増やしていない：芽1つ・タネ1つ・灯る実1�
   assert.ok(!/\bcoin|treasure|chest|gacha|enemy\b/i.test(V2_CODE));
   assert.equal(count(V2_CODE, /createElement\(/g), 4, 'only the finale texts and buttons');
   assert.equal(count(HTML, /class="panel"/g), count(OLD, /class="panel"/g), 'no new panel');
-  assert.equal(count(HTML, /\bfetch\(/g), 1);
+  assert.equal(count(HTML, /\bfetch\(/g), 2);   // 語彙カードと、深掘りの答えを広げる（Step 11L-F）の2か所
 });
 
 test('33. ことばの樹の構図：カメラは丘の上ではなく、道と谷の低い所に置く（ヒロリがどの向きから着いても）', () => {

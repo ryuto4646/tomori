@@ -235,7 +235,7 @@ test('16. GLB・外部素材・新しい通信に頼っていない', () => {
   assert.ok(!/\.glb|\.gltf|GLTFLoader\(|\.load\(/i.test(SRC));
   assert.ok(!/fetch\(|XMLHttpRequest|https?:/.test(SRC));
   const script = HTML.replace(/\/\/.*$/gm, '');
-  assert.equal((script.match(/\bfetch\(/g) || []).length, 1, 'only the existing vocabulary fetch');
+  assert.equal((script.match(/\bfetch\(/g) || []).length, 2, 'only the vocabulary fetch and the expand fetch (Step 11L-F)');
   assert.equal((HTML.match(/https:\/\/cdn\./g) || []).length, 2, 'no new CDN');
 });
 

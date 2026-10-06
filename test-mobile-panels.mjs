@@ -18,18 +18,19 @@ const RESET = between(HTML, 'function doReset(){', '\n}\n');
 
 // 深掘りの答えを送る処理と、決めたあとの処理を、画面の代わりの小さな部品で動かす（判定・広げる処理は呼んだ回数だけ数える）
 function makeEnv(stateName = 'SECRET_UNLOCKED', kind = 'ok') {
-  const els = {}, log = { timeouts: [], blooms: 0, scrolls: 0, expands: 0, hints: 0 };
+  const els = {}, log = { timeouts: [], blooms: 0, scrolls: 0, expands: 0, hints: 0, aiCalls: [] };
   const el = id => els[id] || (els[id] = { id, value: '', inert: false, attrs: {}, blurred: 0, classes: new Set(['show']),
     classList: { add: c => els[id].classes.add(c), remove: c => els[id].classes.delete(c), contains: c => els[id].classes.has(c), toggle: (c, on) => on ? els[id].classes.add(c) : els[id].classes.delete(c) },
     setAttribute: (k, v) => { els[id].attrs[k] = v; }, blur: () => { els[id].blurred++; } });
   const S = { SECRET_UNLOCKED: 'SECRET_UNLOCKED', DEMO_COMPLETE: 'DEMO_COMPLETE' };
-  const fn = new Function('document', 'S', 'ctxState', 'worldTimeout', 'mkFlower', 'flowerGroup', 'bloomSeq', 'resetPageScroll', 'nextGroup', 'setState', 'classifyAnswer', 'showSecretHint', 'showExpansion',
-    `let state = ctxState; let secretSent = false, secretDone = false; const window = {};
+  const fn = new Function('document', 'S', 'ctxState', 'worldTimeout', 'mkFlower', 'flowerGroup', 'bloomSeq', 'resetPageScroll', 'nextGroup', 'setState', 'classifyAnswer', 'showSecretHint', 'showExpansion', 'fetchExpansion',
+    `let state = ctxState; let secretSent = false, secretDone = false; const window = {}; let _expandGen = 0, enteredText = 'ひよこ', chosenWord = '輪郭';
      ${REVEAL}\n};
      ${FINISH}\n}
      return { send: () => window.revealSecret(), finish: () => finishSecret(), sent: () => secretSent, done: () => secretDone };`);
   const api = fn({ getElementById: el }, S, S[stateName] || stateName, (f, ms) => log.timeouts.push(ms), () => ({}), { add: () => {} }, () => { log.blooms++; }, () => { log.scrolls++; }, {}, () => {},
-    () => ({ kind }), () => { log.hints++; }, () => { log.expands++; });
+    () => ({ kind }), () => { log.hints++; }, () => { log.expands++; },
+    fields => { log.aiCalls.push(fields); return Promise.resolve(null); });   // AI は使えなかった（端末内の処理へ）
   return { els, el, log, api };
 }
 
@@ -51,9 +52,10 @@ test('2. 状態が変わるたびに、すべてのパネルを閉じて、さ�
   for (const c of cases) assert.ok((c.match(/openPanel\(/g) || []).length <= 1, c.slice(0, 30));
 });
 
-test('3. 送ると、同じパネルの中で受けとめと候補へ切りかえる（問いを2つ出さない）。決めたら、すぐパネルを閉じてタネへ進む', () => {
+const tick = () => new Promise(r => setTimeout(r, 0));
+test('3. 送ると、同じパネルの中で受けとめと候補へ切りかえる（問いを2つ出さない）。決めたら、すぐパネルを閉じてタネへ進む', async () => {
   const env = makeEnv(); env.el('secret-input').value = '丸いところが可愛い';
-  env.api.send();
+  env.api.send(); await tick();
   assert.equal(env.log.expands, 1, 'expansion step shown');
   assert.equal(env.el('secret-input').blurred, 1);
   assert.equal(env.log.scrolls, 1);
@@ -64,22 +66,23 @@ test('3. 送ると、同じパネルの中で受けとめと候補へ切りか�
   assert.equal(env.log.blooms, 1); assert.deepEqual(env.log.timeouts, [900]);
 });
 
-test('4. 連打・Enter と押すの重なりでも、広げる段階も、タネへ進むのも1回だけ', () => {
+test('4. 連打・Enter と押すの重なりでも、AI へ送るのも、広げる段階も、タネへ進むのも1回だけ', async () => {
   const env = makeEnv(); env.el('secret-input').value = '丸いところが可愛い';
-  env.api.send(); env.api.send(); env.api.send();
+  env.api.send(); env.api.send(); env.api.send(); await tick();
+  assert.equal(env.log.aiCalls.length, 1);
   assert.equal(env.log.expands, 1);
   env.api.finish(); env.api.finish();
   assert.equal(env.log.blooms, 1); assert.deepEqual(env.log.timeouts, [900]);
 });
 
-test('5. 空の答え・ほかの状態では送らない。短すぎる・記号だけの答えは、案内を出して進まない', () => {
+test('5. 空の答え・ほかの状態では送らない。短すぎる・記号だけの答えは、案内を出して進まない', async () => {
   const empty = makeEnv(); empty.el('secret-input').value = '   ';
   empty.api.send(); assert.equal(empty.log.expands + empty.log.hints, 0);
   const other = makeEnv('DEMO_COMPLETE'); other.el('secret-input').value = 'ある';
-  other.api.send(); assert.equal(other.log.expands, 0);
+  other.api.send(); await tick(); assert.equal(other.log.expands, 0); assert.equal(other.log.aiCalls.length, 0);
   for (const kind of ['symbol', 'repeat', 'placeholder', 'one-known', 'one-unknown']) {
     const e = makeEnv('SECRET_UNLOCKED', kind); e.el('secret-input').value = 'x';
-    e.api.send(); assert.equal(e.log.hints, 1, kind); assert.equal(e.log.expands, 0, kind); assert.equal(e.api.sent(), false, kind);
+    e.api.send(); await tick(); assert.equal(e.log.hints, 1, kind); assert.equal(e.log.expands, 0, kind); assert.equal(e.api.sent(), false, kind); assert.equal(e.log.aiCalls.length, 0, kind);
   }
 });
 
@@ -113,5 +116,6 @@ test('8. 答える画面へ入るたび・リセットで、問いの画面を�
 test('9. care・429・端末内の候補の流れは、同じパネルと同じ閉じ方を使う（通信は増やさない）', () => {
   assert.match(between(HTML, 'function applyUI() {', '\nfunction openPanel('), /case S\.WORDS_READY:\s*openPanel\('panel-words'\);/);
   assert.match(FINISH, /worldTimeout\(\(\)=>\{ nextGroup\.visible=true; setState\(S\.DEMO_COMPLETE\); \},900\);/);
-  assert.equal((HTML.match(/\bfetch\(/g) || []).length, 1, 'no new network');
+  // 通信は、最初の語彙カード（/vocabulary）と、深掘りの答えを広げる（/expand・Step 11L-F）の2か所だけ
+  assert.equal((HTML.match(/\bfetch\(/g) || []).length, 2, 'vocabulary + expand only');
 });

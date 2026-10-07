@@ -17,20 +17,21 @@ const FINISH = between(HTML, 'function finishSecret(){', '\n}\n');
 const RESET = between(HTML, 'function doReset(){', '\n}\n');
 
 // 深掘りの答えを送る処理と、決めたあとの処理を、画面の代わりの小さな部品で動かす（判定・広げる処理は呼んだ回数だけ数える）
-function makeEnv(stateName = 'SECRET_UNLOCKED', kind = 'ok') {
-  const els = {}, log = { timeouts: [], blooms: 0, scrolls: 0, expands: 0, hints: 0, aiCalls: [] };
+function makeEnv(stateName = 'SECRET_UNLOCKED', kind = 'ok', { ai = null, localCare = null } = {}) {
+  const els = {}, log = { timeouts: [], blooms: 0, scrolls: 0, expands: 0, hints: 0, aiCalls: [], waits: [], cares: [] };
   const el = id => els[id] || (els[id] = { id, value: '', inert: false, attrs: {}, blurred: 0, classes: new Set(['show']),
     classList: { add: c => els[id].classes.add(c), remove: c => els[id].classes.delete(c), contains: c => els[id].classes.has(c), toggle: (c, on) => on ? els[id].classes.add(c) : els[id].classes.delete(c) },
     setAttribute: (k, v) => { els[id].attrs[k] = v; }, blur: () => { els[id].blurred++; } });
   const S = { SECRET_UNLOCKED: 'SECRET_UNLOCKED', DEMO_COMPLETE: 'DEMO_COMPLETE' };
-  const fn = new Function('document', 'S', 'ctxState', 'worldTimeout', 'mkFlower', 'flowerGroup', 'bloomSeq', 'resetPageScroll', 'nextGroup', 'setState', 'classifyAnswer', 'showSecretHint', 'showExpansion', 'fetchExpansion',
+  const fn = new Function('document', 'S', 'ctxState', 'worldTimeout', 'mkFlower', 'flowerGroup', 'bloomSeq', 'resetPageScroll', 'nextGroup', 'setState', 'classifyAnswer', 'showSecretHint', 'showExpansion', 'fetchExpansion', 'localExpandCare', 'showSecretWait', 'showSecretCare',
     `let state = ctxState; let secretSent = false, secretDone = false; const window = {}; let _expandGen = 0, enteredText = 'ひよこ', chosenWord = '輪郭';
      ${REVEAL}\n};
      ${FINISH}\n}
      return { send: () => window.revealSecret(), finish: () => finishSecret(), sent: () => secretSent, done: () => secretDone };`);
   const api = fn({ getElementById: el }, S, S[stateName] || stateName, (f, ms) => log.timeouts.push(ms), () => ({}), { add: () => {} }, () => { log.blooms++; }, () => { log.scrolls++; }, {}, () => {},
     () => ({ kind }), () => { log.hints++; }, () => { log.expands++; },
-    fields => { log.aiCalls.push(fields); return Promise.resolve(null); });   // AI は使えなかった（端末内の処理へ）
+    fields => { log.aiCalls.push(fields); return Promise.resolve(ai); },   // 既定は null（AI は使えなかった＝端末内の処理へ）
+    () => localCare, on => { log.waits.push(on); }, urgent => { log.cares.push(urgent); });
   return { els, el, log, api };
 }
 
@@ -118,4 +119,42 @@ test('9. care・429・端末内の候補の流れは、同じパネルと同じ�
   assert.match(FINISH, /worldTimeout\(\(\)=>\{ nextGroup\.visible=true; setState\(S\.DEMO_COMPLETE\); \},900\);/);
   // 通信は、最初の語彙カード（/vocabulary）と、深掘りの答えを広げる（/expand・Step 11L-F）の2か所だけ
   assert.equal((HTML.match(/\bfetch\(/g) || []).length, 2, 'vocabulary + expand only');
+});
+
+// ═══ Step 11L-G：待つ間のひとこと・care ═══
+test('10. AI を待つ間は「ことばを探しているよ」を出し、返事（成功・失敗）が届いたら片付ける。連打しても送るのは1回', async () => {
+  const env = makeEnv(); env.el('secret-input').value = '丸いところが可愛い';
+  env.api.send(); env.api.send();
+  assert.deepEqual(env.log.waits, [true]); assert.equal(env.el('secret-input').readOnly, true);
+  await tick();
+  assert.deepEqual(env.log.waits, [true, false]); assert.equal(env.el('secret-input').readOnly, false);
+  assert.equal(env.log.aiCalls.length, 1); assert.equal(env.log.expands, 1);
+  assert.match(HTML, /box\.textContent = on \? 'ことばを探しているよ' : '';/);
+  assert.match(HTML, /for \(const id of \['secret-hint', 'secret-expand', 'secret-wait', 'secret-care'\]\)/, 'reset clears the wait text and care');
+});
+
+test('11. 明らかな危険を示す答えは、送らずに端末内で care。候補にもタネにも進まない', async () => {
+  for (const urgent of [false, true]) {
+    const env = makeEnv('SECRET_UNLOCKED', 'ok', { localCare: { care: true, urgent } }); env.el('secret-input').value = 'x';
+    env.api.send(); env.api.send(); await tick();
+    assert.deepEqual(env.log.cares, [urgent]);
+    assert.equal(env.log.aiCalls.length, 0); assert.equal(env.log.expands, 0); assert.equal(env.log.hints, 0);
+    assert.equal(env.log.blooms, 0); assert.deepEqual(env.log.timeouts, []);
+  }
+});
+
+test('12. AI（第二段階）が care と返したときも care を出し、候補・タネへ進まない', async () => {
+  const env = makeEnv('SECRET_UNLOCKED', 'ok', { ai: { care: true, urgent: true } }); env.el('secret-input').value = '丸いところが可愛い';
+  env.api.send(); await tick();
+  assert.deepEqual(env.log.cares, [true]); assert.equal(env.log.expands, 0); assert.equal(env.log.blooms, 0);
+  assert.deepEqual(env.log.waits, [true, false]);
+});
+
+test('13. care の画面：差し迫った危険の案内を先に出し、支援の文と「入力にもどる」を置く（固定の文・textContent）', () => {
+  const fn = between(HTML, 'function showSecretCare(urgent) {', '\n}\n');
+  assert.ok(fn.indexOf('URGENT_CARE_MESSAGE') < fn.indexOf('CARE_SUPPORT_MESSAGE'));
+  assert.match(fn, /secretChip\('入力にもどる'/);
+  assert.match(fn, /restoreSecretPanel\(\);/);
+  assert.ok(!/finishSecret|bloomSeq|showCandidates|innerHTML/.test(fn));
+  assert.match(HTML, /const URGENT_CARE_MESSAGE = 'いま危ないと感じたら、すぐ近くの大人に知らせてね。';/);
 });

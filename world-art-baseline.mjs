@@ -568,7 +568,28 @@ function restoreSecretPanel() {
   secretSent = false; secretDone = false;
   _expandGen++; cancelExpansion(); secretEl('secret-input').readOnly = false;   // 送っている途中の答えは、もう画面に出さない
   secretQuestionParts().forEach(e => { if (e) e.style.display = ''; });
-  for (const id of ['secret-hint', 'secret-expand']) { const b = secretEl(id); if (b) { b.replaceChildren(); b.style.display = 'none'; } }
+  for (const id of ['secret-hint', 'secret-expand', 'secret-wait', 'secret-care']) { const b = secretEl(id); if (b) { b.replaceChildren(); b.style.display = 'none'; } }
+}
+// AI の返事を待つ間：送るボタンのすぐ下に「ことばを探しているよ」（答えは入力欄に残す）
+function showSecretWait(on) {
+  const box = secretBox('secret-wait'); box.className = 'secret-wait';
+  box.setAttribute('role', 'status');
+  box.textContent = on ? 'ことばを探しているよ' : '';
+  box.style.display = on ? '' : 'none';
+}
+// 深掘りの答えの care：候補・タネへは進まない。責めずに、信頼できる大人へ話すことをすすめ、入力へ戻る出口を置く
+function showSecretCare(urgent) {
+  secretQuestionParts().forEach(e => { if (e) e.style.display = 'none'; });
+  for (const id of ['secret-hint', 'secret-expand', 'secret-wait']) { const b = secretEl(id); if (b) { b.replaceChildren(); b.style.display = 'none'; } }
+  const box = secretBox('secret-care'); box.className = 'secret-care'; box.replaceChildren(); box.style.display = '';
+  const line = (t, cls) => { const d = document.createElement('div'); d.className = cls; d.textContent = t; box.appendChild(d); };
+  if (urgent) line(URGENT_CARE_MESSAGE, 'care-msg care-urgent');   // 差し迫った危険のときは、すぐ知らせる案内を先に
+  line(CARE_SUPPORT_MESSAGE.replace(/。(?=.)/g, '。\\n'), 'care-msg');
+  const back = secretChip('入力にもどる', 'btn-care btn-care-rewrite', () => {
+    restoreSecretPanel();
+    const input = secretEl('secret-input'); input.value = ''; secretEl('btn-secret-next').classList.add('btn-disabled'); input.focus();
+  });
+  box.appendChild(back);
 }
 let secretSent = false;   // 深掘りの答えを送ったか（二重に送らない：Step 11L-C）
 window.toSecretText = ()=>{ restoreSecretPanel(); setState(S.SECRET_UNLOCKED); };`],
@@ -578,20 +599,23 @@ window.toSecretText = ()=>{ restoreSecretPanel(); setState(S.SECRET_UNLOCKED); }
   const text = document.getElementById('secret-input').value.trim();
   if(!text) return;
   if(state !== S.SECRET_UNLOCKED || secretSent) return;   // 1回だけ（連打・Enter と押す の重なりを受けない）
+  const input = document.getElementById('secret-input');
+  const settle = () => { secretSent = true; input.blur(); document.getElementById('btn-secret-next').classList.add('btn-disabled'); resetPageScroll(); };
+  // 明らかな危険を示す答えは、送る前に端末内で care にする（通信できなくても、ふつうの候補・タネへ進めない）
+  const care = localExpandCare({ expression: enteredText, answer: text });
+  if(care){ settle(); showSecretCare(care.urgent); return; }
   const c = classifyAnswer(text);
   if(c.kind !== 'ok' && c.kind !== 'vague'){ showSecretHint(c); return; }   // まだ進まない：ことばを足してもらう（エラーとは言わない）
-  secretSent = true;
-  const input = document.getElementById('secret-input');
-  input.blur(); document.getElementById('btn-secret-next').classList.add('btn-disabled');
-  resetPageScroll();
+  settle();
   // 受けとめて、ことばを一段広げる。タネは、ことばを決めたあとに生まれる（finishSecret）
   if(c.kind !== 'ok'){ showExpansion(text, c); return; }   // 感想だけの答えは、端末内で先に「どこが？」を聞く
-  // くわしい答えは AI へ1回だけ送る（最大3秒）。待つ間も問いの画面のまま（「考え中」は出さない）。失敗したら端末内の処理
+  // くわしい答えは AI へ1回だけ送る（最大5秒）。待つ間は同じパネルに「ことばを探しているよ」。失敗したら端末内の処理
   const gen = _expandGen;
-  input.readOnly = true;
+  input.readOnly = true; showSecretWait(true);
   fetchExpansion({ expression: enteredText, word: chosenWord, question: document.getElementById('secret-t-title').textContent, answer: text }).then(ai => {
     if(gen !== _expandGen || state !== S.SECRET_UNLOCKED || secretDone) return;   // リセット・やり直しのあとに届いた答えは使わない
-    input.readOnly = false;
+    input.readOnly = false; showSecretWait(false);
+    if(ai && ai.care){ showSecretCare(ai.urgent); return; }   // AI（第二段階）が care と判断したとき
     showExpansion(text, c, ai);
   });
 };
@@ -622,6 +646,10 @@ document.getElementById('secret-input').addEventListener('input',function(){`],
 .secret-chip { min-height:44px; padding:8px 14px; border:2px solid #c8b87a; border-radius:22px; background:#fff; color:#5a4830; font-size:14px; cursor:pointer; }
 .secret-chip:focus-visible, .secret-choice:focus-visible { outline:3px solid #3a3328; outline-offset:3px; }
 .secret-insight { font-size:16px; }
+/* Step 11L-G：AI の返事を待つ間のひとこと（同じパネルの中・動かさない）と、深掘りの答えの care */
+.secret-wait { font-size:14px; color:#6a5840; text-align:center; margin-top:10px; }
+.secret-care { padding:16px; background:#fff8f0; border:2px solid #f0c080; border-radius:14px; text-align:center; }
+.secret-care .care-urgent { font-weight:bold; color:#7a2810; }
 .secret-choice { display:block; width:100%; text-align:left; font-size:16px; font-weight:bold; color:#3a7a28; margin-bottom:10px; font-family:inherit; }
 `],
   [`  <button id="btn-back"  onclick="window.location.href='index.html'">← アプリへ</button>`,
@@ -630,27 +658,57 @@ document.getElementById('secret-input').addEventListener('input',function(){`],
 
 `,
    `// VOCAB-CORE-END
-// EXPAND-AI-BEGIN（Step 11L-F：深掘りの答えを Worker の /expand へ1回だけ送り、受けとめのひとことと3つの言い方をもらう。
-// 3秒で返らない・429・通信の失敗・JSON でない・決まりに合わない ときは、作り直さずに null を返す（画面は端末内の処理を使う）。
+// EXPAND-AI-BEGIN（Step 11L-F・11L-G：深掘りの答えを Worker の /expand へ1回だけ送り、受けとめのひとことと3つの言い方をもらう。
+// 5秒で返らない・429・通信の失敗・JSON でない・決まりに合わない ときは、作り直さずに null を返す（画面は端末内の処理を使う）。
+// 明らかな危険を示す答えは、送る前に端末内で care にする（通信できなくても、ふつうの候補へ変えない）。
 // 送るのは、最初の入力・選んだ語彙カード・深掘りの問い・深掘りの答えだけ。写真・名前・端末の情報は送らない。test-expand-ai.mjs が確かめる）
 const EXPAND_API_URL = VOCABULARY_API_URL.replace(/\\/vocabulary$/, '/expand');
-const EXPAND_AI_TIMEOUT_MS = 3000;
+const EXPAND_AI_TIMEOUT_MS = 5000;
 const EXPAND_AI_LIMITS = { expression: 200, word: 20, question: 60, answer: 200 };
 const EXPAND_AI_AXES = new Set(['detail', 'reason', 'compare', 'evidence', 'imagination']);
 const EXPAND_AI_MARKUP = /[<>]|https?:|www\\.|:\\/\\/|&[a-z#0-9]+;/i;
 const EXPAND_AI_BANNED = /正解|不正解|間違|まちが|ちがうよ|違うよ|ダメ|だめ|点数|写真|写って|うつって|画像|AI|ＡＩ/;
 const EXPAND_AI_PRAISE_ONLY = /^((すごい|いい|えらい|さすが|すてき|素敵)(ね|よ|な|です|だね)?)+$/;
 const EXPAND_AI_BREAK = new RegExp('[\\r\\n' + String.fromCharCode(0x2028, 0x2029) + ']');
+// 最初の入力と答えに無い 部位・色・手触り を足した返事は使わない（Worker の EXPAND_UNGROUNDED_WORDS と同じ）
+const EXPAND_AI_UNGROUNDED = [
+  '目玉', 'つぶら', '瞳', '耳', '鼻', 'くちばし', '羽', '翼', 'つばさ', 'しっぽ', '尻尾', '足', '顔', '毛並み', 'ひげ', 'おなか', '背中', '首',
+  '赤', '青', '黄', '白', '黒', '緑', 'ピンク', '茶色', '金色', '銀色', 'オレンジ', '紫', '水色', '灰色',
+  'ふわふわ', 'もふもふ', 'ふさふさ', 'ざらざら', 'すべすべ', 'つるつる', 'さらさら', 'ごつごつ', '手触り', '手ざわり',
+].map(w => normalizeForSafety(w));
+// 差し迫った危険のしるし（Worker の URGENT_CARE_PATTERNS と同じ）。care のときだけ見る
+const EXPAND_URGENT_PATTERNS = [
+  /(今|いま)(から|すぐ)/, /これから/,
+  /(殴|なぐ)られ(てい|てる)/, /(叩|たた)かれ(てい|てる)/, /蹴られ(てい|てる)/, /(怖|こわ)いことを?され(てい|てる)/,
+  /(家|いえ|うち)に(帰|かえ)るのが(怖|こわ)い/,
+  /(殺|ころ)(してやる|すぞ)/, /刺してやる/,
+];
+const URGENT_CARE_MESSAGE = 'いま危ないと感じたら、すぐ近くの大人に知らせてね。';
 let _expandAbort = null;   // 送っている途中の AbortController
 let _expandGen = 0;        // 答える画面へ入るたび・リセットのたびに増える。古い応答で画面を書き換えないため
 
 function cancelExpansion() {
   if (_expandAbort) { try { _expandAbort.abort(); } catch (e) {} _expandAbort = null; }
 }
+function isUrgentCare(text) {
+  const s = normalizeForSafety(String(text == null ? '' : text));
+  return EXPAND_URGENT_PATTERNS.some(p => p.test(s));
+}
+// 端末内の安全判定（正規化してから規則に当てる。語句の完全一致だけには頼らない）。当たれば { care, urgent }
+function localExpandCare(fields) {
+  const texts = [fields.expression, fields.answer].map(v => String(v == null ? '' : v));
+  if (!texts.some(t => detectDeterministicCare(t))) return null;
+  return { care: true, urgent: texts.some(isUrgentCare) };
+}
 
-// Worker と同じ決まりで確かめる。合っていれば { reflection, candidates, axis }、合わなければ null
+// Worker と同じ決まりで確かめる。合っていれば { reflection, candidates, axis }、care なら { care, urgent }、合わなければ null
 function validateExpandResponse(data, fields) {
-  if (!data || typeof data !== 'object' || Array.isArray(data) || data.safetyLevel !== 'normal') return null;
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
+  if (data.safetyLevel === 'care') {   // Worker の care の形：{ reflection:null, candidates:[], axis:null, safetyLevel:'care', urgent, supportMessage }
+    if (data.reflection !== null || data.axis !== null || !Array.isArray(data.candidates) || data.candidates.length !== 0 || typeof data.urgent !== 'boolean') return null;
+    return { care: true, urgent: data.urgent };
+  }
+  if (data.safetyLevel !== 'normal') return null;
   if (!EXPAND_AI_AXES.has(data.axis)) return null;
   const key = s => normalizeForSafety(String(s));
   const inputs = [fields.answer, fields.word, fields.expression].map(key);
@@ -668,14 +726,19 @@ function validateExpandResponse(data, fields) {
     candidates.push(t);
   }
   if (new Set(candidates.map(key)).size !== 3) return null;
+  const basis = key(fields.expression + ' ' + fields.answer);   // 事実の根拠は、最初の入力と答えだけ
   for (const t of [reflection, ...candidates]) {
     if (EXPAND_AI_MARKUP.test(t) || EXPAND_AI_BANNED.test(t) || detectDeterministicCare(t)) return null;
+    const k = key(t);
+    if (EXPAND_AI_UNGROUNDED.some(w => k.includes(w) && !basis.includes(w))) return null;
   }
   return { reflection, candidates, axis: data.axis };
 }
 
 async function fetchExpansion(fields) {
   cancelExpansion();
+  const local = localExpandCare(fields);
+  if (local) return local;   // 送らない
   if (!VOCABULARY_AI_ENABLED) return null;
   const body = {};
   for (const [k, max] of Object.entries(EXPAND_AI_LIMITS)) {
@@ -683,26 +746,32 @@ async function fetchExpansion(fields) {
     if (!v) return null;
     body[k] = v;
   }
-  // 明示的な表現は送らない（端末内の処理のまま）
-  if (Object.values(body).some(v => detectDeterministicCare(v))) return null;
   const sessionId = getVocabSessionId();
   if (!sessionId) return null;
   const abort = new AbortController();
   _expandAbort = abort;
-  const timeoutId = setTimeout(() => abort.abort(), EXPAND_AI_TIMEOUT_MS);
+  let timeoutId;
+  // 5秒たったら、届いていなくても null で終える（あとから届いた返事は使わない）
+  const timeout = new Promise(resolve => { timeoutId = setTimeout(() => { abort.abort(); resolve(null); }, EXPAND_AI_TIMEOUT_MS); });
+  const work = (async () => {
+    try {
+      const res = await fetch(EXPAND_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Tomori-Session': sessionId },
+        body: JSON.stringify({ ...body, age: 'grade_3_4', language: 'ja' }),
+        signal: abort.signal,
+      });
+      if (abort.signal.aborted || !res.ok) return null;
+      let data;
+      try { data = await res.json(); } catch (e) { return null; }
+      if (abort.signal.aborted) return null;
+      return validateExpandResponse(data, body);
+    } catch (e) {
+      return null;
+    }
+  })();
   try {
-    const res = await fetch(EXPAND_API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Tomori-Session': sessionId },
-      body: JSON.stringify({ ...body, age: 'grade_3_4', language: 'ja' }),
-      signal: abort.signal,
-    });
-    if (!res.ok) return null;
-    let data;
-    try { data = await res.json(); } catch (e) { return null; }
-    return validateExpandResponse(data, body);
-  } catch (e) {
-    return null;
+    return await Promise.race([work, timeout]);
   } finally {
     clearTimeout(timeoutId);
     if (_expandAbort === abort) _expandAbort = null;

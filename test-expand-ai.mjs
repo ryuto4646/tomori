@@ -12,19 +12,19 @@ const EXPAND = section('// EXPAND-AI-BEGIN', '// EXPAND-AI-END');
 const REVEAL = section('window.revealSecret = ()=>{', '\n};');
 const WORKER_PATH = new URL('../tomori-vocabulary/worker.js', import.meta.url);
 
-const FIELDS = { expression: 'ひよこのぬいぐるみ', word: '輪郭', question: 'どのあたりが気になった？', answer: '丸いところが可愛い' };
+const FIELDS = { expression: 'これがいい', word: '輪郭', question: 'どのあたりが気になった？', answer: '丸いところが可愛い' };
 const AI = { reflection: '丸さが、やわらかい感じを作っているのかも。', candidates: ['ころんと丸い形', 'ふっくらした丸み', 'やわらかな輪郭線'], axis: 'detail', safetyLevel: 'normal', supportMessage: null };
 
 function storage() { const m = new Map(); return { getItem: k => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)) }; }
 // fetch・タイマーを差しかえて読み込む。timers には、予約した待ち時間（ms）が入る
 function load(fetchImpl, { enabled = true } = {}) {
   const timers = [];
-  const fakeSetTimeout = (fn, ms) => { timers.push(ms); return setTimeout(fn, ms >= 3000 ? 5 : ms); };   // 3秒の打ち切りは、すぐに起こす
+  const fakeSetTimeout = (fn, ms) => { timers.push(ms); return setTimeout(fn, ms >= 3000 ? 5 : ms); };   // 5秒の打ち切りは、すぐに起こす
   const core = enabled ? CORE : CORE.replace('const VOCABULARY_AI_ENABLED = true;', 'const VOCABULARY_AI_ENABLED = false;');
   const api = new Function('fetch', 'setTimeout', 'clearTimeout', 'sessionStorage', 'globalThis', `
     ${core}
     ${EXPAND}
-    return { fetchExpansion, validateExpandResponse, cancelExpansion, EXPAND_API_URL, EXPAND_AI_TIMEOUT_MS, get abort() { return _expandAbort; } };`)(
+    return { fetchExpansion, validateExpandResponse, cancelExpansion, localExpandCare, isUrgentCare, EXPAND_API_URL, EXPAND_AI_TIMEOUT_MS, get abort() { return _expandAbort; } };`)(
     fetchImpl, fakeSetTimeout, clearTimeout, storage(), { crypto: globalThis.crypto });
   return { api, timers };
 }
@@ -46,8 +46,8 @@ test('1. AI 成功：受けとめ・3つの言い方・axis を返す。送り�
   assert.deepEqual(Object.keys(s.calls[0].body).sort(), ['age', 'answer', 'expression', 'language', 'question', 'word']);
   assert.match(s.calls[0].opts.headers['X-Tomori-Session'], /^[0-9a-f-]{36}$/);
   assert.ok(!/photo|image|name|userAgent|data:/i.test(JSON.stringify(s.calls[0].body)));
-  assert.equal(api.EXPAND_AI_TIMEOUT_MS, 3000);
-  assert.deepEqual(timers, [3000]);
+  assert.equal(api.EXPAND_AI_TIMEOUT_MS, 5000);
+  assert.deepEqual(timers, [5000]);
   assert.equal(api.abort, null);
 });
 
@@ -83,7 +83,9 @@ const BAD = [
   ['採点', { ...AI, reflection: '正解！丸さに気づけたね。' }],
   ['写真の断定', { ...AI, reflection: '写真には黄色いひよこが写っているね。' }],
   ['axis', { ...AI, axis: 'feeling' }],
-  ['care', { reflection: null, candidates: [], axis: null, safetyLevel: 'care', supportMessage: 'x' }],
+  ['care（urgent が無い）', { reflection: null, candidates: [], axis: null, safetyLevel: 'care', supportMessage: 'x' }],
+  ['入力に無い特徴', { ...AI, candidates: ['つぶらな目玉と丸い体', 'ふっくらした丸み', 'やわらかな輪郭線'] }],
+  ['入力に無い色', { ...AI, reflection: '黄色い丸さが、やさしい感じを作っているのかも。' }],
   ['形', ['ころんと丸い形']],
 ];
 
@@ -98,15 +100,16 @@ test('3. 決まりに合わない返事（少ない・多い・長い・オウ�
 test('4. Worker の検証（validateExpansion）とブラウザの検証は、同じ返事に同じ判断をする', { skip: !existsSync(WORKER_PATH) }, async () => {
   const { validateExpansion } = await import(WORKER_PATH);
   const { api } = load(async () => { throw new Error('unused'); });
-  for (const [label, body] of [['ok', AI], ...BAD.filter(([l]) => l !== 'care')]) {
+  for (const [label, body] of [['ok', AI], ...BAD.filter(([l]) => !l.startsWith('care'))]) {
     assert.equal(validateExpansion(body, FIELDS).ok, api.validateExpandResponse(body, FIELDS) !== null, label);
   }
 });
 
-test('5. AI を止めているとき・明示的な表現があるとき・空の項目があるときは、送らずに null', async () => {
+test('5. AI を止めているとき・空の項目があるときは送らずに null。明示的な危険の表現は、送らずに端末内で care（AI を止めていても）', async () => {
   const s = stub(json(AI));
   assert.equal(await load(s.f, { enabled: false }).api.fetchExpansion(FIELDS), null);
-  assert.equal(await load(s.f).api.fetchExpansion({ ...FIELDS, answer: '死にたい' }), null);
+  assert.deepEqual(await load(s.f).api.fetchExpansion({ ...FIELDS, answer: '死にたい' }), { care: true, urgent: false });
+  assert.deepEqual(await load(s.f, { enabled: false }).api.fetchExpansion({ ...FIELDS, answer: '今から死にたい' }), { care: true, urgent: true });
   assert.equal(await load(s.f).api.fetchExpansion({ ...FIELDS, word: '' }), null);
   assert.equal(s.calls.length, 0);
 });
@@ -136,4 +139,36 @@ test('7. 画面：くわしい答えだけ AI へ1回送る。待つ間は問い
   assert.match(HTML, /function restoreSecretPanel\(\) \{\s*secretSent = false; secretDone = false;\s*_expandGen\+\+; cancelExpansion\(\);/);
   // 子どもの答え・AI の文は textContent で出す（HTML として入れない）
   assert.ok(!/innerHTML|outerHTML|insertAdjacentHTML|console\./.test(EXPAND));
+});
+
+test('8. 5秒をすぎてから届いた返事は使わない（null のまま）。自動で送り直さない', async () => {
+  const s = stub(() => new Promise(r => setTimeout(() => r({ ok: true, status: 200, json: async () => AI }), 40)));   // 打ち切りを無視して、あとから届く
+  const { api } = load(s.f);
+  assert.equal(await api.fetchExpansion(FIELDS), null);
+  await new Promise(r => setTimeout(r, 60));
+  assert.equal(s.calls.length, 1);
+});
+
+test('9. Worker の care の形（urgent つき）を受け取る。形がちがう care は null', async () => {
+  const CARE = { reflection: null, candidates: [], axis: null, safetyLevel: 'care', urgent: true, supportMessage: 'x' };
+  for (const [body, want] of [[CARE, { care: true, urgent: true }], [{ ...CARE, urgent: false }, { care: true, urgent: false }],
+    [{ ...CARE, urgent: 'yes' }, null], [{ ...CARE, candidates: ['a'] }, null], [{ safetyLevel: 'care' }, null]]) {
+    const { api } = load(stub(json(body)).f);
+    assert.deepEqual(await api.fetchExpansion(FIELDS), want, JSON.stringify(body));
+  }
+});
+
+test('10. 端末内の安全判定は、表記ゆれ（カタカナ・全角・空白・記号）にも当たる。差し迫った危険は urgent', () => {
+  const { api } = load(async () => { throw new Error('unused'); });
+  for (const t of ['死にたい', 'シニタイ', 'し に た い', '死・に・た・い', '自分を傷つけたい']) assert.deepEqual(api.localExpandCare({ expression: 'x', answer: t }), { care: true, urgent: false }, t);
+  for (const t of ['今から死にたい', '家で殴られている', '家に帰るのが怖い', 'いますぐ消えたい']) assert.equal(api.localExpandCare({ expression: 'x', answer: t }).urgent, true, t);
+  for (const t of ['丸いところが可愛い', '死ぬほど笑った', 'ゲームで死んだ']) assert.equal(api.localExpandCare({ expression: 'x', answer: t }), null, t);
+});
+
+test('11. Worker と同じ「入力に無い特徴」の語の一覧・差し迫った危険の規則を使う', { skip: !existsSync(WORKER_PATH) }, () => {
+  const W = readFileSync(WORKER_PATH, 'utf8').replace(/\r\n/g, '\n');
+  const list = (src, name) => src.slice(src.indexOf(name), src.indexOf('].map', src.indexOf(name))).replace(/\/\/.*$/gm, '').match(/'[^']+'/g);
+  assert.deepEqual(list(HTML, 'const EXPAND_AI_UNGROUNDED'), list(W, 'const EXPAND_UNGROUNDED_WORDS'));
+  const pats = (src, name) => src.slice(src.indexOf(name), src.indexOf('];', src.indexOf(name))).match(/\/.+?\/,/g);
+  assert.deepEqual(pats(HTML, 'const EXPAND_URGENT_PATTERNS'), pats(W, 'const URGENT_CARE_PATTERNS'));
 });

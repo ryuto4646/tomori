@@ -192,3 +192,17 @@ test('15. 門がひらいたあと、草原の中どうし（東のふちを含�
   }
   H.steerToward(0, 0, 15, -26, o); assert.deepEqual([o.x, o.z], [W.GATE.x, W.GATE.z], 'to the tree: first the gate');
 });
+
+test('16. ことばの樹のまわりでは、幹の向こう側から草原へ歩き出しても、幹に引っかからずに帰れる', () => {
+  const H = new Function(TERRAIN + ADV + '\nreturn { steerToward, clampWalk };')();
+  for (const [sx, sz] of [[17.1, -26.9], [18.6, -27], [16, -31.5], [Q.QUEST_DEFS[1].start.x, Q.QUEST_DEFS[1].start.z]]) {
+    const p = { x: sx, z: sz }, o = { x: 0, z: 0 }; let i = 0;
+    for (; i < 1500; i++) {
+      if (Math.hypot(p.x - 6.3, p.z + 1.8) < .6) break;
+      H.steerToward(p.x, p.z, 6.3, -1.8, o);
+      const dx = o.x - p.x, dz = o.z - p.z, d = Math.hypot(dx, dz), st = Math.min(4 / 60, d);
+      p.x += dx / d * st; p.z += dz / d * st; H.clampWalk(p, true, 1);
+    }
+    assert.ok(i < 1500, `stuck from ${sx},${sz} at ${p.x.toFixed(2)},${p.z.toFixed(2)}`);
+  }
+});

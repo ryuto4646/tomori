@@ -502,7 +502,7 @@ function finalLine(original, chosen) {
 const QUEST_DEFS = Object.freeze([
   { id: 'first', title: 'はじめての冒険' },
   { id: 'second', title: 'ちがうところから、見てみよう', after: 'first', needsWorldV2: true,
-    start: { x: 18.6, z: -27.0, r: 1.3 },   // ことばの樹のそばの新しい芽（樹のまわりの、平らで歩ける輪の中）
+    start: { x: 14.2, z: -25.4, r: 1.3 },   // ことばの樹のそばの新しい芽（樹のまわりの、平らで歩ける輪の中。道の側なので、帰り道が幹にかからない）
     sub: 'さっきとちがうところに、目を向けてみよう。同じ写真でも大丈夫。',
     question: '今度は、どこに目が止まった？', flowers: 6, reward: 'ことばの樹に、2つ目の実が灯った！' },
 ]);
@@ -1100,7 +1100,8 @@ const questHub = (() => {
     if (st.quests.first !== 'done') return;
     current = null;
     freeMsg = kind === 'next' && q2Usable() ? 'ことばの樹のそばに、新しい芽が出ている。近づいてみよう' : FREE_DEFAULT;
-    if (character) q2NeedsLeave = Math.hypot(character.position.x - Q2.start.x, character.position.z - Q2.start.z) <= Q2.start.r;
+    // 「次の冒険へ」なら、芽の上に立っていてもすぐ始まる。「自由に歩く」なら、一度離れてから近づくと始まる
+    if (character) q2NeedsLeave = kind !== 'next' && Math.hypot(character.position.x - Q2.start.x, character.position.z - Q2.start.z) <= Q2.start.r;
     setState(S.FREE_EXPLORE);
   }
 

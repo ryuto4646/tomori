@@ -13,7 +13,7 @@ const between = (s, a, b) => { const i = s.indexOf(a), j = s.indexOf(b, i + 1); 
 const APPLY = between(HTML, 'function applyUI() {', '\nfunction openPanel(');
 const OPEN = between(HTML, 'function openPanel(id) {', '\n}\n');
 const REVEAL = between(HTML, 'window.revealSecret = ()=>{', '\n};');
-const FINISH = between(HTML, 'function finishSecret(){', '\n}\n');
+const FINISH = between(HTML, 'function finishSecret(){', '\n};\n');   // Step 11M：finishSecret は '};' で終わる（後ろの QUEST-UI まで取り込まない）
 const RESET = between(HTML, 'function doReset(){', '\n}\n');
 
 // 深掘りの答えを送る処理と、決めたあとの処理を、画面の代わりの小さな部品で動かす（判定・広げる処理は呼んだ回数だけ数える）
@@ -23,15 +23,16 @@ function makeEnv(stateName = 'SECRET_UNLOCKED', kind = 'ok', { ai = null, localC
     classList: { add: c => els[id].classes.add(c), remove: c => els[id].classes.delete(c), contains: c => els[id].classes.has(c), toggle: (c, on) => on ? els[id].classes.add(c) : els[id].classes.delete(c) },
     setAttribute: (k, v) => { els[id].attrs[k] = v; }, blur: () => { els[id].blurred++; } });
   const S = { SECRET_UNLOCKED: 'SECRET_UNLOCKED', DEMO_COMPLETE: 'DEMO_COMPLETE' };
-  const fn = new Function('document', 'S', 'ctxState', 'worldTimeout', 'mkFlower', 'flowerGroup', 'bloomSeq', 'resetPageScroll', 'nextGroup', 'setState', 'classifyAnswer', 'showSecretHint', 'showExpansion', 'fetchExpansion', 'localExpandCare', 'showSecretWait', 'showSecretCare',
+  const fn = new Function('document', 'S', 'ctxState', 'worldTimeout', 'mkFlower', 'flowerGroup', 'bloomSeq', 'resetPageScroll', 'nextGroup', 'setState', 'classifyAnswer', 'showSecretHint', 'showExpansion', 'fetchExpansion', 'localExpandCare', 'showSecretWait', 'showSecretCare', 'questHub',
     `let state = ctxState; let secretSent = false, secretDone = false; const window = {}; let _expandGen = 0, enteredText = 'ひよこ', chosenWord = '輪郭';
      ${REVEAL}\n};
-     ${FINISH}\n}
+     ${FINISH}\n};
      return { send: () => window.revealSecret(), finish: () => finishSecret(), sent: () => secretSent, done: () => secretDone };`);
   const api = fn({ getElementById: el }, S, S[stateName] || stateName, (f, ms) => log.timeouts.push(ms), () => ({}), { add: () => {} }, () => { log.blooms++; }, () => { log.scrolls++; }, {}, () => {},
     () => ({ kind }), () => { log.hints++; }, () => { log.expands++; },
     fields => { log.aiCalls.push(fields); return Promise.resolve(ai); },   // 既定は null（AI は使えなかった＝端末内の処理へ）
-    () => localCare, on => { log.waits.push(on); }, urgent => { log.cares.push(urgent); });
+    () => localCare, on => { log.waits.push(on); }, urgent => { log.cares.push(urgent); },
+    { current: () => 'first', finishSecond: () => { log.second = (log.second || 0) + 1; } });   // 最初のクエスト（第2クエストは test-quests.mjs）
   return { els, el, log, api };
 }
 
@@ -47,7 +48,9 @@ test('2. 状態が変わるたびに、すべてのパネルを閉じて、さ�
   assert.match(APPLY, /document\.querySelectorAll\('\.panel'\)\.forEach\(p => \{ p\.classList\.remove\('show'\); p\.inert = true; p\.setAttribute\('aria-hidden', 'true'\); \}\);/);
   assert.match(OPEN, /el\.inert = false; el\.removeAttribute\('aria-hidden'\);/);
   // 予約したあとに状態が先へ進んでいたら出さない（古いパネルが出直さない）
-  assert.match(OPEN, /requestAnimationFrame\(\(\) => \{ if \(state === at\) el\.classList\.add\('show'\); \}\);/);
+  assert.match(OPEN, /requestAnimationFrame\(\(\) => \{ if \(state === at\) \{ el\.classList\.add\('show'\);/);
+  // Step 11M：出したあと、data-autofocus の場所へフォーカス（道くさ・見つけたもの）
+  assert.match(OPEN, /const f = el\.querySelector\('\[data-autofocus\]'\); if \(f\) f\.focus\(\{ preventScroll: true \}\);/);
   // どの状態でも openPanel は1回まで
   const cases = APPLY.split('case S.').slice(1);
   for (const c of cases) assert.ok((c.match(/openPanel\(/g) || []).length <= 1, c.slice(0, 30));

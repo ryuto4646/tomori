@@ -66,7 +66,10 @@ test('4. 同じ出来事が何度起きても二重に進まず、戻りもし�
 
 test('5. タネが生まれるのは深掘りの問いのあと（DEMO_COMPLETE）だけ。care からは来ない。2つの出口の両方で生まれる', () => {
   assert.match(ADVENTURE_FN, /if \(progress === P\.MISSION && state === S\.DEMO_COMPLETE\) \{\s*progress = advance\(progress, 'deepDone'\);/);
-  assert.match(HTML, /window\.toDemoEnd   = \(\)=>\{ nextGroup\.visible=true; setState\(S\.DEMO_COMPLETE\); \};/);
+  // Step 11M：「今は進む」は答えた扱いにせず記録し、第2クエストのときは樹の実へ、最初のクエストのときは今までどおり DEMO_COMPLETE へ
+  const skip = between(HTML, 'window.toDemoEnd   = ()=>{', '\n};');
+  assert.match(skip, /questHub\.noteAnswer\('', null, true\);/);
+  assert.match(skip, /nextGroup\.visible=true; setState\(S\.DEMO_COMPLETE\);/);
   // Step 11L-D：答える出口は、ことばを広げて決めたあと（finishSecret）に DEMO_COMPLETE へ進む
   assert.match(between(HTML, 'function finishSecret(){', '\n}\n'), /setState\(S\.DEMO_COMPLETE\)/);
   for (const fn of ['window.careRewrite = () => {', 'window.careBack = () => {']) assert.ok(!/DEMO_COMPLETE/.test(between(HTML, fn, '\n};')), fn);
@@ -192,13 +195,15 @@ test('13. 上部の案内は5つ（＋タネへのひとこと）。どれも一
   assert.match(V2_CODE, /function say\(text\) \{ mbarText\.textContent = text; \}/);
 });
 
-test('14. 完了のことばは既存の枠を使い、textContent で作る。「もう少し歩いてみる」と「紹介ページへ戻る」', () => {
+test('14. 完了のことばは既存の枠を使い、textContent で作る。「次の冒険へ」「自由に歩く」と「紹介ページへ戻る」（Step 11M）', () => {
   const fin = between(V2_CODE, 'function showFinale()', 'function reset()');
-  for (const s of ["'きみのことばが、世界をひとつ灯した。'", "'ことばの樹には、まだ眠っている実がある。'", "'もう少し歩いてみる'", "'紹介ページへ戻る'"]) assert.ok(fin.includes(s), s);
+  for (const s of ["'きみのことばが、世界をひとつ灯した。'", "'ことばの樹には、まだ眠っている実がある。'", "'次の冒険へ'", "'自由に歩く'", "'紹介ページへ戻る'"]) assert.ok(fin.includes(s), s);
   assert.match(fin, /document\.createElement\('button'\)/);
   // テレビ向けの導線：紹介ページ（LP。Pages では https://ryuto4646.github.io/tomori-lp/）へ戻る
   assert.match(fin, /back\.href = '\.\.\/tomori-lp\/';/);
-  assert.match(fin, /more\.addEventListener\('click', \(\) => demoEnd\.classList\.remove\('show'\)\);/);
+  // Step 11M：どちらのボタンも完了の枠を閉じてから、自由な散歩へ（次の冒険へ：芽へ案内／自由に歩く）
+  assert.match(fin, /next\.addEventListener\('click', \(\) => \{ demoEnd\.classList\.remove\('show'\); questHub\.toFree\('next'\); \}\);/);
+  assert.match(fin, /more\.addEventListener\('click', \(\) => \{ demoEnd\.classList\.remove\('show'\); questHub\.toFree\('free'\); \}\);/);
   assert.match(fin, /demoEnd\.replaceChildren\(\.\.\.finaleNodes\);/);
   // 冒険のあいだは V1 のデモ終了（遠くの光）を出さない
   assert.match(ADVENTURE_FN, /if \(state === S\.DEMO_COMPLETE && progress !== P\.COMPLETE && demoEnd\.classList\.contains\('show'\)\) demoEnd\.classList\.remove\('show'\);/);
@@ -244,7 +249,9 @@ test('17. 秘密の道：門がひらくまでは見えない（透明度0）。
 });
 
 test('18. 道ばたの発見はひとつだけ：水色の芽。道のすぐそば（1.5m以内）にあり、近づくと明るくなる。取ったり数えたりしない', () => {
-  assert.equal(count(V2_CODE, /put\(sproutName,/g), 1, 'only one sprout');
+  // Step 11M：道ばたの芽は1つのまま。もう1つは第2クエストの芽（ことばの樹のそば。最初のクエストが終わるまでは大きさ0）
+  assert.equal(count(V2_CODE, /put\(sproutName,/g), 2, 'path sprout + quest sprout');
+  assert.match(V2_CODE, /sproutMesh\.setMatrixAt\(questSproutIndex, m4\.makeScale\(0, 0, 0\)\);/);
   assert.match(V2_CODE, /put\(sproutName, SPROUT\[0\], SPROUT\[1\], 1\.35, \.4, 0x9fd6ee\);/);
   assert.match(ADVENTURE_FN, /const near = Math\.max\(0, 1 - Math\.hypot\(cx - SPROUT\[0\], cz - SPROUT\[1\]\) \/ 4\);/);
   assert.ok(!/\bscore\b|\bpoints\b|collectedCount|sproutTaken/.test(V2_CODE));
@@ -295,7 +302,7 @@ test('22. reduced-motion：タネはすぐ現れ、門はすぐひらき、道�
 
 // ── リセット・V1・性能 ────────────────────────────────────────────
 test('23. 「デモを最初から」：タネ・門・道・歩ける範囲・実・完了の枠・カメラ・進み方を、すべて最初へ戻す', () => {
-  assert.match(HTML, /  worldV2\.reset\(\);   \/\/ [^\n]*\n  if\(character\)\{ character\.position\.set\(0,0,0\); character\.rotation\.set\(0,0,0\); \}/);
+  assert.match(HTML, /  worldV2\.reset\(\);   \/\/ [^\n]*\n  questHub\.reset\(\);[^\n]*\n  if\(character\)\{ character\.position\.set\(0,0,0\); character\.rotation\.set\(0,0,0\); \}/);
   assert.match(RESET, /if \(!active\) return;/);
   for (const re of [/progress = P\.EXPLORING; gateOpen = false;/, /wordSeed\.visible = false;/, /for \(let i = 0; i < 4; i\+\+\) gateMeshes\[i\]\.matrix\.multiplyMatrices\(gatePlace, gateNode\[i\]\);/,
     /gateMeshes\[3\]\.visible = true;/, /secretColor\.array\[v \* 4 \+ 3\] = secretU\[v\] < 0 \? secretBase\[v\] : 0;/, /fruits\.setMatrixAt\(i, fruitBase\[i\]\)/,
@@ -427,8 +434,10 @@ test('31. PC（high）の見た目は、秘密の谷と道の向きだけが変�
 
 test('32. 収集物を増やしていない：芽1つ・タネ1つ・灯る実1つだけ（コイン・宝箱・敵・ガチャ・新しい説明パネル・通信なし）', () => {
   assert.ok(!/\bcoin|treasure|chest|gacha|enemy\b/i.test(V2_CODE));
-  assert.equal(count(V2_CODE, /createElement\(/g), 4, 'only the finale texts and buttons');
-  assert.equal(count(HTML, /class="panel"/g), count(OLD, /class="panel"/g), 'no new panel');
+  assert.equal(count(V2_CODE, /createElement\(/g), 5, 'only the finale texts and buttons（Step 11M：次の冒険へ）');
+  // Step 11M：パネルを足したのは、道くさの問いと「見つけたもの」の2つだけ（点数・正誤の画面は作らない）
+  assert.equal(count(HTML, /class="panel"/g), count(OLD, /class="panel"/g) + 2, 'only the detour and found panels');
+  assert.ok(!/\bscore\b|正解数|ランキング/.test(between(HTML, '// QUEST-UI-BEGIN', '// QUEST-UI-END')));
   assert.equal(count(HTML, /\bfetch\(/g), 2);   // 語彙カードと、深掘りの答えを広げる（Step 11L-F）の2か所
 });
 

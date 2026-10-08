@@ -983,25 +983,35 @@ function validateExpandResponse(data, fields) {
   return { reflection, candidates, axis: data.axis };
 }
 
+// 開発用の記録（Step 11N）：送ったときの結果の種類と時間だけ。入力・AI の文・写真・鍵は残さない。console へも出さない
+// 種類：ok（AI の返事を表示）／care_ai／timeout（5秒）／network（通信の失敗）／http_NNN（HTTP エラー）／
+//       worker_invalid（Worker の検査で不合格。code は Worker の決まった記号だけ）／bad_json／app_invalid（アプリの検査で不合格）／
+//       cancelled（閉じた・リセット）／care_local・disabled・no_session・empty（送らなかった）
+const EXPAND_DIAG = [];
+function noteExpand(entry) { EXPAND_DIAG.push(entry); if (EXPAND_DIAG.length > 20) EXPAND_DIAG.shift(); }
+window.tomoriExpandDiag = () => EXPAND_DIAG.map(e => ({ ...e }));
 async function fetchExpansion(fields) {
   cancelExpansion();
+  const scene = fields.scene === 'detour' ? 'detour' : 'quest';
   const local = localExpandCare(fields);
-  if (local) return local;   // 送らない
-  if (!VOCABULARY_AI_ENABLED) return null;
+  if (local) { noteExpand({ scene, reason: 'care_local', ms: 0 }); return local; }   // 送らない
+  if (!VOCABULARY_AI_ENABLED) { noteExpand({ scene, reason: 'disabled', ms: 0 }); return null; }
   const body = {};
   for (const [k, max] of Object.entries(EXPAND_AI_LIMITS)) {
     const v = String(fields[k] == null ? '' : fields[k]).trim().slice(0, max);
-    if (!v) return null;
+    if (!v) { noteExpand({ scene, reason: 'empty', ms: 0 }); return null; }
     body[k] = v;
   }
-  if (fields.scene === 'detour') body.scene = 'detour';   // 道くさ（香りを想像する問い）。Worker がプロンプトを切りかえる
+  if (scene === 'detour') body.scene = 'detour';   // 道くさ（香りを想像する問い）。Worker がプロンプトを切りかえる
   const sessionId = getVocabSessionId();
-  if (!sessionId) return null;
+  if (!sessionId) { noteExpand({ scene, reason: 'no_session', ms: 0 }); return null; }
   const abort = new AbortController();
   _expandAbort = abort;
-  let timeoutId;
+  const t0 = performance.now();
+  let timeoutId, done = false;
+  const finish = (reason, code) => { if (done) return; done = true; const e = { scene, reason, ms: Math.round(performance.now() - t0) }; if (code) e.code = code; noteExpand(e); };
   // 5秒たったら、届いていなくても null で終える（あとから届いた返事は使わない）
-  const timeout = new Promise(resolve => { timeoutId = setTimeout(() => { abort.abort(); resolve(null); }, EXPAND_AI_TIMEOUT_MS); });
+  const timeout = new Promise(resolve => { timeoutId = setTimeout(() => { finish('timeout'); abort.abort(); resolve(null); }, EXPAND_AI_TIMEOUT_MS); });
   const work = (async () => {
     try {
       const res = await fetch(EXPAND_API_URL, {
@@ -1010,12 +1020,21 @@ async function fetchExpansion(fields) {
         body: JSON.stringify({ ...body, age: 'grade_3_4', language: 'ja' }),
         signal: abort.signal,
       });
-      if (abort.signal.aborted || !res.ok) return null;
+      if (abort.signal.aborted) { finish('cancelled'); return null; }
+      if (!res.ok) {
+        let code = null;
+        try { const e = await res.json(); if (e && e.code === 'INVALID_AI_RESPONSE' && /^[A-Z_]{3,40}$/.test(String(e.diagnosticCode))) code = e.diagnosticCode; } catch (e) {}
+        finish(code ? 'worker_invalid' : 'http_' + res.status, code);
+        return null;
+      }
       let data;
-      try { data = await res.json(); } catch (e) { return null; }
-      if (abort.signal.aborted) return null;
-      return validateExpandResponse(data, body);
+      try { data = await res.json(); } catch (e) { finish('bad_json'); return null; }
+      if (abort.signal.aborted) { finish('cancelled'); return null; }
+      const v = validateExpandResponse(data, body);
+      finish(!v ? 'app_invalid' : v.care ? 'care_ai' : 'ok');
+      return v;
     } catch (e) {
+      finish(abort.signal.aborted ? 'cancelled' : 'network');
       return null;
     }
   })();
@@ -1381,7 +1400,7 @@ function mkFlower(x,z,red){
   const hd=new THREE.Mesh(new THREE.SphereGeometry(.12,6,6),
     new THREE.MeshLambertMaterial({color:col}));
   hd.position.y=.44; g.add(hd);
-  g.position.set(x,0,z); g.scale.setScalar(0); return g;
+  g.position.set(x,0,z); g.scale.setScalar(0); g.visible=false; return g;   // 咲くまでは描かない（大きさ0でも描く回数は増えるため：Step 11N）
 }
 
 // ミッション周囲の花
@@ -2298,6 +2317,7 @@ const worldV2 = (() => {
     let pick = -1, best = 1e9;
     for (let i = 1; i < 5; i++) {
       if (i === litFruit || extraLit.some(e => e.i === i)) continue;
+      if (meshyTree && i <= 2) { pick = i; break; }   // Meshy の樹：2つ目も、もう一方の下枝（見やすい場所を先に使う）
       const d = (fruitPos[i].x - Q.x) ** 2 + (fruitPos[i].z - Q.z) ** 2;
       if (d < best) { best = d; pick = i; }
     }
@@ -2308,6 +2328,52 @@ const worldV2 = (() => {
     return fruitPos[pick];
   }
 
+  // ── MESHY-PROPS（Step 11N）：Meshy で作ったことばの樹と香りの草。V2 の準備ができたあとに読み、失敗したら今までの表示のまま ──
+  const MESHY_TREE_URL = 'assets/world-meshy/tomori-word-tree-game.glb', MESHY_PLANT_URL = 'assets/world-meshy/tomori-scent-plant-game.glb';
+  const MESHY_TREE_H = 11.2;   // 樹の高さ（m）。いままでの樹とほぼ同じ（歩ける範囲・着いたと判定する距離・カメラは変えない）
+  // 正面（+Z）を、門の側（道を歩いてくるとき・芽のそばのカメラ）と、道から着く側の、あいだへ向ける（どちらのカメラからも実が見える）
+  const MESHY_TREE_YAW = Math.atan2(-.89, .45);
+  // 実の場所（樹のローカル座標・樹の高さを 1 とする）：0 中央の樹冠の手前／1 左の下枝／2 右の下枝／3 左の上枝／4 右の上枝（仮の配置）
+  const FRUIT_SLOTS = [[0, .74, .25], [-.3014, .5, .2104], [.3014, .5, .2264], [-.1306, .86, .1376], [.1306, .86, .0964]];
+  const FRUIT_SCALE = 3;       // 実の直径を、いままでの約3倍に
+  const PLANT_H = .8;          // 香りの草の高さ（m）。道くさの目印
+  let meshyTree = false, markerY = .55;
+  function loadMeshyProps(built) {
+    const loader = new THREE.FileLoader().setResponseType('arraybuffer');
+    const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
+    const firstGeom = buf => { const it = readGlb(buf).values().next().value; if (!it) throw new Error('empty'); return it.geometry; };
+    loader.load(MESHY_TREE_URL, buf => {
+      try {
+        if (progress === P.TREE_REACHED || progress === P.COMPLETE) return;   // 樹の演出のあとでは入れかえない（実が急に動かない）
+        const geo = firstGeom(buf), m = new THREE.Mesh(geo, mat);
+        m.name = 'WordTree_Meshy'; m.matrixAutoUpdate = false; m.castShadow = HIGH; m.receiveShadow = HIGH;
+        m.matrix.compose(new THREE.Vector3(WORD_TREE.x, heightAt(WORD_TREE.x, WORD_TREE.z), WORD_TREE.z),
+          new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), MESHY_TREE_YAW), new THREE.Vector3(MESHY_TREE_H, MESHY_TREE_H, MESHY_TREE_H));
+        // 実は樹のローカル座標で置く（樹を動かしたり大きくしたりしても、いっしょに動く）
+        const slot = new THREE.Matrix4(), size = new THREE.Matrix4().makeScale(FRUIT_SCALE / MESHY_TREE_H, FRUIT_SCALE / MESHY_TREE_H, FRUIT_SCALE / MESHY_TREE_H);
+        for (let i = 0; i < 5; i++) {
+          slot.makeTranslation(FRUIT_SLOTS[i][0], FRUIT_SLOTS[i][1], FRUIT_SLOTS[i][2]);
+          fruitBase[i].multiplyMatrices(m.matrix, slot).multiply(size); fruitPos[i].setFromMatrixPosition(fruitBase[i]);
+          fruits.setMatrixAt(i, fruitBase[i]);
+        }
+        fruits.instanceMatrix.needsUpdate = true; fruits.computeBoundingSphere();
+        built.tree.visible = false; built.group.add(m); meshyTree = true;
+      } catch (e) { /* 読めなければ、いままでの樹と実のまま */ }
+    }, undefined, () => {});
+    loader.load(MESHY_PLANT_URL, buf => {
+      try {
+        const geo = firstGeom(buf);
+        // 道くさの場所ごとに1本（ばらばらの物にして、画面の外の草は描かない）
+        DETOUR_DEFS.forEach((d, k) => {
+          const pl = new THREE.Mesh(geo, mat); pl.name = 'ScentPlant_' + d.id;
+          pl.position.set(d.x, heightAt(d.x, d.z), d.z); pl.rotation.y = k * 2.1 + .5; pl.scale.setScalar(PLANT_H);
+          built.group.add(pl);
+        });
+        markerY = PLANT_H + .25;   // 気配の光は、草の上に
+      } catch (e) { /* 読めなければ、草木で少し隠した光の目印のまま */ }
+    }, undefined, () => {});
+  }
+
   // 読み込み：時間切れ・失敗のときは V1 のまま（ready は、どちらの場合も最後に終わる）
   const ready = !wanted ? Promise.resolve(false) : new Promise(resolve => {
     let done = false;
@@ -2315,7 +2381,7 @@ const worldV2 = (() => {
     const timer = setTimeout(() => finish(false), LOAD_TIMEOUT_MS);
     new THREE.FileLoader().setResponseType('arraybuffer').load(GLB_URL, buf => {
       if (done) return;
-      try { activate(build(readGlb(buf))); clearTimeout(timer); finish(true); }
+      try { const built = build(readGlb(buf)); activate(built); clearTimeout(timer); finish(true); loadMeshyProps(built); }
       catch (e) { clearTimeout(timer); finish(false); }
     }, undefined, () => { clearTimeout(timer); finish(false); });
   });
@@ -2476,7 +2542,7 @@ const worldV2 = (() => {
     if (progress === P.SECRET_PATH && Math.hypot(cx - WORD_TREE.x, cz - WORD_TREE.z) <= TREE_REACH_R) {
       progress = advance(progress, 'treeApproached'); litT = t; seedFrom.copy(wordSeed.position);
       let best = 1e9;
-      for (let i = 1; i < 5; i++) { const d = (fruitPos[i].x - cx) ** 2 + (fruitPos[i].z - cz) ** 2; if (d < best) { best = d; litFruit = i; } }
+      for (let i = 1; i < 5; i++) { if (meshyTree && i > 2) continue; const d = (fruitPos[i].x - cx) ** 2 + (fruitPos[i].z - cz) ** 2; if (d < best) { best = d; litFruit = i; } }   // Meshy の樹：最初は左右の下枝のどちらか（いちばん見やすい）
       treeX = cx; treeZ = cz;
       if (!still) {
         // ヒロリの側から樹を見る向きを基本に、カメラの位置と視線の途中が低い（道と谷の上）向きを、近い順に探す（丘の上から見下ろさない）
@@ -2522,14 +2588,14 @@ const worldV2 = (() => {
       const sw = Math.sin((t - litT) * 1.6), w = still ? .3 : .5 + .5 * Math.sign(sw) * Math.pow(Math.abs(sw), .35);   // 金色と水色を、はっきり行き来する
       fruitLit.copy(GOLD).lerp(SKY, w);
       fruits.setColorAt(litFruit, fruitLit); fruits.instanceColor.needsUpdate = true;
-      const g = 1.45 + (still ? 0 : .08 * Math.sin((t - litT) * 3.2));
+      const g = (meshyTree ? 1.12 : 1.45) + (still ? 0 : .08 * Math.sin((t - litT) * 3.2));   // Meshy の樹の実は、もとから約3倍なので、灯ったときの広がりは小さく
       fruitM.copy(fruitBase[litFruit]); fruitM.elements[0] *= g; fruitM.elements[1] *= g; fruitM.elements[2] *= g; fruitM.elements[4] *= g; fruitM.elements[5] *= g; fruitM.elements[6] *= g; fruitM.elements[8] *= g; fruitM.elements[9] *= g; fruitM.elements[10] *= g;
       fruits.setMatrixAt(litFruit, fruitM); fruits.instanceMatrix.needsUpdate = true;
       // Step 11M：あとから灯った実（第2クエスト）も、同じように金色と水色を行き来する。灯るときは、ゆっくり大きくなる
       for (let j = 0; j < extraLit.length; j++) {
         const e = extraLit[j], sj = Math.sin((t - e.t) * 1.6 + 1.3), wj = still ? .3 : .5 + .5 * Math.sign(sj) * Math.pow(Math.abs(sj), .35);
         fruitLit.copy(GOLD).lerp(SKY, wj); fruits.setColorAt(e.i, fruitLit);
-        const gj = (still ? 1 : ease(Math.min(1, (t - e.t) / 1.2))) * (.45 + (still ? 0 : .08 * Math.sin((t - e.t) * 3.2))) + 1;
+        const gj = (still ? 1 : ease(Math.min(1, (t - e.t) / 1.2))) * ((meshyTree ? .12 : .45) + (still ? 0 : .08 * Math.sin((t - e.t) * 3.2))) + 1;
         fruitM.copy(fruitBase[e.i]); fruitM.elements[0] *= gj; fruitM.elements[1] *= gj; fruitM.elements[2] *= gj; fruitM.elements[4] *= gj; fruitM.elements[5] *= gj; fruitM.elements[6] *= gj; fruitM.elements[8] *= gj; fruitM.elements[9] *= gj; fruitM.elements[10] *= gj;
         fruits.setMatrixAt(e.i, fruitM);
       }
@@ -2587,7 +2653,7 @@ const worldV2 = (() => {
   }
   // PER-FRAME-V2-END
   return { ready, update, reset, groundCharacter, clampToWalkable, heightAt, isActive: () => active, progress: () => progress, quality: WORLD_QUALITY,
-    showQuestSprout, lightNextFruit, groundAt: (x, z) => active ? heightAt(x, z) : 0, wordTree: WORD_TREE };
+    showQuestSprout, lightNextFruit, groundAt: (x, z) => active ? heightAt(x, z) : 0, wordTree: WORD_TREE, markerHeight: () => markerY, meshyTree: () => meshyTree };
 })();
 // WORLD-V2-END
 // WORLD-ART-END
@@ -3061,7 +3127,7 @@ function bloomSeq(arr,onDone){
   let idx=0;
   function next(){
     if(idx>=arr.length){if(onDone)onDone();return;}
-    const f=arr[idx++];
+    const f=arr[idx++]; f.visible=true;
     const t0=Date.now();
     (function grow(){
       const t=Math.min((Date.now()-t0)/380,1);
@@ -3103,12 +3169,11 @@ function doWorldChange(word){
   // 3D変化（段階的に）
   worldTimeout(()=>{
     vineGroup.visible=false;
-    newPath.visible=true;
-    secretGroup.visible=true;
+    if(!worldV2.isActive()){ newPath.visible=true; secretGroup.visible=true; }   // V1 の道・秘密の場所（V2 には自分の道と秘密の谷があるので出さない：Step 11N）
   }, 500);
 
   // 赤い花を咲かせる
-  worldTimeout(()=>bloomSeq(redFlowers,null), 700);
+  if(!worldV2.isActive()) worldTimeout(()=>bloomSeq(redFlowers,null), 700);   // V1 の秘密の場所の赤い花（V2 では咲かせない。描く回数を増やさない）
 
   // メインの花（一部）
   worldTimeout(()=>bloomSeq(mainFlowers.slice(0,6),null), 300);
@@ -3130,7 +3195,7 @@ function resetWorldState(){
   newPath.visible=false;
   secretGroup.visible=false;
   nextGroup.visible=false;
-  [...mainFlowers,...redFlowers].forEach(f=>f.scale.setScalar(0));
+  [...mainFlowers,...redFlowers].forEach(f=>{ f.scale.setScalar(0); f.visible=false; });
   // 今回の世界変化で追加した花（revealSecret）だけを消す。最初からある花・木・岩は消さない
   [...flowerGroup.children]
     .filter(f=>!mainFlowers.includes(f)&&!redFlowers.includes(f))
@@ -3639,10 +3704,11 @@ function finishSecret(){
   resetPageScroll();
   if(questHub.current() === 'second'){ questHub.finishSecond(); return; }   // 第2クエスト：樹の2つ目の実と、芽のまわりの花（Step 11M）
   // 追加の花
-  const extra=[];
+  // V1：秘密の場所に赤い花。V2：答えた祠のまわりに花（V2 の達成の演出。V1 の秘密の場所は V2 では使わない）
+  const extra=[], v2=worldV2.isActive();
   for(let i=0;i<8;i++){
-    const a=Math.random()*Math.PI*2, r=1.2+Math.random()*2;
-    const f=mkFlower(16+Math.cos(a)*r,-8+Math.sin(a)*r,true);
+    const a=v2?i/8*Math.PI*2+.2:Math.random()*Math.PI*2, r=v2?3.3+(i%2)*.5:1.2+Math.random()*2;
+    const f=v2?mkFlower(MISSION_POS.x+Math.cos(a)*r,MISSION_POS.z+Math.sin(a)*r,false):mkFlower(16+Math.cos(a)*r,-8+Math.sin(a)*r,true);
     flowerGroup.add(f); extra.push(f);
   }
   bloomSeq(extra,null);
@@ -3682,7 +3748,7 @@ const questHub = (() => {
     DETOUR_DEFS.forEach((d, i) => {
       if (st.detours[d.id]) { gm.makeScale(0, 0, 0); glow.setMatrixAt(i, gm); return; }
       const near = Math.max(0, 1 - Math.hypot(x - d.x, z - d.z) / 6), s = .6 + .9 * near;
-      gm.makeScale(s, s, s).setPosition(d.x, worldV2.groundAt(d.x, d.z) + .55 + (still ? 0 : .06 * Math.sin(t * 1.7 + i * 2)), d.z);
+      gm.makeScale(s, s, s).setPosition(d.x, worldV2.groundAt(d.x, d.z) + worldV2.markerHeight() + (still ? 0 : .06 * Math.sin(t * 1.7 + i * 2)), d.z);
       glow.setMatrixAt(i, gm);
     });
     glow.instanceMatrix.needsUpdate = true;
@@ -3753,7 +3819,7 @@ const questHub = (() => {
       const f = mkFlower(Q2.start.x + Math.cos(a) * r, Q2.start.z + Math.sin(a) * r, false);
       flowerGroup.add(f); fl.push(f);
     }
-    if (reduceMotionQuery.matches) fl.forEach(f => f.scale.setScalar(1)); else bloomSeq(fl, null);
+    if (reduceMotionQuery.matches) fl.forEach(f => { f.scale.setScalar(1); f.visible = true; }); else bloomSeq(fl, null);
     freeMsg = Q2.reward;
     worldTimeout(() => setState(S.FREE_EXPLORE), 900);
   }

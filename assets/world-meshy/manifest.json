@@ -1,0 +1,34 @@
+{
+ "note": "Step 11N：Meshy の高詳細データ（正本はリポジトリの外。ここには置かない）から作ったゲーム用。色は部位ごとの単色を頂点色（COLOR_0）に入れた（テクスチャなし）。足もとが原点・高さ1・正面は +Z。",
+ "files": {
+  "tomori-word-tree-game.glb": {
+   "sha256": "5bf2147d789d69f7ceb9ea3ba91ed8efe13387ff9bf5c1fdf25f201839ce845f",
+   "triangles": 3418,
+   "parts": {
+    "leaf": "#5EA855",
+    "bark": "#9A6A45"
+   },
+   "source": {
+    "file": "tomori-word-tree-original.glb",
+    "sha256": "d20d13de9c7eca842ba38a8f53336a2a03252ea8b4ba609b984956da93976251",
+    "triangles": 399906
+   },
+   "use": "ことばの樹（高さ11.2m・実は樹のローカル座標の5か所）"
+  },
+  "tomori-scent-plant-game.glb": {
+   "sha256": "cdd3c38973663f42cd72c40e31309e512c83fb0f6f0944dd5c9bb383caf4683e",
+   "triangles": 1228,
+   "parts": {
+    "leaf": "#6FB25A",
+    "bud": "#F3C6D6"
+   },
+   "source": {
+    "file": "tomori-scent-plant-original.glb",
+    "sha256": "7f92e6dfc2f7ca495e631b6ef19bea07119d058ac1b10d2e7af574fac1551ebb",
+    "triangles": 299662
+   },
+   "use": "道くさの目印（高さ0.8m・3か所）"
+  }
+ },
+ "tools": "tomori-meshy-work/tools（build_prop.py：部位の場で三角形を切って塗る／export_game.py：材質を外して頂点色だけの1つの形にする）"
+}

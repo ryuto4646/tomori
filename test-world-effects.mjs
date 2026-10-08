@@ -78,7 +78,7 @@ function load() {
   const fetchCalls = [];
   const fetch = async (...a) => { fetchCalls.push(a); throw new Error('no network in tests'); };
   const app = new Function('document', 'setTimeout', 'clearTimeout', 'requestAnimationFrame', 'cancelAnimationFrame', 'Date', 'fetch',
-    'vineGroup', 'newPath', 'secretGroup', 'nextGroup', 'mainFlowers', 'redFlowers', 'flowerGroup', 'innerWidth', 'innerHeight', `
+    'vineGroup', 'newPath', 'secretGroup', 'nextGroup', 'mainFlowers', 'redFlowers', 'flowerGroup', 'innerWidth', 'innerHeight', 'worldV2', `
     ${CORE}
     ${WORLD}
     const S = { WORDS_READY: 'WORDS_READY', WORD_SELECTED: 'WORD_SELECTED', SECRET_QUESTION: 'SECRET_QUESTION', EXPLORE: 'EXPLORE' };
@@ -90,7 +90,7 @@ function load() {
       setResult(r) { _vocabResult = r; _vocabFallback = !r; }, get state() { return state; }, set state(v) { state = v; },
       stateLog, get gen() { return _worldEffectGen; }, VOCABULARY_AI_ENABLED };`)(
     doc, clock.setTimeout, clock.clearTimeout, clock.requestAnimationFrame, clock.cancelAnimationFrame, { now: clock.now }, fetch,
-    w.vineGroup, w.newPath, w.secretGroup, w.nextGroup, w.mainFlowers, w.redFlowers, w.flowerGroup, 375, 812);
+    w.vineGroup, w.newPath, w.secretGroup, w.nextGroup, w.mainFlowers, w.redFlowers, w.flowerGroup, 375, 812, { isActive: () => false });   // V1 の世界の演出（Step 11N：V2 では V1 の道・赤い花を出さない）
   return { app, clock, doc, w, fetchCalls };
 }
 // 画面の「リセット」と同じ順番：世界を戻してから、探索の状態へ

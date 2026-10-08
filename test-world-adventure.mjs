@@ -262,7 +262,7 @@ test('18. 道ばたの発見はひとつだけ：水色の芽。道のすぐそ�
 });
 
 test('19. ことばの樹：タネは幹の外をまわってのぼり、まだ眠っている実のひとつ（0番以外・いちばん近い実）に入って灯る', () => {
-  assert.match(ADVENTURE_FN, /for \(let i = 1; i < 5; i\+\+\) \{ const d = \(fruitPos\[i\]\.x - cx\) \*\* 2 \+ \(fruitPos\[i\]\.z - cz\) \*\* 2; if \(d < best\) \{ best = d; litFruit = i; \} \}/);
+  assert.match(ADVENTURE_FN, /for \(let i = 1; i < 5; i\+\+\) \{ if \(meshyTree && i > 2\) continue; const d = \(fruitPos\[i\]\.x - cx\) \*\* 2 \+ \(fruitPos\[i\]\.z - cz\) \*\* 2; if \(d < best\) \{ best = d; litFruit = i; \} \}/);
   assert.match(ADVENTURE_FN, /r = 1\.35;/);
   assert.ok(1.35 < A.TREE_AREA.trunk + .1 || true);
   assert.match(ADVENTURE_FN, /fruitLit\.copy\(GOLD\)\.lerp\(SKY, w\);/);
@@ -418,8 +418,10 @@ test('30. スマホ（low）だけ、言葉で咲く花を茎と花の2つの In
   assert.match(upd, /if \(!flowerFr\.intersectsSphere\(flowerS\)\) continue;/);
   assert.match(upd, /flowerHead\.setColorAt\(n, f\.children\[1\]\.material\.color\);/);
   // 元の花（V1 の作り方・数・咲かせ方）は変えていない。PC（high）は今までどおり1本ずつ描く
-  const mk = s => between(s, 'function mkFlower(x,z,red){', '\n}\n') + between(s, '// ミッション周囲の花', '// ── 秘密エリア');
+  // （Step 11N：咲くまでは visible=false にして、大きさ0の花を描く回数を数えない。形・色・数・場所は同じ）
+  const mk = s => between(s, 'function mkFlower(x,z,red){', '\n}\n').replace(" g.visible=false; return g;   // 咲くまでは描かない（大きさ0でも描く回数は増えるため：Step 11N）", ' return g;') + between(s, '// ミッション周囲の花', '// ── 秘密エリア');
   assert.equal(mk(HTML), mk(OLD));
+  assert.match(HTML, /const f=arr\[idx\+\+\]; f\.visible=true;/);
   assert.match(HTML, /worldTimeout\(\(\)=>bloomSeq\(mainFlowers\.slice\(0,6\),null\), 300\);/);
 });
 

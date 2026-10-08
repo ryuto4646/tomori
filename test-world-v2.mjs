@@ -117,12 +117,16 @@ test('8. WORLD_V2_ENABLED = true。?world=v1 で V1 を強制できる（品質�
 });
 
 test('9. V2 は組み立てがすべて成功したときだけ切り替わり、失敗・時間切れでは V1 のまま（console に出さない）', () => {
-  assert.match(V2_CODE, /try \{ activate\(build\(readGlb\(buf\)\)\); clearTimeout\(timer\); finish\(true\); \}\s*catch \(e\) \{ clearTimeout\(timer\); finish\(false\); \}/);
+  assert.match(V2_CODE, /try \{ const built = build\(readGlb\(buf\)\); activate\(built\); clearTimeout\(timer\); finish\(true\); loadMeshyProps\(built\); \}\s*catch \(e\) \{ clearTimeout\(timer\); finish\(false\); \}/);
   assert.match(V2_CODE, /const timer = setTimeout\(\(\) => finish\(false\), LOAD_TIMEOUT_MS\);/);
   assert.match(V2_CODE, /\}, undefined, \(\) => \{ clearTimeout\(timer\); finish\(false\); \}\);/);
   // シーンを変えるのは activate の中だけ（組み立ては新しいグループの中で行う）
   const act = between(V2_CODE, 'function activate(built)', '\n  }\n');
-  const rest = V2_CODE.replace(act, '');
+  // Step 11N：Meshy の樹と草は、V2 に切り替わったあと（activate のあと）にだけ読み、読めたときだけ今までの樹を隠す
+  const meshy = between(V2_CODE, 'const MESHY_TREE_URL', 'const ready = ');
+  assert.match(meshy, /built\.tree\.visible = false; built\.group\.add\(m\); meshyTree = true;\s*\} catch \(e\) \{/);
+  assert.ok(!/scene\.add\(|ground\.geometry =/.test(meshy));
+  const rest = V2_CODE.replace(act, '').replace(meshy, '');
   // （ことばのタネと、その外の光・下の地面の光だけは、組み立てで隠しておき、「デモを最初から」でも隠し直す：Step 11I-C・11K-B）
   assert.ok(!/scene\.add\(|ground\.geometry =|(?<!wordSeed|seedGround|seedHalo)\.visible = false/.test(rest), 'scene changes only in activate');
   assert.match(act, /active = true;\s*$/);

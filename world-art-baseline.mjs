@@ -705,6 +705,11 @@ window.toDemoEnd   = ()=>{   // 「今は進む」：答えなくても進める
   [`window.revealSecret = ()=>{
   if(!document.getElementById('secret-input').value.trim()) return;
   // 追加の花
+  const extra=[];
+  for(let i=0;i<8;i++){
+    const a=Math.random()*Math.PI*2, r=1.2+Math.random()*2;
+    const f=mkFlower(16+Math.cos(a)*r,-8+Math.sin(a)*r,true);
+    flowerGroup.add(f); extra.push(f);
 `,
    `window.revealSecret = ()=>{
   const text = document.getElementById('secret-input').value.trim();
@@ -739,6 +744,12 @@ function finishSecret(){
   resetPageScroll();
   if(questHub.current() === 'second'){ questHub.finishSecond(); return; }   // 第2クエスト：樹の2つ目の実と、芽のまわりの花（Step 11M）
   // 追加の花
+  // V1：秘密の場所に赤い花。V2：答えた祠のまわりに花（V2 の達成の演出。V1 の秘密の場所は V2 では使わない）
+  const extra=[], v2=worldV2.isActive();
+  for(let i=0;i<8;i++){
+    const a=v2?i/8*Math.PI*2+.2:Math.random()*Math.PI*2, r=v2?3.3+(i%2)*.5:1.2+Math.random()*2;
+    const f=v2?mkFlower(MISSION_POS.x+Math.cos(a)*r,MISSION_POS.z+Math.sin(a)*r,false):mkFlower(16+Math.cos(a)*r,-8+Math.sin(a)*r,true);
+    flowerGroup.add(f); extra.push(f);
 `],
   [`document.getElementById('secret-input').addEventListener('input',function(){`,
    `document.getElementById('secret-input').addEventListener('keydown', e => {   // Enter で送る。日本語の変換を確定する Enter では送らない
@@ -874,25 +885,35 @@ function validateExpandResponse(data, fields) {
   return { reflection, candidates, axis: data.axis };
 }
 
+// 開発用の記録（Step 11N）：送ったときの結果の種類と時間だけ。入力・AI の文・写真・鍵は残さない。console へも出さない
+// 種類：ok（AI の返事を表示）／care_ai／timeout（5秒）／network（通信の失敗）／http_NNN（HTTP エラー）／
+//       worker_invalid（Worker の検査で不合格。code は Worker の決まった記号だけ）／bad_json／app_invalid（アプリの検査で不合格）／
+//       cancelled（閉じた・リセット）／care_local・disabled・no_session・empty（送らなかった）
+const EXPAND_DIAG = [];
+function noteExpand(entry) { EXPAND_DIAG.push(entry); if (EXPAND_DIAG.length > 20) EXPAND_DIAG.shift(); }
+window.tomoriExpandDiag = () => EXPAND_DIAG.map(e => ({ ...e }));
 async function fetchExpansion(fields) {
   cancelExpansion();
+  const scene = fields.scene === 'detour' ? 'detour' : 'quest';
   const local = localExpandCare(fields);
-  if (local) return local;   // 送らない
-  if (!VOCABULARY_AI_ENABLED) return null;
+  if (local) { noteExpand({ scene, reason: 'care_local', ms: 0 }); return local; }   // 送らない
+  if (!VOCABULARY_AI_ENABLED) { noteExpand({ scene, reason: 'disabled', ms: 0 }); return null; }
   const body = {};
   for (const [k, max] of Object.entries(EXPAND_AI_LIMITS)) {
     const v = String(fields[k] == null ? '' : fields[k]).trim().slice(0, max);
-    if (!v) return null;
+    if (!v) { noteExpand({ scene, reason: 'empty', ms: 0 }); return null; }
     body[k] = v;
   }
-  if (fields.scene === 'detour') body.scene = 'detour';   // 道くさ（香りを想像する問い）。Worker がプロンプトを切りかえる
+  if (scene === 'detour') body.scene = 'detour';   // 道くさ（香りを想像する問い）。Worker がプロンプトを切りかえる
   const sessionId = getVocabSessionId();
-  if (!sessionId) return null;
+  if (!sessionId) { noteExpand({ scene, reason: 'no_session', ms: 0 }); return null; }
   const abort = new AbortController();
   _expandAbort = abort;
-  let timeoutId;
+  const t0 = performance.now();
+  let timeoutId, done = false;
+  const finish = (reason, code) => { if (done) return; done = true; const e = { scene, reason, ms: Math.round(performance.now() - t0) }; if (code) e.code = code; noteExpand(e); };
   // 5秒たったら、届いていなくても null で終える（あとから届いた返事は使わない）
-  const timeout = new Promise(resolve => { timeoutId = setTimeout(() => { abort.abort(); resolve(null); }, EXPAND_AI_TIMEOUT_MS); });
+  const timeout = new Promise(resolve => { timeoutId = setTimeout(() => { finish('timeout'); abort.abort(); resolve(null); }, EXPAND_AI_TIMEOUT_MS); });
   const work = (async () => {
     try {
       const res = await fetch(EXPAND_API_URL, {
@@ -901,12 +922,21 @@ async function fetchExpansion(fields) {
         body: JSON.stringify({ ...body, age: 'grade_3_4', language: 'ja' }),
         signal: abort.signal,
       });
-      if (abort.signal.aborted || !res.ok) return null;
+      if (abort.signal.aborted) { finish('cancelled'); return null; }
+      if (!res.ok) {
+        let code = null;
+        try { const e = await res.json(); if (e && e.code === 'INVALID_AI_RESPONSE' && /^[A-Z_]{3,40}$/.test(String(e.diagnosticCode))) code = e.diagnosticCode; } catch (e) {}
+        finish(code ? 'worker_invalid' : 'http_' + res.status, code);
+        return null;
+      }
       let data;
-      try { data = await res.json(); } catch (e) { return null; }
-      if (abort.signal.aborted) return null;
-      return validateExpandResponse(data, body);
+      try { data = await res.json(); } catch (e) { finish('bad_json'); return null; }
+      if (abort.signal.aborted) { finish('cancelled'); return null; }
+      const v = validateExpandResponse(data, body);
+      finish(!v ? 'app_invalid' : v.care ? 'care_ai' : 'ok');
+      return v;
     } catch (e) {
+      finish(abort.signal.aborted ? 'cancelled' : 'network');
       return null;
     }
   })();
@@ -1010,6 +1040,14 @@ async function fetchExpansion(fields) {
   questHub.applyUI();   // 「見つけたもの」ボタン・道くさの案内は、歩けるときだけ出す（入力中は隠す）
 }
 `],
+  [`  hd.position.y=.44; g.add(hd);
+  g.position.set(x,0,z); g.scale.setScalar(0); return g;
+}
+`,
+   `  hd.position.y=.44; g.add(hd);
+  g.position.set(x,0,z); g.scale.setScalar(0); g.visible=false; return g;   // 咲くまでは描かない（大きさ0でも描く回数は増えるため：Step 11N）
+}
+`],
   [`  const p=character.position.clone(); p.y+=2.6; p.project(camera);
   if(p.z>1){charLabel.style.opacity='0';return;}
   charLabel.style.opacity='1';
@@ -1029,6 +1067,39 @@ async function fetchExpansion(fields) {
    `function onTap(e){
   if(!canMove()) return;
   const ndc=getNDC(e);
+`],
+  [`    if(idx>=arr.length){if(onDone)onDone();return;}
+    const f=arr[idx++];
+    const t0=Date.now();
+`,
+   `    if(idx>=arr.length){if(onDone)onDone();return;}
+    const f=arr[idx++]; f.visible=true;
+    const t0=Date.now();
+`],
+  [`    vineGroup.visible=false;
+    newPath.visible=true;
+    secretGroup.visible=true;
+  }, 500);
+`,
+   `    vineGroup.visible=false;
+    if(!worldV2.isActive()){ newPath.visible=true; secretGroup.visible=true; }   // V1 の道・秘密の場所（V2 には自分の道と秘密の谷があるので出さない：Step 11N）
+  }, 500);
+`],
+  [`  // 赤い花を咲かせる
+  worldTimeout(()=>bloomSeq(redFlowers,null), 700);
+
+`,
+   `  // 赤い花を咲かせる
+  if(!worldV2.isActive()) worldTimeout(()=>bloomSeq(redFlowers,null), 700);   // V1 の秘密の場所の赤い花（V2 では咲かせない。描く回数を増やさない）
+
+`],
+  [`  nextGroup.visible=false;
+  [...mainFlowers,...redFlowers].forEach(f=>f.scale.setScalar(0));
+  // 今回の世界変化で追加した花（revealSecret）だけを消す。最初からある花・木・岩は消さない
+`,
+   `  nextGroup.visible=false;
+  [...mainFlowers,...redFlowers].forEach(f=>{ f.scale.setScalar(0); f.visible=false; });
+  // 今回の世界変化で追加した花（revealSecret）だけを消す。最初からある花・木・岩は消さない
 `],
   [`  _vocabCare = false;
   missionTriggered = false;
@@ -1078,7 +1149,7 @@ const questHub = (() => {
     DETOUR_DEFS.forEach((d, i) => {
       if (st.detours[d.id]) { gm.makeScale(0, 0, 0); glow.setMatrixAt(i, gm); return; }
       const near = Math.max(0, 1 - Math.hypot(x - d.x, z - d.z) / 6), s = .6 + .9 * near;
-      gm.makeScale(s, s, s).setPosition(d.x, worldV2.groundAt(d.x, d.z) + .55 + (still ? 0 : .06 * Math.sin(t * 1.7 + i * 2)), d.z);
+      gm.makeScale(s, s, s).setPosition(d.x, worldV2.groundAt(d.x, d.z) + worldV2.markerHeight() + (still ? 0 : .06 * Math.sin(t * 1.7 + i * 2)), d.z);
       glow.setMatrixAt(i, gm);
     });
     glow.instanceMatrix.needsUpdate = true;
@@ -1149,7 +1220,7 @@ const questHub = (() => {
       const f = mkFlower(Q2.start.x + Math.cos(a) * r, Q2.start.z + Math.sin(a) * r, false);
       flowerGroup.add(f); fl.push(f);
     }
-    if (reduceMotionQuery.matches) fl.forEach(f => f.scale.setScalar(1)); else bloomSeq(fl, null);
+    if (reduceMotionQuery.matches) fl.forEach(f => { f.scale.setScalar(1); f.visible = true; }); else bloomSeq(fl, null);
     freeMsg = Q2.reward;
     worldTimeout(() => setState(S.FREE_EXPLORE), 900);
   }

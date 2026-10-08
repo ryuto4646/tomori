@@ -21,12 +21,13 @@ function load(fetchImpl, { enabled = true } = {}) {
   const timers = [];
   const fakeSetTimeout = (fn, ms) => { timers.push(ms); return setTimeout(fn, ms >= 3000 ? 5 : ms); };   // 5秒の打ち切りは、すぐに起こす
   const core = enabled ? CORE : CORE.replace('const VOCABULARY_AI_ENABLED = true;', 'const VOCABULARY_AI_ENABLED = false;');
-  const api = new Function('fetch', 'setTimeout', 'clearTimeout', 'sessionStorage', 'globalThis', `
+  const win = {};
+  const api = new Function('fetch', 'setTimeout', 'clearTimeout', 'sessionStorage', 'globalThis', 'window', 'performance', `
     ${core}
     ${EXPAND}
     return { fetchExpansion, validateExpandResponse, cancelExpansion, localExpandCare, isUrgentCare, EXPAND_API_URL, EXPAND_AI_TIMEOUT_MS, get abort() { return _expandAbort; } };`)(
-    fetchImpl, fakeSetTimeout, clearTimeout, storage(), { crypto: globalThis.crypto });
-  return { api, timers };
+    fetchImpl, fakeSetTimeout, clearTimeout, storage(), { crypto: globalThis.crypto }, win, performance);
+  return { api, timers, diag: () => win.tomoriExpandDiag() };
 }
 function stub(respond) {
   const calls = [];
@@ -171,4 +172,35 @@ test('11. Worker と同じ「入力に無い特徴」の語の一覧・差し迫
   assert.deepEqual(list(HTML, 'const EXPAND_AI_UNGROUNDED'), list(W, 'const EXPAND_UNGROUNDED_WORDS'));
   const pats = (src, name) => src.slice(src.indexOf(name), src.indexOf('];', src.indexOf(name))).match(/\/.+?\/,/g);
   assert.deepEqual(pats(HTML, 'const EXPAND_URGENT_PATTERNS'), pats(W, 'const URGENT_CARE_PATTERNS'));
+});
+
+test('12. 開発用の記録：時間切れ・通信の失敗・HTTP エラー・Worker の検査不合格・アプリの検査不合格・成功を分けて残す。入力や AI の文は残さない', async () => {
+  const cases = [
+    ['timeout', opts => new Promise((_, rej) => opts.signal.addEventListener('abort', () => rej(new DOMException('aborted', 'AbortError'))))],
+    ['network', () => { throw new TypeError('Failed to fetch'); }],
+    ['http_429', json({ error: 'Too many requests', code: 'RATE_LIMITED' }, 429)],
+    ['http_500', json({ error: 'x', code: 'UPSTREAM_ERROR' }, 500)],
+    ['worker_invalid', json({ error: 'Invalid AI response', code: 'INVALID_AI_RESPONSE', diagnosticCode: 'CANDIDATE_INVALID' }, 502)],
+    ['bad_json', () => ({ ok: true, status: 200, json: async () => { throw new SyntaxError('x'); } })],
+    ['app_invalid', json({ ...AI, candidates: ['つぶらな目玉と丸い体', 'ふっくらした丸み', 'やわらかな輪郭線'] })],
+    ['ok', json(AI)],
+  ];
+  for (const [reason, respond] of cases) {
+    const s = stub(respond);
+    const { api, diag } = load(s.f);
+    await api.fetchExpansion({ ...FIELDS, scene: 'detour' });
+    const d = diag();
+    assert.equal(d.length, 1, reason);
+    assert.equal(d[0].reason, reason);
+    assert.equal(d[0].scene, 'detour');
+    assert.ok(Number.isFinite(d[0].ms));
+    if (reason === 'worker_invalid') assert.equal(d[0].code, 'CANDIDATE_INVALID');
+    assert.ok(!JSON.stringify(d).includes(FIELDS.answer) && !JSON.stringify(d).includes('丸'), 'no input or AI text');
+    assert.equal(s.calls.length, 1, 'no retry');
+  }
+  // 送らなかったとき（危険の表現は端末内の care）
+  const s = stub(json(AI)); const { api, diag } = load(s.f);
+  await api.fetchExpansion({ ...FIELDS, answer: '死にたい' });
+  assert.deepEqual(diag().map(e => e.reason), ['care_local']); assert.equal(s.calls.length, 0);
+  assert.ok(!/console\./.test(EXPAND));
 });

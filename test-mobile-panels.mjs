@@ -23,7 +23,7 @@ function makeEnv(stateName = 'SECRET_UNLOCKED', kind = 'ok', { ai = null, localC
     classList: { add: c => els[id].classes.add(c), remove: c => els[id].classes.delete(c), contains: c => els[id].classes.has(c), toggle: (c, on) => on ? els[id].classes.add(c) : els[id].classes.delete(c) },
     setAttribute: (k, v) => { els[id].attrs[k] = v; }, blur: () => { els[id].blurred++; } });
   const S = { SECRET_UNLOCKED: 'SECRET_UNLOCKED', DEMO_COMPLETE: 'DEMO_COMPLETE' };
-  const fn = new Function('document', 'S', 'ctxState', 'worldTimeout', 'mkFlower', 'flowerGroup', 'bloomSeq', 'resetPageScroll', 'nextGroup', 'setState', 'classifyAnswer', 'showSecretHint', 'showExpansion', 'fetchExpansion', 'localExpandCare', 'showSecretWait', 'showSecretCare', 'questHub',
+  const fn = new Function('document', 'S', 'ctxState', 'worldTimeout', 'mkFlower', 'flowerGroup', 'bloomSeq', 'resetPageScroll', 'nextGroup', 'setState', 'classifyAnswer', 'showSecretHint', 'showExpansion', 'fetchExpansion', 'localExpandCare', 'showSecretWait', 'showSecretCare', 'questHub', 'worldV2', 'MISSION_POS',
     `let state = ctxState; let secretSent = false, secretDone = false; const window = {}; let _expandGen = 0, enteredText = 'ひよこ', chosenWord = '輪郭';
      ${REVEAL}\n};
      ${FINISH}\n};
@@ -32,7 +32,7 @@ function makeEnv(stateName = 'SECRET_UNLOCKED', kind = 'ok', { ai = null, localC
     () => ({ kind }), () => { log.hints++; }, () => { log.expands++; },
     fields => { log.aiCalls.push(fields); return Promise.resolve(ai); },   // 既定は null（AI は使えなかった＝端末内の処理へ）
     () => localCare, on => { log.waits.push(on); }, urgent => { log.cares.push(urgent); },
-    { current: () => 'first', finishSecond: () => { log.second = (log.second || 0) + 1; } });   // 最初のクエスト（第2クエストは test-quests.mjs）
+    { current: () => 'first', finishSecond: () => { log.second = (log.second || 0) + 1; } }, { isActive: () => false }, { x: 1.5, z: -6.5 });   // 最初のクエスト（第2クエストは test-quests.mjs）
   return { els, el, log, api };
 }
 

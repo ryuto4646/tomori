@@ -204,3 +204,12 @@ test('12. 開発用の記録：時間切れ・通信の失敗・HTTP エラー�
   assert.deepEqual(diag().map(e => e.reason), ['care_local']); assert.equal(s.calls.length, 0);
   assert.ok(!/console\./.test(EXPAND));
 });
+
+test('13. 道くさでは、答えを引いて考えを足した受けとめを受け取る（Worker と同じ）。深掘りでは今までどおりオウム返しとして受け取らない', async () => {
+  const fields = { expression: 'ふしぎな香りの花を見つけた', word: 'なまえの花', question: 'この香りに、名前をつけるなら？', answer: 'ひみつのにおい' };
+  const ok = { ...AI, reflection: '「ひみつのにおい」って、どんな景色が浮かぶ香りかな。', candidates: ['ないしょの香り', 'こっそり香る花', 'ひみつめいた香り'] };
+  const { api } = load(async () => { throw new Error('unused'); });
+  assert.ok(api.validateExpandResponse(ok, { ...fields, scene: 'detour' }));
+  assert.equal(api.validateExpandResponse({ ...ok, reflection: 'ひみつのにおいだね。' }, { ...fields, scene: 'detour' }), null);
+  assert.equal(api.validateExpandResponse(ok, fields), null, 'quest keeps the strict rule');
+});

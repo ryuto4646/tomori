@@ -964,7 +964,8 @@ function validateExpandResponse(data, fields) {
   const reflection = data.reflection.trim(), rKey = key(reflection);
   if (!reflection || Array.from(reflection).length > 45) return null;
   if (!rKey || EXPAND_AI_PRAISE_ONLY.test(rKey)) return null;
-  if (rKey === inputs[0] || (Array.from(inputs[0]).length >= 4 && rKey.includes(inputs[0]))) return null;
+  const quoteOk = fields.scene === 'detour' && Array.from(rKey).length >= Array.from(inputs[0]).length + 12;   // 道くさ：答えを引いて考えを足すのは認める（Worker と同じ）
+  if (rKey === inputs[0] || (Array.from(inputs[0]).length >= 4 && rKey.includes(inputs[0]) && !quoteOk)) return null;
   if (!Array.isArray(data.candidates) || data.candidates.length !== 3) return null;
   const candidates = [];
   for (const c of data.candidates) {

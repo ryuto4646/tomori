@@ -265,12 +265,16 @@ scene.add(character);
 // assets/hirori-field/hirori-field.glb（tools/hirori-field/generate_hirori_field.py で作る）を同じ場所から読み込み、
 // 読み込みがすべて成功したときだけ、仮ヒロリの見た目と入れかえる。失敗・8秒をこえたときは仮ヒロリのまま。
 // 位置・向き・影・カメラ・名前の表示は仮ヒロリ（character）のものをそのまま使う。?hirori=placeholder で仮ヒロリに固定できる
+// Step 11N：Meshy から作ったヒロリ（assets/hirori-meshy。1つの形・頂点色だけ）を先に読む。読めなければ、いままでの Field ヒロリ、
+// それも読めなければ仮ヒロリ。?hirori=field で、いままでの Field ヒロリに固定できる（元へ戻す道）
 const fieldHirori = (() => {
   const URL_GLB = 'assets/hirori-field/hirori-field.glb', TIMEOUT_MS = 8000, SCALE = 2.0;   // GLB は全高約1.0。仮ヒロリ（約2.0）にそろえる
+  const MESHY_GLB = 'assets/hirori-meshy/hirori-meshy.glb';
   let active = false, P = null;
   const wanted = new URLSearchParams(location.search).get('hirori') !== 'placeholder';
+  const useMeshy = new URLSearchParams(location.search).get('hirori') !== 'field';
   // GLB を読む：ノードの階層（位置・回転・大きさ）と、形（位置・法線・頂点色・番号）と、素材の色だけ。画像は使わない
-  function parse(buf) {
+  function parse(buf, kind) {
     const dv = new DataView(buf);
     if (dv.getUint32(0, true) !== 0x46546C67 || dv.getUint32(4, true) !== 2) throw new Error('not glb2');
     const jlen = dv.getUint32(12, true);
@@ -287,6 +291,7 @@ const fieldHirori = (() => {
       const f = (m.pbrMetallicRoughness && m.pbrMetallicRoughness.baseColorFactor) || [1, 1, 1, 1];
       return new THREE.MeshStandardMaterial({ color: new THREE.Color().setRGB(f[0], f[1], f[2], THREE.LinearSRGBColorSpace), roughness: .86, metalness: 0 });
     });
+    if (!mats.length) mats.push(new THREE.MeshStandardMaterial({ roughness: .86, metalness: 0 }));   // 材質のない GLB（Meshy ヒロリ：色は頂点色だけ）
     const nodes = json.nodes.map(nd => {
       const o = new THREE.Group(); o.name = nd.name || '';
       if (nd.translation) o.position.fromArray(nd.translation);
@@ -308,6 +313,13 @@ const fieldHirori = (() => {
     json.nodes.forEach((nd, i) => (nd.children || []).forEach(c => nodes[i].add(nodes[c])));
     const top = new THREE.Group(); top.name = 'FieldHirori';
     for (const i of json.scenes[json.scene || 0].nodes) top.add(nodes[i]);
+    if (kind === 'meshy') {   // 部位に分かれていない1つの形：体全体を upper に入れて、呼吸・上下・左右の重心だけを付ける
+      const upper = new THREE.Group();
+      for (const o of top.children.slice()) upper.add(o);
+      top.add(upper); top.scale.setScalar(SCALE);
+      top.traverse(o => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; } });
+      return { top, upper, meshy: true };
+    }
     const get = n => { const o = top.getObjectByName(n); if (!o) throw new Error('node ' + n); return o; };
     // 動かす部位（毎フレーム探さない）。とさかは顔側から 01〜04
     const parts = { top, body: get('Hirori_Body'), legL: get('Hirori_Leg_L'), legR: get('Hirori_Leg_R'), wingL: get('Hirori_Wing_L'), wingR: get('Hirori_Wing_R'),
@@ -327,19 +339,24 @@ const fieldHirori = (() => {
     for (const o of root.children) if (o !== pp.shadow) o.visible = false;
     root.add(parts.top); P = parts; active = true;
   }
-  function load(root) {
-    if (!wanted) return Promise.resolve(false);
+  function loadOne(root, url, kind) {
     return new Promise(resolve => {
       let done = false;
       const finish = ok => { if (!done) { done = true; resolve(ok); } };
       const timer = setTimeout(() => finish(false), TIMEOUT_MS);
-      new THREE.FileLoader().setResponseType('arraybuffer').load(URL_GLB, buf => {
+      new THREE.FileLoader().setResponseType('arraybuffer').load(url, buf => {
         if (done) return;
-        try { const parts = parse(buf); clearTimeout(timer); if (!done) { attach(root, parts); finish(true); } }
+        try { const parts = parse(buf, kind); clearTimeout(timer); if (!done) { attach(root, parts); finish(true); } }
         catch (e) { clearTimeout(timer); finish(false); }
       }, undefined, () => { clearTimeout(timer); finish(false); });
     });
   }
+  async function load(root) {
+    if (!wanted) return false;
+    if (useMeshy && await loadOne(root, MESHY_GLB, 'meshy')) return true;
+    return loadOne(root, URL_GLB, 'field');
+  }
+  const kind = () => (active ? (P.meshy ? 'meshy' : 'field') : 'placeholder');
   // 動き：よちよち歩き。歩幅は仮ヒロリの75%（移動速度は同じなので、足を速く小さく動かす）。脚は小さく振り、体は左右へ少しだけ重心を移す
   // 待機は小さな呼吸。羽は小さく揺れ、とさかは少し遅れて揺れる。reduced-motion では、左右の揺れ・飾りの上下動・羽・とさかを止める
   const STRIDE = STRIDE_UNITS * .75, WING_FLAP = .17, WING_IDLE = .03;   // 羽：歩くときの上・外への振れ（約10°）、待機の呼吸（約1.7°）
@@ -349,8 +366,10 @@ const fieldHirori = (() => {
     const w = m.walkBlend;
     if (moving) m.phase += dt * SPEED * (Math.PI * 2) / STRIDE;
     const s = Math.sin(m.phase);
-    P.legL.rotation.x = s * (reduce ? .2 : .3) * w;
-    P.legR.rotation.x = -s * (reduce ? .2 : .3) * w;
+    if (!P.meshy) {   // 脚：Meshy ヒロリは1つの形なので、脚だけは動かさない（体全体の上下と重心で歩く）
+      P.legL.rotation.x = s * (reduce ? .2 : .3) * w;
+      P.legR.rotation.x = -s * (reduce ? .2 : .3) * w;
+    }
     const breath = Math.sin(t * 2.0);
     P.upper.position.y = (breath * .006 * (1 - w) + Math.abs(s) * .01 * w) * lift;
     P.upper.scale.y = 1 + breath * .012 * (1 - w) * deco;
@@ -358,16 +377,18 @@ const fieldHirori = (() => {
     P.upper.position.x = s * .008 * w * deco;
     // 羽：歩くあいだだけ、左右いっしょに上・外へ小さくパタパタ（約10°。待機の角度より下へは振らない）。待機中は呼吸ほど（2°以下）
     const flap = (.5 - .5 * Math.cos(m.phase * 2)) * WING_FLAP * w + (.5 - .5 * Math.cos(t * 1.6)) * WING_IDLE * (1 - w);
-    P.wingL.rotation.z = P.wingBase[0] + flap * deco;
-    P.wingR.rotation.z = P.wingBase[1] - flap * deco;
-    for (let i = 0; i < 4; i++) P.crest[i].rotation.x = (Math.sin(t * 1.2 - .5 - i * .35) * .04 * (1 - w) + Math.sin(m.phase * 2 - 1.1 - i * .4) * .07 * w) * deco;
+    if (!P.meshy) {
+      P.wingL.rotation.z = P.wingBase[0] + flap * deco;
+      P.wingR.rotation.z = P.wingBase[1] - flap * deco;
+      for (let i = 0; i < 4; i++) P.crest[i].rotation.x = (Math.sin(t * 1.2 - .5 - i * .35) * .04 * (1 - w) + Math.sin(m.phase * 2 - 1.1 - i * .4) * .07 * w) * deco;
+    }
     // 到着：小さく跳ね、羽が少し開く（1回だけ）
     let hop = 0;
     if (m.arrivalT >= 0) {
       m.arrivalT += dt;
       const u = Math.min(m.arrivalT / ARRIVAL_SEC, 1), k = Math.sin(Math.PI * u);
       hop = k * .16 * lift;
-      P.wingL.rotation.z += k * .35 * deco; P.wingR.rotation.z -= k * .35 * deco;
+      if (!P.meshy) { P.wingL.rotation.z += k * .35 * deco; P.wingR.rotation.z -= k * .35 * deco; }
       if (u >= 1) m.arrivalT = -1;
     }
     root.position.y = hop;
@@ -377,9 +398,9 @@ const fieldHirori = (() => {
     if (m.blinkT < 0) { m.blinkIn -= dt; if (m.blinkIn <= 0) { m.blinkT = 0; m.blinkIn = 2.5 + Math.random() * 3; } }
     let eyeY = 1;
     if (m.blinkT >= 0) { m.blinkT += dt; eyeY = m.blinkT < .14 ? Math.max(.12, Math.abs(1 - m.blinkT / .07)) : 1; if (m.blinkT >= .14) m.blinkT = -1; }
-    for (let i = 0; i < 4; i++) P.eyes[i].scale.y = eyeY;
+    if (!P.meshy) for (let i = 0; i < 4; i++) P.eyes[i].scale.y = eyeY;   // まばたき：Meshy ヒロリの目は塗った色なので、閉じない
   }
-  return { load, update, active: () => active, parse };
+  return { load, update, active: () => active, kind, parse };
 })();
 fieldHirori.ready = fieldHirori.load(character);
 // FIELD-HIRORI-END

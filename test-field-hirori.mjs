@@ -102,8 +102,8 @@ test('4. 比率（ひよこ型）：頭（あごから頭頂）は全高の30〜
 test('5. 組み込み：同じ場所の GLB を読み、すべて成功したときだけ仮ヒロリと入れかえる。失敗・8秒こえは仮ヒロリのまま', () => {
   assert.match(FH, /const URL_GLB = 'assets\/hirori-field\/hirori-field\.glb', TIMEOUT_MS = 8000, SCALE = 2\.0;/);
   assert.ok(!/https?:\/\//.test(FH_CODE), 'same origin only');
-  assert.match(FH, /new THREE\.FileLoader\(\)\.setResponseType\('arraybuffer'\)\.load\(URL_GLB,/);
-  assert.match(FH, /try \{ const parts = parse\(buf\); clearTimeout\(timer\); if \(!done\) \{ attach\(root, parts\); finish\(true\); \} \}\s*catch \(e\) \{ clearTimeout\(timer\); finish\(false\); \}/);
+  assert.match(FH, /new THREE\.FileLoader\(\)\.setResponseType\('arraybuffer'\)\.load\(url,/);
+  assert.match(FH, /try \{ const parts = parse\(buf, kind\); clearTimeout\(timer\); if \(!done\) \{ attach\(root, parts\); finish\(true\); \} \}\s*catch \(e\) \{ clearTimeout\(timer\); finish\(false\); \}/);
   assert.match(FH, /\}, undefined, \(\) => \{ clearTimeout\(timer\); finish\(false\); \}\);/);
   assert.match(FH, /const timer = setTimeout\(\(\) => finish\(false\), TIMEOUT_MS\);/);
   // 画像や外のファイルを使う GLB は読まない
@@ -161,4 +161,35 @@ test('9. 羽の動き：歩くあいだだけ左右いっしょに上・外へ�
   assert.match(FH, /deco = reduce \? 0 : 1/);
   const gen = readFileSync(join(REPO, 'tools', 'hirori-field', 'generate_hirori_field.py'), 'utf8');
   assert.match(gen, /eye_x=0\.086 \* HEAD_K \* 0\.92 \* 0\.85, eye_z=hz\(0\.592\), eye_r=\(0\.01935, 0\.008, 0\.01935\)/);
+});
+
+// Step 11N：Meshy から作ったヒロリ（1つの形・頂点色だけ）。先に読み、読めなければいままでの Field ヒロリ、それも読めなければ仮ヒロリ
+const MGLB = join(ROOT, 'assets', 'hirori-meshy', 'hirori-meshy.glb');
+test('10. Meshy ヒロリの GLB：1つの形・頂点色だけ（材質・テクスチャなし）・三角形 8,000 以下・高さ1・manifest と一致', () => {
+  const r = inspect(MGLB, { profile: 'field' });
+  assert.deepEqual(r.checks.filter(c => c.level === 'error').map(c => c.id), []);
+  assert.ok(r.facts.triangles <= 8000, `triangles ${r.facts.triangles}`);
+  assert.equal(r.facts.materials, 0); assert.equal(r.facts.textures, 0); assert.equal(r.facts.images, 0);
+  assert.ok(Math.abs(r.facts.sole_y) <= .005 && r.facts.height >= .95 && r.facts.height <= 1.05);
+  const mb = readFileSync(MGLB), mj = JSON.parse(mb.toString('utf8', 20, 20 + mb.readUInt32LE(12)));
+  assert.equal(mj.meshes.length, 1); assert.equal(mj.meshes[0].primitives.length, 1);
+  const pr = mj.meshes[0].primitives[0];
+  assert.deepEqual(Object.keys(pr.attributes).sort(), ['COLOR_0', 'NORMAL', 'POSITION']);
+  assert.ok(pr.indices !== undefined && pr.material === undefined);
+  const man = JSON.parse(readFileSync(join(ROOT, 'assets', 'hirori-meshy', 'manifest.json'), 'utf8'));
+  assert.equal(man.sha256, createHash('sha256').update(mb).digest('hex'), 'manifest matches the GLB');
+  assert.equal(man.triangles, r.facts.triangles);
+  assert.ok(statSync(MGLB).size <= 1.5 * 1024 * 1024);
+});
+
+test('11. Meshy ヒロリの組み込み：先に読み、だめならいままでの Field ヒロリ。?hirori=field で元のヒロリへ戻せる。部位の動きは Meshy ヒロリにはかけない', () => {
+  assert.match(FH, /const MESHY_GLB = 'assets\/hirori-meshy\/hirori-meshy\.glb';/);
+  assert.match(FH, /const useMeshy = new URLSearchParams\(location\.search\)\.get\('hirori'\) !== 'field';/);
+  assert.match(FH, /if \(!wanted\) return false;\s*if \(useMeshy && await loadOne\(root, MESHY_GLB, 'meshy'\)\) return true;\s*return loadOne\(root, URL_GLB, 'field'\);/);
+  // 材質のない GLB でも読める（頂点色だけ）
+  assert.match(FH, /if \(!mats\.length\) mats\.push\(new THREE\.MeshStandardMaterial/);
+  // 脚・羽・とさか・まばたきは、部位のある Field ヒロリだけ
+  const upd = between(FH, 'function update(root, dt, t, moving) {', 'return { load, update');
+  assert.equal(count(upd, /if \(!P\.meshy\)/g), 4);
+  assert.match(upd, /P\.upper\.rotation\.z = s \* \.07 \* w \* deco;/);
 });

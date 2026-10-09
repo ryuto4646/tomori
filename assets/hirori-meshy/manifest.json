@@ -1,0 +1,23 @@
+{
+ "note": "Step 11N：Meshy の高詳細ヒロリ（正本はリポジトリの外。ここには置かない）から作った探索用ヒロリ。1つの形・頂点色（COLOR_0）だけ（材質・テクスチャなし）。足もとが原点・高さ1・正面は +Z。部位は分かれていないので、動きは体全体（呼吸・上下・左右の重心・旋回・到着の小さな跳ね）。",
+ "file": "hirori-meshy.glb",
+ "sha256": "62c0df93e5165d852686b07bed816fbebca18e04d0f7b1aa9b9cec8ac0f10c44",
+ "triangles": 6802,
+ "version": "v7（花・羽・猫耳の模様は v6 で確定。のどの折れを直した版）",
+ "parts": {
+  "body": "#EE8471",
+  "cream": "#F7EBDB",
+  "wing_inner": "#A9D3EC",
+  "flower": "#B4DAF2",
+  "flower_center": "#F7EBDB",
+  "eye": "#2E262B",
+  "mouth": "#5A3530"
+ },
+ "source": {
+  "file": "hirori-meshy-original.glb",
+  "sha256": "858778e10d78eef930a2f96c8cc0bef518633ef56ad5126fac068d900002f9db",
+  "triangles": 223984
+ },
+ "fallback": "読み込めないときは assets/hirori-field/hirori-field.glb（いままでの Field ヒロリ）、それも読めなければ仮ヒロリ。?hirori=field でいままでの Field ヒロリ、?hirori=placeholder で仮ヒロリに固定できる",
+ "tools": "tomori-meshy-work/tools（build_hirori.py・flower_seg.py・body_seg.py）"
+}

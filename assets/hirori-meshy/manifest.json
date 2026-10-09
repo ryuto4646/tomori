@@ -1,9 +1,9 @@
 {
- "note": "Step 11N：Meshy の高詳細ヒロリ（正本はリポジトリの外。ここには置かない）から作った探索用ヒロリ。1つの形・頂点色（COLOR_0）だけ（材質・テクスチャなし）。足もとが原点・高さ1・正面は +Z。部位は分かれていないので、動きは体全体（呼吸・上下・左右の重心・旋回・到着の小さな跳ね）。",
+ "note": "Step 11N/11O：Meshy の高詳細ヒロリ（正本はリポジトリの外。ここには置かない）から作った探索用ヒロリ。1つの形・頂点色（COLOR_0）だけ（材質・テクスチャなし）。足もとが原点・高さ1・正面は +Z。骨で脚・足・羽・花を動かす（骨はすべて回転なしの向き）。",
  "file": "hirori-meshy.glb",
- "sha256": "62c0df93e5165d852686b07bed816fbebca18e04d0f7b1aa9b9cec8ac0f10c44",
+ "sha256": "33273fd3033a511e57161e4598c7315e6c7165331103b99eb1c198be1e887155",
  "triangles": 6802,
- "version": "v7（花・羽・猫耳の模様は v6 で確定。のどの折れを直した版）",
+ "version": "v7.1＋骨（Step 11O）：形・色・三角形は v7 のまま。花の側の目の外側（頬）の縦のくぼみだけを浅くした（86点）。骨 8 本と重み（1頂点に最大4本）を足した",
  "parts": {
   "body": "#EE8471",
   "cream": "#F7EBDB",
@@ -19,5 +19,19 @@
   "triangles": 223984
  },
  "fallback": "読み込めないときは assets/hirori-field/hirori-field.glb（いままでの Field ヒロリ）、それも読めなければ仮ヒロリ。?hirori=field でいままでの Field ヒロリ、?hirori=placeholder で仮ヒロリに固定できる",
- "tools": "tomori-meshy-work/tools（build_hirori.py・flower_seg.py・body_seg.py）"
+ "tools": "tomori-meshy-work/tools（build_hirori.py・flower_seg.py・body_seg.py：形と色／rig_hirori.py：骨と重み／skin_check.py：ゲームと同じ計算で動かして確かめる）",
+ "bones": [
+  "Root",
+  "Leg_L",
+  "Foot_L",
+  "Leg_R",
+  "Foot_R",
+  "Wing_L",
+  "Wing_R",
+  "Flower"
+ ],
+ "v7_static": {
+  "sha256": "62c0df93e5165d852686b07bed816fbebca18e04d0f7b1aa9b9cec8ac0f10c44",
+  "where": "tomori-meshy-work/baseline-v7/hirori-game.glb・コミット b84f257"
+ }
 }

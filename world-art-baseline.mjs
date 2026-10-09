@@ -281,7 +281,7 @@ const fieldHirori = (() => {
     const json = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 20, jlen)));
     const binOff = 20 + jlen + 8;
     if ((json.images || []).length || (json.textures || []).length || (json.buffers || []).some(b => b.uri)) throw new Error('external data');
-    const TYPES = { 5121: Uint8Array, 5123: Uint16Array, 5125: Uint32Array, 5126: Float32Array }, N = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4 };
+    const TYPES = { 5121: Uint8Array, 5123: Uint16Array, 5125: Uint32Array, 5126: Float32Array }, N = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4, MAT4: 16 };   // MAT4：骨の初期の逆行列
     const read = i => {
       const a = json.accessors[i], v = json.bufferViews[a.bufferView], T = TYPES[a.componentType], n = N[a.type];
       if (!T || !n || (v.byteStride && v.byteStride !== n * T.BYTES_PER_ELEMENT)) throw new Error('accessor');
@@ -292,8 +292,11 @@ const fieldHirori = (() => {
       return new THREE.MeshStandardMaterial({ color: new THREE.Color().setRGB(f[0], f[1], f[2], THREE.LinearSRGBColorSpace), roughness: .86, metalness: 0 });
     });
     if (!mats.length) mats.push(new THREE.MeshStandardMaterial({ roughness: .86, metalness: 0 }));   // 材質のない GLB（Meshy ヒロリ：色は頂点色だけ）
-    const nodes = json.nodes.map(nd => {
-      const o = new THREE.Group(); o.name = nd.name || '';
+    // 骨（Step 11O）：skin の joints は Bone として作り、形は SkinnedMesh にする（骨と重みで脚・羽・花を動かす）
+    const skin = (json.skins || [])[0], jointSet = new Set(skin ? skin.joints : []);
+    const skinned = [];
+    const nodes = json.nodes.map((nd, ni) => {
+      const o = jointSet.has(ni) ? new THREE.Bone() : new THREE.Group(); o.name = nd.name || '';
       if (nd.translation) o.position.fromArray(nd.translation);
       if (nd.rotation) o.quaternion.fromArray(nd.rotation);
       if (nd.scale) o.scale.fromArray(nd.scale);
@@ -306,19 +309,32 @@ const fieldHirori = (() => {
         const ck = Object.keys(pr.attributes).filter(k => /^COLOR_\\d+$/.test(k)).sort().pop();
         if (ck) { g.setAttribute('color', read(pr.attributes[ck])); mat = mat.userData.vc || (mat.userData.vc = Object.assign(mat.clone(), { vertexColors: true })); }
         if (pr.indices !== undefined) g.setIndex(read(pr.indices));
-        const me = new THREE.Mesh(g, mat); me.name = o.name; o.add(me);
+        const sk = nd.skin !== undefined && pr.attributes.JOINTS_0 !== undefined && pr.attributes.WEIGHTS_0 !== undefined;
+        if (sk) { g.setAttribute('skinIndex', read(pr.attributes.JOINTS_0)); g.setAttribute('skinWeight', read(pr.attributes.WEIGHTS_0)); }
+        const me = sk ? new THREE.SkinnedMesh(g, mat) : new THREE.Mesh(g, mat); me.name = o.name; o.add(me);
+        if (sk) skinned.push(me);
       }
       return o;
     });
     json.nodes.forEach((nd, i) => (nd.children || []).forEach(c => nodes[i].add(nodes[c])));
     const top = new THREE.Group(); top.name = 'FieldHirori';
     for (const i of json.scenes[json.scene || 0].nodes) top.add(nodes[i]);
-    if (kind === 'meshy') {   // 部位に分かれていない1つの形：体全体を upper に入れて、呼吸・上下・左右の重心だけを付ける
+    if (skinned.length) {   // 骨の初期の逆行列（inverseBindMatrices）で結ぶ
+      top.updateMatrixWorld(true);
+      const ibm = read(skin.inverseBindMatrices).array;
+      const bones = skin.joints.map(k => nodes[k]), inv = skin.joints.map((k, i) => new THREE.Matrix4().fromArray(ibm, i * 16));
+      for (const me of skinned) me.bind(new THREE.Skeleton(bones, inv), me.matrixWorld);
+    }
+    if (kind === 'meshy') {   // 1つの形：体全体を upper に入れる。骨があれば、脚・足・羽・花を骨で動かす（なければ体全体だけ）
       const upper = new THREE.Group();
       for (const o of top.children.slice()) upper.add(o);
       top.add(upper); top.scale.setScalar(SCALE);
       top.traverse(o => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; } });
-      return { top, upper, meshy: true };
+      const bone = n => { const o = top.getObjectByName(n); return o && o.isBone ? o : null; };
+      const names = ['Root', 'Leg_L', 'Leg_R', 'Foot_L', 'Foot_R', 'Wing_L', 'Wing_R', 'Flower'];
+      const rig = names.every(bone) ? Object.fromEntries(names.map(n => [n, bone(n)])) : null;
+      if (rig) for (const n of names) rig[n].userData.rest = rig[n].position.clone();   // 骨の初期位置（毎フレームここからずらす）
+      return { top, upper, meshy: true, rig };
     }
     const get = n => { const o = top.getObjectByName(n); if (!o) throw new Error('node ' + n); return o; };
     // 動かす部位（毎フレーム探さない）。とさかは顔側から 01〜04
@@ -360,21 +376,45 @@ const fieldHirori = (() => {
   // 動き：よちよち歩き。歩幅は仮ヒロリの75%（移動速度は同じなので、足を速く小さく動かす）。脚は小さく振り、体は左右へ少しだけ重心を移す
   // 待機は小さな呼吸。羽は小さく揺れ、とさかは少し遅れて揺れる。reduced-motion では、左右の揺れ・飾りの上下動・羽・とさかを止める
   const STRIDE = STRIDE_UNITS * .75, WING_FLAP = .17, WING_IDLE = .03;   // 羽：歩くときの上・外への振れ（約10°）、待機の呼吸（約1.7°）
+  // Step 11O：骨で歩く（Meshy ヒロリ）。1周期（左右1歩ずつ）で STRIDE_RIG（ワールド）だけ進む
+  // 足が地面に着いている前半は、足が体に対して一定の速さで後ろへ動く。後半で少し持ち上げて前へ戻す
+  // 前後の動きは、股のまわりの回転と、脚の前後のずれで作る。足の骨は脚と逆に回し、足の裏をいつも水平に保つ
+  // 体は、2本の足のうち低いほうがちょうど地面に着く高さへ上げ下げする（足が地面に沈まない）。値はゲームの座標（全高1）
+  const STRIDE_RIG = .9, RIG_REACH = .075, RIG_SHIFT = .45, RIG_LIFT = .028, RIG_SIN_MAX = .6;
+  const GAIT = { dz: 0, lift: 0 }, LEGPOSE = { a: 0, dy: 0, dz: 0 };
+  function gait(u) {   // u：その足の周期の位置（0〜1）。dz＝股に対する足の前後、lift＝持ち上げる高さ
+    u -= Math.floor(u);
+    if (u < .5) { GAIT.dz = RIG_REACH * (1 - 4 * u); GAIT.lift = 0; }
+    else { const v = (u - .5) * 2; GAIT.dz = RIG_REACH * (Math.cos(Math.PI * v) * -1); GAIT.lift = RIG_LIFT * Math.sin(Math.PI * v); }
+  }
+  function legPose(r, dz) {   // r：股から足首（Foot 骨の初期位置）。dz の一部を回転、残りを前後のずれで出す
+    const sa = Math.max(-RIG_SIN_MAX, Math.min(RIG_SIN_MAX, dz * (1 - RIG_SHIFT) / r.y)), a = Math.asin(sa), ca = Math.cos(a);
+    LEGPOSE.a = a;
+    LEGPOSE.dz = dz - (r.y * sa + r.z * (ca - 1));        // 回転で動いたぶんを引いて、合計がちょうど dz
+    LEGPOSE.dy = r.y * (ca - 1) - r.z * sa;               // 回転で足首が上下する量
+  }
   function update(root, dt, t, moving) {
     const m = hiroriMotion, reduce = reduceMotionQuery.matches, deco = reduce ? 0 : 1, lift = reduce ? 0 : 1;
     m.walkBlend += ((moving ? 1 : 0) - m.walkBlend) * (1 - Math.exp(-10 * dt));
     const w = m.walkBlend;
-    if (moving) m.phase += dt * SPEED * (Math.PI * 2) / STRIDE;
+    if (moving) m.phase += dt * SPEED * (Math.PI * 2) / (P.rig ? STRIDE_RIG : STRIDE);
     const s = Math.sin(m.phase);
     if (!P.meshy) {   // 脚：Meshy ヒロリは1つの形なので、脚だけは動かさない（体全体の上下と重心で歩く）
       P.legL.rotation.x = s * (reduce ? .2 : .3) * w;
       P.legR.rotation.x = -s * (reduce ? .2 : .3) * w;
     }
     const breath = Math.sin(t * 2.0);
-    P.upper.position.y = (breath * .006 * (1 - w) + Math.abs(s) * .01 * w) * lift;
-    P.upper.scale.y = 1 + breath * .012 * (1 - w) * deco;
-    P.upper.rotation.z = s * .07 * w * deco;          // 左右へ少しだけ重心を移す（よちよち）
-    P.upper.position.x = s * .008 * w * deco;
+    if (P.rig) {   // 骨のあるヒロリ：歩く上下は脚の動きで出すので、体全体の揺れは小さくする（重ねて大きく揺れないように）
+      P.upper.rotation.z = s * .025 * w * deco;
+      P.upper.position.y = breath * .006 * (1 - w) * lift + Math.abs(P.upper.rotation.z) * .1;   // 傾けても、下がった側の足が沈まない
+      P.upper.scale.y = 1 + breath * .012 * (1 - w) * deco;
+      P.upper.position.x = s * .004 * w * deco;
+    } else {
+      P.upper.position.y = (breath * .006 * (1 - w) + Math.abs(s) * .01 * w) * lift;
+      P.upper.scale.y = 1 + breath * .012 * (1 - w) * deco;
+      P.upper.rotation.z = s * .07 * w * deco;          // 左右へ少しだけ重心を移す（よちよち）
+      P.upper.position.x = s * .008 * w * deco;
+    }
     // 羽：歩くあいだだけ、左右いっしょに上・外へ小さくパタパタ（約10°。待機の角度より下へは振らない）。待機中は呼吸ほど（2°以下）
     const flap = (.5 - .5 * Math.cos(m.phase * 2)) * WING_FLAP * w + (.5 - .5 * Math.cos(t * 1.6)) * WING_IDLE * (1 - w);
     if (!P.meshy) {
@@ -383,13 +423,26 @@ const fieldHirori = (() => {
       for (let i = 0; i < 4; i++) P.crest[i].rotation.x = (Math.sin(t * 1.2 - .5 - i * .35) * .04 * (1 - w) + Math.sin(m.phase * 2 - 1.1 - i * .4) * .07 * w) * deco;
     }
     // 到着：小さく跳ね、羽が少し開く（1回だけ）
-    let hop = 0;
+    let hop = 0, open = 0;
     if (m.arrivalT >= 0) {
       m.arrivalT += dt;
       const u = Math.min(m.arrivalT / ARRIVAL_SEC, 1), k = Math.sin(Math.PI * u);
-      hop = k * .16 * lift;
-      if (!P.meshy) { P.wingL.rotation.z += k * .35 * deco; P.wingR.rotation.z -= k * .35 * deco; }
+      hop = k * .16 * lift; open = k * .35 * deco;
+      if (!P.meshy) { P.wingL.rotation.z += open; P.wingR.rotation.z -= open; }
       if (u >= 1) m.arrivalT = -1;
+    }
+    if (P.rig) {   // 骨：脚は左右交互（右は半周期ずらす）。reduced-motion では歩幅を小さくし、羽・花の揺れを止める
+      const B = P.rig, amp = (reduce ? .7 : 1) * w, ph = m.phase / (Math.PI * 2);
+      gait(ph); legPose(B.Foot_L.userData.rest, GAIT.dz * amp);
+      const aL = LEGPOSE.a, zL = LEGPOSE.dz, yL = LEGPOSE.dy, hL = GAIT.lift * amp;
+      gait(ph + .5); legPose(B.Foot_R.userData.rest, GAIT.dz * amp);
+      const aR = LEGPOSE.a, zR = LEGPOSE.dz, yR = LEGPOSE.dy, hR = GAIT.lift * amp;
+      B.Root.position.y = B.Root.userData.rest.y - Math.min(yL + hL, yR + hR);   // 低いほうの足（持ち上げた高さも入れる）を、ちょうど地面に
+      B.Leg_L.rotation.x = aL; B.Leg_L.position.copy(B.Leg_L.userData.rest); B.Leg_L.position.y += hL; B.Leg_L.position.z += zL;
+      B.Leg_R.rotation.x = aR; B.Leg_R.position.copy(B.Leg_R.userData.rest); B.Leg_R.position.y += hR; B.Leg_R.position.z += zR;
+      B.Foot_L.rotation.x = -aL; B.Foot_R.rotation.x = -aR;   // 足の裏を水平に
+      B.Wing_L.rotation.z = flap * deco + open; B.Wing_R.rotation.z = -flap * deco - open;
+      B.Flower.rotation.x = (Math.sin(m.phase * 2 - .8) * .06 * w + Math.sin(t * 1.3) * .02 * (1 - w)) * deco;
     }
     root.position.y = hop;
     const sh = root.userData.parts.shadow;

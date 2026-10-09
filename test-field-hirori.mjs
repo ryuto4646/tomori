@@ -174,8 +174,13 @@ test('10. Meshy ヒロリの GLB：1つの形・頂点色だけ（材質・テ�
   const mb = readFileSync(MGLB), mj = JSON.parse(mb.toString('utf8', 20, 20 + mb.readUInt32LE(12)));
   assert.equal(mj.meshes.length, 1); assert.equal(mj.meshes[0].primitives.length, 1);
   const pr = mj.meshes[0].primitives[0];
-  assert.deepEqual(Object.keys(pr.attributes).sort(), ['COLOR_0', 'NORMAL', 'POSITION']);
+  assert.deepEqual(Object.keys(pr.attributes).sort(), ['COLOR_0', 'JOINTS_0', 'NORMAL', 'POSITION', 'WEIGHTS_0']);
   assert.ok(pr.indices !== undefined && pr.material === undefined);
+  // 骨（Step 11O）：8本・すべて回転なし（ゲームで rotation.x／z をそのまま使う）。アニメーションは入れない（動きはゲーム側で作る）
+  assert.equal(mj.skins.length, 1); assert.equal((mj.animations || []).length, 0);
+  const bones = mj.skins[0].joints.map(k => mj.nodes[k]);
+  assert.deepEqual(bones.map(b => b.name).sort(), ['Flower', 'Foot_L', 'Foot_R', 'Leg_L', 'Leg_R', 'Root', 'Wing_L', 'Wing_R']);
+  for (const b of bones) assert.ok(!b.rotation && !b.scale, `${b.name} has no rest rotation`);
   const man = JSON.parse(readFileSync(join(ROOT, 'assets', 'hirori-meshy', 'manifest.json'), 'utf8'));
   assert.equal(man.sha256, createHash('sha256').update(mb).digest('hex'), 'manifest matches the GLB');
   assert.equal(man.triangles, r.facts.triangles);
@@ -192,4 +197,22 @@ test('11. Meshy ヒロリの組み込み：先に読み、だめならいまま�
   const upd = between(FH, 'function update(root, dt, t, moving) {', 'return { load, update');
   assert.equal(count(upd, /if \(!P\.meshy\)/g), 4);
   assert.match(upd, /P\.upper\.rotation\.z = s \* \.07 \* w \* deco;/);
+});
+
+test('12. 骨で歩く（Step 11O）：骨の行列を読める。脚は左右交互、足の裏は水平、低いほうの足がちょうど地面。体全体の揺れは小さく', () => {
+  assert.match(FH, /MAT4: 16/);
+  assert.match(FH, /new THREE\.SkinnedMesh\(g, mat\)/);
+  assert.match(FH, /me\.bind\(new THREE\.Skeleton\(bones, inv\), me\.matrixWorld\)/);
+  const upd = between(FH, 'function update(root, dt, t, moving) {', 'return { load, update');
+  assert.match(upd, /gait\(ph\); legPose\(B\.Foot_L\.userData\.rest/);
+  assert.match(upd, /gait\(ph \+ \.5\); legPose\(B\.Foot_R\.userData\.rest/);   // 右は半周期ずらす（交互）
+  assert.match(upd, /B\.Foot_L\.rotation\.x = -aL; B\.Foot_R\.rotation\.x = -aR;/);
+  assert.match(upd, /B\.Root\.position\.y = B\.Root\.userData\.rest\.y - Math\.min\(yL \+ hL, yR \+ hR\);/);
+  assert.match(upd, /P\.upper\.rotation\.z = s \* \.025 \* w \* deco;/);
+  // 歩幅と周期：1周期で STRIDE_RIG 進む。phase は移動速度から進める（速さと足の動きを合わせる）
+  assert.match(FH, /const STRIDE_RIG = \.9, RIG_REACH = \.075, RIG_SHIFT = \.45, RIG_LIFT = \.028, RIG_SIN_MAX = \.6;/);
+  assert.match(upd, /m\.phase \+= dt \* SPEED \* \(Math\.PI \* 2\) \/ \(P\.rig \? STRIDE_RIG : STRIDE\);/);
+  // 歩き方の計算（gait・legPose）も、毎フレーム新しい物を作らない
+  const helpers = stripComments(between(FH, 'function gait(u) {', 'function update(root'));
+  assert.ok(!/\bnew\b|\.clone\(|=>|\.map\(/.test(helpers), 'no per-frame allocation in gait helpers');
 });

@@ -206,3 +206,14 @@ test('16. ことばの樹のまわりでは、幹の向こう側から草原へ�
     assert.ok(i < 1500, `stuck from ${sx},${sz} at ${p.x.toFixed(2)},${p.z.toFixed(2)}`);
   }
 });
+
+test('17. 上の知らせ：自由に歩いているあいだは、実が灯った知らせ・「自由に歩いてみよう」を5秒で消す。芽への案内は残す。状態が変わると出しなおす', () => {
+  assert.match(UI, /const BAR_HOLD_MS = 5000;/);
+  assert.match(UI, /function fadeBarLater\(\) \{\s*if \(freeMsg === Q2_GUIDE\) return;/);
+  // 消す前に、ほかの知らせが出ていたら（状態が変わったら）消さない
+  assert.match(UI, /worldTimeout\(\(\) => \{ if \(my === barToken && state === S\.FREE_EXPLORE\) el\('mission-bar'\)\.style\.opacity = '0'; \}, BAR_HOLD_MS\);/);
+  assert.match(UI, /function showBar\(\) \{ barToken\+\+;/);
+  assert.match(HTML, /function applyUI\(\) \{\n  stopVoice\(\);\n  questHub\.showBar\(\);/);
+  assert.match(HTML, /case S\.FREE_EXPLORE:\n      mbar\.textContent = questHub\.freeMessage\(\);\n      hint\.style\.opacity = '0';\n      questHub\.fadeBarLater\(\);/);
+  assert.match(UI, /reward: 'ことばの樹に、2つ目の実が灯った！'|freeMsg = Q2\.reward;/);
+});

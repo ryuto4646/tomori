@@ -476,6 +476,7 @@ fieldHirori.ready = fieldHirori.load(character);
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('show'));`,
    `function applyUI() {
   stopVoice();
+  questHub.showBar();   // 上の知らせは、状態が変わるたびに出しなおす（前の「数秒で消す」は取り消す）
   document.querySelectorAll('.panel').forEach(p => { p.classList.remove('show'); p.inert = true; p.setAttribute('aria-hidden', 'true'); });   // PANEL-HIDE（Step 11L-C）
   resetPageScroll();`],
   [`function openPanel(id) {
@@ -1102,6 +1103,7 @@ async function fetchExpansion(fields) {
     case S.FREE_EXPLORE:
       mbar.textContent = questHub.freeMessage();
       hint.style.opacity = '0';
+      questHub.fadeBarLater();   // 実が灯った知らせ・「自由に歩いてみよう」は、数秒で消す（芽への案内は残す）
       break;
     case S.DETOUR:
       openPanel('panel-detour');
@@ -1196,6 +1198,7 @@ const questHub = (() => {
   let st = createQuestState();
   let current = 'first';   // いま答えを記録するクエスト（自由に歩いているあいだは null）
   const FREE_DEFAULT = '自由に歩いてみよう。気になる場所があるかも。';
+  const Q2_GUIDE = 'ことばの樹のそばに、新しい芽が出ている。近づいてみよう';
   let freeMsg = FREE_DEFAULT, returnState = S.EXPLORE, q2NeedsLeave = false;
   let detourNear = null, detourDef = null, detourGen = 0, detourSent = false;
   const el = id => document.getElementById(id);
@@ -1240,12 +1243,21 @@ const questHub = (() => {
     call.classList.toggle('show', on);
   }
   function freeMessage() { return freeMsg; }
+  // 上の知らせ（mission-bar）を、自由に歩いているあいだは数秒で消す。芽への案内（次の冒険へ）は、行き先を示すので残す
+  const BAR_HOLD_MS = 5000;
+  let barToken = 0;
+  function showBar() { barToken++; const bar = el('mission-bar'); if (bar) bar.style.opacity = ''; }
+  function fadeBarLater() {
+    if (freeMsg === Q2_GUIDE) return;
+    const my = ++barToken;
+    worldTimeout(() => { if (my === barToken && state === S.FREE_EXPLORE) el('mission-bar').style.opacity = '0'; }, BAR_HOLD_MS);
+  }
   // 最初のクエストのあと：次の冒険へ（芽へ案内）か、自由に歩く
   function toFree(kind) {
     if (st.quests.first === 'active' && !worldV2.isActive() && state === S.DEMO_COMPLETE) questEvent(st, 'firstDone');
     if (st.quests.first !== 'done') return;
     current = null;
-    freeMsg = kind === 'next' && q2Usable() ? 'ことばの樹のそばに、新しい芽が出ている。近づいてみよう' : FREE_DEFAULT;
+    freeMsg = kind === 'next' && q2Usable() ? Q2_GUIDE : FREE_DEFAULT;
     // 「次の冒険へ」なら、芽の上に立っていてもすぐ始まる。「自由に歩く」なら、一度離れてから近づくと始まる
     if (character) q2NeedsLeave = kind !== 'next' && Math.hypot(character.position.x - Q2.start.x, character.position.z - Q2.start.z) <= Q2.start.r;
     setState(S.FREE_EXPLORE);
@@ -1450,7 +1462,7 @@ const questHub = (() => {
     const vp = el('expr-viewpoints'); vp.replaceChildren(); vp.style.display = 'none';
     el('detour-input').value = ''; el('found-list').replaceChildren();
   }
-  return { update, applyUI, freeMessage, toFree, current: () => current, noteAnswer, finishSecond, abortSecond,
+  return { update, applyUI, freeMessage, showBar, fadeBarLater, toFree, current: () => current, noteAnswer, finishSecond, abortSecond,
     openDetour, sendDetour, closeDetour, openFound, closeFound, reset, state: () => st };
 })();
 // ボタンは addEventListener でつなぐ（HTML の onclick は増やさない）

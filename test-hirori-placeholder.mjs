@@ -226,7 +226,8 @@ test('14. 既存の移動・到着・リセット・描画ループにつなが�
 test('15. 移動速度・到着判定・カメラ追従・タップ判定は変えていない', () => {
   assert.match(HTML, /const SPEED=4\.0, ARRIVE=0\.6;/);
   assert.match(HTML, /const CAM_OFF = new THREE\.Vector3\(0, 5, 8\);/);
-  assert.match(HTML, /camera\.position\.lerp\(character\.position\.clone\(\)\.add\(CAM_OFF\),\.08\);/);
+  // Step 11P：追いかけ方（.08 ずつ寄る）は元のまま。視点の操作（camUser）を回していなければ、CAM_OFF そのもの（回す角0・倍率1）
+  assert.match(HTML, /camera\.position\.lerp\(character\.position\.clone\(\)\.add\(worldV2\.cameraFramed\(\)\?CAM_OFF:camUser\.offset\(character\.position\.x,character\.position\.z\)\),\.08\);/);
   assert.match(HTML, /const hits=raycaster\.intersectObject\(ground\);/);
   assert.equal((HTML.match(/intersectObject/g) || []).length, 1);
 });
@@ -262,7 +263,7 @@ test('20. 名前ラベルは、動けないとき（到着後・パネル表示�
 
 test('21. 探索中のカメラ追従は元のまま。パネル中だけ構図を変え、動きを減らす設定では即座に落ち着く', () => {
   const fn = HTML.match(/function updateCamera\(dt\)\{([\s\S]*?)\n\}/)[1];
-  assert.match(fn, /if\(!focus\)\{\s*camera\.position\.lerp\(character\.position\.clone\(\)\.add\(CAM_OFF\),\.08\);/);
+  assert.match(fn, /camUser\.step\(dt\);\s*if\(!focus\)\{\s*camera\.position\.lerp\(character\.position\.clone\(\)\.add\(worldV2\.cameraFramed\(\)\?CAM_OFF:camUser\.offset\(character\.position\.x,character\.position\.z\)\),\.08\);/);
   assert.match(fn, /const k=reduceMotionQuery\.matches\?1:1-Math\.exp\(-dt\/FOCUS_TAU\);/);
   assert.match(fn, /camera\.clearViewOffset\(\)/);
   assert.match(HTML, /updateCamera\(dt\);/);

@@ -4,6 +4,106 @@
 
 // [変更前, 変更後]。変更後の文字列は demo-world.html にちょうど1回ずつ出てくる
 export const WORLD_ART_EDITS = [
+  [`canvas.addEventListener('click',onTap);
+canvas.addEventListener('touchend',e=>{e.preventDefault();onTap(e);},{passive:false});
+
+`,
+   `canvas.addEventListener('click',onTap);
+canvas.addEventListener('touchend',e=>{e.preventDefault();if(camUser.wasGesture(e))return;onTap(e);},{passive:false});   // 2本指の視点操作はタップにしない（Step 11P）
+
+`],
+  [`  if(character){ character.position.set(0,0,0); character.rotation.set(0,0,0); }
+  resetHiroriMotion();
+  targetPos.set(0,0,0); isMoving=false;
+`,
+   `  if(character){ character.position.set(0,0,0); character.rotation.set(0,0,0); }
+  resetHiroriMotion(); camUser.reset();   // 視点も最初の構図へ（Step 11P）
+  targetPos.set(0,0,0); isMoving=false;
+`],
+  [`
+function updateCamera(dt){
+`,
+   `
+// CAMERA-USER-BEGIN（Step 11P：視点を回す・寄る／引く。自由に歩けるときだけ。1本指のタップは今までどおり「そこへ歩く」）
+// スマホ：2本指で左右になぞる＝まわりを回る、つまむ／広げる＝寄る／引く。PC：右ボタンでドラッグ・Q／E＝回る、ホイール＝寄る／引く
+// 「視点をもどす」で元の構図へ。パネルを出す場面・ことばの樹の構図のあいだは、決めた構図のまま（ここの視点は使わない）
+const camUser=(()=>{
+  const ZOOM_MIN=.55, ZOOM_MAX=1.6, KEY_TURN=1.8;   // 寄る／引くの範囲（元の距離の倍率）・Q／Eで回る速さ（rad/秒）
+  let yaw=0, zoom=1, yawT=0, zoomT=1, gesture=false, g0=null, rdrag=null;
+  const btn=document.getElementById('btn-view-reset'), off=new THREE.Vector3();
+  const clampZ=z=>Math.min(ZOOM_MAX,Math.max(ZOOM_MIN,z));
+  const usable=()=>canMove()&&!worldV2.cameraFramed();
+  const pair=e=>{ const a=e.touches[0], b=e.touches[1]; return { mx:(a.clientX+b.clientX)/2, d:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY) }; };
+  canvas.addEventListener('touchstart',e=>{ if(e.touches.length>=2){ gesture=true; g0=pair(e); e.preventDefault(); } },{passive:false});
+  canvas.addEventListener('touchmove',e=>{
+    if(e.touches.length<2||!g0) return;
+    e.preventDefault();
+    const g=pair(e);
+    if(usable()){ yawT-=(g.mx-g0.mx)/innerWidth*Math.PI; zoomT=clampZ(zoomT*g0.d/Math.max(1,g.d)); }   // 画面の幅ぶんなぞると半周
+    g0=g;
+  },{passive:false});
+  canvas.addEventListener('touchend',e=>{ if(e.touches.length<2) g0=null; });
+  document.addEventListener('gesturestart',e=>e.preventDefault());   // iPhone の画面ごとの拡大を止める
+  // 2本指の操作が終わるまでの指の離れは、タップにしない
+  function wasGesture(e){ if(!gesture) return false; if(e.touches.length===0) gesture=false; return true; }
+  canvas.addEventListener('wheel',e=>{ if(!usable()) return; e.preventDefault(); zoomT=clampZ(zoomT*Math.exp(e.deltaY*.0012)); },{passive:false});
+  canvas.addEventListener('contextmenu',e=>e.preventDefault());
+  canvas.addEventListener('pointerdown',e=>{ if(e.button===2) rdrag=e.clientX; });
+  addEventListener('pointermove',e=>{ if(rdrag===null) return; if(usable()) yawT-=(e.clientX-rdrag)/innerWidth*Math.PI; rdrag=e.clientX; });
+  addEventListener('pointerup',e=>{ if(e.button===2) rdrag=null; });
+  btn.addEventListener('click',()=>{ yawT=0; zoomT=1; });
+  function step(dt){
+    if(usable()){ if(keys['q']||keys['Q']) yawT+=dt*KEY_TURN; if(keys['e']||keys['E']) yawT-=dt*KEY_TURN; }
+    const k=reduceMotionQuery.matches?1:1-Math.exp(-dt/.12);
+    yaw+=(yawT-yaw)*k; zoom+=(zoomT-zoom)*k;
+    btn.classList.toggle('show',usable()&&(Math.abs(yawT)>.02||Math.abs(zoomT-1)>.02));
+  }
+  // ヒロリからカメラまで（CAM_OFF）を、まわりに回して、寄せる／引く
+  // 視点を変えているときだけ：ヒロリとカメラのあいだに木があれば、木の手前までカメラを寄せる（元の視点は今までどおり）
+  let pull=1;
+  function offset(px,pz){
+    const cs=Math.cos(yaw), sn=Math.sin(yaw);
+    off.set((CAM_OFF.x*cs+CAM_OFF.z*sn)*zoom, CAM_OFF.y*zoom, (-CAM_OFF.x*sn+CAM_OFF.z*cs)*zoom);
+    let want=1;
+    if(px!==undefined&&(Math.abs(yaw)>.02||Math.abs(zoom-1)>.02)){
+      const L=Math.hypot(off.x,off.z), ux=off.x/L, uz=off.z/L, spots=worldV2.isActive()?worldV2.occluders():TREE_SPOTS;
+      for(let i=0;i<spots.length;i++){
+        const s=spots[i], dx=s[0]-px, dz=s[1]-pz, along=dx*ux+dz*uz, r=s[2]||TREE_RADIUS;
+        if(along<1.2||along>L+r) continue;                         // ヒロリのすぐそば・カメラより後ろの木は見ない
+        if(Math.abs(dx*uz-dz*ux)<r+.4) want=Math.min(want,Math.max(.35,(along-r-.6)/L));
+      }
+    }
+    pull+=(want-pull)*(want<pull?.25:.05);   // 木に近づくときは早めに寄り、離れるときはゆっくり戻す
+    return off.set(off.x*pull, off.y*(.5+.5*pull), off.z*pull);
+  }
+  // キーで歩く向きを、回した画面の向きにそろえる
+  function turnInput(v){ const cs=Math.cos(yaw), sn=Math.sin(yaw), x=v.x*cs+v.z*sn, z=-v.x*sn+v.z*cs; v.x=x; v.z=z; }
+  function reset(){ yaw=yawT=0; zoom=zoomT=1; gesture=false; g0=null; rdrag=null; btn.classList.remove('show'); }
+  return { step, offset, turnInput, wasGesture, reset, yaw:()=>yaw, zoom:()=>zoom };
+})();
+// CAMERA-USER-END
+
+function updateCamera(dt){
+`],
+  [`  const focus=!canMove();
+  if(!focus){
+    camera.position.lerp(character.position.clone().add(CAM_OFF),.08);
+    camTgt.lerp(character.position.clone().add(CAM_LOOK),.08);
+`,
+   `  const focus=!canMove();
+  camUser.step(dt);
+  if(!focus){
+    camera.position.lerp(character.position.clone().add(worldV2.cameraFramed()?CAM_OFF:camUser.offset(character.position.x,character.position.z)),.08);   // 視点の操作（CAMERA-USER）。樹の構図のあいだは決めた構図
+    camTgt.lerp(character.position.clone().add(CAM_LOOK),.08);
+`],
+  [`      if(kd.lengthSq()>0){
+        kd.normalize();
+        character.position.addScaledVector(kd,SPEED*dt);
+`,
+   `      if(kd.lengthSq()>0){
+        kd.normalize(); camUser.turnInput(kd);   // 回した画面の向きにそろえる（Step 11P）
+        character.position.addScaledVector(kd,SPEED*dt);
+`],
   [`html, body { width:100%; height:100%; overflow:hidden; background:#a8d8ea;
 `,
    `html, body { width:100%; height:100%; overflow:hidden; background:#a8d8ea;
@@ -858,6 +958,14 @@ document.getElementById('secret-input').addEventListener('input',function(){`],
   color:#5a4830; font-size:13px; font-weight:bold; cursor:pointer; pointer-events:all; display:none;
 }
 #btn-found.show { display:block; }
+/* Step 11P：視点をもどす（視点を回したり寄せたりしたときだけ出す） */
+#btn-view-reset {
+  position:absolute; left:max(12px, env(safe-area-inset-left)); bottom:max(14px, env(safe-area-inset-bottom));
+  min-height:44px; padding:8px 14px; background:rgba(254,249,240,.92); border:1.5px solid #c8b87a; border-radius:22px;
+  color:#5a4830; font-size:13px; font-weight:bold; cursor:pointer; pointer-events:all; display:none;
+}
+#btn-view-reset.show { display:block; }
+#btn-view-reset:focus-visible { outline:3px solid #3a3328; outline-offset:3px; }
 #detour-call {
   position:absolute; left:50%; bottom:calc(70px + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%);
   width:max-content; max-width:calc(100vw - 32px); display:none; align-items:center; gap:10px;
@@ -1031,6 +1139,7 @@ async function fetchExpansion(fields) {
 `,
    `  <div id="overlay-world"><div id="word-announce"></div></div>
   <button id="btn-found" type="button">見つけたもの</button>
+  <button id="btn-view-reset" type="button">視点をもどす</button>
   <div id="detour-call" role="status"><span id="detour-call-text"></span><button type="button" id="btn-detour-open">調べる</button></div>
   <div id="demo-end">
 `],

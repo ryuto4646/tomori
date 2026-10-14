@@ -4925,22 +4925,36 @@ function treeMarginBehind(cam, px, pz, py){
   }
   return m;
 }
+// EXPANSION-01：宝さがしの西の草原は木が多いので、パネルの構図では、草原のふちの木も数え、カメラと「ヒロリ・調べる物」のあいだの木もよける。角度の候補も増やす
+const FOCUS_WEST_X=-2.5, FOCUS_WEST_ANGLES=[50,45,55,40,60,30,70,20,80,10];
+function treeBetween(cam, px, pz, spots){
+  const vx=px-cam.x, vz=pz-cam.z, L=Math.hypot(vx,vz), ux=vx/L, uz=vz/L;
+  let m=99;
+  for(const t of spots){
+    const s=(t[0]-cam.x)*ux+(t[1]-cam.z)*uz;
+    if(s<0.5||s>L-0.6) continue;
+    m=Math.min(m,Math.abs((t[0]-cam.x)*uz-(t[1]-cam.z)*ux)-(t[2]||TREE_RADIUS));
+  }
+  return m;
+}
 // 角度と左右を選ぶ：カメラが木に近すぎず、結晶とヒロリの頭の後ろに木が重ならない組み合わせ。
 // 同じくらいなら、好ましい角度と、今のカメラに近い側（大きく回らない）を選ぶ
 function chooseFocusSide(){
   let best=null, bestScore=-Infinity;
-  FOCUS_ANGLES.forEach((deg,rank)=>{
+  const west=worldV2.isActive()&&character.position.x<FOCUS_WEST_X, spots=west?worldV2.occluders():TREE_SPOTS;   // EXPANSION-01
+  (west?FOCUS_WEST_ANGLES:FOCUS_ANGLES).forEach((deg,rank)=>{
     for(const side of [1,-1]){
       const a=deg*Math.PI/180;
       focusFrame(a,side,_focusPos,_focusLook);
       let camClear=99;
-      for(const [tx,tz] of TREE_SPOTS) camClear=Math.min(camClear,Math.hypot(tx-_focusPos.x,tz-_focusPos.z)-2.2);
+      for(const [tx,tz] of spots) camClear=Math.min(camClear,Math.hypot(tx-_focusPos.x,tz-_focusPos.z)-2.2);
       const wt=worldV2.wordTree;   // ことばの樹（幹と枝が大きいので、カメラは少し離す）
       if(worldV2.isActive()) camClear=Math.min(camClear,Math.hypot(wt.x-_focusPos.x,wt.z-_focusPos.z)-3.6);
       const ft=focusTarget||mpGroup.position;
       const crystal=treeMarginBehind(_focusPos,ft.x,ft.z,1.2);
       const head=treeMarginBehind(_focusPos,character.position.x,character.position.z,1.9);
-      const clear=Math.min(camClear,crystal,head,2);
+      let clear=Math.min(camClear,crystal,head,2);
+      if(west) clear=Math.min(clear,treeBetween(_focusPos,ft.x,ft.z,spots)+.4,treeBetween(_focusPos,character.position.x,character.position.z,spots)+.4);
       const score=clear*10-rank*0.3-camera.position.distanceTo(_focusPos)*0.05;
       if(score>bestScore){bestScore=score;best={a,side};}
     }

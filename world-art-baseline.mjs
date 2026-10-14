@@ -1694,6 +1694,30 @@ let treasure = null;   // 宝さがし（EXPANSION-01）。QUEST-UI のあとで
   const ZOOM_MIN=.55, ZOOM_MAX=1.6, KEY_TURN=1.8;`],
   [`    if(px!==undefined&&(Math.abs(yaw)>.02||Math.abs(zoom-1)>.02)){`,
    `    if(px!==undefined&&(Math.abs(yaw)>.02||Math.abs(zoom-1)>.02||px<WEST_PULL_X)){   // EXPANSION-01：宝さがしの西の草原（木が多い）は、元の視点でも寄せる`],
+  [`// 角度と左右を選ぶ：カメラが木に近すぎず、結晶とヒロリの頭の後ろに木が重ならない組み合わせ。
+`,
+   `// EXPANSION-01：宝さがしの西の草原は木が多いので、パネルの構図では、草原のふちの木も数え、カメラと「ヒロリ・調べる物」のあいだの木もよける。角度の候補も増やす
+const FOCUS_WEST_X=-2.5, FOCUS_WEST_ANGLES=[50,45,55,40,60,30,70,20,80,10];
+function treeBetween(cam, px, pz, spots){
+  const vx=px-cam.x, vz=pz-cam.z, L=Math.hypot(vx,vz), ux=vx/L, uz=vz/L;
+  let m=99;
+  for(const t of spots){
+    const s=(t[0]-cam.x)*ux+(t[1]-cam.z)*uz;
+    if(s<0.5||s>L-0.6) continue;
+    m=Math.min(m,Math.abs((t[0]-cam.x)*uz-(t[1]-cam.z)*ux)-(t[2]||TREE_RADIUS));
+  }
+  return m;
+}
+// 角度と左右を選ぶ：カメラが木に近すぎず、結晶とヒロリの頭の後ろに木が重ならない組み合わせ。
+`],
+  [`  FOCUS_ANGLES.forEach((deg,rank)=>{`,
+   `  const west=worldV2.isActive()&&character.position.x<FOCUS_WEST_X, spots=west?worldV2.occluders():TREE_SPOTS;   // EXPANSION-01
+  (west?FOCUS_WEST_ANGLES:FOCUS_ANGLES).forEach((deg,rank)=>{`],
+  [`      for(const [tx,tz] of TREE_SPOTS) camClear=Math.min(camClear,Math.hypot(tx-_focusPos.x,tz-_focusPos.z)-2.2);`,
+   `      for(const [tx,tz] of spots) camClear=Math.min(camClear,Math.hypot(tx-_focusPos.x,tz-_focusPos.z)-2.2);`],
+  [`      const clear=Math.min(camClear,crystal,head,2);`,
+   `      let clear=Math.min(camClear,crystal,head,2);
+      if(west) clear=Math.min(clear,treeBetween(_focusPos,ft.x,ft.z,spots)+.4,treeBetween(_focusPos,character.position.x,character.position.z,spots)+.4);`],
   [`  questHub.reset();  // クエスト・答え・道くさ・見つけたもの（Step 11M）
 `,
    `  questHub.reset();  // クエスト・答え・道くさ・見つけたもの（Step 11M）

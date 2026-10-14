@@ -229,7 +229,9 @@ test('15. 移動速度・到着判定・カメラ追従・タップ判定は変�
   // Step 11P：追いかけ方（.08 ずつ寄る）は元のまま。視点の操作（camUser）を回していなければ、CAM_OFF そのもの（回す角0・倍率1）
   assert.match(HTML, /camera\.position\.lerp\(character\.position\.clone\(\)\.add\(worldV2\.cameraFramed\(\)\?CAM_OFF:camUser\.offset\(character\.position\.x,character\.position\.z\)\),\.08\);/);
   assert.match(HTML, /const hits=raycaster\.intersectObject\(ground\);/);
-  assert.equal((HTML.match(/intersectObject/g) || []).length, 1);
+  // EXPANSION-01：宝さがしの人・物のタップ（TREASURE-UI の中だけ）は test-treasure-hunt.mjs で調べる
+  const noTreasure = HTML.replace(/\n\/\/ TREASURE-CORE-BEGIN[\s\S]*?\/\/ TREASURE-UI-END\n/, '');
+  assert.equal((noTreasure.match(/intersectObject/g) || []).length, 1);
 });
 
 test('16. GLB・外部素材・新しい通信に頼っていない', () => {

@@ -1637,6 +1637,85 @@ const canMove=()=>state===S.EXPLORE||state===S.DEMO_COMPLETE||state===S.FREE_EXP
 `],
 ];
 
+// EXPANSION-01（宝さがし）：目印で囲んだまとまり（CSS・画面の部品・パネル・TREASURE-CORE／UI）は丸ごと取り除き、
+// ほかの場所へ足した短いつなぎは、[変更前, 変更後] で元へ戻す。どれも demo-world.html にちょうど1回ずつ出てくる
+const EXPANSION_BLOCKS = [
+  /\/\* TREASURE-CSS-BEGIN[\s\S]*?\/\* TREASURE-CSS-END \*\/\n/,
+  /  <!-- TREASURE-UI-HTML-BEGIN[\s\S]*?<!-- TREASURE-UI-HTML-END -->\n/,
+  /\n<!-- TREASURE-PANELS-BEGIN[\s\S]*?<!-- TREASURE-PANELS-END -->\n/,
+  /\n\/\/ TREASURE-CORE-BEGIN[\s\S]*?\/\/ TREASURE-UI-END\n/,
+];
+export const EXPANSION_EDITS = [
+  [`  FREE_EXPLORE:'FREE_EXPLORE', DETOUR:'DETOUR', FOUND:'FOUND',
+};`,
+   `  FREE_EXPLORE:'FREE_EXPLORE', DETOUR:'DETOUR', FOUND:'FOUND',
+  // EXPANSION-01：宝さがしの会話・しらべた結果（TALK）と、冒険メモ（NOTEBOOK）。どちらも開いているあいだは歩かない
+  TALK:'TALK', NOTEBOOK:'NOTEBOOK',
+};`],
+  [`let state = S.EXPLORE;
+`,
+   `let state = S.EXPLORE;
+let treasure = null;   // 宝さがし（EXPANSION-01）。QUEST-UI のあとで組み立てる
+`],
+  [`  }
+  questHub.applyUI();   // 「見つけたもの」ボタン・道くさの案内は、歩けるときだけ出す（入力中は隠す）
+}`,
+   `    case S.TALK:
+      openPanel('panel-talk');
+      hint.style.opacity = '0';
+      break;
+    case S.NOTEBOOK:
+      openPanel('panel-notebook');
+      hint.style.opacity = '0';
+      break;
+  }
+  questHub.applyUI();   // 「見つけたもの」ボタン・道くさの案内は、歩けるときだけ出す（入力中は隠す）
+  if (treasure) treasure.applyUI();   // 宝さがしの「話す」・冒険メモのボタン（EXPANSION-01。組み立てる前は何もしない）
+}`],
+  [`  raycaster.setFromCamera(ndc,camera);
+  const hits=raycaster.intersectObject(ground);
+  if(hits.length){
+`,
+   `  raycaster.setFromCamera(ndc,camera);
+  if(treasure&&treasure.pick(raycaster)) return;   // 宝さがしの人・物をタップ：そのそばまで歩き、着いたら話す・しらべる（EXPANSION-01）
+  const hits=raycaster.intersectObject(ground);
+  if(hits.length){
+    if(treasure) treasure.clearPending();
+`],
+  [`  renderer.render(scene,camera);
+}`,
+   `  if(treasure) treasure.update(t,dt);   // 宝さがしの人・物の動きと「話す」の案内（EXPANSION-01。同じ描画ループの中）
+  renderer.render(scene,camera);
+}`],
+  [`window.confirmReset = ()=>{ if(confirm('デモを最初からやり直しますか？')) doReset(); };`,
+   `window.confirmReset = ()=>{ if(confirm('デモを最初からやり直しますか？\\n宝さがしの記録ともちものも消えます。')) doReset(); };`],
+  [`  const ZOOM_MIN=.55, ZOOM_MAX=1.6, KEY_TURN=1.8;`,
+   `  const WEST_PULL_X=-2.5;   // EXPANSION-01：これより西（宝さがしの場所）では、元の視点でもヒロリと木が重なれば木の手前へ寄せる。出発点・祠・東の道くさは今までどおり
+  const ZOOM_MIN=.55, ZOOM_MAX=1.6, KEY_TURN=1.8;`],
+  [`    if(px!==undefined&&(Math.abs(yaw)>.02||Math.abs(zoom-1)>.02)){`,
+   `    if(px!==undefined&&(Math.abs(yaw)>.02||Math.abs(zoom-1)>.02||px<WEST_PULL_X)){   // EXPANSION-01：宝さがしの西の草原（木が多い）は、元の視点でも寄せる`],
+  [`  questHub.reset();  // クエスト・答え・道くさ・見つけたもの（Step 11M）
+`,
+   `  questHub.reset();  // クエスト・答え・道くさ・見つけたもの（Step 11M）
+  treasure.reset();  // 宝さがしの進み具合・もちもの・端末の記録（EXPANSION-01）
+`],
+];
+// 宝さがし（EXPANSION-01）の変更だけを元へ戻す
+export function revertExpansion(html) {
+  let out = html;
+  for (const re of EXPANSION_BLOCKS) {
+    const n = (out.match(new RegExp(re.source, 'g')) || []).length;
+    if (n !== 1) throw new Error(`expansion block appears ${n} times: ${re.source.slice(0, 40)}`);
+    out = out.replace(re, '');
+  }
+  for (const [before, after] of EXPANSION_EDITS) {
+    const n = out.split(after).length - 1;
+    if (n !== 1) throw new Error(`expansion edit appears ${n} times: ${after.slice(0, 40)}`);
+    out = out.split(after).join(before);
+  }
+  return out;
+}
+
 const ART_BLOCK = /\/\/ WORLD-ART-BEGIN[\s\S]*?\/\/ WORLD-ART-END\n\n/;
 
 // 美術のまとまり（WORLD-ART-BEGIN〜END）を取り出す
@@ -1646,7 +1725,7 @@ export const artBlock = html => (html.match(ART_BLOCK) || [''])[0];
 export function revertWorldArt(html) {
   const blocks = html.match(new RegExp(ART_BLOCK.source, 'g')) || [];
   if (blocks.length !== 1) throw new Error(`WORLD-ART block count ${blocks.length}`);
-  let out = html.replace(ART_BLOCK, '');
+  let out = revertExpansion(html.replace(ART_BLOCK, ''));   // 先に宝さがし（EXPANSION-01）を外す（下の Step 11M・11P の変更と重なる場所があるため）
   for (const [before, after] of WORLD_ART_EDITS) {
     const n = out.split(after).length - 1;
     if (n !== 1) throw new Error(`art edit appears ${n} times: ${after.slice(0, 40)}`);

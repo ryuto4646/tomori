@@ -9,7 +9,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { artBlock, revertWorldArt } from './world-art-baseline.mjs';
+import { artBlock, revertWorldArt, revertExpansion } from './world-art-baseline.mjs';
 
 const REPO = dirname(fileURLToPath(import.meta.url));
 const ROOT = process.env.WORLD_VISUALS_ROOT || REPO;
@@ -59,7 +59,8 @@ test('1. 美術の要素がそろっている（空・遠くの丘と森・霧�
 
 test('2. 光る小道・草花・小石に当たり判定が無く、タップ移動は今までどおり地面だけ', () => {
   assert.ok(!/raycaster|intersectObject|collid|obstacle/i.test(ART_CODE), 'no raycast or collision in art');
-  assert.equal(count(NOW, /intersectObject/g), count(OLD, /intersectObject/g));
+  // EXPANSION-01：宝さがしの人・物のタップ（TREASURE-UI）は test-treasure-hunt.mjs で調べる。それ以外は地面だけのまま
+  assert.equal(count(revertExpansion(NOW), /intersectObject/g), count(OLD, /intersectObject/g));
   assert.match(NOW, /const hits=raycaster\.intersectObject\(ground\);/);
   // 美術は1つのグループにまとめ、シーンへ1回だけ加える（ほかの物の子にしない）
   assert.equal(count(ART_V1, /scene\.add\(/g), 1);
@@ -145,7 +146,8 @@ test('12. 新しい外部 URL・CDN・パッケージが無い', () => {
 
 test('13. テクスチャを使わない。新しいジオメトリは8つ・素材は6つ以内（Step 11H より増やさない）', () => {
   assert.ok(!/Texture|Loader|map\s*:|CanvasTexture|<canvas/.test(ART_V1_CODE), 'no texture in art');
-  assert.equal(count(NOW, /Texture/g), count(OLD, /Texture/g));
+  // EXPANSION-01：ほらあなのかべの絵（その場で描く CanvasTexture 1枚）は test-treasure-hunt.mjs で調べる
+  assert.equal(count(revertExpansion(NOW), /Texture/g), count(OLD, /Texture/g));
   assert.ok(count(ART_V1, /new THREE\.\w*Geometry\(/g) <= 8, 'geometries');
   assert.ok(count(ART_V1, /new THREE\.\w+Material\(/g) <= 6, 'materials');
   assert.ok(!/\.clone\(\)/.test(ART), 'no cloned materials');

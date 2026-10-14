@@ -9,6 +9,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { revertExpansion } from './world-art-baseline.mjs';
 
 const REPO = dirname(fileURLToPath(import.meta.url));
 const ROOT = process.env.WORLD_V2_ROOT || REPO;
@@ -259,7 +260,8 @@ test('19. AI スイッチ true・語彙の Worker URL・care・ミッション�
   const care = s => between(s, 'const CARE_SUPPORT_MESSAGE', 'const VOCAB_SESSION_KEY');
   assert.equal(care(HTML), care(OLD));
   const missionLines = s => s.split('\n').filter(l => /光るポイント|なにかが呼んでいる|気になったものを|VOCAB_MISSION/.test(l)).join('\n');
-  assert.equal(missionLines(HTML), missionLines(OLD));
+  // EXPANSION-01：宝さがしの途中だけ上の知らせを宝さがしの案内にする（ミッションの文面そのものは同じ）。宝さがしを外して比べる
+  assert.equal(missionLines(revertExpansion(HTML)), missionLines(OLD));
   assert.ok(!/tomori-api\.[a-z0-9-]+\.workers\.dev/.test(HTML));
 });
 

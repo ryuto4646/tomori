@@ -17,7 +17,7 @@ const QUEST = between(HTML, '// QUEST-CORE-BEGIN', '// QUEST-CORE-END');
 const TERRAIN = between(HTML, '// TERRAIN-BEGIN', '// TERRAIN-END');
 const ADV = between(HTML, '// ADVENTURE-BEGIN', '// ADVENTURE-END');
 const T = new Function(CORE + `
-return { TREASURE_SAVE_KEY, TREASURE_TALK_R, TREASURE_SPOTS, TREASURE_STEPS, TREASURE_HINTS, TREASURE_TALK, TREASURE_CLUES, TREASURE_CHEST, TREASURE_CAVE, TREASURE_DECOYS, TREASURE_ITEMS,
+return { TREASURE_SAVE_KEY, TREASURE_GUIDE, TREASURE_TALK_R, TREASURE_SPOTS, TREASURE_STEPS, TREASURE_HINTS, TREASURE_TALK, TREASURE_CLUES, TREASURE_CHEST, TREASURE_CAVE, TREASURE_DECOYS, TREASURE_ITEMS,
   createTreasureState, treasureGoal, treasureItems, treasureTalk, treasureMoreHint, treasureInspect, treasureLantern, treasureMemo, restoreTreasure };`)();
 const Q = new Function(QUEST + '\nreturn { DETOUR_DEFS, QUEST_DEFS };')();
 const W = new Function(TERRAIN + ADV + '\nreturn { inWalk, GATE, WORD_TREE };')();
@@ -199,6 +199,9 @@ test('11. 正解と行き先は固定データだけで決まる：AI・通信�
 test('12. 保存：localStorage は TREASURE-UI の try の中だけ。キーは1つ。リセットで消す。確認の文で「宝さがしも消える」と伝える', () => {
   const u = code(UI);
   assert.equal(T.TREASURE_SAVE_KEY, 'tomori-treasure-v1');
+  // 開発版（ファイル名に preview）は別のキー。公開版と記録を上書きしあわない
+  assert.match(u, /const SAVE_KEY = TREASURE_SAVE_KEY \+ \(\/preview\/i\.test\(location\.pathname\) \? '-preview' : ''\);/);
+  assert.ok(!/localStorage\.\w+\(TREASURE_SAVE_KEY/.test(u), 'always through SAVE_KEY');
   for (const m of u.matchAll(/localStorage\.\w+\(/g)) assert.match(u.slice(Math.max(0, m.index - 40), m.index), /try \{ (const s = )?$/, 'inside try');
   assert.equal((u.match(/localStorage\./g) || []).length, 3, 'get, set, remove');
   assert.match(between(UI, 'function reset() {', '\n  }\n'), /forget\(\); st = createTreasureState\(\);/);
@@ -245,6 +248,38 @@ test('15. 描画の負荷：新しい描画ループ・タイマー・点光源�
   assert.match(HTML, /  if\(treasure\) treasure\.update\(t,dt\);[^\n]*\n  renderer\.render\(scene,camera\);/);
   // 人・物は、まとめた Mesh（mesh(...)）で作る。数は 25 個まで
   assert.ok((u.match(/\bmesh\(\[/g) || []).length <= 25);
+});
+
+test('17. 上の知らせ：宝さがしの途中は、いまの目標がわかる案内（行き先は言わない）。祠に近づいたら写真のクエストの案内。芽への案内などはそのまま', () => {
+  for (const g of T.TREASURE_STEPS) { assert.ok(T.TREASURE_GUIDE[g] && T.TREASURE_GUIDE[g].length <= 22, g); assert.match(T.TREASURE_GUIDE[g], /^宝さがし：/); }
+  assert.ok(!T.TREASURE_GUIDE.popo && !T.TREASURE_GUIDE.done, 'only while the hunt is going on');
+  assert.ok(!/左|右|おく|手前|のはし|祠/.test(Object.values(T.TREASURE_GUIDE).join('')), 'no directions in the banner');
+  const g = between(UI, 'function guide(free) {', '\n  }\n');
+  assert.match(g, /if \(free !== undefined && free !== FREE_TEXT\) return null;/);
+  assert.match(UI, /const FREE_TEXT = '自由に歩いてみよう。気になる場所があるかも。';/);
+  assert.match(HTML, /mbar\.textContent = md<CALLOUT_RADIUS \? 'なにかが呼んでいる…' : \(treasure&&treasure\.guide\(\)\) \|\| '光るポイントを探して歩こう！';/);
+  assert.match(HTML, /mbar\.textContent = \(treasure && treasure\.guide\(\)\) \|\| '光るポイントを探して歩こう！';/);
+});
+
+test('18. REVIEW：会話中は調べる物もパネルの上に見せる。横向きの小さな画面は右にパネル。閉じた指で「見つけたもの」を押さない。構図はほらあなの岩もよける', () => {
+  // 調べる物（会話の相手・調べている物）の場所を、縦のずらしに使う。ヒロリの顔は上の知らせより下のまま
+  assert.match(between(UI, 'function focusPoint() {', '\n  }\n'), /if \(state !== S\.TALK \|\| !openId \|\| !TREASURE_SPOTS\[openId\]\) return null;/);
+  assert.match(HTML, /if\(tp\)\{ _probe\.copy\(tp\)\.project\(camera\); const ty=\(1-_probe\.y\)\/2\*H; want=Math\.max\(topUI\+0\.03\*H,Math\.min\(want,visiblePanelTop\(\)-0\.05\*H-\(ty-faceY\)\)\); \}/);
+  // 右に出すパネルは画面の下をふさがない。横のずらしでヒロリと物をパネルの左へ
+  assert.match(HTML, /return r\.left>innerWidth\*\.3\?innerHeight:r\.top;/);
+  assert.match(HTML, /camera\.setViewOffset\(innerWidth,H,viewShiftX,viewShift,innerWidth,H\);/);
+  assert.match(HTML, /@media \(orientation: landscape\) and \(max-height: 500px\) \{\n  #panel-talk, #panel-notebook \{ left:auto; top:0;/);
+  // 会話パネルは低め。高さの小さい画面では下の2つのボタンがいつも見える
+  assert.match(HTML, /<div class="talk-actions">\n    <button class="btn-secondary" id="btn-talk-memo"/);
+  assert.match(HTML, /\.talk-actions \{ position:sticky; bottom:0;/);
+  // 閉じたあと 0.45 秒は「見つけたもの」を押せない（新しいタイマーは使わず、毎フレームの処理で戻す）
+  assert.match(UI, /function guardTap\(\) \{ guardUntil = performance\.now\(\) \+ 450; el\('btn-found'\)\.style\.pointerEvents = 'none'; \}/);
+  assert.match(between(UI, 'function close() {', '}\n'), /guardTap\(\);/);
+  assert.match(UI, /if \(guardUntil && performance\.now\(\) > guardUntil\) \{ guardUntil = 0; el\('btn-found'\)\.style\.pointerEvents = ''; \}/);
+  // パネルの構図は、草原のふちの木とほらあなの岩もよける（西の草原だけ）
+  assert.match(HTML, /spots=west\?worldV2\.occluders\(\)\.concat\(treasure\?treasure\.obstacles\(\):\[\]\):TREE_SPOTS;/);
+  // 歩いているとき：西の草原では、木にかからない向きへカメラをゆっくり回す（自分で回したときは、その向き）
+  assert.match(HTML, /if\(px<WEST_PULL_X&&Math\.abs\(yawT\)<\.02&&Math\.abs\(zoomT-1\)<\.02&&worldV2\.isActive\(\)\)\{/);
 });
 
 test('16. 動きを減らす設定：ミナのジャンプ・ねこの寝息・水の輪・宝箱のふた・ヒントの光は、止めるか、すぐ終わる形にする', () => {

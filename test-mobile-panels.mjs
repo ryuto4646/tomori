@@ -17,22 +17,22 @@ const FINISH = between(HTML, 'function finishSecret(){', '\n};\n');   // Step 11
 const RESET = between(HTML, 'function doReset(){', '\n}\n');
 
 // 深掘りの答えを送る処理と、決めたあとの処理を、画面の代わりの小さな部品で動かす（判定・広げる処理は呼んだ回数だけ数える）
-function makeEnv(stateName = 'SECRET_UNLOCKED', kind = 'ok', { ai = null, localCare = null } = {}) {
+function makeEnv(stateName = 'SECRET_UNLOCKED', kind = 'ok', { ai = null, localCare = null, hold = null } = {}) {
   const els = {}, log = { timeouts: [], blooms: 0, scrolls: 0, expands: 0, hints: 0, aiCalls: [], waits: [], cares: [] };
   const el = id => els[id] || (els[id] = { id, value: '', inert: false, attrs: {}, blurred: 0, classes: new Set(['show']),
     classList: { add: c => els[id].classes.add(c), remove: c => els[id].classes.delete(c), contains: c => els[id].classes.has(c), toggle: (c, on) => on ? els[id].classes.add(c) : els[id].classes.delete(c) },
     setAttribute: (k, v) => { els[id].attrs[k] = v; }, blur: () => { els[id].blurred++; } });
   const S = { SECRET_UNLOCKED: 'SECRET_UNLOCKED', DEMO_COMPLETE: 'DEMO_COMPLETE' };
-  const fn = new Function('document', 'S', 'ctxState', 'worldTimeout', 'mkFlower', 'flowerGroup', 'bloomSeq', 'resetPageScroll', 'nextGroup', 'setState', 'classifyAnswer', 'showSecretHint', 'showExpansion', 'fetchExpansion', 'localExpandCare', 'showSecretWait', 'showSecretCare', 'questHub', 'worldV2', 'MISSION_POS',
+  const fn = new Function('document', 'S', 'ctxState', 'worldTimeout', 'mkFlower', 'flowerGroup', 'bloomSeq', 'resetPageScroll', 'nextGroup', 'setState', 'classifyAnswer', 'showSecretHint', 'showExpansion', 'fetchExpansion', 'localExpandCare', 'showSecretWait', 'showSecretCare', 'questHub', 'worldV2', 'MISSION_POS', 'missionHold',
     `let state = ctxState; let secretSent = false, secretDone = false; const window = {}; let _expandGen = 0, enteredText = 'ひよこ', chosenWord = '輪郭';
      ${REVEAL}\n};
      ${FINISH}\n};
-     return { send: () => window.revealSecret(), finish: () => finishSecret(), sent: () => secretSent, done: () => secretDone };`);
+     return { send: () => window.revealSecret(), finish: () => finishSecret(), sent: () => secretSent, done: () => secretDone, setState: v => { state = v; }, bumpGen: () => { _expandGen++; } };`);
   const api = fn({ getElementById: el }, S, S[stateName] || stateName, (f, ms) => log.timeouts.push(ms), () => ({}), { add: () => {} }, () => { log.blooms++; }, () => { log.scrolls++; }, {}, () => {},
     () => ({ kind }), () => { log.hints++; }, () => { log.expands++; },
     fields => { log.aiCalls.push(fields); return Promise.resolve(ai); },   // 既定は null（AI は使えなかった＝端末内の処理へ）
     () => localCare, on => { log.waits.push(on); }, urgent => { log.cares.push(urgent); },
-    { current: () => 'first', finishSecond: () => { log.second = (log.second || 0) + 1; } }, { isActive: () => false }, { x: 1.5, z: -6.5 });   // 最初のクエスト（第2クエストは test-quests.mjs）
+    { current: () => 'first', finishSecond: () => { log.second = (log.second || 0) + 1; } }, { isActive: () => false }, { x: 1.5, z: -6.5 }, hold);   // 最初のクエスト（第2クエストは test-quests.mjs）
   return { els, el, log, api };
 }
 
@@ -160,4 +160,51 @@ test('13. care の画面：差し迫った危険の案内を先に出し、支�
   assert.match(fn, /restoreSecretPanel\(\);/);
   assert.ok(!/finishSecret|bloomSeq|showCandidates|innerHTML/.test(fn));
   assert.match(HTML, /const URGENT_CARE_MESSAGE = 'いま危ないと感じたら、すぐ近くの大人に知らせてね。';/);
+});
+
+// ═══ EXPANSION-02-FOLLOWUP：AI の返事を待つあいだに「あとで・冒険にもどる」で閉じる ═══
+// 本物の missionHold と同じ約束の小さな代わり：閉じているあいだの whenOpen は「続ける」まで待つ
+function fakeHold() {
+  let held = false, waiters = [];
+  const release = () => { const w = waiters; waiters = []; w.forEach(r => r()); };
+  return { pause: () => { release(); held = true; }, resume: () => { held = false; release(); }, reset: () => { held = false; release(); },
+    whenOpen: () => held ? new Promise(r => waiters.push(r)) : Promise.resolve() };
+}
+test('14. 待つあいだに閉じても、届いた返事はパネルへ出さず、「続ける」で開き直したときに使う。送り直さない', async () => {
+  const hold = fakeHold();
+  const env = makeEnv('SECRET_UNLOCKED', 'ok', { hold }); env.el('secret-input').value = '丸いところが可愛い';
+  env.api.send(); hold.pause(); env.api.setState('EXPLORE');
+  await tick(); await tick();
+  assert.deepEqual(env.log.waits, [true], 'still waiting while closed'); assert.equal(env.log.expands, 0); assert.equal(env.log.blooms, 0);
+  env.api.send();   // 閉じているあいだに押しても送らない
+  env.api.setState('SECRET_UNLOCKED'); hold.resume(); await tick(); await tick();
+  assert.deepEqual(env.log.waits, [true, false]); assert.equal(env.log.expands, 1);
+  assert.equal(env.log.aiCalls.length, 1, 'sent once');
+  assert.equal(env.el('secret-input').value, '丸いところが可愛い', 'answer kept');
+});
+test('15. 閉じているあいだにリセット・別の問いへ移ったら、古い返事は使わない', async () => {
+  for (const how of ['reset', 'other']) {
+    const hold = fakeHold();
+    const env = makeEnv('SECRET_UNLOCKED', 'ok', { hold, ai: { reflection: 'x', candidates: ['a', 'b', 'c'], axis: 'detail' } }); env.el('secret-input').value = '丸いところが可愛い';
+    env.api.send(); hold.pause(); env.api.setState('EXPLORE'); await tick();
+    env.api.bumpGen();   // リセット・別の問いの画面へ入ると _expandGen が増える（restoreSecretPanel）
+    if (how === 'reset') hold.reset(); else { env.api.setState('SECRET_UNLOCKED'); hold.resume(); }
+    await tick(); await tick();
+    assert.equal(env.log.expands, 0, how); assert.equal(env.log.cares.length, 0, how); assert.equal(env.log.blooms, 0, how);
+  }
+});
+test('16. 通信の失敗・時間切れ（返事は null）でも、「続ける」のあとは端末内の処理で進められる', async () => {
+  const hold = fakeHold();
+  const env = makeEnv('SECRET_UNLOCKED', 'ok', { hold, ai: null }); env.el('secret-input').value = '丸いところが可愛い';
+  env.api.send(); hold.pause(); env.api.setState('EXPLORE'); await tick();
+  env.api.setState('SECRET_UNLOCKED'); hold.resume(); await tick(); await tick();
+  assert.equal(env.log.expands, 1); assert.equal(env.el('secret-input').readOnly, false);
+});
+test('17. 写真のクエストのことば探し（toWords）も、閉じているあいだは待ち、世代番号でリセット後の返事を捨てる', () => {
+  const t = HTML.match(/window\.toWords = async \(\)=>\{([\s\S]*?)\n\};/)[1];
+  assert.match(t, /if \(gen !== _vocabGen\) return;\s*if \(missionHold\) \{ await missionHold\.whenOpen\(\); if \(gen !== _vocabGen\) return; \}/);
+  const mh = HTML.match(/\/\/ MISSION-HOLD-BEGIN[\s\S]*?\/\/ MISSION-HOLD-END/)[0];
+  assert.ok(!/busy\(\)/.test(mh), 'can close while waiting');
+  assert.match(mh, /setState\(S\[h\.state\]\);\s*release\(\);/);
+  assert.match(mh, /reset: \(\) => \{ hold = null; near = false; release\(\); applyUI\(\); \}/);
 });

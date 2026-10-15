@@ -291,3 +291,12 @@ test('16. 動きを減らす設定：ミナのジャンプ・ねこの寝息・�
   for (const re of [/minaBody\.position\.y = !calm/, /st\.found\.cat \|\| calm \? 1/, /const u = calm \? \.6/, /if \(ev\) stepEvent\(dt, t, calm\);/, /u = calm \? \.5/])
     assert.match(upd, re);
 });
+
+test('19. FOLLOWUP：演出に使う物の描き方と絵は、読み込みのときに用意する（はじめての演出で一瞬止まらない）。隠していた物は隠したまま', () => {
+  const w = UI.match(/function warmUp\(\) \{([\s\S]*?)\n  \}/);
+  assert.ok(w, 'warmUp');
+  assert.match(w[1], /renderer\.compile\(scene, camera\)/);
+  assert.match(w[1], /renderer\.initTexture\(m\.map\)/);
+  assert.match(w[1], /hidden\.forEach\(o => \{ o\.visible = false; \}\)/);
+  assert.match(UI, /warmUp\(\);\s*built = true;/);
+});

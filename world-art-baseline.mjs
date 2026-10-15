@@ -1837,6 +1837,16 @@ let viewShiftX=0;`],
 `,
    `  if(focus&&state!==S.EVENT){   // 発見の演出のあいだは、上下にずらさない（EXPANSION-02）
 `],
+  [`  if (gen !== _vocabGen) return;
+`,
+   `  if (gen !== _vocabGen) return;
+  if (missionHold) { await missionHold.whenOpen(); if (gen !== _vocabGen) return; }   // 「あとで」で閉じているあいだに届いた返事は、「続ける」まで待って使う（送り直さない。EXPANSION-02）
+`],
+  [`answer: text }).then(ai => {
+    if(gen !== _expandGen`,
+   `answer: text }).then(async ai => {
+    if(missionHold) await missionHold.whenOpen();   // 「あとで」で閉じているあいだに届いた返事は、「続ける」まで待って使う（送り直さない。EXPANSION-02）
+    if(gen !== _expandGen`],
   [`  questHub.reset();  // クエスト・答え・道くさ・見つけたもの（Step 11M）
 `,
    `  questHub.reset();  // クエスト・答え・道くさ・見つけたもの（Step 11M）

@@ -142,14 +142,14 @@ textarea, input { word-break:normal; }
 .found-section { font-size:13px; font-weight:bold; color:#8a7650; margin:12px 0 4px; }
 #expr-viewpoints { margin:0 0 10px; }
 /* TREASURE-CSS-BEGIN（EXPANSION-01）：宝さがしの話しかけ・冒険メモ・名前の札・音の文字 */
-#treasure-call {
+#treasure-call, #hold-call {
   position:absolute; left:50%; bottom:calc(70px + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%);
   width:max-content; max-width:calc(100vw - 32px); display:none; align-items:center; gap:10px;
   background:rgba(254,249,240,.95); border:2px solid #e8d4a0; border-radius:18px; padding:8px 8px 8px 14px;
   color:#5a4830; font-size:14px; box-shadow:0 2px 12px rgba(0,0,0,.12); pointer-events:all;
 }
-#treasure-call.show { display:flex; }
-#treasure-call button { min-height:44px; padding:8px 16px; border:none; border-radius:14px; background:#d08a3a; color:#fff; font-size:14px; font-weight:bold; cursor:pointer; flex:none; }
+#treasure-call.show, #hold-call.show { display:flex; }
+#treasure-call button, #hold-call button { min-height:44px; padding:8px 16px; border:none; border-radius:14px; background:#d08a3a; color:#fff; font-size:14px; font-weight:bold; cursor:pointer; flex:none; }
 #btn-notebook {
   position:absolute; top:92px; left:12px;
   min-height:44px; padding:8px 14px; background:rgba(254,249,240,.92); border:1.5px solid #c8b87a; border-radius:22px;
@@ -180,6 +180,7 @@ textarea, input { word-break:normal; }
 /* 会話パネルは低めに：調べる物（ねこ・花・宝箱など）をパネルの上に見せるため */
 #panel-talk { padding-top:12px; }
 #panel-talk .panel-handle { margin-bottom:10px; }
+.btn-later { margin-top:4px; }
 .talk-head { display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:6px; }
 .talk-head .panel-icon { font-size:26px; margin:0; }
 .talk-head .panel-title { margin:0; }
@@ -403,6 +404,7 @@ textarea, input { word-break:normal; }
   <!-- TREASURE-UI-HTML-BEGIN（EXPANSION-01）：近づいたときの「話す／しらべる」・冒険メモのボタン・名前の札・音の文字 -->
   <div id="treasure-call" role="status"><span id="treasure-call-text"></span><button type="button" id="btn-treasure-open">話す</button></div>
   <button id="btn-notebook" type="button">📖 冒険メモ</button>
+  <div id="hold-call" role="status"><span>問いの続きができるよ</span><button type="button" id="btn-hold-resume">続ける</button></div>
   <div class="npc-label" id="label-popo">ふくろうのポポ</div>
   <div class="npc-label" id="label-mina">うさぎのミナ</div>
   <div class="sfx-label" id="sfx-spring" aria-hidden="true">ちょろちょろ…</div>
@@ -658,9 +660,11 @@ const S = {
   FREE_EXPLORE:'FREE_EXPLORE', DETOUR:'DETOUR', FOUND:'FOUND',
   // EXPANSION-01：宝さがしの会話・しらべた結果（TALK）と、冒険メモ（NOTEBOOK）。どちらも開いているあいだは歩かない
   TALK:'TALK', NOTEBOOK:'NOTEBOOK',
+  EVENT:'EVENT',   // EXPANSION-02：宝箱・ランタン・秘密の発見を、3D の世界で見せているあいだ（そのあとで説明のパネル）
 };
 let state = S.EXPLORE;
 let treasure = null;   // 宝さがし（EXPANSION-01）。QUEST-UI のあとで組み立てる
+let missionHold = null;   // ミッションの後回し（EXPANSION-02）。TREASURE-UI のあとで組み立てる
 let photoDataUrl = null;
 let enteredText   = '';
 let chosenWord    = '';
@@ -1366,6 +1370,7 @@ function applyUI() {
   }
   questHub.applyUI();   // 「見つけたもの」ボタン・道くさの案内は、歩けるときだけ出す（入力中は隠す）
   if (treasure) treasure.applyUI();   // 宝さがしの「話す」・冒険メモのボタン（EXPANSION-01。組み立てる前は何もしない）
+  if (missionHold) missionHold.applyUI();   // 「あとで・冒険にもどる」と「続ける」（EXPANSION-02）
 }
 
 function openPanel(id) {
@@ -2094,12 +2099,16 @@ const worldV2 = (() => {
 
     // 木：今までの場所（TREE_SPOTS）＋外周の木立＋遠くの木
     const TREES = ['Tree_Round_A', 'Tree_Round_B', 'Tree_Tall_A', 'Tree_Tall_B', 'Tree_Sapling_A'];
+    // EXPANSION-02：宝さがしの西の草原の木。歩くときにカメラが上から見通せる高さへ（とがった木は小さく、ミナのそばは幹のまわりがあく丸い木）
+    // 下を向いた花のそばの「丸い大きな木」は、ヒントの目印なので大きいまま
+    const WEST_TREES = { '-5,-6': ['Tree_Tall_B', .7], '-8,2': ['Tree_Round_A', .7], '-10,-3': ['Tree_Round_B', .95] };
     TREE_SPOTS.forEach(([x, z], k) => {
       // ヒロリの頭のうしろ・祠から根の門への見通しをふさぐ場所は、低い若木にする（場所はカメラが木をよける計算でも使うので変えない）
       const open = (Math.abs(x) < 2 && z < -8) || segDist(x, z, 1.5, -6.5, GATE.x, GATE.z) < 4 || Math.hypot(x - GATE.x, z - GATE.z) < 5;
-      const type = open ? 'Tree_Sapling_A' : TREES[(k * 7 + 3) % 4];
-      put(type, x, z, .85 + rnd() * .35, undefined, depthTint(x, z), (rnd() - .5) * .08);
-      if (!open) occluders.push([x, z, 1.6]);
+      const west = WEST_TREES[x + ',' + z];   // EXPANSION-02：[形, 大きさの倍率]（乱数の数と順番は変えない）
+      const type = open ? 'Tree_Sapling_A' : west ? west[0] : TREES[(k * 7 + 3) % 4];
+      put(type, x, z, (.85 + rnd() * .35) * (west ? west[1] : 1), undefined, depthTint(x, z), (rnd() - .5) * .08);
+      if (!open) occluders.push([x, z, 1.6 * (west ? west[1] : 1)]);
     });
     // 外周の木立：歩ける範囲のふちの外側。門の前と、カメラ側（手前）はあける
     for (let i = 0, n = HIGH ? 46 : 10; i < n; i++) {
@@ -3142,7 +3151,8 @@ const fieldHirori = (() => {
   // 足が地面に着いている前半は、足が体に対して一定の速さで後ろへ動く。後半で少し持ち上げて前へ戻す
   // 前後の動きは、股のまわりの回転と、脚の前後のずれで作る。足の骨は脚と逆に回し、足の裏をいつも水平に保つ
   // 体は、2本の足のうち低いほうがちょうど地面に着く高さへ上げ下げする（足が地面に沈まない）。値はゲームの座標（全高1）
-  const STRIDE_RIG = .9, RIG_REACH = .075, RIG_SHIFT = .45, RIG_LIFT = .028, RIG_SIN_MAX = .6;
+  const STRIDE_RIG = 1.5, RIG_REACH = .1, RIG_SHIFT = .45, RIG_LIFT = .05, RIG_SIN_MAX = .6;   // EXPANSION-02：前は .9 / .075 / .028（1秒に約9歩の小走り → 約4.4歩）
+  const STEP_BOB = .035, STEP_LEAN = .07, STEP_PACE = .22;   // 一歩ごとの体の上下・前かがみ・速さの強弱
   const GAIT = { dz: 0, lift: 0 }, LEGPOSE = { a: 0, dy: 0, dz: 0 };
   function gait(u) {   // u：その足の周期の位置（0〜1）。dz＝股に対する足の前後、lift＝持ち上げる高さ
     u -= Math.floor(u);
@@ -3200,6 +3210,9 @@ const fieldHirori = (() => {
       gait(ph + .5); legPose(B.Foot_R.userData.rest, GAIT.dz * amp);
       const aR = LEGPOSE.a, zR = LEGPOSE.dz, yR = LEGPOSE.dy, hR = GAIT.lift * amp;
       B.Root.position.y = B.Root.userData.rest.y - Math.min(yL + hL, yR + hR);   // 低いほうの足（持ち上げた高さも入れる）を、ちょうど地面に
+      const sp = (ph * 2) % 1;   // いまの一歩の中の位置（0＝着地）
+      B.Root.position.y += STEP_BOB * Math.sin(Math.PI * sp) ** 2 * w * lift;   // 一歩の途中で少し上がり、着地で沈む（体重が乗る）
+      B.Root.rotation.x = STEP_LEAN * w * deco;   // 歩くあいだは少し前へ
       B.Leg_L.rotation.x = aL; B.Leg_L.position.copy(B.Leg_L.userData.rest); B.Leg_L.position.y += hL; B.Leg_L.position.z += zL;
       B.Leg_R.rotation.x = aR; B.Leg_R.position.copy(B.Leg_R.userData.rest); B.Leg_R.position.y += hR; B.Leg_R.position.z += zR;
       B.Foot_L.rotation.x = -aL; B.Foot_R.rotation.x = -aR;   // 足の裏を水平に
@@ -3215,7 +3228,13 @@ const fieldHirori = (() => {
     if (m.blinkT >= 0) { m.blinkT += dt; eyeY = m.blinkT < .14 ? Math.max(.12, Math.abs(1 - m.blinkT / .07)) : 1; if (m.blinkT >= .14) m.blinkT = -1; }
     if (!P.meshy) for (let i = 0; i < 4; i++) P.eyes[i].scale.y = eyeY;   // まばたき：Meshy ヒロリの目は塗った色なので、閉じない
   }
-  return { load, update, active: () => active, kind, parse };
+  // 一歩の中の速さの倍率（平均 1）：着地でゆっくり、一歩の途中で速く。骨が無い・止まっていく・動きを減らす設定のときは 1
+  function pace() {
+    if (!P.rig || reduceMotionQuery.matches) return 1;
+    const sp = ((hiroriMotion.phase / (Math.PI * 2)) * 2) % 1;
+    return 1 - STEP_PACE * Math.cos(2 * Math.PI * sp) * hiroriMotion.walkBlend;
+  }
+  return { load, update, active: () => active, kind, parse, pace };
 })();
 fieldHirori.ready = fieldHirori.load(character);
 // FIELD-HIRORI-END
@@ -3261,6 +3280,7 @@ function onTap(e){
   if(!canMove()) return;
   const ndc=getNDC(e);
   raycaster.setFromCamera(ndc,camera);
+  if(treasure&&treasure.tapBlocked()) return;   // パネルを閉じた指は、そのまま「そこへ歩く」にしない（EXPANSION-02）
   if(treasure&&treasure.pick(raycaster)) return;   // 宝さがしの人・物をタップ：そのそばまで歩き、着いたら話す・しらべる（EXPANSION-01）
   const hits=raycaster.intersectObject(ground);
   if(hits.length){
@@ -4209,8 +4229,8 @@ const TREASURE_SAVE_KEY = 'tomori-treasure-v1';
 const TREASURE_TALK_R = 2.0;   // この距離まで近づくと「話す／しらべる」を出す
 // 場所は草原の西側（まだ何も置いていない側）。approach：タップしたとき、物の中心からどれだけ手前で止まるか
 const TREASURE_SPOTS = Object.freeze({
-  popo:   { x: -1.7, z: -2.6, approach: 1.2, name: 'ふくろうのポポ', icon: '🦉', call: 'ふくろうのポポがいる', verb: '話す' },
-  mina:   { x: -5.6, z: 1.6, approach: 1.2, name: 'うさぎのミナ', icon: '🐰', call: 'うさぎのミナがいる', verb: '話す' },
+  popo:   { x: -1.7, z: -2.6, approach: 1.2, name: 'ふくろうのポポ', icon: '🦉', call: 'ふくろうのポポがいる', callNew: 'ふくろうがいる', verb: '話す' },
+  mina:   { x: -5.6, z: 1.6, approach: 1.2, name: 'うさぎのミナ', icon: '🐰', call: 'うさぎのミナがいる', callNew: 'うさぎがいる', verb: '話す' },
   cat:    { x: -1.8, z: -9.8, approach: 1.4, name: 'ひなたの平たい岩', icon: '🐈', call: 'ねこがねている', verb: 'しらべる' },
   bell:   { x: -9.4, z: -1.9, approach: 1.1, name: '下を向いてさく花', icon: '🔔', call: '下を向いた花がある', verb: 'しらべる' },
   spring: { x: -8.8, z: -7.6, approach: 1.4, name: '小さな泉', icon: '💧', call: '水の音がする', verb: 'しらべる' },
@@ -4314,6 +4334,7 @@ const TREASURE_GUIDE = Object.freeze({
   spring: '宝さがし：石板のことばをたよりに進もう',
   chest: '宝さがし：かぎに書かれた場所をさがそう',
   cave: '宝さがし：ランタンが役に立つ場所はどこ？',
+  done: '宝さがし：遠くの大きな木が、かすかに光っている…',   // EXPANSION-02：秘密を見つけたあと（次の冒険の気配）
 });
 const TREASURE_ITEMS = Object.freeze({
   lantern: { icon: '🏮', name: '光るランタン', words: 'あかりがともる。暗いところを照らせる。' },
@@ -4321,7 +4342,7 @@ const TREASURE_ITEMS = Object.freeze({
 });
 
 function createTreasureState() {
-  return { v: 1, started: false, found: { cat: false, bell: false, spring: false }, chestSeen: false, chestOpened: false,
+  return { v: 1, started: false, met: { popo: false, mina: false }, found: { cat: false, bell: false, spring: false }, chestSeen: false, chestOpened: false,
     caveLit: false, lanternOn: false, hint: { cat: 0, bell: 0, spring: 0, chest: 0, cave: 0 } };
 }
 // いまの目標：まだ見つけていない、いちばん前の手がかり
@@ -4340,6 +4361,7 @@ function treasureItems(st) {
 function treasureTalk(st, npc) {
   const lines = TREASURE_TALK[npc];
   if (!lines) return null;
+  st.met[npc] = true;   // 話したら名前がわかる（名前の札は、出会ったあとだけ）
   const goal = treasureGoal(st);
   if (goal === 'popo') {
     if (npc !== 'popo') return { line: lines.start, goal: null, hint: 0, started: false };
@@ -4408,6 +4430,8 @@ function restoreTreasure(raw) {
   const st = createTreasureState();
   if (!raw || typeof raw !== 'object' || raw.v !== 1) return st;
   st.started = raw.started === true;
+  for (const n of ['popo', 'mina']) st.met[n] = !!raw.met && raw.met[n] === true;
+  if (st.started) st.met.popo = true;   // 宝さがしが始まっているなら、ポポには会っている
   let ok = st.started;
   for (const id of ['cat', 'bell', 'spring']) { ok = ok && !!raw.found && raw.found[id] === true; st.found[id] = ok; }
   st.chestOpened = st.found.spring && raw.chestOpened === true;
@@ -4435,9 +4459,13 @@ treasure = (() => {
   function forget() { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} }
   let st = load();
   let built = false, near = null, pending = null, openId = null, returnState = S.EXPLORE;
-  let chestT = -1, glintUntil = 0, glintId = null, hopAt = 0, hopStart = -1, guardUntil = 0;
+  let glintUntil = 0, glintId = null, hopAt = 0, hopStart = -1, guardUntil = 0;
+  let ev = null;   // 発見の演出 { kind: 'chest' | 'cave', t: 経過秒, dur: 長さ }
+  const fx = {};   // 演出に使う物（はじめは隠しておく）
+  const NAME_R = 5;   // 出会った相手の名前を出す距離
   // パネルを閉じた指が、同じ場所に出てくる「見つけたもの」を続けて押してしまわないよう、閉じたあと少しだけ押せなくする
   function guardTap() { guardUntil = performance.now() + 450; el('btn-found').style.pointerEvents = 'none'; }
+  const tapBlocked = () => performance.now() < guardUntil;
 
   // ── 見た目：基本の形（球・円すい・円柱・箱）だけ。人・物ごとに 1〜2 個の Mesh にまとめて、描く回数を増やしすぎない ──
   const G = new THREE.Group(); G.name = 'TreasureHunt'; scene.add(G);
@@ -4463,6 +4491,19 @@ treasure = (() => {
     const m = new THREE.Mesh(geo, mat); m.name = name; return m;
   }
   const glowMat = (hex, opacity) => new THREE.MeshBasicMaterial({ color: hex, transparent: true, opacity, depthWrite: false });
+  // やわらかい光の丸：中心が明るく、外へ消える絵（その場で1枚だけ描き、色は素材で変える）
+  let softTex = null;
+  function softGlow(hex) {
+    if (!softTex) {
+      const cv = document.createElement('canvas'); cv.width = cv.height = 64;
+      const g = cv.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+      gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.35, 'rgba(255,255,255,.45)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+      softTex = new THREE.CanvasTexture(cv);
+    }
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: softTex, color: hex, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+    sp.renderOrder = 4; return sp;
+  }
   const roots = {}, hits = [];
   const HIT = new THREE.MeshBasicMaterial({ visible: false }), HIT_GEO = new THREE.SphereGeometry(1, 8, 6);
   function root(id, x = TREASURE_SPOTS[id].x, z = TREASURE_SPOTS[id].z) {
@@ -4473,7 +4514,7 @@ treasure = (() => {
     const h = new THREE.Mesh(HIT_GEO, HIT); h.scale.setScalar(r); h.position.y = y; h.userData.treasureId = id; on.add(h); hits.push(h);
   }
   const faceTo = (g, x, z) => { g.rotation.y = Math.atan2(x - g.position.x, z - g.position.z); };
-  let popoHead, minaHead, minaBody, catHead, catBody, tablet, keyGlint, ripples = [], lid, burst, shardPop, mouth, mural, lantern, glint, farGlow;
+  let popoHead, minaHead, minaBody, catHead, catBody, tablet, keyGlint, ripples = [], lid, burst, shardPop, mouth, mural, lantern, glint, farGlow, chestRoot, caveRoot, farTree;
 
   function build() {
     // ふくろうのポポ：切り株の上。頭だけ別にして、ヒロリのほうへ少し向ける
@@ -4563,22 +4604,22 @@ treasure = (() => {
     const flow = new THREE.Mesh(fg, new THREE.MeshLambertMaterial({ color: 0x86c9e6, emissive: 0x1f4a5c, side: THREE.DoubleSide })); flow.name = 'Spring_Flow'; G.add(flow);
 
     // 古い宝箱：ふたは後ろのふちを軸に開く
-    const chest = root('chest');
+    const chest = root('chest'); chestRoot = chest;
     chest.add(mesh([
       [BOX, 0x8a5a32, [0, .2, 0], [.62, .38, .42]], [BOX, 0xd8a840, [.25, .2, 0], [.045, .39, .43]], [BOX, 0xd8a840, [-.25, .2, 0], [.045, .39, .43]],
       [BOX, 0x3a2a1a, [0, .3, .215], [.08, .09, .02]],
     ], 'Chest_Base'));
     lid = new THREE.Group(); lid.position.set(0, .39, -.21); chest.add(lid);
     lid.add(mesh([[CYL, 0x96643a, [0, 0, .21], [.21, .62, .21], [0, 0, Math.PI / 2]], [BOX, 0xd8a840, [.25, .02, .21], [.05, .38, .44]], [BOX, 0xd8a840, [-.25, .02, .21], [.05, .38, .44]]], 'Chest_Lid'));
-    burst = new THREE.Mesh(SPH, glowMat(0xfff0b0, 0)); burst.scale.setScalar(.5); burst.position.y = .5; burst.renderOrder = 3; chest.add(burst);
+    burst = softGlow(0xffe9a8); burst.position.y = .55; chest.add(burst);   // 宝箱の中からあふれる光（やわらかい丸）
     shardPop = new THREE.Mesh(new THREE.OctahedronGeometry(.1), new THREE.MeshBasicMaterial({ color: 0xbfe8ff })); shardPop.visible = false; chest.add(shardPop);
     faceTo(chest, -8.5, -5.4); hitArea('chest', .7, .3);
 
     // 暗いほらあな：立ち石のとなりの岩に、真っ暗な入口。ランタンで照らすと、かべの絵が見える
-    const cave = root('cave', -5.6, -12.6);
+    const cave = root('cave', -5.6, -12.6); caveRoot = cave;
     cave.add(mesh([[SPH, 0x7f7a6e, [0, .3, 0], [1.6, 1.25, 1.2]], [SPH, 0x8a8478, [-1.15, .12, .3], [.8, .62, .66]], [SPH, 0x746f64, [-.4, 1.2, -.2], [.9, .5, .8]]], 'Cave_Rock'));
     mouth = new THREE.Mesh(new THREE.CircleGeometry(.62, 20, 0, Math.PI), new THREE.MeshBasicMaterial({ color: 0x15120f })); mouth.position.set(0, -.02, 1.19); mouth.name = 'Cave_Mouth'; cave.add(mouth);
-    mural = new THREE.Mesh(new THREE.PlaneGeometry(.78, .46), new THREE.MeshBasicMaterial({ map: muralTexture(), transparent: true })); mural.position.set(0, .26, 1.2); mural.visible = false; mural.name = 'Cave_Mural'; cave.add(mural);
+    mural = new THREE.Mesh(new THREE.PlaneGeometry(.78, .46), new THREE.MeshBasicMaterial({ map: muralTexture(false), transparent: true, depthWrite: false })); mural.position.set(0, .26, 1.2); mural.visible = false; mural.name = 'Cave_Mural'; cave.add(mural);
     faceTo(cave, TREASURE_SPOTS.cave.x, TREASURE_SPOTS.cave.z); hitArea('cave', 1.1, .4);
 
     // 調べられるけれど、宝さがしの答えではない場所（まるい岩・空を向いてさく花）。見た目は世界にある物のまま
@@ -4596,14 +4637,30 @@ treasure = (() => {
       [CYL, 0x6f8790, [0, 4.5, 0], [2.4, 9, 2.4]], [CONE, 0x6f8790, [0, 1.2, 0], [4.6, 2.6, 4.6]],
       [SPH, 0x7f9ea6, [0, 13, 0], [10, 5.5, 9]], [SPH, 0x86a5ac, [-8, 10.5, 1.5], [6.5, 4, 6]], [SPH, 0x7b99a1, [8, 11, -1], [7, 4.5, 6]], [SPH, 0x8aa9b0, [1.5, 17, -1], [6.5, 3.6, 6]],
     ], 'Far_GreatTree');
-    far.position.set(-34, worldV2.groundAt(-34, -50), -50); G.add(far);
+    far.position.set(-34, worldV2.groundAt(-34, -50), -50); G.add(far); farTree = far;
     farGlow = new THREE.Mesh(SPH, glowMat(0xffe7a6, .35)); farGlow.scale.setScalar(2.2); farGlow.position.set(-34, far.position.y + 9.5, -45); farGlow.renderOrder = 3; G.add(farGlow);
 
     // ランタン（持っているときに使う）：ヒロリの横に浮かぶ小さな灯りと、足もとのやわらかな光。点光源は使わない（スマホで重くしない）
-    lantern = new THREE.Group(); lantern.name = 'Treasure_Lantern'; lantern.visible = false; G.add(lantern);
-    lantern.add(mesh([[BOX, 0x4a3420, [0, .2, 0], [.16, .03, .16]], [BOX, 0x4a3420, [0, -.02, 0], [.18, .03, .18]], [CYL, 0x4a3420, [0, .25, 0], [.02, .06, .02]]], 'Lantern_Frame'));
-    const core = new THREE.Mesh(SPH, new THREE.MeshBasicMaterial({ color: 0xffd27a })); core.scale.set(.07, .1, .07); core.position.y = .09; lantern.add(core);
-    const halo = new THREE.Mesh(SPH, glowMat(0xffd27a, .22)); halo.scale.setScalar(.42); halo.position.y = .09; halo.renderOrder = 3; lantern.add(halo);
+    const makeLantern = name => {
+      const g = new THREE.Group(); g.name = name; g.visible = false;
+      g.add(mesh([[BOX, 0x4a3420, [0, .2, 0], [.16, .03, .16]], [BOX, 0x4a3420, [0, -.02, 0], [.18, .03, .18]], [CYL, 0x4a3420, [0, .25, 0], [.02, .06, .02]]], name + '_Frame'));
+      const core = new THREE.Mesh(SPH, new THREE.MeshBasicMaterial({ color: 0xffd27a })); core.scale.set(.07, .1, .07); core.position.y = .09; g.add(core);
+      const halo = new THREE.Mesh(SPH, glowMat(0xffd27a, .22)); halo.scale.setScalar(.42); halo.position.y = .09; halo.renderOrder = 3; g.add(halo); g.userData.halo = halo;
+      return g;
+    };
+    lantern = makeLantern('Treasure_Lantern'); G.add(lantern);
+
+    // ── 発見の演出に使う物：場面ごとに色と動きを変える（宝箱＝金色の光の筋と粒、ランタン＝だいだい色の灯り、秘密＝青白い光） ──
+    const ADD = (hex, op) => new THREE.MeshBasicMaterial({ color: hex, transparent: true, opacity: op, depthWrite: false, blending: THREE.AdditiveBlending });
+    fx.rays = new THREE.Group(); fx.rays.position.y = .4; fx.rays.visible = false; chestRoot.add(fx.rays);   // 宝箱の中からもれる光の筋
+    const rayGeo = new THREE.CylinderGeometry(.015, .17, 1.3, 8, 1, true); rayGeo.translate(0, .65, 0);
+    for (let i = 0; i < 5; i++) { const m = new THREE.Mesh(rayGeo, ADD(0xffc560, 0)); m.rotation.set(.22 * Math.cos(i * 1.26), 0, .22 * Math.sin(i * 1.26)); m.renderOrder = 4; fx.rays.add(m); }
+    fx.spark = new THREE.InstancedMesh(new THREE.OctahedronGeometry(.035), ADD(0xfff0b0, .95), 24); fx.spark.visible = false; fx.spark.frustumCulled = false; fx.spark.renderOrder = 5; G.add(fx.spark);
+    fx.item = makeLantern('Treasure_LanternItem'); G.add(fx.item);   // 宝箱から出てくるランタン
+    fx.mouthGlow = softGlow(0xffa850); fx.mouthGlow.position.set(0, .3, 1.35); fx.mouthGlow.scale.setScalar(2.6); caveRoot.add(fx.mouthGlow);   // 入口と壁を照らす、だいだい色のやわらかい光
+    fx.muralGlow = new THREE.Mesh(new THREE.PlaneGeometry(.78, .46), new THREE.MeshBasicMaterial({ map: muralTexture(true), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+    fx.muralGlow.position.set(0, .26, 1.205); fx.muralGlow.renderOrder = 5; caveRoot.add(fx.muralGlow);
+    fx.beam = new THREE.InstancedMesh(new THREE.SphereGeometry(.1, 8, 6), ADD(0xc8ecff, .9), 18); fx.beam.visible = false; fx.beam.frustumCulled = false; fx.beam.renderOrder = 5; G.add(fx.beam);
 
     // いちばんくわしいヒントを聞いたときだけ、その場所が少しのあいだ光る（矢印は出さない）
     glint = new THREE.Mesh(new THREE.RingGeometry(.7, .82, 32), glowMat(0xffe08a, 0)); glint.rotation.x = -Math.PI / 2; glint.renderOrder = 3; glint.visible = false; G.add(glint);
@@ -4613,13 +4670,14 @@ treasure = (() => {
     applyVisuals(); applyUI();
   }
   // かべの絵（画像ファイルは使わず、その場で描く）：大きな木と、根もとでねむる大きな生きもの
-  function muralTexture() {
+  function muralTexture(glowOnly) {   // glowOnly：大きな木の部分だけを青白く（秘密の発見で光らせる層）
     const cv = document.createElement('canvas'); cv.width = 256; cv.height = 150;
     const g = cv.getContext('2d');
-    g.fillStyle = 'rgba(70,50,30,.85)'; g.fillRect(0, 0, 256, 150);
-    g.strokeStyle = '#ffd98a'; g.fillStyle = '#ffd98a'; g.lineWidth = 4; g.lineCap = 'round';
+    if (!glowOnly) { g.fillStyle = 'rgba(70,50,30,.85)'; g.fillRect(0, 0, 256, 150); }
+    g.strokeStyle = glowOnly ? '#bfe8ff' : '#ffd98a'; g.fillStyle = g.strokeStyle; g.lineWidth = glowOnly ? 7 : 4; g.lineCap = 'round';
     g.beginPath(); g.moveTo(128, 138); g.lineTo(128, 70); g.stroke();
     [[128, 50, 40], [96, 62, 26], [160, 62, 26]].forEach(([x, y, r]) => { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.stroke(); });
+    if (glowOnly) { const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t; }
     g.beginPath(); g.ellipse(60, 128, 38, 14, 0, Math.PI, 0); g.stroke();
     g.beginPath(); g.arc(34, 118, 9, 0, Math.PI * 2); g.stroke();
     [[206, 30], [222, 52], [196, 58]].forEach(([x, y]) => { g.beginPath(); g.arc(x, y, 4, 0, Math.PI * 2); g.fill(); });
@@ -4632,11 +4690,15 @@ treasure = (() => {
     catHead.position.set(.28, st.found.cat ? .5 : .34, .05); catHead.rotation.set(st.found.cat ? -.25 : .35, 0, 0);
     tablet.visible = st.found.bell;
     keyGlint.visible = st.started && !st.found.spring;
-    if (chestT < 0) lid.rotation.x = st.chestOpened ? -1.9 : 0;
+    if (ev) return;   // 演出のあいだは演出が動かす（終わったときにここへ戻る）
+    lid.rotation.x = st.chestOpened ? -1.9 : 0; chestRoot.rotation.z = 0;
     burst.material.opacity = 0; shardPop.visible = false;
-    lantern.visible = st.lanternOn;
-    mural.visible = st.caveLit;
+    fx.rays.visible = false; fx.spark.visible = false; fx.item.visible = false; fx.beam.visible = false;
+    lantern.visible = st.lanternOn; lantern.userData.halo.scale.setScalar(.42);
+    mural.visible = st.caveLit; mural.material.opacity = 1;
     mouth.material.color.set(st.caveLit ? 0x4a3420 : 0x15120f);
+    fx.mouthGlow.material.opacity = st.caveLit ? .3 : 0; fx.mouthGlow.scale.setScalar(2.6);
+    fx.muralGlow.material.opacity = st.caveLit ? .3 : 0;   // 秘密を見つけたあとは、絵の木がかすかに光ったまま
   }
 
   // ── タップ：人・物を押したら、そのそばまで歩き、着いたら開く ──
@@ -4680,25 +4742,18 @@ treasure = (() => {
       r.scale.setScalar(.2 + .62 * u); r.material.opacity = calm ? .25 : .45 * (1 - u);
     });
     if (keyGlint.visible) keyGlint.rotation.y = calm ? 0 : t * 2;
-    // 宝箱が開く（0.9 秒）：ふたが開き、光がふくらみ、かけらが少し浮く
-    if (chestT >= 0) {
-      chestT = Math.min(1, chestT + dt / .9); const k = calm ? 1 : chestT, ease = 1 - (1 - k) ** 3;
-      lid.rotation.x = -1.9 * ease;
-      burst.material.opacity = .55 * Math.sin(Math.PI * k); burst.scale.setScalar(.4 + .8 * k);
-      shardPop.visible = k < 1; shardPop.position.set(0, .45 + .7 * ease, 0); shardPop.rotation.y = t * 3;
-      if (chestT >= 1 || calm) { chestT = -1; applyVisuals(); }
-    }
+    if (ev) stepEvent(dt, t, calm);   // 発見の演出（EXPANSION-02）
     // ランタン：ヒロリの右手のあたりに浮かぶ。ほらあなに近づくと、入口が少しずつ明るくなる
     if (lantern.visible) {
       const yaw = character.rotation.y, lx = .34, lz = .2;
       lantern.position.set(x + lx * Math.cos(yaw) + lz * Math.sin(yaw), character.position.y + .7 + (calm ? 0 : .03 * Math.sin(t * 2.4)), z - lx * Math.sin(yaw) + lz * Math.cos(yaw));
     }
-    if (!st.caveLit) {
+    if (!st.caveLit && !ev) {
       const cd = Math.hypot(x - TREASURE_SPOTS.cave.x, z - TREASURE_SPOTS.cave.z), warm = st.lanternOn ? Math.max(0, 1 - cd / 4) : 0;
       mouth.material.color.setHex(0x15120f).lerp(_c.setHex(0x4a3420), warm * .8);
     }
     // 遠くの大きな木の光は、ゆっくり明るくなったり暗くなったり
-    farGlow.material.opacity = calm ? .3 : .26 + .1 * Math.sin(t * .6);
+    if (!ev) farGlow.material.opacity = calm ? .3 : .26 + .1 * Math.sin(t * .6);
     // ヒントの光（いちばんくわしいヒントのあと 6 秒だけ）
     const now = performance.now() / 1000;
     glint.visible = !!glintId && now < glintUntil;
@@ -4720,9 +4775,9 @@ treasure = (() => {
     const callId = w ? best : null;
     if (callId !== near) { near = callId; applyUI(); }
     // 名前の札（近いときだけ）・音の文字（水の音・ねこの寝息）
-    project(roots.popo.position.x, roots.popo.position.y + 1.42, roots.popo.position.z, el('label-popo'), w && pd < 12);
+    project(roots.popo.position.x, roots.popo.position.y + 1.42, roots.popo.position.z, el('label-popo'), w && st.met.popo && pd < NAME_R);   // 名前は出会ったあと・近いときだけ（遠くから場所がわからないように）
     const md = Math.hypot(x - roots.mina.position.x, z - roots.mina.position.z);
-    project(roots.mina.position.x, roots.mina.position.y + 1.45, roots.mina.position.z, el('label-mina'), w && md < 12);
+    project(roots.mina.position.x, roots.mina.position.y + 1.45, roots.mina.position.z, el('label-mina'), w && st.met.mina && md < NAME_R);
     const sd = Math.hypot(x - TREASURE_SPOTS.spring.x, z - TREASURE_SPOTS.spring.z);
     project(TREASURE_SPOTS.spring.x, roots.spring.position.y + .7, TREASURE_SPOTS.spring.z, el('sfx-spring'), w && sd < 6.5);
     const cd = Math.hypot(x - TREASURE_SPOTS.cat.x, z - TREASURE_SPOTS.cat.z);
@@ -4733,7 +4788,7 @@ treasure = (() => {
   function applyUI() {
     const w = walkable() && built;
     const on = w && !!near && !el('detour-call').classList.contains('show');
-    if (on) { const s = TREASURE_SPOTS[near]; el('treasure-call-text').textContent = s.call; el('btn-treasure-open').textContent = s.verb; }
+    if (on) { const s = TREASURE_SPOTS[near]; el('treasure-call-text').textContent = s.callNew && !st.met[near] ? s.callNew : s.call; el('btn-treasure-open').textContent = s.verb; }
     el('treasure-call').classList.toggle('show', on);
     el('btn-notebook').classList.toggle('show', w && st.started);
     if (!w) for (const id of ['label-popo', 'label-mina', 'sfx-spring', 'sfx-cat']) el(id).classList.remove('show');
@@ -4785,8 +4840,8 @@ treasure = (() => {
       render(talkView(id, treasureTalk(st, id)));
     } else {
       const r = treasureInspect(st, id);
-      if (r && r.kind === 'open') chestT = 0;
       render(inspectView(id, r));
+      if (r && (r.kind === 'open' || r.kind === 'lit')) { save(); startEvent(r.kind === 'open' ? 'chest' : 'cave'); return; }
     }
     save(); applyVisuals();
     setState(S.TALK);
@@ -4803,8 +4858,10 @@ treasure = (() => {
   // ほらあなの前で「ランタンを使う」：つけて、そのまま照らす
   function lanternAtCave() {
     if (state !== S.TALK || openId !== 'cave' || !treasureLantern(st, true)) return;
-    render(inspectView('cave', treasureInspect(st, 'cave')));
-    save(); applyVisuals();
+    const r = treasureInspect(st, 'cave');
+    render(inspectView('cave', r));
+    save();
+    if (r && r.kind === 'lit') startEvent('cave'); else applyVisuals();
   }
   // 閉じたら、パネルの構図の向き先を祠へ戻す（宝さがしは最初のクエストの前にも遊べるので、祠に着いたときの構図をずらさない）
   function close() { if (state === S.TALK) { openId = null; focusTarget = null; guardTap(); setState(returnState); } }
@@ -4854,7 +4911,8 @@ treasure = (() => {
   // 「デモを最初から」：宝さがしの進み具合・もちもの・端末の記録を、すべて最初へ
   function reset() {
     forget(); st = createTreasureState();
-    near = null; pending = null; openId = null; chestT = -1; glintId = null; returnState = S.EXPLORE;
+    near = null; pending = null; openId = null; ev = null; glintId = null; returnState = S.EXPLORE;
+    farGlow.scale.setScalar(2.2);
     applyVisuals();
   }
 
@@ -4872,7 +4930,8 @@ treasure = (() => {
       const rc = new THREE.Raycaster(), inside = (o, r) => { for (; o; o = o.parent) if (o === r) return true; return false; };
       const see = (x, y, z, own) => {
         const d = _p.set(x, y, z).sub(camera.position), L = d.length(); rc.set(camera.position, d.normalize()); rc.far = L - .35;
-        const h = rc.intersectObjects(scene.children, true).find(i => !inside(i.object, own) && !i.object.isPoints && i.object.visible && i.object.material && i.object.material.visible !== false && !(i.object.material.transparent && i.object.material.opacity < .5) && i.object.name !== 'ground');
+        rc.camera = camera;
+        const h = rc.intersectObjects(scene.children, true).find(i => !inside(i.object, own) && !i.object.isPoints && !i.object.isSprite && i.object.visible && i.object.material && i.object.material.visible !== false && !(i.object.material.transparent && i.object.material.opacity < .5) && i.object.name !== 'ground');
         return h ? (h.object.name || h.object.type) : null;
       };
       const s = TREASURE_SPOTS[id];
@@ -4886,6 +4945,112 @@ treasure = (() => {
     const s = TREASURE_SPOTS[openId];
     return _fp.set(s.x, worldV2.groundAt(s.x, s.z) + .3, s.z);
   }
+  // 演出のあいだのカメラ：宝箱は横から少し見下ろし、ほらあなは入口の正面から。ヒロリも画面に入る位置
+  function eventFrame(outPos, outLook) {
+    if (!ev || !character) return false;
+    if (ev.kind === 'chest') {
+      const c = chestRoot.position, dx = character.position.x - c.x, dz = character.position.z - c.z, L = Math.hypot(dx, dz) || 1, a = Math.atan2(dx / L, dz / L) + .95;
+      outPos.set(c.x + Math.sin(a) * 3.3, c.y + 2.1, c.z + Math.cos(a) * 3.3);
+      outLook.set(c.x + dx * .25, c.y + .75, c.z + dz * .25);
+    } else {
+      caveRoot.localToWorld(outLook.set(0, .35, 1.2));
+      // ヒロリが入口の右と左のどちらにいるかを見て、反対の側から入口を斜めに見る（ヒロリが絵の前に重ならない）
+      const ry0 = caveRoot.rotation.y, side = Math.sign((character.position.x - outLook.x) * Math.cos(ry0) - (character.position.z - outLook.z) * Math.sin(ry0)) || 1;
+      const ry = ry0 - side * .75;
+      outPos.set(outLook.x + Math.sin(ry) * 3.4, outLook.y + 1.3, outLook.z + Math.cos(ry) * 3.4);
+      outLook.y += .15;
+    }
+    return true;
+  }
+  // ── 発見の演出（EXPANSION-02）：何が起きたかを 3D の世界で見せてから、説明のパネルを出す ──
+  // ごほうびと発見は、演出を始める前に決めて保存してある（連打・読み込みなおし・リセットでも、二重にならず、止まらない）
+  // 動きを減らす設定：ゆれ・粒・ちらつきを止め、0.6 秒で終える
+  const EV_DUR = { chest: 2.4, cave: 3.6 };
+  const sm = (a, b, x) => { const k = Math.min(1, Math.max(0, (x - a) / (b - a))); return k * k * (3 - 2 * k); };
+  const _ma = new THREE.Matrix4(), _va = new THREE.Vector3(), _vb = new THREE.Vector3();
+  function startEvent(kind) {
+    ev = { kind, t: 0, dur: still() ? .6 : EV_DUR[kind] };
+    if (kind === 'chest') { lid.rotation.x = 0; fx.rays.visible = true; fx.item.visible = false; }
+    if (kind === 'cave') { lantern.visible = true; mural.visible = true; mural.material.opacity = 0; }
+    sfx(kind);
+    setState(S.EVENT);
+  }
+  function endEvent() {
+    if (!ev) return;
+    ev = null; applyVisuals();
+    if (state === S.EVENT) setState(S.TALK);
+  }
+  function stepEvent(dt, t, calm) {
+    ev.t += dt;
+    const T = Math.min(1, ev.t / ev.dur) * EV_DUR[ev.kind];   // 動きを減らす設定でも、同じ順番を短い時間で
+    if (ev.kind === 'chest') {
+      const c = chestRoot.position;
+      chestRoot.rotation.z = calm ? 0 : .05 * Math.sin(T * 55) * (1 - sm(0, .3, T));   // 開く前に、少しだけゆれる
+      lid.rotation.x = -1.9 * (1 - (1 - sm(.25, .9, T)) ** 3);
+      const glow = sm(.35, .75, T) * (1 - sm(1.9, 2.4, T));
+      fx.rays.children.forEach((m, i) => { m.material.opacity = .28 * glow * (calm ? 1 : .8 + .2 * Math.sin(t * 3 + i)); });
+      fx.rays.rotation.y = calm ? 0 : t * .4;
+      burst.material.opacity = .85 * sm(.3, .8, T) * (1 - sm(1.6, 2.4, T)); burst.scale.setScalar(.8 + 1.6 * sm(.3, 1.1, T));
+      // 光の粒：宝箱から上へ、ふわっと広がって消える
+      fx.spark.visible = !calm && T > .4 && T < 2.4;
+      if (fx.spark.visible) {
+        for (let i = 0; i < 24; i++) {
+          const a = i * 2.4, u = (T - .4) * (.55 + (i % 5) * .08), r = .12 + u * (.25 + (i % 3) * .08);
+          _va.set(c.x + Math.cos(a + u) * r, c.y + .45 + u * (1.1 + (i % 4) * .15), c.z + Math.sin(a + u) * r);
+          const sc = Math.max(0, 1 - u / 1.6) * (.7 + .3 * Math.sin(t * 9 + i));
+          fx.spark.setMatrixAt(i, _ma.makeScale(sc, sc, sc).setPosition(_va));
+        }
+        fx.spark.instanceMatrix.needsUpdate = true;
+      }
+      // ランタンとかけらが現れて浮かび、ヒロリのところへ（入手）
+      const up = sm(.8, 1.5, T), go = sm(1.85, 2.35, T);
+      fx.item.visible = T > .8; shardPop.visible = T > .95 && go < 1;
+      _va.set(c.x - .12, c.y + .45 + .75 * up + (calm ? 0 : .04 * Math.sin(t * 3)), c.z);
+      _vb.set(character.position.x, character.position.y + .8, character.position.z);
+      fx.item.position.lerpVectors(_va, _vb, go); fx.item.rotation.y = calm ? 0 : T * 1.5; fx.item.scale.setScalar(1.3 * (1 - .6 * go));
+      fx.item.userData.halo.scale.setScalar(.42 + .25 * up * (1 - go));
+      _va.set(c.x + .2, c.y + .5 + .65 * sm(.95, 1.6, T), c.z);
+      shardPop.position.copy(_va.lerp(_vb, go)).sub(c); shardPop.rotation.y = calm ? 0 : t * 3; shardPop.scale.setScalar(1.4 * (1 - .6 * go));
+      if (go >= 1) fx.item.visible = false;
+    } else {
+      // ランタン：灯りがともって、ゆらめく
+      lantern.userData.halo.scale.setScalar(.42 + .5 * sm(0, .5, T) * (calm ? 1 : .85 + .15 * Math.sin(t * 13)));
+      // ほらあなの入口と壁が、だいだい色に照らされる → 壁の絵が浮かび上がる
+      fx.mouthGlow.material.opacity = .75 * sm(.4, 1.2, T) - .45 * sm(2.6, 3.6, T); fx.mouthGlow.scale.setScalar(1.6 + 1.4 * sm(.4, 1.4, T));
+      mouth.material.color.setHex(0x15120f).lerp(_c.setHex(0x4a3420), sm(.4, 1.4, T));
+      mural.material.opacity = sm(1.1, 2.0, T);
+      // 秘密の発見：絵の中の大きな木が青白く光り、光の粒が遠くの大きな木のほうへ流れ、遠くの木の光がふくらむ
+      fx.muralGlow.material.opacity = .9 * sm(2.0, 2.4, T) * (calm ? 1 : .75 + .25 * Math.sin(t * 4)) * (1 - .6 * sm(3.2, 3.6, T));
+      fx.beam.visible = !calm && T > 2.1;
+      if (fx.beam.visible) {
+        caveRoot.localToWorld(_va.set(0, .55, 1.25)); _vb.copy(farGlow.position);
+        for (let i = 0; i < 18; i++) {
+          const u = ((T - 2.1) * .45 + i / 18) % 1, k = u * .08;   // 遠くの木の方角へ、数メートルだけ（画面の中で見える長さ）
+          const sc = Math.sin(Math.PI * u) * (.6 + .4 * Math.sin(t * 7 + i));
+          _ma.makeScale(sc, sc, sc).setPosition(_va.x + (_vb.x - _va.x) * k + Math.sin(u * 7 + i) * .2, _va.y + u * 2.6, _va.z + (_vb.z - _va.z) * k + Math.cos(u * 7 + i) * .2);
+          fx.beam.setMatrixAt(i, _ma);
+        }
+        fx.beam.instanceMatrix.needsUpdate = true;
+      }
+      farGlow.material.opacity = .3 + .5 * Math.sin(Math.PI * sm(2.4, 3.6, T)); farGlow.scale.setScalar(2.2 * (1 + .5 * Math.sin(Math.PI * sm(2.4, 3.6, T))));
+    }
+    if (ev.t >= ev.dur) { farGlow.scale.setScalar(2.2); endEvent(); }
+  }
+  // 短い効果音（その場で作る音。音のファイルは使わない）。最初に画面にふれたときから鳴らせる
+  let actx = null;
+  const unlock = () => { try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); } catch (e) {} };
+  ['pointerup', 'touchend', 'keydown'].forEach(n => addEventListener(n, unlock, { passive: true }));
+  function tone(f, at, len, vol, type) {
+    const o = actx.createOscillator(), g = actx.createGain(); o.type = type || 'sine'; o.frequency.value = f;
+    g.gain.setValueAtTime(0, at); g.gain.linearRampToValueAtTime(vol, at + .02); g.gain.exponentialRampToValueAtTime(.0001, at + len);
+    o.connect(g); g.connect(actx.destination); o.start(at); o.stop(at + len + .05);
+  }
+  function sfx(kind) {
+    if (!actx || actx.state !== 'running') return;
+    const t0 = actx.currentTime + .05;
+    if (kind === 'chest') [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(f, t0 + .35 + i * .12, .9, .06));   // きらきら上がる音
+    else { tone(196, t0 + .1, 1.3, .05, 'triangle'); tone(293.66, t0 + .5, 1.1, .035); [880, 1174.66, 1318.51].forEach((f, i) => tone(f, t0 + 2.05 + i * .16, 1.3, .035)); }   // 灯りの低い音 → 秘密の高い音
+  }
   // 上の知らせ：宝さがしの途中だけ、その案内。自由に歩くときは、ふだんの「自由に歩いてみよう」のときだけ置きかえる（芽への案内などは、そのまま出す）
   const FREE_TEXT = '自由に歩いてみよう。気になる場所があるかも。';
   function guide(free) {
@@ -4894,9 +5059,60 @@ treasure = (() => {
   }
   // パネルの構図でよける、宝さがしの大きな物（ほらあなの岩）
   const OBSTACLES = [[-5.6, -12.6, 1.7]];
-  return { pick, clearPending, update, applyUI, reset, guide, focusPoint, obstacles: () => OBSTACLES };
+  return { pick, clearPending, update, applyUI, reset, guide, focusPoint, obstacles: () => OBSTACLES, guardTap, tapBlocked, eventFrame };
 })();
 // TREASURE-UI-END
+
+// MISSION-HOLD-BEGIN（EXPANSION-02：写真のクエスト・第2クエストのパネルを「あとで・冒険にもどる」で閉じ、同じ場所で続きから再開する。test-treasure-hunt.mjs が形を確かめる）
+// 閉じても達成にはしない。写真・書いたこと・選んだことばは、このページを開いているあいだは残す（端末には保存しない）
+// 近づいただけでは開き直さない。続きは、その場所で「続ける」を押したときだけ
+missionHold = (() => {
+  const el = id => document.getElementById(id);
+  const PANELS = { MISSION_FOUND: 'panel-mission', PHOTO_PANEL: 'panel-photo', PHOTO_SELECTED: 'panel-photo', EXPRESSION_ENTERED: 'panel-expr',
+    WORDS_READY: 'panel-words', SECRET_QUESTION: 'panel-secret-q', SECRET_UNLOCKED: 'panel-secret-t' };
+  const RESUME_R = 3.0;
+  let hold = null, near = false;
+  // 各パネルの下に「あとで・冒険にもどる」を足す（HTML は変えない）
+  new Set(Object.values(PANELS)).forEach(id => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'btn-secondary btn-later'; b.textContent = 'あとで・冒険にもどる';
+    b.addEventListener('click', () => pause()); el(id).appendChild(b);
+  });
+  // AI の返事を待っているあいだは閉じない（返事が届いて、閉じたパネルが勝手に開かないように）
+  const busy = () => el('vocab-loading').classList.contains('show') || (el('secret-wait') && el('secret-wait').style.display !== 'none' && el('secret-wait').textContent !== '');
+  function applyUI() {
+    const can = !!PANELS[state] && !busy();
+    document.querySelectorAll('.btn-later').forEach(b => { b.style.display = can ? '' : 'none'; });
+    const show = !!hold && near && (state === S.EXPLORE || state === S.FREE_EXPLORE) && !el('treasure-call').classList.contains('show') && !el('detour-call').classList.contains('show');
+    el('hold-call').classList.toggle('show', show);
+  }
+  function pause() {
+    if (!PANELS[state] || busy() || !character) return;
+    stopVoice();
+    const where = questHub.current() === 'second' ? QUEST_DEFS[1].start : mpGroup.position;
+    hold = { state, x: where.x, z: where.z, quest: questHub.current() };
+    isMoving = false; playAnim('idle');
+    if (treasure) treasure.guardTap();
+    focusTarget = null;
+    resetPageScroll();
+    setState(questHub.current() === 'second' || questHub.state().quests.first === 'done' ? S.FREE_EXPLORE : S.EXPLORE);
+  }
+  function resume() {
+    if (!hold || !(state === S.EXPLORE || state === S.FREE_EXPLORE)) return;
+    const h = hold; hold = null; near = false;
+    isMoving = false; playAnim('idle');
+    if (character) hiroriMotion.facing = Math.atan2(h.x - character.position.x, h.z - character.position.z);
+    if (h.quest === 'second') focusOn(h.x, h.z); else focusTarget = null;
+    setState(S[h.state]);
+  }
+  function update() {
+    if (!hold || !character) { if (near) { near = false; applyUI(); } return; }
+    const n = Math.hypot(character.position.x - hold.x, character.position.z - hold.z) <= RESUME_R;
+    if (n !== near) { near = n; applyUI(); }
+  }
+  el('btn-hold-resume').addEventListener('click', resume);
+  return { applyUI, update, pause, resume, held: () => !!hold, reset: () => { hold = null; near = false; applyUI(); } };
+})();
+// MISSION-HOLD-END
 
 // ── リセット ─────────────────────────────────────────────────────
 window.confirmReset = ()=>{ if(confirm('デモを最初からやり直しますか？\n宝さがしの記録ともちものも消えます。')) doReset(); };
@@ -4923,6 +5139,7 @@ function doReset(){
   worldV2.reset();   // ことばのタネ・根の門・秘密の道・ことばの樹の実・カメラの構図を最初へ（WORLD-V2）
   questHub.reset();  // クエスト・答え・道くさ・見つけたもの（Step 11M）
   treasure.reset();  // 宝さがしの進み具合・もちもの・端末の記録（EXPANSION-01）
+  missionHold.reset();  // 後回しにしたミッション（EXPANSION-02）
   if(character){ character.position.set(0,0,0); character.rotation.set(0,0,0); }
   resetHiroriMotion(); camUser.reset();   // 視点も最初の構図へ（Step 11P）
   targetPos.set(0,0,0); isMoving=false;
@@ -5108,7 +5325,7 @@ const camUser=(()=>{
       for(let i=0;i<spots.length;i++){
         const s=spots[i], dx=s[0]-px, dz=s[1]-pz, along=dx*ux+dz*uz, r=s[2]||TREE_RADIUS;
         if(along<1.2||along>L+r) continue;                         // ヒロリのすぐそば・カメラより後ろの木は見ない
-        if(Math.abs(dx*uz-dz*ux)<r+.4) want=Math.min(want,Math.max(.35,(along-r-.6)/L));
+        if(Math.abs(dx*uz-dz*ux)<r+.4) want=Math.min(want,Math.max(px<WEST_PULL_X?.55:.35,(along-r-.6)/L));   // EXPANSION-02：西の草原は .55 まで（ヒロリの真後ろまで寄らない）
       }
     }
     pull+=(want-pull)*(want<pull?.25:.05);   // 木に近づくときは早めに寄り、離れるときはゆっくり戻す
@@ -5131,7 +5348,7 @@ function updateCamera(dt){
   } else {
     // 0.3〜0.5秒でなめらかに移る。動きを減らす設定では、すぐに落ち着いた位置へ
     const k=reduceMotionQuery.matches?1:1-Math.exp(-dt/FOCUS_TAU);
-    focusFrame(focusAngle,focusSide,_focusPos,_focusLook);
+    if(!(treasure&&treasure.eventFrame(_focusPos,_focusLook))) focusFrame(focusAngle,focusSide,_focusPos,_focusLook);   // 発見の演出のあいだは、物に寄った構図（EXPANSION-02）
     camera.position.lerp(_focusPos,k);
     camTgt.lerp(_focusLook,k);
   }
@@ -5141,7 +5358,7 @@ function updateCamera(dt){
   // 縦のずらし：パネル表示中は、ヒロリの顔を画面上から20〜35％、胸がパネル上端に少しかかる程度へ
   const H=innerHeight;
   let targetShift=0;
-  if(focus){
+  if(focus&&state!==S.EVENT){   // 発見の演出のあいだは、上下にずらさない（EXPANSION-02）
     _probe.copy(character.position).setY(character.position.y+1.72).project(camera);
     const faceY=(1-_probe.y)/2*H;
     _probe.copy(character.position).setY(character.position.y+0.95).project(camera);
@@ -5171,7 +5388,7 @@ function updateCamera(dt){
 
 // ── ゲームループ ─────────────────────────────────────────────────
 const clock=new THREE.Clock();
-const SPEED=4.0, ARRIVE=0.6;
+const SPEED=3.3, ARRIVE=0.6;   // EXPANSION-02：一歩ずつの間が感じられる速さ（前は 4.0）
 const canMove=()=>state===S.EXPLORE||state===S.DEMO_COMPLETE||state===S.FREE_EXPLORE;
 
 function animate(){
@@ -5189,7 +5406,7 @@ function animate(){
       if(keys['d']||keys['D']||keys['ArrowRight']) kd.x+=1;
       if(kd.lengthSq()>0){
         kd.normalize(); camUser.turnInput(kd);   // 回した画面の向きにそろえる（Step 11P）
-        character.position.addScaledVector(kd,SPEED*dt);
+        character.position.addScaledVector(kd,SPEED*dt*fieldHirori.pace());   // 一歩の中の速さの強弱（EXPANSION-02）
         hiroriMotion.facing=Math.atan2(kd.x,kd.z);
         isMoving=false; playAnim('walk');
         document.getElementById('hint').style.opacity='0';
@@ -5202,7 +5419,7 @@ function animate(){
       const dist=dir.length();
       if(dist<ARRIVE){ isMoving=false; playAnim('idle'); }
       else{
-        const mv=dir.normalize().multiplyScalar(Math.min(SPEED*dt,dist));
+        const mv=dir.normalize().multiplyScalar(Math.min(SPEED*dt*fieldHirori.pace(),dist));   // 一歩の中の速さの強弱（EXPANSION-02）
         character.position.add(mv);
         hiroriMotion.facing=Math.atan2(mv.x,mv.z);
       }
@@ -5253,6 +5470,7 @@ function animate(){
   worldArt.update(t); worldV2.update(t);   // 小道の光・光の柱・ことばの樹の実を、ゆっくり動かす（WORLD-ART・WORLD-V2）
   questHub.update(t);   // 第2クエストの芽・道くさの気配（Step 11M。新しい描画ループは作らない）
   if(treasure) treasure.update(t,dt);   // 宝さがしの人・物の動きと「話す」の案内（EXPANSION-01。同じ描画ループの中）
+  missionHold.update();   // 後回しにしたミッションの「続ける」（EXPANSION-02）
   renderer.render(scene,camera);
 }
 

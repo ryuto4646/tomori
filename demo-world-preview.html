@@ -3466,6 +3466,7 @@ window.toWords = async ()=>{
   const gen = ++_vocabGen;
   const result = await fetchVocabulary(v);
   if (gen !== _vocabGen) return;
+  if (missionHold) { await missionHold.whenOpen(); if (gen !== _vocabGen) return; }   // 「あとで」で閉じているあいだに届いた返事は、「続ける」まで待って使う（送り直さない。EXPANSION-02）
 
   showVocabLoading(false);
 
@@ -3910,7 +3911,8 @@ window.revealSecret = ()=>{
   // くわしい答えは AI へ1回だけ送る（最大5秒）。待つ間は同じパネルに「ことばを探しているよ」。失敗したら端末内の処理
   const gen = _expandGen;
   input.readOnly = true; showSecretWait(true);
-  fetchExpansion({ expression: enteredText, word: chosenWord, question: document.getElementById('secret-t-title').textContent, answer: text }).then(ai => {
+  fetchExpansion({ expression: enteredText, word: chosenWord, question: document.getElementById('secret-t-title').textContent, answer: text }).then(async ai => {
+    if(missionHold) await missionHold.whenOpen();   // 「あとで」で閉じているあいだに届いた返事は、「続ける」まで待って使う（送り直さない。EXPANSION-02）
     if(gen !== _expandGen || state !== S.SECRET_UNLOCKED || secretDone) return;   // リセット・やり直しのあとに届いた答えは使わない
     input.readOnly = false; showSecretWait(false);
     if(ai && ai.care){ showSecretCare(ai.urgent); return; }   // AI（第二段階）が care と判断したとき
@@ -4666,8 +4668,20 @@ treasure = (() => {
     glint = new THREE.Mesh(new THREE.RingGeometry(.7, .82, 32), glowMat(0xffe08a, 0)); glint.rotation.x = -Math.PI / 2; glint.renderOrder = 3; glint.visible = false; G.add(glint);
 
     for (const g of Object.values(roots)) g.position.y = worldV2.groundAt(g.position.x, g.position.z);
+    warmUp();
     built = true;
     applyVisuals(); applyUI();
+  }
+  // 演出に使う物（ふだんは隠している）の描き方と絵を、読み込みのときに用意しておく。
+  // はじめて演出を見せた1コマで準備が走ると、スマホで一瞬止まるため（EXPANSION-02-FOLLOWUP の計測で 43〜50ms）
+  function warmUp() {
+    const hidden = [];
+    G.traverse(o => { if (!o.visible) { hidden.push(o); o.visible = true; } });
+    try {
+      renderer.compile(scene, camera);
+      G.traverse(o => { const m = o.material; if (m && m.map) renderer.initTexture(m.map); });
+    } catch (e) {}
+    hidden.forEach(o => { o.visible = false; });
   }
   // かべの絵（画像ファイルは使わず、その場で描く）：大きな木と、根もとでねむる大きな生きもの
   function muralTexture(glowOnly) {   // glowOnly：大きな木の部分だけを青白く（秘密の発見で光らせる層）
@@ -5077,17 +5091,22 @@ missionHold = (() => {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'btn-secondary btn-later'; b.textContent = 'あとで・冒険にもどる';
     b.addEventListener('click', () => pause()); el(id).appendChild(b);
   });
-  // AI の返事を待っているあいだは閉じない（返事が届いて、閉じたパネルが勝手に開かないように）
-  const busy = () => el('vocab-loading').classList.contains('show') || (el('secret-wait') && el('secret-wait').style.display !== 'none' && el('secret-wait').textContent !== '');
+  // AI の返事を待っているあいだも閉じられる。届いた返事は、閉じているあいだは使わずに待たせ（whenOpen）、
+  // 「続ける」で開き直したときに画面へ出す。パネルは勝手に開かず、報酬・クエストも進まない。送り直しもしない
+  // リセット・別の問いへ移ったあとの返事は、それぞれの世代番号（_vocabGen・_expandGen）で捨てる
+  let waiters = [];
+  const release = () => { const w = waiters; waiters = []; w.forEach(r => r()); };
+  const whenOpen = () => hold ? new Promise(r => waiters.push(r)) : Promise.resolve();
   function applyUI() {
-    const can = !!PANELS[state] && !busy();
+    const can = !!PANELS[state];
     document.querySelectorAll('.btn-later').forEach(b => { b.style.display = can ? '' : 'none'; });
     const show = !!hold && near && (state === S.EXPLORE || state === S.FREE_EXPLORE) && !el('treasure-call').classList.contains('show') && !el('detour-call').classList.contains('show');
     el('hold-call').classList.toggle('show', show);
   }
   function pause() {
-    if (!PANELS[state] || busy() || !character) return;
+    if (!PANELS[state] || !character) return;
     stopVoice();
+    release();   // 前に閉じた問いの返事を待っていたもの（世代番号で捨てられる）
     const where = questHub.current() === 'second' ? QUEST_DEFS[1].start : mpGroup.position;
     hold = { state, x: where.x, z: where.z, quest: questHub.current() };
     isMoving = false; playAnim('idle');
@@ -5103,6 +5122,7 @@ missionHold = (() => {
     if (character) hiroriMotion.facing = Math.atan2(h.x - character.position.x, h.z - character.position.z);
     if (h.quest === 'second') focusOn(h.x, h.z); else focusTarget = null;
     setState(S[h.state]);
+    release();   // 閉じているあいだに届いていた返事を、開き直したパネルへ出す（まだ届いていなければ、待つ表示のまま）
   }
   function update() {
     if (!hold || !character) { if (near) { near = false; applyUI(); } return; }
@@ -5110,7 +5130,7 @@ missionHold = (() => {
     if (n !== near) { near = n; applyUI(); }
   }
   el('btn-hold-resume').addEventListener('click', resume);
-  return { applyUI, update, pause, resume, held: () => !!hold, reset: () => { hold = null; near = false; applyUI(); } };
+  return { applyUI, update, pause, resume, whenOpen, held: () => !!hold, reset: () => { hold = null; near = false; release(); applyUI(); } };
 })();
 // MISSION-HOLD-END
 

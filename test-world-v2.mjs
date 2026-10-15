@@ -199,7 +199,7 @@ test('15. タップ先とキーボード移動の両方を、歩ける範囲の�
   assert.ok(anim.indexOf('worldV2.groundCharacter(character);') > anim.indexOf('updateHiroriMotion(character, dt, t, walking);'), 'after motion');
   assert.ok(anim.indexOf('worldV2.groundCharacter(character);') < anim.indexOf('// 距離チェック'), 'before mission check');
   assert.match(V2, /function groundCharacter\(c\) \{\s*if \(!active \|\| !c\) return;\s*clampToWalkable\(c\.position, 1\);/);
-  assert.match(HTML, /const SPEED=4\.0, ARRIVE=0\.6;/);
+  assert.match(HTML, /const SPEED=3\.3, ARRIVE=0\.6;/);
   // 到着判定は平面の距離
   assert.match(HTML, /const md=Math\.hypot\(character\.position\.x-mpGroup\.position\.x, character\.position\.z-mpGroup\.position\.z\);/);
   // だ円の外の点は、ふちの上へ戻る。内側の点は動かない

@@ -145,7 +145,7 @@ test('10. タップ先（limit 0.97）は、道のふちより少し内側へ戻
   assert.match(HTML, /worldV2\.clampToWalkable\(targetPos, 0\.97\);/);
 });
 
-test('11. 秘密の道（S字）は 28〜42m。SPEED 4.0 で計算上 7〜12秒。道とことばの樹のまわりは平ら', () => {
+test('11. 秘密の道（S字）は 28〜42m。SPEED 3.3（EXPANSION-02。前は 4.0）で計算上 8〜13秒。道とことばの樹のまわりは平ら', () => {
   // 歩ける場所はすべて平ら（道のカプセルの中・樹のまわり）
   for (let i = 0; i < A.PASSAGE.length - 1; i++) for (let k = 0; k <= 8; k++) for (const o of [-1.3, 0, 1.3]) {
     const [ax, az] = A.PASSAGE[i], [bx, bz] = A.PASSAGE[i + 1], tl = Math.hypot(bx - ax, bz - az), x = ax + (bx - ax) * k / 8 - (bz - az) / tl * o, z = az + (bz - az) * k / 8 + (bx - ax) / tl * o;
@@ -156,8 +156,8 @@ test('11. 秘密の道（S字）は 28〜42m。SPEED 4.0 で計算上 7〜12秒�
   assert.ok(max < 1e-6, `tree area height ${max}`);
   assert.ok(A.ROUTE_TOTAL >= 28 && A.ROUTE_TOTAL <= 42, `route ${A.ROUTE_TOTAL}`);
   const speed = +HTML.match(/const SPEED=([\d.]+), ARRIVE=0\.6;/)[1];
-  assert.equal(speed, 4);
-  assert.ok(A.ROUTE_TOTAL / speed >= 7 && A.ROUTE_TOTAL / speed <= 12, `time ${A.ROUTE_TOTAL / speed}`);
+  assert.equal(speed, 3.3);
+  assert.ok(A.ROUTE_TOTAL / speed >= 8 && A.ROUTE_TOTAL / speed <= 13, `time ${A.ROUTE_TOTAL / speed}`);
   // 一本道の直線ではない：門から樹への直線より十分に長く、左右に曲がる（向きの変化が2回以上）
   assert.ok(A.ROUTE_TOTAL > 1.5 * Math.hypot(A.WORD_TREE.x - A.GATE.x, A.WORD_TREE.z - A.GATE.z));
   let turns = 0, last = 0;

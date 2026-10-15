@@ -224,7 +224,7 @@ test('14. 既存の移動・到着・リセット・描画ループにつなが�
 });
 
 test('15. 移動速度・到着判定・カメラ追従・タップ判定は変えていない', () => {
-  assert.match(HTML, /const SPEED=4\.0, ARRIVE=0\.6;/);
+  assert.match(HTML, /const SPEED=3\.3, ARRIVE=0\.6;/);
   assert.match(HTML, /const CAM_OFF = new THREE\.Vector3\(0, 5, 8\);/);
   // Step 11P：追いかけ方（.08 ずつ寄る）は元のまま。視点の操作（camUser）を回していなければ、CAM_OFF そのもの（回す角0・倍率1）
   assert.match(HTML, /camera\.position\.lerp\(character\.position\.clone\(\)\.add\(worldV2\.cameraFramed\(\)\?CAM_OFF:camUser\.offset\(character\.position\.x,character\.position\.z\)\),\.08\);/);

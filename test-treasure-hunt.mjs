@@ -242,7 +242,9 @@ test('15. 描画の負荷：新しい描画ループ・タイマー・点光源�
   const u = code(UI);
   assert.ok(!/requestAnimationFrame|setInterval|setTimeout\(/.test(u));
   assert.ok(!/PointLight|SpotLight|DirectionalLight|castShadow = true/.test(u));
-  assert.equal((u.match(/new THREE\.\w*Texture\(/g) || []).length, 1);
+  // かべの絵（その場で描く）は、絵そのものと、秘密の発見で光らせる木の部分の2枚（EXPANSION-02）。どちらも同じ関数で作る
+  // ＋やわらかい光の丸（1枚を共有。色は素材で変える）
+  assert.equal((u.match(/new THREE\.\w*Texture\(/g) || []).length, 3);
   assert.match(u, /new THREE\.CanvasTexture\(cv\)/);
   assert.ok(!/innerHTML|insertAdjacentHTML/.test(u));
   assert.match(HTML, /  if\(treasure\) treasure\.update\(t,dt\);[^\n]*\n  missionHold\.update\(\);[^\n]*\n  renderer\.render\(scene,camera\);/);
@@ -252,7 +254,8 @@ test('15. 描画の負荷：新しい描画ループ・タイマー・点光源�
 
 test('17. 上の知らせ：宝さがしの途中は、いまの目標がわかる案内（行き先は言わない）。祠に近づいたら写真のクエストの案内。芽への案内などはそのまま', () => {
   for (const g of T.TREASURE_STEPS) { assert.ok(T.TREASURE_GUIDE[g] && T.TREASURE_GUIDE[g].length <= 22, g); assert.match(T.TREASURE_GUIDE[g], /^宝さがし：/); }
-  assert.ok(!T.TREASURE_GUIDE.popo && !T.TREASURE_GUIDE.done, 'only while the hunt is going on');
+  assert.ok(!T.TREASURE_GUIDE.popo, 'not before the hunt starts');
+  assert.match(T.TREASURE_GUIDE.done, /遠くの大きな木/);   // EXPANSION-02：秘密を見つけたあとは、次の冒険の気配
   assert.ok(!/左|右|おく|手前|のはし|祠/.test(Object.values(T.TREASURE_GUIDE).join('')), 'no directions in the banner');
   const g = between(UI, 'function guide(free) {', '\n  }\n');
   assert.match(g, /if \(free !== undefined && free !== FREE_TEXT\) return null;/);
@@ -285,6 +288,6 @@ test('18. REVIEW：会話中は調べる物もパネルの上に見せる。横�
 test('16. 動きを減らす設定：ミナのジャンプ・ねこの寝息・水の輪・宝箱のふた・ヒントの光は、止めるか、すぐ終わる形にする', () => {
   const upd = between(UI, 'function update(t, dt) {', '\n  // 「話す／しらべる」の案内');
   assert.match(upd, /const x = character\.position\.x, z = character\.position\.z, calm = still\(\)/);
-  for (const re of [/minaBody\.position\.y = !calm/, /st\.found\.cat \|\| calm \? 1/, /const u = calm \? \.6/, /const k = calm \? 1 : chestT/, /u = calm \? \.5/])
+  for (const re of [/minaBody\.position\.y = !calm/, /st\.found\.cat \|\| calm \? 1/, /const u = calm \? \.6/, /if \(ev\) stepEvent\(dt, t, calm\);/, /u = calm \? \.5/])
     assert.match(upd, re);
 });

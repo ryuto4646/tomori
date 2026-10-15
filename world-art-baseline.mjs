@@ -1652,6 +1652,7 @@ export const EXPANSION_EDITS = [
    `  FREE_EXPLORE:'FREE_EXPLORE', DETOUR:'DETOUR', FOUND:'FOUND',
   // EXPANSION-01：宝さがしの会話・しらべた結果（TALK）と、冒険メモ（NOTEBOOK）。どちらも開いているあいだは歩かない
   TALK:'TALK', NOTEBOOK:'NOTEBOOK',
+  EVENT:'EVENT',   // EXPANSION-02：宝箱・ランタン・秘密の発見を、3D の世界で見せているあいだ（そのあとで説明のパネル）
 };`],
   [`let state = S.EXPLORE;
 `,
@@ -1806,6 +1807,36 @@ let viewShiftX=0;`],
   else camera.setViewOffset(innerWidth,H,viewShiftX,viewShift,innerWidth,H);`],
   [`        if(Math.abs(dx*uz-dz*ux)<r+.4) want=Math.min(want,Math.max(.35,(along-r-.6)/L));`,
    `        if(Math.abs(dx*uz-dz*ux)<r+.4) want=Math.min(want,Math.max(px<WEST_PULL_X?.55:.35,(along-r-.6)/L));   // EXPANSION-02：西の草原は .55 まで（ヒロリの真後ろまで寄らない）`],
+  [`const SPEED=4.0, ARRIVE=0.6;`,
+   `const SPEED=3.3, ARRIVE=0.6;   // EXPANSION-02：一歩ずつの間が感じられる速さ（前は 4.0）`],
+  [`        character.position.addScaledVector(kd,SPEED*dt);`,
+   `        character.position.addScaledVector(kd,SPEED*dt*fieldHirori.pace());   // 一歩の中の速さの強弱（EXPANSION-02）`],
+  [`        const mv=dir.normalize().multiplyScalar(Math.min(SPEED*dt,dist));`,
+   `        const mv=dir.normalize().multiplyScalar(Math.min(SPEED*dt*fieldHirori.pace(),dist));   // 一歩の中の速さの強弱（EXPANSION-02）`],
+  [`  const STRIDE_RIG = .9, RIG_REACH = .075, RIG_SHIFT = .45, RIG_LIFT = .028, RIG_SIN_MAX = .6;`,
+   `  const STRIDE_RIG = 1.5, RIG_REACH = .1, RIG_SHIFT = .45, RIG_LIFT = .05, RIG_SIN_MAX = .6;   // EXPANSION-02：前は .9 / .075 / .028（1秒に約9歩の小走り → 約4.4歩）
+  const STEP_BOB = .035, STEP_LEAN = .07, STEP_PACE = .22;   // 一歩ごとの体の上下・前かがみ・速さの強弱`],
+  [`      B.Root.position.y = B.Root.userData.rest.y - Math.min(yL + hL, yR + hR);   // 低いほうの足（持ち上げた高さも入れる）を、ちょうど地面に`,
+   `      B.Root.position.y = B.Root.userData.rest.y - Math.min(yL + hL, yR + hR);   // 低いほうの足（持ち上げた高さも入れる）を、ちょうど地面に
+      const sp = (ph * 2) % 1;   // いまの一歩の中の位置（0＝着地）
+      B.Root.position.y += STEP_BOB * Math.sin(Math.PI * sp) ** 2 * w * lift;   // 一歩の途中で少し上がり、着地で沈む（体重が乗る）
+      B.Root.rotation.x = STEP_LEAN * w * deco;   // 歩くあいだは少し前へ`],
+  [`  return { load, update, active: () => active, kind, parse };`,
+   `  // 一歩の中の速さの倍率（平均 1）：着地でゆっくり、一歩の途中で速く。骨が無い・止まっていく・動きを減らす設定のときは 1
+  function pace() {
+    if (!P.rig || reduceMotionQuery.matches) return 1;
+    const sp = ((hiroriMotion.phase / (Math.PI * 2)) * 2) % 1;
+    return 1 - STEP_PACE * Math.cos(2 * Math.PI * sp) * hiroriMotion.walkBlend;
+  }
+  return { load, update, active: () => active, kind, parse, pace };`],
+  [`    focusFrame(focusAngle,focusSide,_focusPos,_focusLook);
+`,
+   `    if(!(treasure&&treasure.eventFrame(_focusPos,_focusLook))) focusFrame(focusAngle,focusSide,_focusPos,_focusLook);   // 発見の演出のあいだは、物に寄った構図（EXPANSION-02）
+`],
+  [`  if(focus){
+`,
+   `  if(focus&&state!==S.EVENT){   // 発見の演出のあいだは、上下にずらさない（EXPANSION-02）
+`],
   [`  questHub.reset();  // クエスト・答え・道くさ・見つけたもの（Step 11M）
 `,
    `  questHub.reset();  // クエスト・答え・道くさ・見つけたもの（Step 11M）

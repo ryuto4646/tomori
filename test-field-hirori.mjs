@@ -210,7 +210,8 @@ test('12. 骨で歩く（Step 11O）：骨の行列を読める。脚は左右�
   assert.match(upd, /B\.Root\.position\.y = B\.Root\.userData\.rest\.y - Math\.min\(yL \+ hL, yR \+ hR\);/);
   assert.match(upd, /P\.upper\.rotation\.z = s \* \.025 \* w \* deco;/);
   // 歩幅と周期：1周期で STRIDE_RIG 進む。phase は移動速度から進める（速さと足の動きを合わせる）
-  assert.match(FH, /const STRIDE_RIG = \.9, RIG_REACH = \.075, RIG_SHIFT = \.45, RIG_LIFT = \.028, RIG_SIN_MAX = \.6;/);
+  // EXPANSION-02：一歩ずつの間が感じられる歩き方（1周期 1.5m・足を大きく前へ・高く上げる。前は .9 / .075 / .028）
+  assert.match(FH, /const STRIDE_RIG = 1\.5, RIG_REACH = \.1, RIG_SHIFT = \.45, RIG_LIFT = \.05, RIG_SIN_MAX = \.6;/);
   assert.match(upd, /m\.phase \+= dt \* SPEED \* \(Math\.PI \* 2\) \/ \(P\.rig \? STRIDE_RIG : STRIDE\);/);
   // 歩き方の計算（gait・legPose）も、毎フレーム新しい物を作らない
   const helpers = stripComments(between(FH, 'function gait(u) {', 'function update(root'));

@@ -102,7 +102,7 @@ test('6. 移動の速さ・キー操作・タップ移動（animate とキー入
   assert.equal(fnBody(noArt(), 'function animate(){'), fnBody(OLD, 'function animate(){'));
   const lines = s => s.split('\n').filter(l => /SPEED|ARRIVE|addEventListener\('key|keys\[/.test(l));
   assert.deepEqual(lines(noArt()), lines(OLD));
-  assert.match(NOW, /const SPEED=4\.0, ARRIVE=0\.6;/);
+  assert.match(NOW, /const SPEED=3\.3, ARRIVE=0\.6;/);
 });
 
 test('7. AI スイッチは true のまま', () => {

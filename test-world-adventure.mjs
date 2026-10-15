@@ -303,7 +303,7 @@ test('22. reduced-motion：タネはすぐ現れ、門はすぐひらき、道�
 // ── リセット・V1・性能 ────────────────────────────────────────────
 test('23. 「デモを最初から」：タネ・門・道・歩ける範囲・実・完了の枠・カメラ・進み方を、すべて最初へ戻す', () => {
   // EXPANSION-01：questHub のあとに宝さがし（treasure.reset）を戻してから、ヒロリを出発点へ
-  assert.match(HTML, /  worldV2\.reset\(\);   \/\/ [^\n]*\n  questHub\.reset\(\);[^\n]*\n  treasure\.reset\(\);[^\n]*\n  if\(character\)\{ character\.position\.set\(0,0,0\); character\.rotation\.set\(0,0,0\); \}/);
+  assert.match(HTML, /  worldV2\.reset\(\);   \/\/ [^\n]*\n  questHub\.reset\(\);[^\n]*\n  treasure\.reset\(\);[^\n]*\n  missionHold\.reset\(\);[^\n]*\n  if\(character\)\{ character\.position\.set\(0,0,0\); character\.rotation\.set\(0,0,0\); \}/);
   assert.match(RESET, /if \(!active\) return;/);
   for (const re of [/progress = P\.EXPLORING; gateOpen = false;/, /wordSeed\.visible = false;/, /for \(let i = 0; i < 4; i\+\+\) gateMeshes\[i\]\.matrix\.multiplyMatrices\(gatePlace, gateNode\[i\]\);/,
     /gateMeshes\[3\]\.visible = true;/, /secretColor\.array\[v \* 4 \+ 3\] = secretU\[v\] < 0 \? secretBase\[v\] : 0;/, /fruits\.setMatrixAt\(i, fruitBase\[i\]\)/,

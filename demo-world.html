@@ -142,14 +142,14 @@ textarea, input { word-break:normal; }
 .found-section { font-size:13px; font-weight:bold; color:#8a7650; margin:12px 0 4px; }
 #expr-viewpoints { margin:0 0 10px; }
 /* TREASURE-CSS-BEGIN（EXPANSION-01）：宝さがしの話しかけ・冒険メモ・名前の札・音の文字 */
-#treasure-call {
+#treasure-call, #hold-call {
   position:absolute; left:50%; bottom:calc(70px + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%);
   width:max-content; max-width:calc(100vw - 32px); display:none; align-items:center; gap:10px;
   background:rgba(254,249,240,.95); border:2px solid #e8d4a0; border-radius:18px; padding:8px 8px 8px 14px;
   color:#5a4830; font-size:14px; box-shadow:0 2px 12px rgba(0,0,0,.12); pointer-events:all;
 }
-#treasure-call.show { display:flex; }
-#treasure-call button { min-height:44px; padding:8px 16px; border:none; border-radius:14px; background:#d08a3a; color:#fff; font-size:14px; font-weight:bold; cursor:pointer; flex:none; }
+#treasure-call.show, #hold-call.show { display:flex; }
+#treasure-call button, #hold-call button { min-height:44px; padding:8px 16px; border:none; border-radius:14px; background:#d08a3a; color:#fff; font-size:14px; font-weight:bold; cursor:pointer; flex:none; }
 #btn-notebook {
   position:absolute; top:92px; left:12px;
   min-height:44px; padding:8px 14px; background:rgba(254,249,240,.92); border:1.5px solid #c8b87a; border-radius:22px;
@@ -180,6 +180,7 @@ textarea, input { word-break:normal; }
 /* 会話パネルは低めに：調べる物（ねこ・花・宝箱など）をパネルの上に見せるため */
 #panel-talk { padding-top:12px; }
 #panel-talk .panel-handle { margin-bottom:10px; }
+.btn-later { margin-top:4px; }
 .talk-head { display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:6px; }
 .talk-head .panel-icon { font-size:26px; margin:0; }
 .talk-head .panel-title { margin:0; }
@@ -403,6 +404,7 @@ textarea, input { word-break:normal; }
   <!-- TREASURE-UI-HTML-BEGIN（EXPANSION-01）：近づいたときの「話す／しらべる」・冒険メモのボタン・名前の札・音の文字 -->
   <div id="treasure-call" role="status"><span id="treasure-call-text"></span><button type="button" id="btn-treasure-open">話す</button></div>
   <button id="btn-notebook" type="button">📖 冒険メモ</button>
+  <div id="hold-call" role="status"><span>問いの続きができるよ</span><button type="button" id="btn-hold-resume">続ける</button></div>
   <div class="npc-label" id="label-popo">ふくろうのポポ</div>
   <div class="npc-label" id="label-mina">うさぎのミナ</div>
   <div class="sfx-label" id="sfx-spring" aria-hidden="true">ちょろちょろ…</div>
@@ -661,6 +663,7 @@ const S = {
 };
 let state = S.EXPLORE;
 let treasure = null;   // 宝さがし（EXPANSION-01）。QUEST-UI のあとで組み立てる
+let missionHold = null;   // ミッションの後回し（EXPANSION-02）。TREASURE-UI のあとで組み立てる
 let photoDataUrl = null;
 let enteredText   = '';
 let chosenWord    = '';
@@ -1366,6 +1369,7 @@ function applyUI() {
   }
   questHub.applyUI();   // 「見つけたもの」ボタン・道くさの案内は、歩けるときだけ出す（入力中は隠す）
   if (treasure) treasure.applyUI();   // 宝さがしの「話す」・冒険メモのボタン（EXPANSION-01。組み立てる前は何もしない）
+  if (missionHold) missionHold.applyUI();   // 「あとで・冒険にもどる」と「続ける」（EXPANSION-02）
 }
 
 function openPanel(id) {
@@ -2094,12 +2098,16 @@ const worldV2 = (() => {
 
     // 木：今までの場所（TREE_SPOTS）＋外周の木立＋遠くの木
     const TREES = ['Tree_Round_A', 'Tree_Round_B', 'Tree_Tall_A', 'Tree_Tall_B', 'Tree_Sapling_A'];
+    // EXPANSION-02：宝さがしの西の草原の木。歩くときにカメラが上から見通せる高さへ（とがった木は小さく、ミナのそばは幹のまわりがあく丸い木）
+    // 下を向いた花のそばの「丸い大きな木」は、ヒントの目印なので大きいまま
+    const WEST_TREES = { '-5,-6': ['Tree_Tall_B', .7], '-8,2': ['Tree_Round_A', .7], '-10,-3': ['Tree_Round_B', .95] };
     TREE_SPOTS.forEach(([x, z], k) => {
       // ヒロリの頭のうしろ・祠から根の門への見通しをふさぐ場所は、低い若木にする（場所はカメラが木をよける計算でも使うので変えない）
       const open = (Math.abs(x) < 2 && z < -8) || segDist(x, z, 1.5, -6.5, GATE.x, GATE.z) < 4 || Math.hypot(x - GATE.x, z - GATE.z) < 5;
-      const type = open ? 'Tree_Sapling_A' : TREES[(k * 7 + 3) % 4];
-      put(type, x, z, .85 + rnd() * .35, undefined, depthTint(x, z), (rnd() - .5) * .08);
-      if (!open) occluders.push([x, z, 1.6]);
+      const west = WEST_TREES[x + ',' + z];   // EXPANSION-02：[形, 大きさの倍率]（乱数の数と順番は変えない）
+      const type = open ? 'Tree_Sapling_A' : west ? west[0] : TREES[(k * 7 + 3) % 4];
+      put(type, x, z, (.85 + rnd() * .35) * (west ? west[1] : 1), undefined, depthTint(x, z), (rnd() - .5) * .08);
+      if (!open) occluders.push([x, z, 1.6 * (west ? west[1] : 1)]);
     });
     // 外周の木立：歩ける範囲のふちの外側。門の前と、カメラ側（手前）はあける
     for (let i = 0, n = HIGH ? 46 : 10; i < n; i++) {
@@ -3261,6 +3269,7 @@ function onTap(e){
   if(!canMove()) return;
   const ndc=getNDC(e);
   raycaster.setFromCamera(ndc,camera);
+  if(treasure&&treasure.tapBlocked()) return;   // パネルを閉じた指は、そのまま「そこへ歩く」にしない（EXPANSION-02）
   if(treasure&&treasure.pick(raycaster)) return;   // 宝さがしの人・物をタップ：そのそばまで歩き、着いたら話す・しらべる（EXPANSION-01）
   const hits=raycaster.intersectObject(ground);
   if(hits.length){
@@ -4209,8 +4218,8 @@ const TREASURE_SAVE_KEY = 'tomori-treasure-v1';
 const TREASURE_TALK_R = 2.0;   // この距離まで近づくと「話す／しらべる」を出す
 // 場所は草原の西側（まだ何も置いていない側）。approach：タップしたとき、物の中心からどれだけ手前で止まるか
 const TREASURE_SPOTS = Object.freeze({
-  popo:   { x: -1.7, z: -2.6, approach: 1.2, name: 'ふくろうのポポ', icon: '🦉', call: 'ふくろうのポポがいる', verb: '話す' },
-  mina:   { x: -5.6, z: 1.6, approach: 1.2, name: 'うさぎのミナ', icon: '🐰', call: 'うさぎのミナがいる', verb: '話す' },
+  popo:   { x: -1.7, z: -2.6, approach: 1.2, name: 'ふくろうのポポ', icon: '🦉', call: 'ふくろうのポポがいる', callNew: 'ふくろうがいる', verb: '話す' },
+  mina:   { x: -5.6, z: 1.6, approach: 1.2, name: 'うさぎのミナ', icon: '🐰', call: 'うさぎのミナがいる', callNew: 'うさぎがいる', verb: '話す' },
   cat:    { x: -1.8, z: -9.8, approach: 1.4, name: 'ひなたの平たい岩', icon: '🐈', call: 'ねこがねている', verb: 'しらべる' },
   bell:   { x: -9.4, z: -1.9, approach: 1.1, name: '下を向いてさく花', icon: '🔔', call: '下を向いた花がある', verb: 'しらべる' },
   spring: { x: -8.8, z: -7.6, approach: 1.4, name: '小さな泉', icon: '💧', call: '水の音がする', verb: 'しらべる' },
@@ -4321,7 +4330,7 @@ const TREASURE_ITEMS = Object.freeze({
 });
 
 function createTreasureState() {
-  return { v: 1, started: false, found: { cat: false, bell: false, spring: false }, chestSeen: false, chestOpened: false,
+  return { v: 1, started: false, met: { popo: false, mina: false }, found: { cat: false, bell: false, spring: false }, chestSeen: false, chestOpened: false,
     caveLit: false, lanternOn: false, hint: { cat: 0, bell: 0, spring: 0, chest: 0, cave: 0 } };
 }
 // いまの目標：まだ見つけていない、いちばん前の手がかり
@@ -4340,6 +4349,7 @@ function treasureItems(st) {
 function treasureTalk(st, npc) {
   const lines = TREASURE_TALK[npc];
   if (!lines) return null;
+  st.met[npc] = true;   // 話したら名前がわかる（名前の札は、出会ったあとだけ）
   const goal = treasureGoal(st);
   if (goal === 'popo') {
     if (npc !== 'popo') return { line: lines.start, goal: null, hint: 0, started: false };
@@ -4408,6 +4418,8 @@ function restoreTreasure(raw) {
   const st = createTreasureState();
   if (!raw || typeof raw !== 'object' || raw.v !== 1) return st;
   st.started = raw.started === true;
+  for (const n of ['popo', 'mina']) st.met[n] = !!raw.met && raw.met[n] === true;
+  if (st.started) st.met.popo = true;   // 宝さがしが始まっているなら、ポポには会っている
   let ok = st.started;
   for (const id of ['cat', 'bell', 'spring']) { ok = ok && !!raw.found && raw.found[id] === true; st.found[id] = ok; }
   st.chestOpened = st.found.spring && raw.chestOpened === true;
@@ -4436,8 +4448,10 @@ treasure = (() => {
   let st = load();
   let built = false, near = null, pending = null, openId = null, returnState = S.EXPLORE;
   let chestT = -1, glintUntil = 0, glintId = null, hopAt = 0, hopStart = -1, guardUntil = 0;
+  const NAME_R = 5;   // 出会った相手の名前を出す距離
   // パネルを閉じた指が、同じ場所に出てくる「見つけたもの」を続けて押してしまわないよう、閉じたあと少しだけ押せなくする
   function guardTap() { guardUntil = performance.now() + 450; el('btn-found').style.pointerEvents = 'none'; }
+  const tapBlocked = () => performance.now() < guardUntil;
 
   // ── 見た目：基本の形（球・円すい・円柱・箱）だけ。人・物ごとに 1〜2 個の Mesh にまとめて、描く回数を増やしすぎない ──
   const G = new THREE.Group(); G.name = 'TreasureHunt'; scene.add(G);
@@ -4720,9 +4734,9 @@ treasure = (() => {
     const callId = w ? best : null;
     if (callId !== near) { near = callId; applyUI(); }
     // 名前の札（近いときだけ）・音の文字（水の音・ねこの寝息）
-    project(roots.popo.position.x, roots.popo.position.y + 1.42, roots.popo.position.z, el('label-popo'), w && pd < 12);
+    project(roots.popo.position.x, roots.popo.position.y + 1.42, roots.popo.position.z, el('label-popo'), w && st.met.popo && pd < NAME_R);   // 名前は出会ったあと・近いときだけ（遠くから場所がわからないように）
     const md = Math.hypot(x - roots.mina.position.x, z - roots.mina.position.z);
-    project(roots.mina.position.x, roots.mina.position.y + 1.45, roots.mina.position.z, el('label-mina'), w && md < 12);
+    project(roots.mina.position.x, roots.mina.position.y + 1.45, roots.mina.position.z, el('label-mina'), w && st.met.mina && md < NAME_R);
     const sd = Math.hypot(x - TREASURE_SPOTS.spring.x, z - TREASURE_SPOTS.spring.z);
     project(TREASURE_SPOTS.spring.x, roots.spring.position.y + .7, TREASURE_SPOTS.spring.z, el('sfx-spring'), w && sd < 6.5);
     const cd = Math.hypot(x - TREASURE_SPOTS.cat.x, z - TREASURE_SPOTS.cat.z);
@@ -4733,7 +4747,7 @@ treasure = (() => {
   function applyUI() {
     const w = walkable() && built;
     const on = w && !!near && !el('detour-call').classList.contains('show');
-    if (on) { const s = TREASURE_SPOTS[near]; el('treasure-call-text').textContent = s.call; el('btn-treasure-open').textContent = s.verb; }
+    if (on) { const s = TREASURE_SPOTS[near]; el('treasure-call-text').textContent = s.callNew && !st.met[near] ? s.callNew : s.call; el('btn-treasure-open').textContent = s.verb; }
     el('treasure-call').classList.toggle('show', on);
     el('btn-notebook').classList.toggle('show', w && st.started);
     if (!w) for (const id of ['label-popo', 'label-mina', 'sfx-spring', 'sfx-cat']) el(id).classList.remove('show');
@@ -4894,9 +4908,60 @@ treasure = (() => {
   }
   // パネルの構図でよける、宝さがしの大きな物（ほらあなの岩）
   const OBSTACLES = [[-5.6, -12.6, 1.7]];
-  return { pick, clearPending, update, applyUI, reset, guide, focusPoint, obstacles: () => OBSTACLES };
+  return { pick, clearPending, update, applyUI, reset, guide, focusPoint, obstacles: () => OBSTACLES, guardTap, tapBlocked };
 })();
 // TREASURE-UI-END
+
+// MISSION-HOLD-BEGIN（EXPANSION-02：写真のクエスト・第2クエストのパネルを「あとで・冒険にもどる」で閉じ、同じ場所で続きから再開する。test-treasure-hunt.mjs が形を確かめる）
+// 閉じても達成にはしない。写真・書いたこと・選んだことばは、このページを開いているあいだは残す（端末には保存しない）
+// 近づいただけでは開き直さない。続きは、その場所で「続ける」を押したときだけ
+missionHold = (() => {
+  const el = id => document.getElementById(id);
+  const PANELS = { MISSION_FOUND: 'panel-mission', PHOTO_PANEL: 'panel-photo', PHOTO_SELECTED: 'panel-photo', EXPRESSION_ENTERED: 'panel-expr',
+    WORDS_READY: 'panel-words', SECRET_QUESTION: 'panel-secret-q', SECRET_UNLOCKED: 'panel-secret-t' };
+  const RESUME_R = 3.0;
+  let hold = null, near = false;
+  // 各パネルの下に「あとで・冒険にもどる」を足す（HTML は変えない）
+  new Set(Object.values(PANELS)).forEach(id => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'btn-secondary btn-later'; b.textContent = 'あとで・冒険にもどる';
+    b.addEventListener('click', () => pause()); el(id).appendChild(b);
+  });
+  // AI の返事を待っているあいだは閉じない（返事が届いて、閉じたパネルが勝手に開かないように）
+  const busy = () => el('vocab-loading').classList.contains('show') || (el('secret-wait') && el('secret-wait').style.display !== 'none' && el('secret-wait').textContent !== '');
+  function applyUI() {
+    const can = !!PANELS[state] && !busy();
+    document.querySelectorAll('.btn-later').forEach(b => { b.style.display = can ? '' : 'none'; });
+    const show = !!hold && near && (state === S.EXPLORE || state === S.FREE_EXPLORE) && !el('treasure-call').classList.contains('show') && !el('detour-call').classList.contains('show');
+    el('hold-call').classList.toggle('show', show);
+  }
+  function pause() {
+    if (!PANELS[state] || busy() || !character) return;
+    stopVoice();
+    const where = questHub.current() === 'second' ? QUEST_DEFS[1].start : mpGroup.position;
+    hold = { state, x: where.x, z: where.z, quest: questHub.current() };
+    isMoving = false; playAnim('idle');
+    if (treasure) treasure.guardTap();
+    focusTarget = null;
+    resetPageScroll();
+    setState(questHub.current() === 'second' || questHub.state().quests.first === 'done' ? S.FREE_EXPLORE : S.EXPLORE);
+  }
+  function resume() {
+    if (!hold || !(state === S.EXPLORE || state === S.FREE_EXPLORE)) return;
+    const h = hold; hold = null; near = false;
+    isMoving = false; playAnim('idle');
+    if (character) hiroriMotion.facing = Math.atan2(h.x - character.position.x, h.z - character.position.z);
+    if (h.quest === 'second') focusOn(h.x, h.z); else focusTarget = null;
+    setState(S[h.state]);
+  }
+  function update() {
+    if (!hold || !character) { if (near) { near = false; applyUI(); } return; }
+    const n = Math.hypot(character.position.x - hold.x, character.position.z - hold.z) <= RESUME_R;
+    if (n !== near) { near = n; applyUI(); }
+  }
+  el('btn-hold-resume').addEventListener('click', resume);
+  return { applyUI, update, pause, resume, held: () => !!hold, reset: () => { hold = null; near = false; applyUI(); } };
+})();
+// MISSION-HOLD-END
 
 // ── リセット ─────────────────────────────────────────────────────
 window.confirmReset = ()=>{ if(confirm('デモを最初からやり直しますか？\n宝さがしの記録ともちものも消えます。')) doReset(); };
@@ -4923,6 +4988,7 @@ function doReset(){
   worldV2.reset();   // ことばのタネ・根の門・秘密の道・ことばの樹の実・カメラの構図を最初へ（WORLD-V2）
   questHub.reset();  // クエスト・答え・道くさ・見つけたもの（Step 11M）
   treasure.reset();  // 宝さがしの進み具合・もちもの・端末の記録（EXPANSION-01）
+  missionHold.reset();  // 後回しにしたミッション（EXPANSION-02）
   if(character){ character.position.set(0,0,0); character.rotation.set(0,0,0); }
   resetHiroriMotion(); camUser.reset();   // 視点も最初の構図へ（Step 11P）
   targetPos.set(0,0,0); isMoving=false;
@@ -5108,7 +5174,7 @@ const camUser=(()=>{
       for(let i=0;i<spots.length;i++){
         const s=spots[i], dx=s[0]-px, dz=s[1]-pz, along=dx*ux+dz*uz, r=s[2]||TREE_RADIUS;
         if(along<1.2||along>L+r) continue;                         // ヒロリのすぐそば・カメラより後ろの木は見ない
-        if(Math.abs(dx*uz-dz*ux)<r+.4) want=Math.min(want,Math.max(.35,(along-r-.6)/L));
+        if(Math.abs(dx*uz-dz*ux)<r+.4) want=Math.min(want,Math.max(px<WEST_PULL_X?.55:.35,(along-r-.6)/L));   // EXPANSION-02：西の草原は .55 まで（ヒロリの真後ろまで寄らない）
       }
     }
     pull+=(want-pull)*(want<pull?.25:.05);   // 木に近づくときは早めに寄り、離れるときはゆっくり戻す
@@ -5253,6 +5319,7 @@ function animate(){
   worldArt.update(t); worldV2.update(t);   // 小道の光・光の柱・ことばの樹の実を、ゆっくり動かす（WORLD-ART・WORLD-V2）
   questHub.update(t);   // 第2クエストの芽・道くさの気配（Step 11M。新しい描画ループは作らない）
   if(treasure) treasure.update(t,dt);   // 宝さがしの人・物の動きと「話す」の案内（EXPANSION-01。同じ描画ループの中）
+  missionHold.update();   // 後回しにしたミッションの「続ける」（EXPANSION-02）
   renderer.render(scene,camera);
 }
 

@@ -1644,6 +1644,7 @@ const EXPANSION_BLOCKS = [
   /  <!-- TREASURE-UI-HTML-BEGIN[\s\S]*?<!-- TREASURE-UI-HTML-END -->\n/,
   /\n<!-- TREASURE-PANELS-BEGIN[\s\S]*?<!-- TREASURE-PANELS-END -->\n/,
   /\n\/\/ TREASURE-CORE-BEGIN[\s\S]*?\/\/ TREASURE-UI-END\n/,
+  /\n\/\/ MISSION-HOLD-BEGIN[\s\S]*?\/\/ MISSION-HOLD-END\n/,
 ];
 export const EXPANSION_EDITS = [
   [`  FREE_EXPLORE:'FREE_EXPLORE', DETOUR:'DETOUR', FOUND:'FOUND',
@@ -1656,6 +1657,7 @@ export const EXPANSION_EDITS = [
 `,
    `let state = S.EXPLORE;
 let treasure = null;   // 宝さがし（EXPANSION-01）。QUEST-UI のあとで組み立てる
+let missionHold = null;   // ミッションの後回し（EXPANSION-02）。TREASURE-UI のあとで組み立てる
 `],
   [`  }
   questHub.applyUI();   // 「見つけたもの」ボタン・道くさの案内は、歩けるときだけ出す（入力中は隠す）
@@ -1671,12 +1673,14 @@ let treasure = null;   // 宝さがし（EXPANSION-01）。QUEST-UI のあとで
   }
   questHub.applyUI();   // 「見つけたもの」ボタン・道くさの案内は、歩けるときだけ出す（入力中は隠す）
   if (treasure) treasure.applyUI();   // 宝さがしの「話す」・冒険メモのボタン（EXPANSION-01。組み立てる前は何もしない）
+  if (missionHold) missionHold.applyUI();   // 「あとで・冒険にもどる」と「続ける」（EXPANSION-02）
 }`],
   [`  raycaster.setFromCamera(ndc,camera);
   const hits=raycaster.intersectObject(ground);
   if(hits.length){
 `,
    `  raycaster.setFromCamera(ndc,camera);
+  if(treasure&&treasure.tapBlocked()) return;   // パネルを閉じた指は、そのまま「そこへ歩く」にしない（EXPANSION-02）
   if(treasure&&treasure.pick(raycaster)) return;   // 宝さがしの人・物をタップ：そのそばまで歩き、着いたら話す・しらべる（EXPANSION-01）
   const hits=raycaster.intersectObject(ground);
   if(hits.length){
@@ -1685,6 +1689,7 @@ let treasure = null;   // 宝さがし（EXPANSION-01）。QUEST-UI のあとで
   [`  renderer.render(scene,camera);
 }`,
    `  if(treasure) treasure.update(t,dt);   // 宝さがしの人・物の動きと「話す」の案内（EXPANSION-01。同じ描画ループの中）
+  missionHold.update();   // 後回しにしたミッションの「続ける」（EXPANSION-02）
   renderer.render(scene,camera);
 }`],
   [`window.confirmReset = ()=>{ if(confirm('デモを最初からやり直しますか？')) doReset(); };`,
@@ -1799,10 +1804,13 @@ let viewShiftX=0;`],
   viewShiftX+=(targetShiftX-viewShiftX)*ks;
   if(Math.abs(viewShift)<0.5&&Math.abs(viewShiftX)<0.5&&!focus){ viewShift=0; viewShiftX=0; if(camera.view&&camera.view.enabled) camera.clearViewOffset(); }
   else camera.setViewOffset(innerWidth,H,viewShiftX,viewShift,innerWidth,H);`],
+  [`        if(Math.abs(dx*uz-dz*ux)<r+.4) want=Math.min(want,Math.max(.35,(along-r-.6)/L));`,
+   `        if(Math.abs(dx*uz-dz*ux)<r+.4) want=Math.min(want,Math.max(px<WEST_PULL_X?.55:.35,(along-r-.6)/L));   // EXPANSION-02：西の草原は .55 まで（ヒロリの真後ろまで寄らない）`],
   [`  questHub.reset();  // クエスト・答え・道くさ・見つけたもの（Step 11M）
 `,
    `  questHub.reset();  // クエスト・答え・道くさ・見つけたもの（Step 11M）
   treasure.reset();  // 宝さがしの進み具合・もちもの・端末の記録（EXPANSION-01）
+  missionHold.reset();  // 後回しにしたミッション（EXPANSION-02）
 `],
 ];
 // 宝さがし（EXPANSION-01）の変更だけを元へ戻す

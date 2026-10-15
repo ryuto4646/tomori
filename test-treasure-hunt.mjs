@@ -245,7 +245,7 @@ test('15. 描画の負荷：新しい描画ループ・タイマー・点光源�
   assert.equal((u.match(/new THREE\.\w*Texture\(/g) || []).length, 1);
   assert.match(u, /new THREE\.CanvasTexture\(cv\)/);
   assert.ok(!/innerHTML|insertAdjacentHTML/.test(u));
-  assert.match(HTML, /  if\(treasure\) treasure\.update\(t,dt\);[^\n]*\n  renderer\.render\(scene,camera\);/);
+  assert.match(HTML, /  if\(treasure\) treasure\.update\(t,dt\);[^\n]*\n  missionHold\.update\(\);[^\n]*\n  renderer\.render\(scene,camera\);/);
   // 人・物は、まとめた Mesh（mesh(...)）で作る。数は 25 個まで
   assert.ok((u.match(/\bmesh\(\[/g) || []).length <= 25);
 });

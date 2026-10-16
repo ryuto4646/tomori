@@ -2,12 +2,12 @@
 
 写真と自分のことばで探究する、ブラウザで遊べる 3D の冒険ゲームです。
 
-- 公開中の作品：https://ryuto4646.github.io/tomori/demo-world.html
-- 開発版（宝さがしを入れた版・実機での確認用）：https://ryuto4646.github.io/tomori/demo-world-preview.html
+- 公開中の作品（宝さがし入り）：https://ryuto4646.github.io/tomori/demo-world.html
+- 開発版（次の調整を実機で確かめる版）：https://ryuto4646.github.io/tomori/demo-world-preview.html
 - 紹介ページ：https://ryuto4646.github.io/tomori-lp/
 - コンテストに提出した版は、タグ `contest-submission-2026-10-11` に残しています。
 
-## 宝さがし（開発版）
+## 宝さがし
 
 草原の西側で遊べる、小さな冒険です。
 
@@ -33,7 +33,7 @@ AI の返事を待っているあいだでも閉じられます。閉じてい�
 | AI の回数を数えるための匿名の番号 | 開いているタブの中だけ（sessionStorage） | タブを閉じると消える | 消えない（タブを閉じるまで同じ番号） |
 
 - 宝さがしの記録は、ブラウザごと・端末ごとに別々です。ほかの端末やブラウザには引きつがれません。
-- 開発版（ファイル名に `preview` が入るページ）は、公開版とは別の名前で保存します。どちらで遊んでも、もう一方の記録は上書きされません。
+- 公開版は `tomori-treasure-v1`、開発版（ファイル名に `preview` が入るページ）は `tomori-treasure-v1-preview` という名前で保存します。どちらで遊んでも、もう一方の記録は上書きされません。
 - 名前・年齢・メールアドレスなどは集めません。
 
 ## 確認
@@ -43,3 +43,5 @@ node --test test-*.mjs
 ```
 
 宝さがしの進み方・保存・報酬のテストは `test-treasure-hunt.mjs` です。
+
+歩き方と発見の演出は、2026-10-16 に iPhone の実機で確認して採用しました。今後の調整の基準は [docs/FEEL_BASELINE.md](docs/FEEL_BASELINE.md) にあります。

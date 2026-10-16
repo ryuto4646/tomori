@@ -145,7 +145,7 @@ test('10. タップ先（limit 0.97）は、道のふちより少し内側へ戻
   assert.match(HTML, /worldV2\.clampToWalkable\(targetPos, 0\.97\);/);
 });
 
-test('11. 秘密の道（S字）は 28〜42m。SPEED 4.0 で計算上 7〜12秒。道とことばの樹のまわりは平ら', () => {
+test('11. 秘密の道（S字）は 28〜42m。SPEED 3.3（EXPANSION-02。前は 4.0）で計算上 8〜13秒。道とことばの樹のまわりは平ら', () => {
   // 歩ける場所はすべて平ら（道のカプセルの中・樹のまわり）
   for (let i = 0; i < A.PASSAGE.length - 1; i++) for (let k = 0; k <= 8; k++) for (const o of [-1.3, 0, 1.3]) {
     const [ax, az] = A.PASSAGE[i], [bx, bz] = A.PASSAGE[i + 1], tl = Math.hypot(bx - ax, bz - az), x = ax + (bx - ax) * k / 8 - (bz - az) / tl * o, z = az + (bz - az) * k / 8 + (bx - ax) / tl * o;
@@ -156,8 +156,8 @@ test('11. 秘密の道（S字）は 28〜42m。SPEED 4.0 で計算上 7〜12秒�
   assert.ok(max < 1e-6, `tree area height ${max}`);
   assert.ok(A.ROUTE_TOTAL >= 28 && A.ROUTE_TOTAL <= 42, `route ${A.ROUTE_TOTAL}`);
   const speed = +HTML.match(/const SPEED=([\d.]+), ARRIVE=0\.6;/)[1];
-  assert.equal(speed, 4);
-  assert.ok(A.ROUTE_TOTAL / speed >= 7 && A.ROUTE_TOTAL / speed <= 12, `time ${A.ROUTE_TOTAL / speed}`);
+  assert.equal(speed, 3.3);
+  assert.ok(A.ROUTE_TOTAL / speed >= 8 && A.ROUTE_TOTAL / speed <= 13, `time ${A.ROUTE_TOTAL / speed}`);
   // 一本道の直線ではない：門から樹への直線より十分に長く、左右に曲がる（向きの変化が2回以上）
   assert.ok(A.ROUTE_TOTAL > 1.5 * Math.hypot(A.WORD_TREE.x - A.GATE.x, A.WORD_TREE.z - A.GATE.z));
   let turns = 0, last = 0;
@@ -302,7 +302,8 @@ test('22. reduced-motion：タネはすぐ現れ、門はすぐひらき、道�
 
 // ── リセット・V1・性能 ────────────────────────────────────────────
 test('23. 「デモを最初から」：タネ・門・道・歩ける範囲・実・完了の枠・カメラ・進み方を、すべて最初へ戻す', () => {
-  assert.match(HTML, /  worldV2\.reset\(\);   \/\/ [^\n]*\n  questHub\.reset\(\);[^\n]*\n  if\(character\)\{ character\.position\.set\(0,0,0\); character\.rotation\.set\(0,0,0\); \}/);
+  // EXPANSION-01：questHub のあとに宝さがし（treasure.reset）を戻してから、ヒロリを出発点へ
+  assert.match(HTML, /  worldV2\.reset\(\);   \/\/ [^\n]*\n  questHub\.reset\(\);[^\n]*\n  treasure\.reset\(\);[^\n]*\n  missionHold\.reset\(\);[^\n]*\n  if\(character\)\{ character\.position\.set\(0,0,0\); character\.rotation\.set\(0,0,0\); \}/);
   assert.match(RESET, /if \(!active\) return;/);
   for (const re of [/progress = P\.EXPLORING; gateOpen = false;/, /wordSeed\.visible = false;/, /for \(let i = 0; i < 4; i\+\+\) gateMeshes\[i\]\.matrix\.multiplyMatrices\(gatePlace, gateNode\[i\]\);/,
     /gateMeshes\[3\]\.visible = true;/, /secretColor\.array\[v \* 4 \+ 3\] = secretU\[v\] < 0 \? secretBase\[v\] : 0;/, /fruits\.setMatrixAt\(i, fruitBase\[i\]\)/,
@@ -437,8 +438,9 @@ test('31. PC（high）の見た目は、秘密の谷と道の向きだけが変�
 test('32. 収集物を増やしていない：芽1つ・タネ1つ・灯る実1つだけ（コイン・宝箱・敵・ガチャ・新しい説明パネル・通信なし）', () => {
   assert.ok(!/\bcoin|treasure|chest|gacha|enemy\b/i.test(V2_CODE));
   assert.equal(count(V2_CODE, /createElement\(/g), 5, 'only the finale texts and buttons（Step 11M：次の冒険へ）');
-  // Step 11M：パネルを足したのは、道くさの問いと「見つけたもの」の2つだけ（点数・正誤の画面は作らない）
-  assert.equal(count(HTML, /class="panel"/g), count(OLD, /class="panel"/g) + 2, 'only the detour and found panels');
+  // Step 11M：道くさの問いと「見つけたもの」の2つ。EXPANSION-01：宝さがしの「話す・しらべる」と「冒険メモ」の2つ
+  // （宝箱は WORLD-V2 の外の TREASURE-UI が持つ。点数・正誤の画面は作らない）
+  assert.equal(count(HTML, /class="panel"/g), count(OLD, /class="panel"/g) + 4, 'detour, found, talk and notebook panels');
   assert.ok(!/\bscore\b|正解数|ランキング/.test(between(HTML, '// QUEST-UI-BEGIN', '// QUEST-UI-END')));
   assert.equal(count(HTML, /\bfetch\(/g), 2);   // 語彙カードと、深掘りの答えを広げる（Step 11L-F）の2か所
 });

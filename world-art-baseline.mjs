@@ -1637,6 +1637,239 @@ const canMove=()=>state===S.EXPLORE||state===S.DEMO_COMPLETE||state===S.FREE_EXP
 `],
 ];
 
+// EXPANSION-01（宝さがし）：目印で囲んだまとまり（CSS・画面の部品・パネル・TREASURE-CORE／UI）は丸ごと取り除き、
+// ほかの場所へ足した短いつなぎは、[変更前, 変更後] で元へ戻す。どれも demo-world.html にちょうど1回ずつ出てくる
+const EXPANSION_BLOCKS = [
+  /\/\* TREASURE-CSS-BEGIN[\s\S]*?\/\* TREASURE-CSS-END \*\/\n/,
+  /  <!-- TREASURE-UI-HTML-BEGIN[\s\S]*?<!-- TREASURE-UI-HTML-END -->\n/,
+  /\n<!-- TREASURE-PANELS-BEGIN[\s\S]*?<!-- TREASURE-PANELS-END -->\n/,
+  /\n\/\/ TREASURE-CORE-BEGIN[\s\S]*?\/\/ TREASURE-UI-END\n/,
+  /\n\/\/ MISSION-HOLD-BEGIN[\s\S]*?\/\/ MISSION-HOLD-END\n/,
+];
+export const EXPANSION_EDITS = [
+  [`  FREE_EXPLORE:'FREE_EXPLORE', DETOUR:'DETOUR', FOUND:'FOUND',
+};`,
+   `  FREE_EXPLORE:'FREE_EXPLORE', DETOUR:'DETOUR', FOUND:'FOUND',
+  // EXPANSION-01：宝さがしの会話・しらべた結果（TALK）と、冒険メモ（NOTEBOOK）。どちらも開いているあいだは歩かない
+  TALK:'TALK', NOTEBOOK:'NOTEBOOK',
+  EVENT:'EVENT',   // EXPANSION-02：宝箱・ランタン・秘密の発見を、3D の世界で見せているあいだ（そのあとで説明のパネル）
+};`],
+  [`let state = S.EXPLORE;
+`,
+   `let state = S.EXPLORE;
+let treasure = null;   // 宝さがし（EXPANSION-01）。QUEST-UI のあとで組み立てる
+let missionHold = null;   // ミッションの後回し（EXPANSION-02）。TREASURE-UI のあとで組み立てる
+`],
+  [`  }
+  questHub.applyUI();   // 「見つけたもの」ボタン・道くさの案内は、歩けるときだけ出す（入力中は隠す）
+}`,
+   `    case S.TALK:
+      openPanel('panel-talk');
+      hint.style.opacity = '0';
+      break;
+    case S.NOTEBOOK:
+      openPanel('panel-notebook');
+      hint.style.opacity = '0';
+      break;
+  }
+  questHub.applyUI();   // 「見つけたもの」ボタン・道くさの案内は、歩けるときだけ出す（入力中は隠す）
+  if (treasure) treasure.applyUI();   // 宝さがしの「話す」・冒険メモのボタン（EXPANSION-01。組み立てる前は何もしない）
+  if (missionHold) missionHold.applyUI();   // 「あとで・冒険にもどる」と「続ける」（EXPANSION-02）
+}`],
+  [`  raycaster.setFromCamera(ndc,camera);
+  const hits=raycaster.intersectObject(ground);
+  if(hits.length){
+`,
+   `  raycaster.setFromCamera(ndc,camera);
+  if(treasure&&treasure.tapBlocked()) return;   // パネルを閉じた指は、そのまま「そこへ歩く」にしない（EXPANSION-02）
+  if(treasure&&treasure.pick(raycaster)) return;   // 宝さがしの人・物をタップ：そのそばまで歩き、着いたら話す・しらべる（EXPANSION-01）
+  const hits=raycaster.intersectObject(ground);
+  if(hits.length){
+    if(treasure) treasure.clearPending();
+`],
+  [`  renderer.render(scene,camera);
+}`,
+   `  if(treasure) treasure.update(t,dt);   // 宝さがしの人・物の動きと「話す」の案内（EXPANSION-01。同じ描画ループの中）
+  missionHold.update();   // 後回しにしたミッションの「続ける」（EXPANSION-02）
+  renderer.render(scene,camera);
+}`],
+  [`window.confirmReset = ()=>{ if(confirm('デモを最初からやり直しますか？')) doReset(); };`,
+   `window.confirmReset = ()=>{ if(confirm('デモを最初からやり直しますか？\\n宝さがしの記録ともちものも消えます。')) doReset(); };`],
+  [`  const ZOOM_MIN=.55, ZOOM_MAX=1.6, KEY_TURN=1.8;`,
+   `  const WEST_PULL_X=-2.5;   // EXPANSION-01：これより西（宝さがしの場所）では、元の視点でもヒロリと木が重なれば木の手前へ寄せる。出発点・祠・東の道くさは今までどおり
+  const ZOOM_MIN=.55, ZOOM_MAX=1.6, KEY_TURN=1.8;`],
+  [`    if(px!==undefined&&(Math.abs(yaw)>.02||Math.abs(zoom-1)>.02)){`,
+   `    if(px!==undefined&&(Math.abs(yaw)>.02||Math.abs(zoom-1)>.02||px<WEST_PULL_X)){   // EXPANSION-01：宝さがしの西の草原（木が多い）は、元の視点でも寄せる`],
+  [`// 角度と左右を選ぶ：カメラが木に近すぎず、結晶とヒロリの頭の後ろに木が重ならない組み合わせ。
+`,
+   `// EXPANSION-01：宝さがしの西の草原は木が多いので、パネルの構図では、草原のふちの木も数え、カメラと「ヒロリ・調べる物」のあいだの木もよける。角度の候補も増やす
+const FOCUS_WEST_X=-2.5, FOCUS_WEST_ANGLES=[50,45,55,40,60,30,70,20,80,10];
+function treeBetween(cam, px, pz, spots){
+  const vx=px-cam.x, vz=pz-cam.z, L=Math.hypot(vx,vz), ux=vx/L, uz=vz/L;
+  let m=99;
+  for(const t of spots){
+    const s=(t[0]-cam.x)*ux+(t[1]-cam.z)*uz;
+    if(s<0.5||s>L-0.6) continue;
+    m=Math.min(m,Math.abs((t[0]-cam.x)*uz-(t[1]-cam.z)*ux)-(t[2]||TREE_RADIUS));
+  }
+  return m;
+}
+// 角度と左右を選ぶ：カメラが木に近すぎず、結晶とヒロリの頭の後ろに木が重ならない組み合わせ。
+`],
+  [`  FOCUS_ANGLES.forEach((deg,rank)=>{`,
+   `  const west=worldV2.isActive()&&character.position.x<FOCUS_WEST_X, spots=west?worldV2.occluders().concat(treasure?treasure.obstacles():[]):TREE_SPOTS;   // EXPANSION-01（ほらあなの岩もよける）
+  (west?FOCUS_WEST_ANGLES:FOCUS_ANGLES).forEach((deg,rank)=>{`],
+  [`      for(const [tx,tz] of TREE_SPOTS) camClear=Math.min(camClear,Math.hypot(tx-_focusPos.x,tz-_focusPos.z)-2.2);`,
+   `      for(const [tx,tz] of spots) camClear=Math.min(camClear,Math.hypot(tx-_focusPos.x,tz-_focusPos.z)-2.2);`],
+  [`      const clear=Math.min(camClear,crystal,head,2);`,
+   `      let clear=Math.min(camClear,crystal,head,2);
+      if(west) clear=Math.min(clear,treeBetween(_focusPos,ft.x,ft.z,spots)+.4,treeBetween(_focusPos,character.position.x,character.position.z,spots)+.4);`],
+  [`      mbar.textContent = '光るポイントを探して歩こう！';
+`,
+   `      mbar.textContent = (treasure && treasure.guide()) || '光るポイントを探して歩こう！';   // 宝さがしの途中は、その案内（EXPANSION-01）
+`],
+  [`      mbar.textContent = questHub.freeMessage();
+`,
+   `      mbar.textContent = (treasure && treasure.guide(questHub.freeMessage())) || questHub.freeMessage();   // ふだんの「自由に歩いてみよう」のかわりに、宝さがしの案内（EXPANSION-01）
+`],
+  [`        mbar.textContent = md<CALLOUT_RADIUS ? 'なにかが呼んでいる…' : '光るポイントを探して歩こう！';`,
+   `        mbar.textContent = md<CALLOUT_RADIUS ? 'なにかが呼んでいる…' : (treasure&&treasure.guide()) || '光るポイントを探して歩こう！';   // 祠に近づいたら写真のクエストの案内へ（EXPANSION-01）`],
+  [`  let pull=1;
+  function offset(px,pz){
+    const cs=Math.cos(yaw), sn=Math.sin(yaw);`,
+   `  let pull=1;
+  // EXPANSION-01：西の草原（宝さがしの場所）では、元の視点のとき、木にかからない向きへカメラをゆっくり回す（自分で回した・寄せたときは、その向きのまま）
+  let auto=0, autoT=0;
+  const AUTO_CANDS=[0,.35,-.35,.7,-.7,1.05,-1.05,1.4,-1.4];
+  function autoTurn(px,pz){
+    let want=0;
+    if(px<WEST_PULL_X&&Math.abs(yawT)<.02&&Math.abs(zoomT-1)<.02&&worldV2.isActive()){
+      const spots=worldV2.occluders(); let best=-1e9;
+      for(const a of AUTO_CANDS){
+        const cs=Math.cos(a), sn=Math.sin(a), ox=CAM_OFF.x*cs+CAM_OFF.z*sn, oz=-CAM_OFF.x*sn+CAM_OFF.z*cs, L=Math.hypot(ox,oz), ux=ox/L, uz=oz/L;
+        let clear=2;
+        for(let i=0;i<spots.length;i++){
+          const s=spots[i], dx=s[0]-px, dz=s[1]-pz, r=s[2]||TREE_RADIUS, along=dx*ux+dz*uz;
+          if(along>.6&&along<L+r) clear=Math.min(clear,Math.abs(dx*uz-dz*ux)-r-.6);   // ヒロリとカメラのあいだの木
+          clear=Math.min(clear,Math.hypot(dx-ox,dz-oz)-r-.6);                         // カメラが木の中に入らない
+        }
+        const sc=Math.min(clear,1.2)*3-Math.abs(a)*.6-Math.abs(a-autoT)*.8;   // 木にかからないこと・元の向きに近いこと・いまの向きから大きく変えないこと
+        if(sc>best){best=sc;want=a;}
+      }
+    }
+    autoT=want;
+    auto+=(autoT-auto)*(reduceMotionQuery.matches?1:.06);
+  }
+  function offset(px,pz){
+    if(px!==undefined) autoTurn(px,pz);
+    const cs=Math.cos(yaw+auto), sn=Math.sin(yaw+auto);`],
+  [`  function turnInput(v){ const cs=Math.cos(yaw), sn=Math.sin(yaw), x=v.x*cs+v.z*sn, z=-v.x*sn+v.z*cs; v.x=x; v.z=z; }`,
+   `  function turnInput(v){ const cs=Math.cos(yaw+auto), sn=Math.sin(yaw+auto), x=v.x*cs+v.z*sn, z=-v.x*sn+v.z*cs; v.x=x; v.z=z; }`],
+  [`  function reset(){ yaw=yawT=0; zoom=zoomT=1; gesture=false; g0=null; rdrag=null; btn.classList.remove('show'); }`,
+   `  function reset(){ yaw=yawT=0; zoom=zoomT=1; auto=autoT=0; gesture=false; g0=null; rdrag=null; btn.classList.remove('show'); }`],
+  [`    const want=Math.min(upper,Math.max(lower,visiblePanelTop()-(chestY-faceY)+0.02*H));
+`,
+   `    let want=Math.min(upper,Math.max(lower,visiblePanelTop()-(chestY-faceY)+0.02*H));
+    const tp=treasure&&treasure.focusPoint();   // EXPANSION-01：宝さがしの会話では、調べる物（ねこ・花・宝箱など）もパネルより上へ。ヒロリの顔は上の知らせより下のまま
+    if(tp){ _probe.copy(tp).project(camera); const ty=(1-_probe.y)/2*H; want=Math.max(topUI+0.03*H,Math.min(want,visiblePanelTop()-0.05*H-(ty-faceY))); }
+`],
+  [`function visiblePanelTop(){
+  for(const el of panelEls) if(el.classList.contains('show')) return el.getBoundingClientRect().top;
+  return innerHeight;
+}`,
+   `function visiblePanelTop(){
+  for(const el of panelEls) if(el.classList.contains('show')){ const r=el.getBoundingClientRect(); return r.left>innerWidth*.3?innerHeight:r.top; }   // EXPANSION-01：横向きの小さな画面で右に出すパネルは、下をふさがない
+  return innerHeight;
+}
+// EXPANSION-01：右に出したパネルの左の端（なければ null）。ヒロリと調べる物を、その左の真ん中へ寄せる
+function sidePanelLeft(){
+  for(const el of panelEls) if(el.classList.contains('show')){ const r=el.getBoundingClientRect(); if(r.left>innerWidth*.3) return r.left; }
+  return null;
+}
+let viewShiftX=0;`],
+  [`  const ks=(focus&&reduceMotionQuery.matches)?1:1-Math.exp(-dt/FOCUS_TAU);
+  viewShift+= (targetShift-viewShift)*ks;
+  if(Math.abs(viewShift)<0.5&&!focus){ viewShift=0; if(camera.view&&camera.view.enabled) camera.clearViewOffset(); }
+  else camera.setViewOffset(innerWidth,H,0,viewShift,innerWidth,H);`,
+   `  const ks=(focus&&reduceMotionQuery.matches)?1:1-Math.exp(-dt/FOCUS_TAU);
+  viewShift+= (targetShift-viewShift)*ks;
+  // EXPANSION-01：右にパネルがあるときは、ヒロリ（と調べる物）をパネルの左の真ん中へ。横のずらし
+  let targetShiftX=0;
+  const sideL=focus?sidePanelLeft():null;
+  if(sideL!==null){
+    const tp=treasure&&treasure.focusPoint();
+    _probe.copy(character.position).setY(character.position.y+1).project(camera); let cx=(_probe.x+1)/2*innerWidth;
+    if(tp){ _probe.copy(tp).project(camera); cx=(cx+(_probe.x+1)/2*innerWidth)/2; }
+    targetShiftX=viewShiftX+(cx-sideL/2);
+  }
+  viewShiftX+=(targetShiftX-viewShiftX)*ks;
+  if(Math.abs(viewShift)<0.5&&Math.abs(viewShiftX)<0.5&&!focus){ viewShift=0; viewShiftX=0; if(camera.view&&camera.view.enabled) camera.clearViewOffset(); }
+  else camera.setViewOffset(innerWidth,H,viewShiftX,viewShift,innerWidth,H);`],
+  [`        if(Math.abs(dx*uz-dz*ux)<r+.4) want=Math.min(want,Math.max(.35,(along-r-.6)/L));`,
+   `        if(Math.abs(dx*uz-dz*ux)<r+.4) want=Math.min(want,Math.max(px<WEST_PULL_X?.55:.35,(along-r-.6)/L));   // EXPANSION-02：西の草原は .55 まで（ヒロリの真後ろまで寄らない）`],
+  [`const SPEED=4.0, ARRIVE=0.6;`,
+   `const SPEED=3.3, ARRIVE=0.6;   // EXPANSION-02：一歩ずつの間が感じられる速さ（前は 4.0）`],
+  [`        character.position.addScaledVector(kd,SPEED*dt);`,
+   `        character.position.addScaledVector(kd,SPEED*dt*fieldHirori.pace());   // 一歩の中の速さの強弱（EXPANSION-02）`],
+  [`        const mv=dir.normalize().multiplyScalar(Math.min(SPEED*dt,dist));`,
+   `        const mv=dir.normalize().multiplyScalar(Math.min(SPEED*dt*fieldHirori.pace(),dist));   // 一歩の中の速さの強弱（EXPANSION-02）`],
+  [`  const STRIDE_RIG = .9, RIG_REACH = .075, RIG_SHIFT = .45, RIG_LIFT = .028, RIG_SIN_MAX = .6;`,
+   `  const STRIDE_RIG = 1.5, RIG_REACH = .1, RIG_SHIFT = .45, RIG_LIFT = .05, RIG_SIN_MAX = .6;   // EXPANSION-02：前は .9 / .075 / .028（1秒に約9歩の小走り → 約4.4歩）
+  const STEP_BOB = .035, STEP_LEAN = .07, STEP_PACE = .22;   // 一歩ごとの体の上下・前かがみ・速さの強弱`],
+  [`      B.Root.position.y = B.Root.userData.rest.y - Math.min(yL + hL, yR + hR);   // 低いほうの足（持ち上げた高さも入れる）を、ちょうど地面に`,
+   `      B.Root.position.y = B.Root.userData.rest.y - Math.min(yL + hL, yR + hR);   // 低いほうの足（持ち上げた高さも入れる）を、ちょうど地面に
+      const sp = (ph * 2) % 1;   // いまの一歩の中の位置（0＝着地）
+      B.Root.position.y += STEP_BOB * Math.sin(Math.PI * sp) ** 2 * w * lift;   // 一歩の途中で少し上がり、着地で沈む（体重が乗る）
+      B.Root.rotation.x = STEP_LEAN * w * deco;   // 歩くあいだは少し前へ`],
+  [`  return { load, update, active: () => active, kind, parse };`,
+   `  // 一歩の中の速さの倍率（平均 1）：着地でゆっくり、一歩の途中で速く。骨が無い・止まっていく・動きを減らす設定のときは 1
+  function pace() {
+    if (!P.rig || reduceMotionQuery.matches) return 1;
+    const sp = ((hiroriMotion.phase / (Math.PI * 2)) * 2) % 1;
+    return 1 - STEP_PACE * Math.cos(2 * Math.PI * sp) * hiroriMotion.walkBlend;
+  }
+  return { load, update, active: () => active, kind, parse, pace };`],
+  [`    focusFrame(focusAngle,focusSide,_focusPos,_focusLook);
+`,
+   `    if(!(treasure&&treasure.eventFrame(_focusPos,_focusLook))) focusFrame(focusAngle,focusSide,_focusPos,_focusLook);   // 発見の演出のあいだは、物に寄った構図（EXPANSION-02）
+`],
+  [`  if(focus){
+`,
+   `  if(focus&&state!==S.EVENT){   // 発見の演出のあいだは、上下にずらさない（EXPANSION-02）
+`],
+  [`  if (gen !== _vocabGen) return;
+`,
+   `  if (gen !== _vocabGen) return;
+  if (missionHold) { await missionHold.whenOpen(); if (gen !== _vocabGen) return; }   // 「あとで」で閉じているあいだに届いた返事は、「続ける」まで待って使う（送り直さない。EXPANSION-02）
+`],
+  [`answer: text }).then(ai => {
+    if(gen !== _expandGen`,
+   `answer: text }).then(async ai => {
+    if(missionHold) await missionHold.whenOpen();   // 「あとで」で閉じているあいだに届いた返事は、「続ける」まで待って使う（送り直さない。EXPANSION-02）
+    if(gen !== _expandGen`],
+  [`  questHub.reset();  // クエスト・答え・道くさ・見つけたもの（Step 11M）
+`,
+   `  questHub.reset();  // クエスト・答え・道くさ・見つけたもの（Step 11M）
+  treasure.reset();  // 宝さがしの進み具合・もちもの・端末の記録（EXPANSION-01）
+  missionHold.reset();  // 後回しにしたミッション（EXPANSION-02）
+`],
+];
+// 宝さがし（EXPANSION-01）の変更だけを元へ戻す
+export function revertExpansion(html) {
+  let out = html;
+  for (const re of EXPANSION_BLOCKS) {
+    const n = (out.match(new RegExp(re.source, 'g')) || []).length;
+    if (n !== 1) throw new Error(`expansion block appears ${n} times: ${re.source.slice(0, 40)}`);
+    out = out.replace(re, '');
+  }
+  for (const [before, after] of EXPANSION_EDITS) {
+    const n = out.split(after).length - 1;
+    if (n !== 1) throw new Error(`expansion edit appears ${n} times: ${after.slice(0, 40)}`);
+    out = out.split(after).join(before);
+  }
+  return out;
+}
+
 const ART_BLOCK = /\/\/ WORLD-ART-BEGIN[\s\S]*?\/\/ WORLD-ART-END\n\n/;
 
 // 美術のまとまり（WORLD-ART-BEGIN〜END）を取り出す
@@ -1646,7 +1879,7 @@ export const artBlock = html => (html.match(ART_BLOCK) || [''])[0];
 export function revertWorldArt(html) {
   const blocks = html.match(new RegExp(ART_BLOCK.source, 'g')) || [];
   if (blocks.length !== 1) throw new Error(`WORLD-ART block count ${blocks.length}`);
-  let out = html.replace(ART_BLOCK, '');
+  let out = revertExpansion(html.replace(ART_BLOCK, ''));   // 先に宝さがし（EXPANSION-01）を外す（下の Step 11M・11P の変更と重なる場所があるため）
   for (const [before, after] of WORLD_ART_EDITS) {
     const n = out.split(after).length - 1;
     if (n !== 1) throw new Error(`art edit appears ${n} times: ${after.slice(0, 40)}`);

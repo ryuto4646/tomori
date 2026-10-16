@@ -9,6 +9,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { revertExpansion } from './world-art-baseline.mjs';
 
 const REPO = dirname(fileURLToPath(import.meta.url));
 const ROOT = process.env.WORLD_V2_ROOT || REPO;
@@ -198,7 +199,7 @@ test('15. タップ先とキーボード移動の両方を、歩ける範囲の�
   assert.ok(anim.indexOf('worldV2.groundCharacter(character);') > anim.indexOf('updateHiroriMotion(character, dt, t, walking);'), 'after motion');
   assert.ok(anim.indexOf('worldV2.groundCharacter(character);') < anim.indexOf('// 距離チェック'), 'before mission check');
   assert.match(V2, /function groundCharacter\(c\) \{\s*if \(!active \|\| !c\) return;\s*clampToWalkable\(c\.position, 1\);/);
-  assert.match(HTML, /const SPEED=4\.0, ARRIVE=0\.6;/);
+  assert.match(HTML, /const SPEED=3\.3, ARRIVE=0\.6;/);
   // 到着判定は平面の距離
   assert.match(HTML, /const md=Math\.hypot\(character\.position\.x-mpGroup\.position\.x, character\.position\.z-mpGroup\.position\.z\);/);
   // だ円の外の点は、ふちの上へ戻る。内側の点は動かない
@@ -259,7 +260,8 @@ test('19. AI スイッチ true・語彙の Worker URL・care・ミッション�
   const care = s => between(s, 'const CARE_SUPPORT_MESSAGE', 'const VOCAB_SESSION_KEY');
   assert.equal(care(HTML), care(OLD));
   const missionLines = s => s.split('\n').filter(l => /光るポイント|なにかが呼んでいる|気になったものを|VOCAB_MISSION/.test(l)).join('\n');
-  assert.equal(missionLines(HTML), missionLines(OLD));
+  // EXPANSION-01：宝さがしの途中だけ上の知らせを宝さがしの案内にする（ミッションの文面そのものは同じ）。宝さがしを外して比べる
+  assert.equal(missionLines(revertExpansion(HTML)), missionLines(OLD));
   assert.ok(!/tomori-api\.[a-z0-9-]+\.workers\.dev/.test(HTML));
 });
 

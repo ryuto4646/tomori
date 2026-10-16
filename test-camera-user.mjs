@@ -119,3 +119,26 @@ test('7. 視点を変えているとき、ヒロリとカメラのあいだに�
   assert.ok(near < 5 - 1.6 && near > full * .35 - 1e-9, `pulled in front of the tree: ${near.toFixed(2)}`);
   assert.ok(Math.abs(run(yaw, [[dir[0] * 5 + 6, dir[1] * 5, 1.6]]) - full) < 1e-6, 'a tree off the line does not pull');
 });
+
+test('8. EXPANSION-01：宝さがしの西の草原（x < -2.5）では、元の視点でも、ヒロリとカメラのあいだの木の手前まで寄せる。出発点のあたりは今までどおり', () => {
+  const run = (px, spots) => {
+    const btn = { classList: { toggle() {}, remove() {} }, addEventListener() {} };
+    class V3 { constructor() { this.x = this.y = this.z = 0; } set(x, y, z) { this.x = x; this.y = y; this.z = z; return this; } }
+    const env = { canvas: { addEventListener() {} }, keys: {}, CAM_OFF: new V3().set(0, 3.4, 8.2), THREE: { Vector3: V3 }, canMove: () => true,
+      worldV2: { cameraFramed: () => false, isActive: () => true, occluders: () => spots }, TREE_SPOTS: [], TREE_RADIUS: 1.6,
+      reduceMotionQuery: { matches: true }, innerWidth: 400, document: { getElementById: () => btn, addEventListener() {} }, addEventListener() {} };
+    const cam = new Function(...Object.keys(env), CU + '\nreturn camUser;')(...Object.values(env));
+    let o; for (let i = 0; i < 200; i++) o = cam.offset(px, 0);
+    return { d: Math.hypot(o.x, o.z), x: o.x, z: o.z };
+  };
+  const full = 8.2;
+  // 西：木がカメラの線にかかるときは、木にかからない向きへ回る（回れないときは木の手前へ寄せる）。どちらでも、ヒロリとカメラのあいだに木が残らない
+  const clearOf = (o, px, [tx, tz, r]) => { const L = Math.hypot(o.x, o.z), ux = o.x / L, uz = o.z / L, dx = tx - px, dz = tz, along = dx * ux + dz * uz; return along < .6 || along > L || Math.abs(dx * uz - dz * ux) > r; };
+  const westRes = run(-6, [[-6, 4, 1.6]]);
+  assert.ok(clearOf(westRes, -6, [-6, 4, 1.6]), `west: the tree is not between Hirori and the camera: ${JSON.stringify(westRes)}`);
+  const nt = run(-6, []);
+  assert.ok(Math.abs(nt.d - full) < 1e-6 && Math.abs(nt.x) < 1e-6, 'west, no tree: no pull, no turn');
+  const st = run(-2, [[-2, 4, 1.6]]);
+  assert.ok(Math.abs(st.d - full) < 1e-6 && Math.abs(st.x) < 1e-6, 'near the start: default view unchanged');
+  assert.match(CU, /const WEST_PULL_X=-2\.5;/);
+});

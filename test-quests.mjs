@@ -214,6 +214,6 @@ test('17. 上の知らせ：自由に歩いているあいだは、実が灯っ�
   assert.match(UI, /worldTimeout\(\(\) => \{ if \(my === barToken && state === S\.FREE_EXPLORE\) el\('mission-bar'\)\.style\.opacity = '0'; \}, BAR_HOLD_MS\);/);
   assert.match(UI, /function showBar\(\) \{ barToken\+\+;/);
   assert.match(HTML, /function applyUI\(\) \{\n  stopVoice\(\);\n  questHub\.showBar\(\);/);
-  assert.match(HTML, /case S\.FREE_EXPLORE:\n      mbar\.textContent = questHub\.freeMessage\(\);\n      hint\.style\.opacity = '0';\n      questHub\.fadeBarLater\(\);/);
+  assert.match(HTML, /case S\.FREE_EXPLORE:\n      mbar\.textContent = \(treasure && treasure\.guide\(questHub\.freeMessage\(\)\)\) \|\| questHub\.freeMessage\(\);[^\n]*\n      hint\.style\.opacity = '0';\n      questHub\.fadeBarLater\(\);/);
   assert.match(UI, /reward: 'ことばの樹に、2つ目の実が灯った！'|freeMsg = Q2\.reward;/);
 });

@@ -427,7 +427,7 @@ test('30. スマホ（low）だけ、言葉で咲く花を茎と花の2つの In
 });
 
 test('31. PC（high）の見た目は、秘密の谷と道の向きだけが変わる（草原・祠・門の手前は同じ組み立て）', () => {
-  assert.match(V2_CODE, /const clear = routeDist\(x, z\) < 3\.4 \|\| Math\.hypot\(x - WORD_TREE\.x, z - WORD_TREE\.z\) < 5\.5 \? 0 : 1;/);
+  assert.match(V2_CODE, /const clear = routeDist\(x, z\) < 3\.4 \|\| Math\.hypot\(x - WORD_TREE\.x, z - WORD_TREE\.z\) < 5\.5 \|\| greatClear\(x, z\) \? 0 : 1;/);
   assert.match(V2_CODE, /put\(TREES\[i % 4\], x, z, \(1 \+ rnd\(\) \* \.45\) \* clear, undefined, depthTint\(x, z\), \(rnd\(\) - \.5\) \* \.1\);/);
   // 門の位置・ことばの樹の位置・草原のだ円は変えていない
   assert.deepEqual([A.GATE.x, A.GATE.z], [7, -12.6]);
@@ -440,7 +440,8 @@ test('32. 収集物を増やしていない：芽1つ・タネ1つ・灯る実1�
   assert.equal(count(V2_CODE, /createElement\(/g), 5, 'only the finale texts and buttons（Step 11M：次の冒険へ）');
   // Step 11M：道くさの問いと「見つけたもの」の2つ。EXPANSION-01：宝さがしの「話す・しらべる」と「冒険メモ」の2つ
   // （宝箱は WORLD-V2 の外の TREASURE-UI が持つ。点数・正誤の画面は作らない）
-  assert.equal(count(HTML, /class="panel"/g), count(OLD, /class="panel"/g) + 4, 'detour, found, talk and notebook panels');
+  // EXPANSION-03：オオネとの対話のパネル
+  assert.equal(count(HTML, /class="panel"/g), count(OLD, /class="panel"/g) + 5, 'detour, found, talk, notebook and giant panels');
   assert.ok(!/\bscore\b|正解数|ランキング/.test(between(HTML, '// QUEST-UI-BEGIN', '// QUEST-UI-END')));
   assert.equal(count(HTML, /\bfetch\(/g), 2);   // 語彙カードと、深掘りの答えを広げる（Step 11L-F）の2か所
 });

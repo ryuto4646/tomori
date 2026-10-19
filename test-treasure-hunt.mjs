@@ -126,7 +126,7 @@ test('6. 宝箱：かぎ（泉）が無いと開かない。開くのは1回だ�
   const r = T.treasureInspect(st, 'chest');
   assert.equal(r.kind, 'open'); assert.deepEqual(r.rewards, ['lantern', 'shard']);
   for (let i = 0; i < 5; i++) assert.equal(T.treasureInspect(st, 'chest').kind, 'again');
-  assert.deepEqual(T.treasureItems(st), { map: true, key: true, keyUsed: true, lantern: true, shards: 1 });
+  assert.deepEqual(T.treasureItems(st), { map: true, key: true, keyUsed: true, lantern: true, shards: 1, seed: 0 });
 });
 
 test('7. ランタン：持つまでは使えない。つけるとほらあなが照らされ、新しい手がかり（大きな存在の絵）が見つかる', () => {
@@ -151,14 +151,15 @@ test('8. 端末の記録から戻す：同じ進み具合に戻る。こわれ�
   const skip = T.restoreTreasure({ v: 1, started: true, found: { cat: true, bell: false, spring: true }, chestOpened: true, caveLit: true, lanternOn: true, hint: { cat: 9, bell: -3, spring: 1.5, chest: '2', cave: 2 } });
   assert.deepEqual(skip.found, { cat: true, bell: false, spring: false });
   assert.equal(skip.chestOpened, false); assert.equal(skip.caveLit, false); assert.equal(skip.lanternOn, false);
-  assert.deepEqual(skip.hint, { cat: 3, bell: 0, spring: 0, chest: 0, cave: 2 });
+  assert.deepEqual(skip.hint, { cat: 3, bell: 0, spring: 0, chest: 0, cave: 2, gate: 0 });
   assert.equal(T.treasureItems(skip).shards, 0);
   // 始まっていない記録は、ヒントも持たない
   assert.deepEqual(T.restoreTreasure({ v: 1, started: false, hint: { cat: 3 } }).hint, T.createTreasureState().hint);
 });
 
 test('9. 置き場所：人・手がかりは、門を開ける前から歩ける草原の中。ほかのクエスト・道くさ・祠・門と重ならず、近すぎない', () => {
-  const S = T.TREASURE_SPOTS, ids = Object.keys(S);
+  // EXPANSION-03 の門・オオネ・途切れた道・うずまきの石は、草原の外（巨木への道）。test-great-tree.mjs が確かめる
+  const S = T.TREASURE_SPOTS, ids = Object.keys(S).filter(id => !['gate', 'giant', 'plant', 'cairn'].includes(id));
   for (const id of ids) {
     const s = S[id];
     assert.ok(W.inWalk(s.x, s.z, false), `${id} inside the meadow`);
@@ -192,7 +193,13 @@ test('10. 子どもが読める短い文：1行は60文字まで。むずかし�
 test('11. 正解と行き先は固定データだけで決まる：AI・通信・乱数・保存を、進み方（TREASURE-CORE）では使わない', () => {
   const c = code(CORE);
   assert.ok(!/fetch\(|fetchExpansion|VOCABULARY|Math\.random|localStorage|sessionStorage|document\.|window\.|THREE\./.test(c));
-  assert.ok(!/fetch\(|fetchExpansion|Math\.random/.test(code(UI)), 'UI does not call AI either');
+  // EXPANSION-03：UI が AI を呼ぶのは、オオネの受けとめのひとことだけ（返事は gs.reply にしか入らない。進み方・ごほうびは決めない）
+  const ui = code(UI);
+  assert.ok(!/fetch\(|Math\.random/.test(ui), 'UI does not fetch directly');
+  assert.equal((ui.match(/fetchExpansion\(/g) || []).length, 1, 'only the giant reply');
+  const send = ui.slice(ui.indexOf('function giantSend('), ui.indexOf('function giantVoice('));
+  assert.match(send, /gs\.reply = r && r\.reflection \? r\.reflection : giantReply\(label, aspect, true\);/);
+  assert.ok(!/treasureGiantDone|treasurePlant|save\(|st\./.test(send), 'the reply does not touch progress');
   assert.ok(Object.isFrozen(T.TREASURE_SPOTS) && Object.isFrozen(T.TREASURE_HINTS) && Object.isFrozen(T.TREASURE_TALK));
 });
 
@@ -206,7 +213,7 @@ test('12. 保存：localStorage は TREASURE-UI の try の中だけ。キーは
   assert.equal((u.match(/localStorage\./g) || []).length, 3, 'get, set, remove');
   assert.match(between(UI, 'function reset() {', '\n  }\n'), /forget\(\); st = createTreasureState\(\);/);
   assert.match(between(HTML, 'function doReset(){', '\n}\n'), /treasure\.reset\(\);/);
-  assert.match(HTML, /confirm\('デモを最初からやり直しますか？\\n宝さがしの記録ともちものも消えます。'\)/);
+  assert.match(HTML, /confirm\('デモを最初からやり直しますか？\\n宝さがしと巨木への冒険の記録、もちものも消えます。'\)/);
   assert.match(HTML, /宝さがしの記録ともちものは、この端末に残ります。「デモを最初から」を押すと消えます。/);
   // ほかの場所（クエスト・道くさ）は、今までどおり保存しない
   assert.ok(!/localStorage|sessionStorage/.test(between(HTML, '// QUEST-UI-BEGIN', '// QUEST-UI-END')));

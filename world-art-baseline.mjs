@@ -1653,6 +1653,7 @@ export const EXPANSION_EDITS = [
   // EXPANSION-01：宝さがしの会話・しらべた結果（TALK）と、冒険メモ（NOTEBOOK）。どちらも開いているあいだは歩かない
   TALK:'TALK', NOTEBOOK:'NOTEBOOK',
   EVENT:'EVENT',   // EXPANSION-02：宝箱・ランタン・秘密の発見を、3D の世界で見せているあいだ（そのあとで説明のパネル）
+  GIANT:'GIANT',   // EXPANSION-03：巨木の根もとのオオネと話しているあいだ
 };`],
   [`let state = S.EXPLORE;
 `,
@@ -1694,7 +1695,7 @@ let missionHold = null;   // ミッションの後回し（EXPANSION-02）。TRE
   renderer.render(scene,camera);
 }`],
   [`window.confirmReset = ()=>{ if(confirm('デモを最初からやり直しますか？')) doReset(); };`,
-   `window.confirmReset = ()=>{ if(confirm('デモを最初からやり直しますか？\\n宝さがしの記録ともちものも消えます。')) doReset(); };`],
+   `window.confirmReset = ()=>{ if(confirm('デモを最初からやり直しますか？\\n宝さがしと巨木への冒険の記録、もちものも消えます。')) doReset(); };`],
   [`  const ZOOM_MIN=.55, ZOOM_MAX=1.6, KEY_TURN=1.8;`,
    `  const WEST_PULL_X=-2.5;   // EXPANSION-01：これより西（宝さがしの場所）では、元の視点でもヒロリと木が重なれば木の手前へ寄せる。出発点・祠・東の道くさは今までどおり
   const ZOOM_MIN=.55, ZOOM_MAX=1.6, KEY_TURN=1.8;`],

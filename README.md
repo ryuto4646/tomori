@@ -65,4 +65,6 @@ node --test test-*.mjs
 
 宝さがしの進み方・保存・報酬のテストは `test-treasure-hunt.mjs`、巨木への冒険のテストは `test-great-tree.mjs` です。
 
+ことばの体験の設計（「もっと冒険したいから、言葉を知りたくなる」）は [docs/LANGUAGE_DESIGN.md](docs/LANGUAGE_DESIGN.md)、テストは `test-language.mjs` です。Marble 導入の準備は [docs/MARBLE_PREP.md](docs/MARBLE_PREP.md) にまとめました。
+
 歩き方と発見の演出は、2026-10-16 に iPhone の実機で確認して採用しました。今後の調整の基準は [docs/FEEL_BASELINE.md](docs/FEEL_BASELINE.md) にあります。

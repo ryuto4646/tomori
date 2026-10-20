@@ -205,6 +205,17 @@ textarea, input { word-break:normal; }
 }
 /* EXPANSION-03：高さの小さい画面では、会話のあいだだけ上の知らせを隠す（話している相手とヒロリを、パネルの上に見せる場所を空ける） */
 @media (max-height: 700px) { body:has(#panel-talk.show) #mission-bar, body:has(#panel-giant.show) #mission-bar { display:none; } }
+/* LANGUAGE-01：ことばの説明（押したときだけ開く）・出会ったことば */
+.talk-words-btn { display:block; margin:-2px 0 8px; padding:6px 12px; min-height:36px; border:1.5px dashed #d6a868; border-radius:12px; background:#fffaf0; color:#8a5420; font-size:13px; cursor:pointer; }
+.talk-words-btn:focus-visible { outline:3px solid #3a3328; outline-offset:2px; }
+#talk-gloss, #giant-wordhint { white-space:pre-line; }
+/* 高さの小さい画面：下にはりつく2つのボタンの下に、ほかのボタンがかくれないように（説明を開いてパネルがのびたとき） */
+#panel-talk button, #panel-giant button { scroll-margin-bottom:72px; }
+.word-item { padding:8px 0; border-bottom:1px dashed #e8d4a0; font-size:14px; color:#3a3328; line-height:1.6; }
+.word-item:last-child { border-bottom:none; }
+.word-head { font-weight:bold; color:#8a5420; }
+.word-scenes { font-size:12px; color:#7a6a48; }
+#event-skip { left:50% !important; top:auto !important; bottom:calc(84px + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%); color:#5a4830; font-size:12px; opacity:.85; }
 /* EXPANSION-03：オオネとの対話 */
 .giant-q { font-size:16px; font-weight:bold; color:#3a3328; line-height:1.6; margin:0 0 10px; }
 .giant-chips { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 10px; }
@@ -435,7 +446,8 @@ textarea, input { word-break:normal; }
   <div class="sfx-label" id="sfx-cat" aria-hidden="true">すう…すう…</div>
   <div class="npc-label" id="label-giant">オオネ</div>
   <div class="sfx-label" id="sfx-river" aria-hidden="true">ザザー…</div>
-  <div class="sfx-label" id="sfx-giant" aria-hidden="true">すう………ふう………</div>
+  <div class="sfx-label" id="sfx-giant" aria-hidden="true">すう……ふう……</div>
+  <div class="sfx-label" id="event-skip" aria-hidden="true">タップで先へ</div>
   <!-- TREASURE-UI-HTML-END -->
   <div id="demo-end">
     <div class="end-line1">遠くで、新しい"なにか"が光っている。</div>
@@ -578,6 +590,7 @@ textarea, input { word-break:normal; }
   <div class="talk-head"><div class="panel-icon" id="talk-icon" aria-hidden="true">🦉</div><div class="panel-title" id="talk-name" tabindex="-1" data-autofocus></div></div>
   <div class="talk-line" id="talk-line"></div>
   <div class="talk-hint" id="talk-hint" style="display:none"><div class="talk-hint-label" id="talk-hint-label"></div><div class="talk-hint-text" id="talk-hint-text"></div></div>
+  <button class="talk-words-btn" id="btn-talk-words" type="button" aria-expanded="false" aria-controls="talk-gloss" style="display:none"></button>
   <div class="talk-gloss" id="talk-gloss" style="display:none"></div>
   <div id="talk-items"></div>
   <button class="btn-primary" id="btn-talk-lantern" type="button" style="display:none">ランタンを使う</button>
@@ -595,6 +608,8 @@ textarea, input { word-break:normal; }
   <div class="panel-title" id="notebook-title" tabindex="-1" data-autofocus>冒険メモ</div>
   <div class="found-section">聞いたヒント・見つけた手がかり</div>
   <div id="notebook-memo"></div>
+  <div class="found-section" id="notebook-words-title" style="display:none">出会ったことば</div>
+  <div id="notebook-words"></div>
   <div class="found-section">もちもの</div>
   <div id="notebook-items"></div>
   <button class="btn-secondary" id="btn-notebook-close" type="button">冒険にもどる</button>
@@ -608,6 +623,7 @@ textarea, input { word-break:normal; }
   <div class="talk-line" id="giant-line"></div>
   <div class="giant-q" id="giant-q" style="display:none"></div>
   <div class="giant-chips" id="giant-chips" role="group"></div>
+  <div class="talk-gloss" id="giant-wordhint" style="display:none"></div>
   <div id="giant-write" style="display:none">
     <textarea class="text-input" id="giant-input" rows="2" maxlength="60" aria-label="自分のことばで書く"></textarea>
     <button id="btn-giant-voice" type="button" aria-label="声で話す">🎤</button>
@@ -4406,6 +4422,7 @@ const TREASURE_SPOTS = Object.freeze({
   cave:   { x: -5.2, z: -11.0, approach: 0.3, name: '暗いほらあな', icon: '🌑', call: '暗いほらあながある', verb: 'しらべる' },
   rock:   { x: -4.0, z: -3.0, approach: 1.0, name: 'まるい岩', icon: '🪨', call: 'まるい岩がある', verb: 'しらべる' },
   bloom:  { x: -6.8, z: -3.6, approach: 1.0, name: '空を向いてさく花', icon: '🌼', call: '花がさいている', verb: 'しらべる' },
+  dazzle: { x: -6.4, z: -8.2, approach: 1.0, name: 'まばゆく輝く花', icon: '🌟', call: 'まぶしい花がさいている', verb: 'しらべる' },   // LANGUAGE-01：「ほのかに」とくらべる花
   // EXPANSION-03：巨木への道（場所は worldV2 の GREAT と同じ。道がひらくまで、門より先へは行けない）
   gate:   { x: -8.7, z: -10.9, approach: 1.0, name: '古い石の門', icon: '🚪', call: '古い石の門がある', verb: 'しらべる' },
   giant:  { x: -20.0, z: -26.0, approach: 1.6, name: 'オオネ', icon: '🦌', call: 'オオネがいる', callNew: 'なにか大きなものが、ねむっている', verb: 'しらべる', verbMet: '話す' },
@@ -4416,12 +4433,12 @@ const TREASURE_STEPS = ['cat', 'bell', 'spring', 'chest', 'cave'];   // この�
 // ヒント：聞くたびに1つずつくわしくなる（3つ目がいちばんくわしい）。gloss は、むずかしいことばの説明
 const TREASURE_HINTS = Object.freeze({
   cat: [
-    { text: 'さっき、ねこがひなたで昼ねしていたよ。どこで休んでいたかな？', gloss: 'ひなた＝お日さまが当たっているところ' },
+    { text: 'さっき、ねこがひなたでまどろんでいたよ。どこで休んでいたかな？', gloss: 'ひなた＝お日さまが当たっているところ' },
     { text: 'ねこは、あたたかくて平たい岩が好き。まるい岩は、ひんやりしているよ。', gloss: '' },
-    { text: '祠（ほこら）の左おく。光がさしこんでいる、平たい岩があるよ。', gloss: '祠＝光る石がのっている、小さな石のお宮' },
+    { text: '祠（ほこら）の左おく。光が差し込んでいる、平たい岩があるよ。', gloss: '祠＝光る石がのっている、小さな石のお宮' },
   ],
   bell: [
-    { text: '地図のきれはしには、下を向いてさく花の絵。その花の下を見てみよう。', gloss: '' },
+    { text: '地図のきれはしには、うつむくように咲く花の絵。その花の下を見てみよう。', gloss: '' },
     { text: '下を向いてさく花は、日かげが好き。とがった木じゃなくて、丸い木のかげをさがそう。', gloss: '日かげ＝お日さまが当たらないところ' },
     { text: '草原の左のはし。丸い大きな木の下に、青いベルみたいな花がさいているよ。', gloss: '' },
   ],
@@ -4442,9 +4459,9 @@ const TREASURE_HINTS = Object.freeze({
   ],
   // EXPANSION-03：かべの絵と同じもようの門（巨木への道の入口）
   gate: [
-    { text: 'かべの絵と同じもようが、どこかにあるはずじゃ。ほらあなの近くを、よく見てごらん。', gloss: '' },
-    { text: 'ほらあなと小さな泉のあいだ。草原のはしに、古い石の門があるぞ。', gloss: '' },
-    { text: 'ほらあなから泉のほうへ、少し歩いたところ。草原のはしの古い門を、しらべてみるのじゃ。かけらが教えてくれる。', gloss: '' },
+    { text: 'かべの絵と同じもようは、ほのかに光る花のそばにあるそうじゃ。', gloss: '' },
+    { text: 'まばゆく輝く花ではないぞ。そっと光る、ほのかな光の花じゃ。ほらあなと泉のあいだを、見くらべてごらん。', gloss: '' },
+    { text: 'ほらあなから泉のほうへ、少し歩いたところ。草原のはしの古い門の足もとに、ほのかに光る花がある。門をしらべてみるのじゃ。', gloss: '' },
   ],
 });
 // 話し方：ポポはゆっくり物知り（〜じゃ・〜のう）、ミナは元気（〜だよ！）。進み具合で、話すことが変わる
@@ -4459,7 +4476,7 @@ const TREASURE_TALK = Object.freeze({
     done: 'そのかけらは、世界のひみつのかけらじゃ。\n遠くに見える、大きな木…。あそこには、世界のひみつを知るものがいるという。かけらを集めたら、会えるかもしれんのう。',
     more: 'では、もう少しくわしく話そうかのう。',
     // EXPANSION-03：巨木への道の進み具合で変わる
-    gate: 'ほらあなの絵を見たか！ 大きな木と、ねむる生きもの…。\nあの絵と同じもようを、どこかで見た気がするのう。',
+    gate: 'ほらあなの絵を見たか！ 大きな木と、まどろむ生きもの…。\nあの絵と同じもようを、どこかで見た気がするのう。',
     great: {
       giant: 'かけらと門のもようが、ひびきあったか！ 道の先で、だれかが待っておるかもしれんのう。',
       talk: 'その大きな生きものは、ことばを聞くのが好きらしいぞ。ゆっくり話してみるのじゃ。',
@@ -4477,7 +4494,7 @@ const TREASURE_TALK = Object.freeze({
     cave: 'ほらあなはちょっとこわいけど、ランタンがあれば大丈夫だね！',
     done: 'かけら、きれい！ 遠くの大きな木、ときどき、かすかに光るんだよ。だれかが住んでるのかな？',
     more: 'じゃあ、もっとくわしく言うね！',
-    gate: 'かべの絵のもよう？ 草原のはしで、似たもようを見た気がする！',
+    gate: 'かべの絵のもよう？ 草原のはしで、似たもようを見た気がする！\nまぶしい花のそば…ううん、もっとそっと光る花のそばだったかも。',
     great: {
       giant: '道の先、なんだか、いいにおいがするね！',
       talk: '大きな生きもの！？ どんなお話をするのかな。',
@@ -4489,25 +4506,25 @@ const TREASURE_TALK = Object.freeze({
 });
 // しらべたとき：早すぎる（まだ順番がきていない）・見つけた・もう一度、のそれぞれ
 const TREASURE_CLUES = Object.freeze({
-  cat: { early: 'ねこが、平たい岩の上で気持ちよさそうにねむっている。…起こさないでおこう。',
+  cat: { early: 'ねこが、平たい岩の上でまどろんでいる。耳だけ、ぴくっと動いた。…起こさないでおこう。',
     found: 'ねこが目をさまして、のびをした。\nねこの下から、地図のきれはしが出てきた！',
     again: 'ねこは、またうとうとしている。地図のきれはしには、下を向いてさく花の絵。',
-    item: { icon: '🗺️', name: '地図のきれはし', words: '下を向いてさく花の絵。「花の下を見よ」' },
-    memo: '地図のきれはし：下を向いてさく花の絵。「花の下を見よ」と書いてある。' },
-  bell: { early: '下を向いてさく、青い花。めずらしいね。（今は、まだ何も見つからない）',
+    item: { icon: '🗺️', name: '地図のきれはし', words: 'うつむくように咲く花の絵。「花の下を見よ」' },
+    memo: '地図のきれはし：うつむくように咲く花の絵。「花の下を見よ」と書いてある。' },
+  bell: { early: 'うつむくように咲く、青い花。めずらしいね。（今は、まだ何も見つからない）',
     found: '花の下に、小さな石板があった！\n「水の音が聞こえるところで、かぎが待っている」',
     again: '石板には「水の音が聞こえるところで、かぎが待っている」と書いてある。',
     item: { icon: '🪨', name: '石板のことば', words: '「水の音が聞こえるところで、かぎが待っている」' },
     memo: '花の下の石板：「水の音が聞こえるところで、かぎが待っている」' },
-  spring: { early: '小さな泉。ちょろちょろと、水の音がする。（今は、まだ何も見つからない）',
-    found: '水の中で、なにかが光った！\n古いかぎを手に入れた。かぎには「水の流れる先」とほってある。',
+  spring: { early: '小さな泉。水面がきらめいて、ちょろちょろと水の音がする。（今は、まだ何も見つからない）',
+    found: 'きらめく水の中で、なにかが光った！\n古いかぎを手に入れた。かぎには「水の流れる先」とほってある。',
     again: '泉の水は、細い流れになって、左へ流れていく。',
     item: { icon: '🗝️', name: '古いかぎ', words: '「水の流れる先」とほってある' },
     memo: '古いかぎ：「水の流れる先」とほってある。' },
 });
 const TREASURE_CHEST = Object.freeze({
   locked: '古い宝箱だ！ でも、かぎがかかっていて開かない。',
-  open: '宝箱が開いた！\n中には、光るランタンと、きらきら光る小さなかけらが入っていた。',
+  open: '宝箱が開いた！ まばゆい光があふれた。\n中には、光るランタンと、小さなかけらが入っていた。',
   again: '宝箱は、もうからっぽ。ランタンとかけらは、もう持っているよ。',
   memoLocked: '古い宝箱を見つけた。かぎがかかっている。',
   memoOpen: '宝箱を開けた！ 光るランタンと、世界のひみつのかけらを手に入れた。',
@@ -4521,7 +4538,8 @@ const TREASURE_CAVE = Object.freeze({
 });
 const TREASURE_DECOYS = Object.freeze({
   rock: 'まるくて、こけのはえた岩。さわると、ひんやりつめたい。ねこが昼ねするには、つめたそう。',
-  bloom: 'この花は、空を向いてさいているね。',
+  bloom: 'この花は、空を向いてさいているね。うつむいてはいないみたい。',
+  dazzle: 'まばゆく輝く花だ！ 目をほそめるくらい、明るい。',   // LANGUAGE-01
 });
 // 上の知らせ（宝さがしの途中）：いまの目標がわかる文。行き先そのものは言わない
 const TREASURE_GUIDE = Object.freeze({
@@ -4533,7 +4551,7 @@ const TREASURE_GUIDE = Object.freeze({
   done: '宝さがし：遠くの大きな木が、かすかに光っている…',   // EXPANSION-02：秘密を見つけたあと（次の冒険の気配）
   // EXPANSION-03：巨木への道（宝さがしのあと）
   gate: '冒険：かべの絵と同じもようを、さがしてみよう',
-  giant: '冒険：巨木の根もとへ行ってみよう',
+  giant: '冒険：ほのかに灯る石をたどって、巨木の根もとへ',
   talk: '冒険：大きな生きものと、話してみよう',
   plant: '冒険：ひかりのつるのタネを、どこに植えよう？',
   cross: '冒険：光のつるの橋を、わたってみよう',
@@ -4545,24 +4563,47 @@ const TREASURE_ITEMS = Object.freeze({
   // EXPANSION-03：見た目と使い方を、もちもので見られるように
   seed: { icon: '🌱', name: 'ひかりのつるのタネ（仮）', words: 'ほのかに青く光る、しずくの形のタネ。道が切れたところに植えると、光るつるが育つ。' },
 });
+// LANGUAGE-01：冒険の中で出会う言い回し。意味は、景色・動き・音・会話からつかめるようにして、別の場面でもう一度出会う
+// 覚えたかを問うことはしない。出会った場面だけを記録し、冒険メモで読み返せるようにする（書いたことばは残さない）
+const WORDS = Object.freeze([
+  { id: 'madoromu', word: 'まどろむ', reading: '', forms: ['まどろ'], meaning: 'うとうとと、浅くねむること' },
+  { id: 'utsumuku', word: 'うつむくように', reading: '', forms: ['うつむ'], meaning: '下を向いているようす。人が顔をふせるときのように' },
+  { id: 'honoka', word: 'ほのかに', reading: '', forms: ['ほのか'], meaning: 'そっと、かすかに。目立たないくらい、うっすら' },
+  { id: 'mabayui', word: 'まばゆく', reading: '', forms: ['まばゆ'], meaning: '目をほそめるくらい、まぶしく' },
+  { id: 'sashikomu', word: '差し込む', reading: 'さしこむ', forms: ['差し込'], meaning: '光が、すきまから入ってくること' },
+  { id: 'kirameku', word: 'きらめく', reading: '', forms: ['きらめ'], meaning: '光が、ちらちらと細かく光ること' },
+]);
+const WORD_SCENES_MAX = 6;
+function wordsIn(text) { const t = String(text || ''); return WORDS.filter(w => w.forms.some(f => t.includes(f))).map(w => w.id); }
+// 出会った言い回しと場面を記録する（同じ場面は1回だけ。場面は6つまで）。新しく出会った言い回しを返す
+function treasureMeetWords(st, text, scene) {
+  const fresh = [];
+  for (const id of wordsIn(text)) {
+    const list = st.words[id] || (st.words[id] = []);
+    if (!list.length) fresh.push(id);
+    if (scene && !list.includes(scene) && list.length < WORD_SCENES_MAX) list.push(String(scene).slice(0, 20));
+  }
+  return fresh;
+}
 // EXPANSION-03：巨木への道・大きな生きもの（オオネ）との対話・ひかりのつるのタネと橋
 // かけらが手に入る場所の一覧。冒険を足すときは、ここに足す（道をひらくのに要る数は GREAT_PATH_SHARDS。かけらは使っても減らない）
 const TREASURE_SHARDS = Object.freeze([{ id: 'chest', has: st => st.chestOpened }]);
 const GREAT_PATH_SHARDS = 1;
 function treasureShards(st) { return TREASURE_SHARDS.filter(s => s.has(st)).length; }
 const GREAT_TEXT = Object.freeze({
-  gateEarly: '古い石の門。大きな木の形のもようが、ほってある。\n…どこかで、見たような？',
+  gateEarly: '古い石の門。大きな木の形のもようが、ほってある。\n足もとで、小さな花がほのかに光っている。…どこかで、見たような？',
   gateNeed: '門のもようが、かすかに光っている。かけらが、まだ足りないみたい…。',
-  gateLit: 'かけらが光って、門のもようが同じように光った！\n巨木への道がひらいた。かけらは、もちものに残っているよ。',
+  gateLit: 'かけらと門のもようが、まばゆく輝いた！\n巨木への道がひらいた。かけらは、もちものに残っているよ。',
+  dazzleHint: 'さがしているのは、ほのかに光る花。これより、もっとそっとした光みたい。',   // LANGUAGE-01：くらべたときのひとこと（罰はない）
   gateAgain: '門のおくへ、巨木への道が続いている。',
-  giantEarly: 'なにか大きなものが、ねむっている…。',
-  plantEarly: '道が、とちゅうで切れている。\n川の流れが速くて、わたれない…。',
+  giantEarly: 'なにか大きなものが、まどろんでいる…。',
+  plantEarly: '道が、とちゅうで切れている。\n川の水面がきらめいて、流れが速い。わたれない…。',
   plantReady: '道が、とちゅうで切れている。川の流れが速くて、わたれない…。\nここなら、ひかりのつるのタネを植えられそう。',
   plantDone: '光のつるの橋ができた！\nつるがしっかり編まれて、向こう岸までわたれるよ。',
   plantAgain: '光のつるの橋。向こう岸へ、わたれるよ。',
   cairnEarly: 'うずまきのもようがほってある石。',
   cairn: 'うずまきのもようがほってある。\n遠くの空にうかぶ島と、同じ光がゆれている…？（このつづきは、また今度）',
-  arrive: '向こう岸に着いた！\n遠くの空に、島がうかんでいる。島のまんなかが、かすかに光っている…。',
+  arrive: '向こう岸に着いた！\n遠くの空に、島がうかんでいる。島のまんなかが、ほのかに光っている…。',
   memoPath: '古い門のもようと、かけらが光った。巨木への道がひらいた。',
   memoGiant: '巨木の根もとで、大きな生きもの「オオネ」が目をさました。',
   memoTalk: 'オオネに、冒険で気になったことを伝えた。お礼に、ひかりのつるのタネをもらった。',
@@ -4571,8 +4612,8 @@ const GREAT_TEXT = Object.freeze({
 });
 // オオネのことば（短く、少しずつ。世界のひみつは一部だけ）
 const GIANT_TALK = Object.freeze({
-  wake: ['……ふう。あたたかい光で、目がさめたよ。\nきみが、かけらを持ってきてくれたんだね。',
-    'わたしはオオネ。この大きな木と、ずっといっしょにねむっていた。\nこの世界のかけらはね、だれかの「気づき」で光るんだよ。'],
+  wake: ['……ふう。木々の間から差し込む光で、目がさめたよ。\nきみが、かけらを持ってきてくれたんだね。',
+    'わたしはオオネ。この大きな木と、ずっといっしょにまどろんでいた。\nこの世界のかけらはね、だれかの「気づき」で光るんだよ。'],
   back: 'また来てくれたんだね。さっきの話の続きを、聞かせてくれるかい？',
   ask1: 'ここまでの冒険で、何が気になった？',
   ask2: 'の、どんなところが気になった？',
@@ -4585,12 +4626,12 @@ const GIANT_TALK = Object.freeze({
 });
 // 「何が気になった？」の答え：実際に出会ったものだけ。aspects は「どんなところ？」の手がかり
 const GIANT_TOPICS = Object.freeze([
-  { id: 'cat', label: 'ねこ', icon: '🐈', has: st => st.found.cat, aspects: ['ねむっているすがた', 'あたたかい岩', '地図をかくしていたこと'] },
-  { id: 'bell', label: '下を向いてさく花', icon: '🔔', has: st => st.found.bell, aspects: ['下を向いているところ', 'ベルみたいな形', '日かげにさいていること'] },
-  { id: 'spring', label: '小さな泉', icon: '💧', has: st => st.found.spring, aspects: ['水の音', '水の中のかぎ', '水が流れていく先'] },
-  { id: 'chest', label: '宝箱', icon: '🧰', has: st => st.chestOpened, aspects: ['開いたときの光', '中に入っていたもの', 'かくされていた場所'] },
+  { id: 'cat', label: 'ねこ', icon: '🐈', has: st => st.found.cat, aspects: ['ひなたでまどろむすがた', '光が差し込む岩', '地図をかくしていたこと'] },
+  { id: 'bell', label: 'うつむくように咲く花', icon: '🔔', has: st => st.found.bell, aspects: ['うつむくように咲くところ', 'ベルみたいな形', '日かげにさいていること'] },
+  { id: 'spring', label: '小さな泉', icon: '💧', has: st => st.found.spring, aspects: ['きらめく水面', '水の中のかぎ', '水が流れていく先'] },
+  { id: 'chest', label: '宝箱', icon: '🧰', has: st => st.chestOpened, aspects: ['まばゆくあふれた光', '中に入っていたもの', 'かくされていた場所'] },
   { id: 'mural', label: 'ほらあなのかべの絵', icon: '🕯️', has: st => st.caveLit, aspects: ['大きな木の絵', 'ねむる生きものの絵', 'ランタンで見えたこと'] },
-  { id: 'gate', label: '光った門のもよう', icon: '🚪', has: st => st.pathOpen, aspects: ['かべの絵と同じもよう', 'かけらといっしょに光ったこと', '道がひらいたこと'] },
+  { id: 'gate', label: '光った門のもよう', icon: '🚪', has: st => st.pathOpen, aspects: ['ほのかに光っていた花', 'まばゆく輝いたもよう', 'かべの絵と同じもよう'] },
   { id: 'popo', label: 'ふくろうのポポ', icon: '🦉', has: st => st.met.popo, aspects: ['ゆっくりした話し方', '物知りなところ', 'ヒントのくれ方'] },
   { id: 'mina', label: 'うさぎのミナ', icon: '🐰', has: st => st.met.mina, aspects: ['元気なところ', '花にくわしいところ', 'ぴょんとはねるところ'] },
 ]);
@@ -4652,7 +4693,8 @@ function treasureArrive(st) {
 function createTreasureState() {
   return { v: 1, started: false, met: { popo: false, mina: false }, found: { cat: false, bell: false, spring: false }, chestSeen: false, chestOpened: false,
     caveLit: false, lanternOn: false, hint: { cat: 0, bell: 0, spring: 0, chest: 0, cave: 0, gate: 0 },
-    pathOpen: false, giantAwake: false, giantTalked: false, bridgeBuilt: false, arrived: false };   // EXPANSION-03
+    pathOpen: false, giantAwake: false, giantTalked: false, bridgeBuilt: false, arrived: false,   // EXPANSION-03
+    words: {} };   // LANGUAGE-01：出会った言い回しと場面
 }
 // いまの目標：まだ見つけていない、いちばん前の手がかり
 function treasureGoal(st) {
@@ -4695,7 +4737,7 @@ function treasureMoreHint(st) {
 }
 // しらべる：順番がきた手がかりだけが見つかる。早すぎる・もう見つけた・関係ない場所は、何も進めずに一言だけ（何度でもやり直せる）
 function treasureInspect(st, id) {
-  if (TREASURE_DECOYS[id]) return { kind: 'decoy' };
+  if (TREASURE_DECOYS[id]) return { kind: 'decoy', hint: id === 'dazzle' && st.caveLit && !st.pathOpen };   // LANGUAGE-01：門をさがしているときだけ、くらべるひとこと
   if (TREASURE_CLUES[id]) {
     if (st.found[id]) return { kind: 'again' };
     const prev = TREASURE_STEPS[TREASURE_STEPS.indexOf(id) - 1];
@@ -4772,6 +4814,11 @@ function restoreTreasure(raw) {
   st.giantTalked = st.giantAwake && raw.giantTalked === true;
   st.bridgeBuilt = st.giantTalked && raw.bridgeBuilt === true;
   st.arrived = st.bridgeBuilt && raw.arrived === true;
+  // LANGUAGE-01：出会った言い回し（決まった言い回しだけ。場面は短い文字だけ）
+  if (raw.words && typeof raw.words === 'object' && !Array.isArray(raw.words)) for (const w of WORDS) {
+    const v = raw.words[w.id];
+    if (Array.isArray(v)) st.words[w.id] = v.filter(x => typeof x === 'string' && x.length > 0 && x.length <= 20).slice(0, WORD_SCENES_MAX);
+  }
   return st;
 }
 // TREASURE-CORE-END
@@ -5090,6 +5137,7 @@ treasure = (() => {
     const hk = (t - hopStart) / .45;
     minaBody.position.y = !calm && hk >= 0 && hk < 1 ? .09 * Math.sin(Math.PI * hk) : 0;
     catBody.scale.y = st.found.cat || calm ? 1 : 1 + .04 * Math.sin(t * 1.8);
+    if (!st.found.cat && !calm) catHead.rotation.z = (t % 4.3) < .18 ? .12 * Math.sin((t % 4.3) / .18 * Math.PI * 2) : 0;   // LANGUAGE-01：まどろむ（ときどき耳がぴくっ）
     // 泉の水の輪
     ripples.forEach((r, i) => {
       const u = calm ? .6 : (t * .45 + i * .5) % 1;
@@ -5169,14 +5217,27 @@ treasure = (() => {
     const h = o.goal && o.hint ? TREASURE_HINTS[o.goal][o.hint - 1] : null, max = h ? TREASURE_HINTS[o.goal].length : 0;
     el('talk-hint').style.display = h ? '' : 'none';
     if (h) { el('talk-hint-label').textContent = 'ヒント ' + o.hint + '/' + max + (o.hint === max ? '（いちばんくわしいヒント）' : ''); el('talk-hint-text').textContent = h.text; }
-    const gloss = [h && h.gloss, o.gloss].filter(Boolean).join('\n');
-    el('talk-gloss').textContent = gloss; el('talk-gloss').style.display = gloss ? '' : 'none';
+    // LANGUAGE-01：ことばの説明は、押したときだけ開く（毎回は出さない）。出会った言い回しは、場面といっしょに冒険メモへ
+    const text = [o.line, h ? h.text : '', ...(o.items || []).map(it => it.words)].join('\n');
+    const ids = wordsIn(text);
+    if (ids.length) { treasureMeetWords(st, text, o.name); save(); }
+    const glosses = [h && h.gloss, o.gloss].filter(Boolean).join('　').split(/[\n　]+/).filter(Boolean);
+    const notes = glosses.concat(ids.map(wordNote));
+    const names = glosses.map(g => g.split('＝')[0]).concat(ids.map(id => WORDS.find(w => w.id === id).word));
+    el('talk-gloss').textContent = notes.join('\n'); el('talk-gloss').style.display = 'none';
+    const wb = el('btn-talk-words'); wb.style.display = notes.length ? '' : 'none';
+    wb.textContent = '「' + names.join('」「') + '」って？'; wb.setAttribute('aria-expanded', 'false');
     const box = el('talk-items'); box.replaceChildren(); (o.items || []).forEach(it => card(box, it));
     el('btn-talk-more').style.display = h && o.hint < max ? '' : 'none';
     el('btn-talk-lantern').style.display = o.lantern ? '' : 'none';
     el('btn-talk-plant').style.display = o.plant ? '' : 'none';   // EXPANSION-03
     el('btn-talk-memo').style.display = st.started ? '' : 'none';
   }
+  const wordNote = id => { const w = WORDS.find(x => x.id === id); return w.word + (w.reading ? '（' + w.reading + '）' : '') + '＝' + w.meaning; };
+  el('btn-talk-words').addEventListener('click', () => {
+    const g = el('talk-gloss'), open = g.style.display === 'none';
+    g.style.display = open ? '' : 'none'; el('btn-talk-words').setAttribute('aria-expanded', String(open));
+  });
   function talkView(id, r) {
     const s = TREASURE_SPOTS[id];
     return { icon: s.icon, name: s.name, line: r.line, goal: r.goal, hint: r.hint };
@@ -5184,7 +5245,7 @@ treasure = (() => {
   function inspectView(id, r) {
     const s = TREASURE_SPOTS[id], o = { icon: s.icon, name: s.name, line: '', items: [] };
     if (!r) return o;
-    if (r.kind === 'decoy') o.line = TREASURE_DECOYS[id];
+    if (r.kind === 'decoy') o.line = TREASURE_DECOYS[id] + (r.hint ? '\n' + GREAT_TEXT.dazzleHint : '');   // LANGUAGE-01：くらべたときのひとこと
     else if (TREASURE_CLUES[id]) { const c = TREASURE_CLUES[id]; o.line = c[r.kind]; if (r.kind === 'found') o.items = [c.item]; }
     else if (id === 'chest') { o.line = TREASURE_CHEST[r.kind]; if (r.kind === 'open') { o.items = [TREASURE_ITEMS.lantern, TREASURE_ITEMS.shard]; o.line += '\nもちものは、冒険メモで見られるよ。'; } }
     else if (id === 'cave') { o.line = TREASURE_CAVE[r.kind === 'again' ? 'lit' : r.kind]; o.lantern = r.kind === 'needLantern'; if (r.kind === 'lit' || r.kind === 'again') o.gloss = TREASURE_CAVE.gloss; }
@@ -5247,6 +5308,16 @@ treasure = (() => {
       const body = add(row, 'div', '', '');
       if (m.label) add(body, 'div', 'memo-label', m.label);
       add(body, 'div', '', m.text);
+    });
+    // LANGUAGE-01：出会ったことばと、出会った場面（覚えたかは問わない）
+    const wbox = el('notebook-words'); wbox.replaceChildren();
+    const met = WORDS.filter(w => st.words[w.id] && st.words[w.id].length);
+    el('notebook-words-title').style.display = met.length ? '' : 'none';
+    met.forEach(w => {
+      const row = add(wbox, 'div', 'word-item', '');
+      add(row, 'div', 'word-head', w.word + (w.reading ? '（' + w.reading + '）' : ''));
+      add(row, 'div', '', w.meaning);
+      add(row, 'div', 'word-scenes', '出会った場面：' + st.words[w.id].join('・'));
     });
     const box = el('notebook-items'); box.replaceChildren();
     const it = treasureItems(st), rows = [];
@@ -5468,6 +5539,17 @@ treasure = (() => {
     ], 'Gate_Roots');
     gt.add(gate.roots); hitArea('gate', .95, 1.0);
     for (const sx of [-1.15, 1.15]) { gt.localToWorld(_g1.set(sx, 0, 0)); OBSTACLES.push([_g1.x, _g1.z, 1.0]); }   // パネルの構図で、門の柱の中にカメラを置かない
+    // LANGUAGE-01：くらべて意味がわかる花。門の足もとは「ほのかに」光る青白い花、泉の近くは「まばゆく」輝く金色の花
+    const fp = [];
+    [[-.75, .55], [-.45, .85], [.5, .7], [.8, .45], [.1, 1.0]].forEach(([x, z]) => fp.push([CYL, 0x6aa050, [x, .12, z], [.012, .24, .012]], [SPH, 0xd8eef8, [x, .26, z], [.06, .04, .06]]));
+    gt.add(mesh(fp, 'Gate_FaintFlowers'));
+    great.faint = [[-.6, .7], [.65, .58], [.1, 1.0]].map(([x, z]) => { const g = softGlow(0xbfe8ff); g.position.set(x, .3, z); g.scale.setScalar(.55); gt.add(g); return g; });
+    const dz = root('dazzle'); faceTo(dz, 0, 0);
+    const dp = [[SPH, 0x4f8a3e, [0, .04, 0], [.42, .05, .36]]];
+    [[0, 0, .55], [.26, .14, .45], [-.24, .18, .5], [.12, -.24, .42], [-.2, -.2, .48], [.3, -.1, .38]].forEach(([x, z, h]) => dp.push([CYL, 0x5f9a48, [x, h / 2, z], [.014, h, .014]], [SPH, 0xffd84a, [x, h + .02, z], [.09, .06, .09]], [SPH, 0xfff6c0, [x, h + .05, z], [.05, .04, .05]]));
+    dz.add(mesh(dp, 'Dazzle_Flowers'));
+    great.dazzle = [[0, .62, 0], [.26, .52, .14], [-.24, .56, .18], [.12, .48, -.24]].map(([x, y, z]) => { const g = softGlow(0xfff2a0); g.position.set(x, y, z); g.scale.setScalar(1.1); dz.add(g); return g; });
+    hitArea('dazzle', .65, .35);
     // ── 道：古い石の道（はじめから見えている）と、ひらくと順に灯る石 ──
     const pathMat = new THREE.MeshLambertMaterial({ color: 0xc9b98a, polygonOffset: true, polygonOffsetFactor: -2 });
     G.add(strip(ROUTE.slice(0, GR.bridgeFrom + 1), 1.5, .03, 'Great_Path', pathMat));
@@ -5515,6 +5597,12 @@ treasure = (() => {
     being.lids = new THREE.Group(); being.lids.position.set(0, .34, 1.05); being.neck.add(being.lids);
     being.lids.add(mesh([[SPH, 0x857c6c, [.3, -.11, .02], [.15, .13, .1]], [SPH, 0x857c6c, [-.3, -.11, .02], [.15, .13, .1]]], 'Giant_Lids'));
     hitArea('giant', 1.7, 1.0);
+    // LANGUAGE-01：巨木の広場に、木々の間から差し込む光の筋（ねこの岩の光と同じ見え方）
+    great.beams = [[GR.clearing.x + .8, GR.clearing.z + 1.2, .9], [GR.clearing.x - 1.8, GR.clearing.z - .6, .7], [GR.being.x + .6, GR.being.z + .9, .8]].map(([x, z, r], i) => {
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(r * .5, r, 6.5, 14, 1, true), glowMat(0xfff1b8, .1)); m.position.set(x, gy(x, z) + 3.25, z); m.rotation.z = .18 * (i % 2 ? 1 : -1); m.renderOrder = 3; m.name = 'Clearing_Sunbeam'; G.add(m); return m;
+    });
+    // 水面のきらめき：泉と川に、小さな光がちらちら
+    great.twinkle = new THREE.InstancedMesh(new THREE.OctahedronGeometry(.045), ADD(0xffffff, .95), 24); great.twinkle.frustumCulled = false; great.twinkle.renderOrder = 5; G.add(great.twinkle);
     // ── 川と、途切れた道：古い橋の杭が両岸に残っている ──
     const water = new THREE.MeshLambertMaterial({ color: 0x67b4d6, emissive: 0x1d4a60, polygonOffset: true, polygonOffsetFactor: -3 });
     G.add(strip(GR.river, GR.riverW, .05, 'Great_River', water));
@@ -5667,10 +5755,38 @@ treasure = (() => {
       great.motes.instanceMatrix.needsUpdate = true;
     }
     if (!calm && great.island.visible) great.islandGlow.material.opacity = .3 + .1 * Math.sin(t * .5);
+    // LANGUAGE-01：ほのかに（うすく、ゆっくり）と、まばゆく（明るく、強く）。見くらべて違いがわかるように
+    great.faint.forEach((g, i) => { g.material.opacity = calm ? .3 : .24 + .1 * Math.sin(t * 1.1 + i); });
+    great.dazzle.forEach((g, i) => { g.material.opacity = calm ? .95 : .8 + .2 * Math.sin(t * 3 + i * 1.3); g.scale.setScalar(calm ? .95 : .85 + .2 * Math.sin(t * 3 + i * 1.3)); });
+    great.beams.forEach((b, i) => { b.material.opacity = calm ? .1 : .08 + .04 * Math.sin(t * .4 + i * 2); });
+    // 水面のきらめき（近いときだけ）：泉は12こ、川は12こ
+    const sd2 = Math.hypot(x - TREASURE_SPOTS.spring.x, z - TREASURE_SPOTS.spring.z);
+    great.twinkle.visible = sd2 < 12 || (st.pathOpen && rd < 16);
+    if (great.twinkle.visible) {
+      const sp = roots.spring.position, [A, M, B] = GR.river;
+      for (let i = 0; i < 24; i++) {
+        const ph = calm ? .5 : (t * (1.3 + (i % 5) * .23) + i * .37) % 1, sc = calm ? .6 : Math.max(0, Math.sin(Math.PI * ph)) ** 3 * 1.2;
+        let px, pz, py;
+        if (i < 12) { const a = i * 2.4, r = .25 + (i % 4) * .17; px = sp.x + Math.cos(a) * r * .9; pz = sp.z + Math.sin(a) * r * .76; py = sp.y + .14; }
+        else { const u = ((i - 12) + .5) / 12, P = u < .5 ? A : M, Q = u < .5 ? M : B, k = u < .5 ? u * 2 : u * 2 - 1; px = P[0] + (Q[0] - P[0]) * k + Math.sin(i * 1.9) * .8; pz = P[1] + (Q[1] - P[1]) * k + Math.cos(i * 2.3) * .5; py = gy(px, pz) + .09; }
+        great.twinkle.setMatrixAt(i, _gm.makeScale(sc, sc, sc).setPosition(px, py, pz));
+      }
+      great.twinkle.instanceMatrix.needsUpdate = true;
+    }
+    // 門の向こうから、大きな寝息（道をひらく前から聞こえる：先へ行きたくなる理由）
+    const gd2 = Math.hypot(x - GR.gate.x, z - GR.gate.z);
+    // 門が画面の外でも、聞こえてくる側の画面のはしに出す（音のする方向がわかる）
+    if (st.caveLit && !st.pathOpen && gd2 < 7) {
+      const lab = el('sfx-giant'); _v.set(ROUTE[1][0], gy(ROUTE[1][0], ROUTE[1][1]) + 2.0, ROUTE[1][1]).project(camera);
+      const on = w && _v.z < 1; lab.classList.toggle('show', on);
+      if (on) { lab.style.left = Math.min(innerWidth - 70, Math.max(70, (_v.x + 1) / 2 * innerWidth)) + 'px'; lab.style.top = Math.min(innerHeight * .6, Math.max(innerHeight * .25, (1 - _v.y) / 2 * innerHeight)) + 'px'; }
+    }
+    // 演出は、タップで先へ（一度見たら、待たなくていい）
+    el('event-skip').classList.toggle('show', !!ev && ev.t > .8 && ev.t < ev.dur - .3);
     // 名前の札・音の文字
     project(being.root.position.x, being.root.position.y + 3.3, being.root.position.z, el('label-giant'), w && st.giantAwake && bd < 9);
     project(GR.river[1][0], gy(GR.river[1][0], GR.river[1][1]) + .8, GR.river[1][1], el('sfx-river'), w && st.pathOpen && rd < 6);
-    project(being.root.position.x, being.root.position.y + 2.2, being.root.position.z, el('sfx-giant'), w && st.pathOpen && !st.giantAwake && bd < 10);
+    if (!(st.caveLit && !st.pathOpen && Math.hypot(x - GR.gate.x, z - GR.gate.z) < 7)) project(being.root.position.x, being.root.position.y + 2.2, being.root.position.z, el('sfx-giant'), w && st.pathOpen && !st.giantAwake && bd < 10);
     // 向こう岸に着いた（一度だけ）
     if (w && st.bridgeBuilt && !st.arrived && !ev && od < GR.overlook.r - .5) arrive();
   }
@@ -5745,6 +5861,8 @@ treasure = (() => {
     }
     if (k === 'arrive') great.islandGlow.material.opacity = .35 + .45 * Math.sin(Math.PI * sm(.2, 2.4, T));
   }
+  // LANGUAGE-01：演出は、タップで先へ（ごほうびは演出の前に決めて保存してあるので、飛ばしても同じ）
+  canvas.addEventListener('pointerup', () => { if (ev && state === S.EVENT && ev.t > .8) ev.t = Math.max(ev.t, ev.dur - .25); });
   // 演出のカメラ
   function greatFrame(outPos, outLook) {
     const k = ev.kind, hx = character.position.x, hz = character.position.z, g0 = gy(hx, hz);
@@ -5791,7 +5909,7 @@ treasure = (() => {
   const heldGiant = () => !!missionHold && missionHold.heldState() === 'GIANT';
   function giantBegin(from) {
     giantGen++; stopGiantVoice();
-    gs = { step: from === 'wake' ? 'wake0' : 'back', topic: null, aspect: null, reply: '', care: null, sending: false };
+    gs = { step: from === 'wake' ? 'wake0' : 'ask1', back: from !== 'wake', topic: null, aspect: null, reply: '', care: null, sending: false };   // LANGUAGE-01：もどってきたときは、ひとことのあと、すぐ問い
     el('giant-input').value = '';
     renderGiant();
   }
@@ -5803,14 +5921,14 @@ treasure = (() => {
   function renderGiant() {
     if (!gs) return;
     const step = gs.step, line = el('giant-line'), q = el('giant-q'), chips = el('giant-chips'), write = el('giant-write'), next = el('btn-giant-next'), input = el('giant-input');
-    chips.replaceChildren(); el('giant-items').replaceChildren(); el('giant-care').replaceChildren(); el('giant-care').style.display = 'none';
+    chips.replaceChildren(); el('giant-items').replaceChildren(); el('giant-care').replaceChildren(); el('giant-care').style.display = 'none'; el('giant-wordhint').style.display = 'none';
     el('giant-wait').style.display = 'none'; write.style.display = 'none'; q.style.display = 'none'; line.textContent = '';
     next.style.display = ''; next.classList.remove('btn-disabled');
     el('btn-giant-voice').style.display = SR_API ? '' : 'none';
     const typed = input.value.trim();
-    if (step === 'wake0' || step === 'wake1') { line.textContent = GIANT_TALK.wake[step === 'wake0' ? 0 : 1]; next.textContent = 'つづきを聞く'; }
-    else if (step === 'back') { line.textContent = GIANT_TALK.back; next.textContent = 'うん、話す'; }
+    if (step === 'wake0' || step === 'wake1') { line.textContent = GIANT_TALK.wake[step === 'wake0' ? 0 : 1]; next.textContent = 'つづきを聞く'; if (wordsIn(line.textContent).length) { treasureMeetWords(st, line.textContent, 'オオネの話'); save(); } }
     else if (step === 'ask1') {
+      if (gs.back) line.textContent = GIANT_TALK.back;
       q.textContent = GIANT_TALK.ask1; q.style.display = '';
       giantTopics(st).filter(tp => tp.id !== 'other').forEach(tp => giantChip(chips, tp.icon + ' ' + tp.label, false, () => { gs.topic = tp; gs.aspect = null; gs.step = 'ask2'; input.value = ''; renderGiant(); }));
       write.style.display = ''; input.placeholder = 'ほかに気になったもの（短いことばで）';
@@ -5819,6 +5937,9 @@ treasure = (() => {
     else if (step === 'ask2') {
       q.textContent = gs.topic.label + GIANT_TALK.ask2; q.style.display = '';
       gs.topic.aspects.forEach(a => giantChip(chips, a, gs.aspect === a, () => { gs.aspect = gs.aspect === a ? null : a; renderGiant(); }));
+      // LANGUAGE-01：選んだ言い回しの意味を、その下に（たとえば「ほのかに」と「まばゆく」のちがい）
+      const sel = gs.aspect ? wordsIn(gs.aspect) : [];
+      if (sel.length) { const wh = el('giant-wordhint'); wh.textContent = sel.map(wordNote).join('\n'); wh.style.display = ''; }
       write.style.display = ''; input.placeholder = '自分のことばでもいいよ（書かなくても大丈夫）';
       next.textContent = 'つたえる'; next.classList.toggle('btn-disabled', !typed && !gs.aspect);
     }
@@ -5846,9 +5967,12 @@ treasure = (() => {
     if (state !== S.GIANT || !gs) return;
     const step = gs.step, typed = el('giant-input').value.trim();
     if (step === 'wake0') gs.step = 'wake1';
-    else if (step === 'wake1' || step === 'back') gs.step = 'ask1';
+    else if (step === 'wake1') gs.step = 'ask1';
     else if (step === 'ask1') { if (!typed) return; gs.topic = { id: 'other', label: typed.slice(0, 12), aspects: GIANT_OTHER.aspects }; gs.aspect = null; gs.step = 'ask2'; el('giant-input').value = ''; }
-    else if (step === 'ask2') { giantSend(); return; }
+    else if (step === 'ask2') {
+      if (wordsIn(gs.aspect || '').length || wordsIn(typed).length) { treasureMeetWords(st, (gs.aspect || '') + '\n' + typed, 'オオネに伝えた'); save(); }   // LANGUAGE-01：自分で使った言い回しも、場面として残す（書いたことばそのものは残さない）
+      giantSend(); return;
+    }
     else if (step === 'reply') { if (treasureGiantDone(st)) save(); applyVisuals(); gs.step = 'got'; }   // 一度だけ（もう受け取っていれば、そのまま）
     else if (step === 'got') { gs = null; stopGiantVoice(); focusTarget = null; guardTap(); setState(returnState === S.GIANT || returnState === S.EVENT ? S.EXPLORE : returnState); return; }
     else if (step === 'care') { gs.care = null; gs.step = 'ask2'; el('giant-input').value = ''; }

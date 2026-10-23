@@ -1646,6 +1646,118 @@ const EXPANSION_BLOCKS = [
   /\n\/\/ TREASURE-CORE-BEGIN[\s\S]*?\/\/ TREASURE-UI-END\n/,
   /\n\/\/ MISSION-HOLD-BEGIN[\s\S]*?\/\/ MISSION-HOLD-END\n/,
 ];
+// FLOW-02（2026-10-21）：歩く速さと歩幅を2倍・世界を2倍に広げた・近づいただけでは開かない・木を透かす。新しい順に元へ戻す
+export const FLOW02_EDITS = [
+  [`  new THREE.PlaneGeometry(80,80,8,8),
+  new THREE.MeshLambertMaterial({ color:0x6aaa4f })`,
+   `  new THREE.PlaneGeometry(160,160,8,8),   // FLOW-02：2倍の世界（前は 80）
+  new THREE.MeshLambertMaterial({ color:0x6aaa4f })`],
+  [`start: { x: 14.2, z: -25.4, r: 1.3 },`,
+   `start: { x: 30.0, z: -53.7, r: 1.3 },   // FLOW-02：ことばの樹といっしょに移した（樹との位置関係は同じ）`],
+  [`id: 'flower', place: '花のそば', x: 6.3, z: -1.8,`,
+   `id: 'flower', place: '花のそば', x: 12.6, z: -3.6,`],
+  [`id: 'shade', place: '木陰', x: 10.5, z: 3.0,`,
+   `id: 'shade', place: '木陰', x: 21.0, z: 6.0,`],
+  [`id: 'grass', place: '草むら', x: 15.0, z: -3.5,`,
+   `id: 'grass', place: '草むら', x: 30.0, z: -7.0,`],
+  [`nextGroup.position.set(22,0,-20);`,
+   `nextGroup.position.set(44,0,-40);`],
+  [`secLight.position.set(16,2,-8);`,
+   `secLight.position.set(32,2,-16);`],
+  [`secGround.rotation.x=-Math.PI/2; secGround.position.set(16,.01,-8);`,
+   `secGround.rotation.x=-Math.PI/2; secGround.position.set(32,.01,-16);`],
+  [`const MISSION_POS = new THREE.Vector3(1.5, 0, -6.5);`,
+   `const MISSION_POS = new THREE.Vector3(3, 0, -13);   // FLOW-02：出発点からの距離を2倍に（前は 1.5, -6.5）`],
+  [`  lb.position.set(12+(Math.random()-.5)*3.2,1.0+Math.random()*1.2,-10+(Math.random()-.5)*3.5);`,
+   `  lb.position.set(24+(Math.random()-.5)*3.2,1.0+Math.random()*1.2,-20+(Math.random()-.5)*3.5);`],
+  [`  v.position.set(12+(Math.random()-.5)*2.5,h/2,-10+(Math.random()-.5)*3.5);`,
+   `  v.position.set(24+(Math.random()-.5)*2.5,h/2,-20+(Math.random()-.5)*3.5);`],
+  [`const v1Rocks=[[-4,-3],[5,-2],[-2,5],[6,4],[-6,6]]`,
+   `const v1Rocks=[[-8,-6],[10,-4],[-4,10],[12,8],[-12,12]]`],
+  [`const TREE_SPOTS=[[-5,-6],[-8,2],[6,-7],[9,1],[-3,8],[4,9],[-10,-3],[11,-4],[0,-12],
+ [-7,11],[8,-12],[-12,7],[13,6],[-14,-8],[7,13],[-6,-14],[12,-9],[-9,13],
+ [17,-5],[19,2],[17,6],[21,-2]
+];`,
+   `// FLOW-02：場所どうしの間を2倍に広げた（前の場所の2倍）。ミナのそばの丸い木と、下を向いた花の上の丸い木は、相手のそばのまま
+const TREE_SPOTS=[[-10,-12],[-13.6,3.6],[12,-14],[18,2],[-6,16],[8,18],[-19.4,-4.9],[22,-8],[0,-24],
+ [-14,22],[16,-24],[-24,14],[26,12],[-28,-16],[14,26],[-12,-28],[24,-18],[-18,26],
+ [34,-10],[38,4],[34,12],[42,-4]
+];`],
+  [`newPath.position.set(13, 0.01, -10);`,
+   `newPath.position.set(26, 0.01, -20);`],
+  [`  new THREE.PlaneGeometry(3,14),`,
+   `  new THREE.PlaneGeometry(3,28),   // FLOW-02：2倍の世界`],
+  [`new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 120);`,
+   `new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 240);   // FLOW-02：遠くまで（前は 120）`],
+  [`scene.fog = new THREE.Fog(0xd6ecef, 24, 88);`,
+   `scene.fog = new THREE.Fog(0xd6ecef, 48, 176);   // FLOW-02：世界を2倍に広げたので、霧も2倍の距離から（前は 24, 88）`],
+  [`  return { update, applyUI, freeMessage, showBar, fadeBarLater, toFree, current: () => current, noteAnswer, finishSecond, abortSecond,
+`,
+   `  return { update, applyUI, freeMessage, showBar, fadeBarLater, toFree, current: () => current, noteAnswer, finishSecond, abortSecond,
+    startSecond, sproutCall: () => state === S.FREE_EXPLORE && q2Usable() ? Q2.start : null,   // FLOW-02：芽のそばの「はじめる」
+`],
+  [`    el('mbar-text').textContent = '新しい芽に着いた！';
+`,
+   `    el('mbar-text').textContent = '新しい芽のそばで、もう一度見てみよう';   // FLOW-02：「着いた！」をくり返し出さない
+`],
+  [`    const near = state === S.FREE_EXPLORE ? nearestDetour(st, x, z) : null;
+`,
+   `    let near = state === S.FREE_EXPLORE ? nearestDetour(st, x, z) : null;
+    if (near && treasure && !treasure.canSee(near.x, near.z)) near = null;   // FLOW-02：木のかげ・岩の向こうの気配は出さない
+`],
+  [`    // 第2クエストの芽：自由に歩いているときに近づくと始まる（入力中・道くさの最中は始まらない）
+    if (state === S.FREE_EXPLORE && q2Usable()) {
+      if (Math.hypot(x - Q2.start.x, z - Q2.start.z) <= Q2.start.r) { if (!q2NeedsLeave) startSecond(); }
+      else q2NeedsLeave = false;
+    }
+`,
+   `    // 第2クエストの芽：近づいただけでは始まらない。近くに出る「新しい芽が光っている｜はじめる」を押したときに始まる（FLOW-02。sproutCall）
+`],
+  [`      mbar.textContent = '光るポイントに着いた！';
+`,
+   `      mbar.textContent = '光るポイントで見つけたことを教えてね';   // FLOW-02：「着いた！」をくり返し出さない
+`],
+  [`      if(md<MISSION_RADIUS){
+        if(!missionNeedsLeave) triggerMission();
+      } else {
+        missionNeedsLeave=false;
+        mbar.textContent = md<CALLOUT_RADIUS ? 'なにかが呼んでいる…' : (treasure&&treasure.guide()) || '光るポイントを探して歩こう！';   // 祠に近づいたら写真のクエストの案内へ（EXPANSION-01）
+      }
+`,
+   `      // FLOW-02：近づいただけでは開かない。近くに出る「光るポイントがある｜はじめる」を押したときに開く（案内は treasure.update がまとめて出す）
+      mbar.textContent = md<CALLOUT_RADIUS&&!missionTriggered&&!missionHold.held() ? 'なにかが呼んでいる…' : (treasure&&treasure.guide()) || '光るポイントを探して歩こう！';   // 祠に近づいたら写真のクエストの案内へ（EXPANSION-01）
+`],
+  [`  const focus=!canMove();
+  camUser.step(dt);
+  if(!focus){
+    camera.position.lerp(character.position.clone().add(worldV2.cameraFramed()?CAM_OFF:camUser.offset(character.position.x,character.position.z)),.08);   // 視点の操作（CAMERA-USER）。樹の構図のあいだは決めた構図
+    camTgt.lerp(character.position.clone().add(CAM_LOOK),.08);
+`,
+   `  const focus=!canMove();
+  camUser.step(dt);
+  // FLOW-02：速く歩いても画面のはしへ行かないよう、追いかけを時間で決め（前は1コマごとに .08）、進む向きへ 0.18 秒ぶん先を見る（最大 1.4m）
+  _lead.copy(character.position).sub(_lastPos).setY(0).multiplyScalar(dt>0&&!focus?.18/dt:0); _lastPos.copy(character.position);
+  if(_lead.lengthSq()>1.96) _lead.setLength(1.4);
+  _leadS.lerp(_lead,reduceMotionQuery.matches?1:1-Math.exp(-dt/.3));
+  if(!focus){
+    const kf=reduceMotionQuery.matches?1:1-Math.exp(-dt/.11);
+    camera.position.lerp(_camWant.copy(character.position).add(_leadS).add(worldV2.cameraFramed()?CAM_OFF:camUser.offset(character.position.x,character.position.z)),kf);   // 視点の操作（CAMERA-USER）。樹の構図のあいだは決めた構図
+    camTgt.lerp(_camWant.copy(character.position).add(_leadS).add(CAM_LOOK),kf);
+`],
+  [`const camTgt=new THREE.Vector3();
+`,
+   `const camTgt=new THREE.Vector3();
+const _lead=new THREE.Vector3(), _leadS=new THREE.Vector3(), _lastPos=new THREE.Vector3(), _camWant=new THREE.Vector3();   // FLOW-02：進む向きへ少し先を見る
+`],
+  [`  const STRIDE_RIG = 1.5, RIG_REACH = .1, RIG_SHIFT = .45, RIG_LIFT = .05, RIG_SIN_MAX = .6;   // EXPANSION-02：前は .9 / .075 / .028（1秒に約9歩の小走り → 約4.4歩）
+  const STEP_BOB = .035, STEP_LEAN = .07, STEP_PACE = .22;   // 一歩ごとの体の上下・前かがみ・速さの強弱`,
+   `  const STRIDE_RIG = 3.0, RIG_REACH = .17, RIG_SHIFT = .4, RIG_LIFT = .075, RIG_SIN_MAX = .75;   // FLOW-02：一歩で進む距離を2倍（1秒に約4.4歩のまま）。足を前後に大きく出し、少し高く上げる（前は 1.5 / .1 / .45 / .05 / .6）
+  const STEP_BOB = .045, STEP_LEAN = .11, STEP_PACE = .32;   // 一歩ごとの体の上下・前かがみ・速さの強弱（FLOW-02：着地で足が止まって見えるよう、着地の前後をゆっくりに。前は .035 / .07 / .22）`],
+  [`const STRIDE_UNITS = 1.6;   // 1周期（左右1歩ずつ）で進む距離。移動速度と足の動きを合わせる`,
+   `const STRIDE_UNITS = 3.2;   // 1周期（左右1歩ずつ）で進む距離。移動速度と足の動きを合わせる（FLOW-02：前は 1.6。速さと歩幅を2倍にして、足を動かす速さは同じ）`],
+  [`const SPEED=3.3, ARRIVE=0.6;   // EXPANSION-02：一歩ずつの間が感じられる速さ（前は 4.0）`,
+   `const SPEED=6.6, ARRIVE=0.6;   // FLOW-02：一歩で進む距離を2倍に（足を動かす速さは同じ。前は 3.3）`],
+];
 export const EXPANSION_EDITS = [
   [`  FREE_EXPLORE:'FREE_EXPLORE', DETOUR:'DETOUR', FOUND:'FOUND',
 };`,
@@ -1856,8 +1968,18 @@ let viewShiftX=0;`],
 `],
 ];
 // 宝さがし（EXPANSION-01）の変更だけを元へ戻す
-export function revertExpansion(html) {
+// FLOW-02 の変更だけを元へ戻す（それより前の拡張はそのまま）
+export function revertFlow02(html) {
   let out = html;
+  for (const [before, after] of FLOW02_EDITS) {
+    const n = out.split(after).length - 1;
+    if (n !== 1) throw new Error(`flow-02 edit appears ${n} times: ${after.slice(0, 40)}`);
+    out = out.split(after).join(before);
+  }
+  return out;
+}
+export function revertExpansion(html) {
+  let out = revertFlow02(html);
   for (const re of EXPANSION_BLOCKS) {
     const n = (out.match(new RegExp(re.source, 'g')) || []).length;
     if (n !== 1) throw new Error(`expansion block appears ${n} times: ${re.source.slice(0, 40)}`);

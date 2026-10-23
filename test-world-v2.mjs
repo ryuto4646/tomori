@@ -9,7 +9,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { revertExpansion } from './world-art-baseline.mjs';
+import { revertExpansion, revertFlow02 } from './world-art-baseline.mjs';
 
 const REPO = dirname(fileURLToPath(import.meta.url));
 const ROOT = process.env.WORLD_V2_ROOT || REPO;
@@ -157,18 +157,18 @@ test('11. heightAt は1つだけで、地形の頂点・木や岩・祠・門・
 });
 
 test('12. 出発点・小道・祠・秘密の場所は平ら（高さ0）。根の門は谷の底で、ほぼ平ら', () => {
-  for (const [x, z] of [[0, 0], [1.5, -6.5], [16, -8]]) assert.ok(Math.abs(T.heightAt(x, z)) < 1e-9, `${x},${z}`);
+  for (const [x, z] of [[0, 0], [3, -13], [32, -16]]) assert.ok(Math.abs(T.heightAt(x, z)) < 1e-9, `${x},${z}`);   // FLOW-02：2倍の場所
   for (const [dx, dz] of [[0, 0], [1.5, 0], [-1.5, 0], [0, 1.5]]) assert.ok(Math.abs(T.heightAt(T.GATE.x + dx, T.GATE.z + dz)) < .05, 'gate floor');
-  for (let k = 0; k <= 20; k++) assert.ok(Math.abs(T.heightAt(1.5 * k / 20, -6.5 * k / 20)) < 1e-9, 'path');
+  for (let k = 0; k <= 20; k++) assert.ok(Math.abs(T.heightAt(3 * k / 20, -13 * k / 20)) < 1e-9, 'path');
   for (let a = 0; a < 360; a += 30) {
-    const r = 3.6, x = 1.5 + Math.cos(a) * r, z = -6.5 + Math.sin(a) * r;   // 立ち石の輪の外側まで
+    const r = 3.6, x = 3 + Math.cos(a) * r, z = -13 + Math.sin(a) * r;   // 立ち石の輪の外側まで
     assert.ok(Math.abs(T.heightAt(x, z)) < 1e-6, 'shrine area');
   }
 });
 
 test('13. 歩ける範囲の傾きは10°以下、外は丘で閉じる（起伏がある）', () => {
   let max = 0, hi = 0;
-  for (let x = -14; x <= 20; x += .25) for (let z = -15; z <= 8; z += .25) {
+  for (let x = -28; x <= 40; x += .5) for (let z = -30; z <= 16; z += .5) {   // FLOW-02：2倍の広さ
     if (!inWalk(x, z)) continue;
     const dx = (T.heightAt(x + .05, z) - T.heightAt(x - .05, z)) / .1, dz = (T.heightAt(x, z + .05) - T.heightAt(x, z - .05)) / .1;
     max = Math.max(max, Math.atan(Math.hypot(dx, dz)) * 180 / Math.PI);
@@ -176,7 +176,7 @@ test('13. 歩ける範囲の傾きは10°以下、外は丘で閉じる（起伏
   }
   assert.ok(max <= 10, `max slope ${max.toFixed(2)}`);
   assert.ok(hi > .3, 'gentle rolling inside');
-  assert.ok(T.heightAt(0, -24) > 1 && T.heightAt(-18, -14) > 1, 'hills outside');
+  assert.ok(T.heightAt(0, -48) > 1 && T.heightAt(-36, -28) > 1, 'hills outside');
   // V2 のカメラ（横長：+z 8.2・+3.4、縦長：-x 4.2・+z 7.6・+4.4）が、歩ける範囲のどこでも地面より上にある
   for (const [ox, oy, oz] of [[0, 3.4, 8.2], [-4.2, 4.4, 7.6]]) for (let a = 0; a < 360; a += 5) {
     const x = T.WALK.cx + Math.cos(a * Math.PI / 180) * T.WALK.rx, z = T.WALK.cz + Math.sin(a * Math.PI / 180) * T.WALK.rz;
@@ -188,8 +188,8 @@ test('14. 根の門は歩ける範囲のふちにあり、その先（ことば�
   const e = Math.hypot((T.GATE.x - T.WALK.cx) / T.WALK.rx, (T.GATE.z - T.WALK.cz) / T.WALK.rz);
   assert.ok(e > .95 && e < 1.05, `gate on the edge ${e}`);
   assert.ok(!inWalk(T.WORD_TREE.x, T.WORD_TREE.z), 'word tree is beyond the gate');
-  assert.ok(inWalk(1.5, -6.5) && inWalk(0, 0), 'start and mission reachable');
-  assert.ok(Math.hypot(T.WORD_TREE.x - 1.5, T.WORD_TREE.z + 6.5) > 25, 'word tree is far');
+  assert.ok(inWalk(3, -13) && inWalk(0, 0), 'start and mission reachable');
+  assert.ok(Math.hypot(T.WORD_TREE.x - 3, T.WORD_TREE.z + 13) > 50, 'word tree is far');   // FLOW-02：前の2倍
 });
 
 // ── 歩ける範囲・画質・動き ────────────────────────────────────────────────
@@ -199,7 +199,7 @@ test('15. タップ先とキーボード移動の両方を、歩ける範囲の�
   assert.ok(anim.indexOf('worldV2.groundCharacter(character);') > anim.indexOf('updateHiroriMotion(character, dt, t, walking);'), 'after motion');
   assert.ok(anim.indexOf('worldV2.groundCharacter(character);') < anim.indexOf('// 距離チェック'), 'before mission check');
   assert.match(V2, /function groundCharacter\(c\) \{\s*if \(!active \|\| !c\) return;\s*clampToWalkable\(c\.position, 1\);/);
-  assert.match(HTML, /const SPEED=3\.3, ARRIVE=0\.6;/);
+  assert.match(HTML, /const SPEED=6\.6, ARRIVE=0\.6;/);   // FLOW-02：前の2倍
   // 到着判定は平面の距離
   assert.match(HTML, /const md=Math\.hypot\(character\.position\.x-mpGroup\.position\.x, character\.position\.z-mpGroup\.position\.z\);/);
   // だ円の外の点は、ふちの上へ戻る。内側の点は動かない
@@ -266,7 +266,7 @@ test('19. AI スイッチ true・語彙の Worker URL・care・ミッション�
 });
 
 test('20. ヒロリの範囲（HIRORI-BEGIN〜END）・index.html・画像・起動ファイル・手順書・収録版タグは変わっていない', () => {
-  assert.equal(between(HTML, '// HIRORI-BEGIN', '// HIRORI-END'), between(OLD, '// HIRORI-BEGIN', '// HIRORI-END'));
+  assert.equal(between(revertFlow02(HTML), '// HIRORI-BEGIN', '// HIRORI-END'), between(OLD, '// HIRORI-BEGIN', '// HIRORI-END'));
   if (ROOT === REPO) {
     for (const f of ['index.html', 'start-tv-demo.cmd', 'docs/TV_RECORDING_RUNBOOK.md']) assert.equal(normalize(readFileSync(join(REPO, f), 'utf8')), normalize(git('show', `b2caa58:${f}`).toString('utf8')), f);
     assert.ok(readFileSync(join(REPO, 'assets', 'tomori-world-gateway.webp')).equals(git('show', 'b2caa58:assets/tomori-world-gateway.webp')));
@@ -278,7 +278,9 @@ test('20. ヒロリの範囲（HIRORI-BEGIN〜END）・index.html・画像・起
 test('21. カメラの構図は V2 だけで変わる（V1 の CAM_OFF・見る高さは今までどおり）', () => {
   assert.match(HTML, /^const CAM_OFF = new THREE\.Vector3\(0, 5, 8\);$/m);
   assert.match(HTML, /^const CAM_LOOK = new THREE\.Vector3\(0, 1, 0\);/m);
-  assert.match(HTML, /camTgt\.lerp\(character\.position\.clone\(\)\.add\(CAM_LOOK\),\.08\);/);
+  // FLOW-02：追いかけは時間で決め（前は1コマ .08）、進む向きへ少し先を見る
+  assert.match(HTML, /camTgt\.lerp\(_camWant\.copy\(character\.position\)\.add\(_leadS\)\.add\(CAM_LOOK\),kf\);/);
+  assert.match(HTML, /const kf=reduceMotionQuery\.matches\?1:1-Math\.exp\(-dt\/\.11\);/);
   const act = between(V2_CODE, 'function activate(built)', '\n  }\n');
   assert.match(act, /CAM_OFF\.set\(portrait \? -4\.2 : 0, portrait \? 4\.4 : 3\.4, portrait \? 7\.6 : 8\.2\);/);
   assert.match(act, /CAM_LOOK\.set\(0, portrait \? 2\.3 : 1\.6, 0\);/);
@@ -326,8 +328,8 @@ test('24. 光る小道：足もとから祠の入口へ・祠の出口から門�
   const routes = new Function('return ' + r[1])();
   const [a, b] = routes, first = a[0], endA = a[a.length - 1], startB = b[0], endB = b[b.length - 1];
   assert.ok(Math.hypot(first[0], first[1]) < 1, 'starts at Hirori');
-  assert.ok(Math.hypot(endA[0] - 1.5, endA[1] + 6.5) < 1.8, 'ends at the shrine entrance');
-  assert.ok(Math.hypot(startB[0] - 1.5, startB[1] + 6.5) < 1.6 && Math.hypot(endB[0] - T.GATE.x, endB[1] - T.GATE.z) < 1, 'shrine to gate');
+  assert.ok(Math.hypot(endA[0] - 3, endA[1] + 13) < 1.8, 'ends at the shrine entrance');
+  assert.ok(Math.hypot(startB[0] - 3, startB[1] + 13) < 1.6 && Math.hypot(endB[0] - T.GATE.x, endB[1] - T.GATE.z) < 1, 'shrine to gate');
   assert.match(V2, /pos\.push\(x, heightAt\(x, z\) \+ \.025, z\);/);
   assert.match(V2, /PA = \[0, \.28, \.85, \.28, 0\]/);
   assert.match(V2, /new THREE\.MeshBasicMaterial\(\{ vertexColors: true, transparent: true, depthWrite: false, side: THREE\.DoubleSide \}\)/);
@@ -336,9 +338,9 @@ test('24. 光る小道：足もとから祠の入口へ・祠の出口から門�
   assert.match(frame, /moteSamples\[j \+ 1\] \+ \(still \? 0 :/);
 });
 
-test('25. ことばの樹は門の先 15〜25m の谷の奥にあり、通常の木より十分に大きい', () => {
+test('25. ことばの樹は門の先 30〜50m（FLOW-02 で2倍）の谷の奥にあり、通常の木より十分に大きい', () => {
   const d = Math.hypot(T.WORD_TREE.x - T.GATE.x, T.WORD_TREE.z - T.GATE.z);
-  assert.ok(d >= 15 && d <= 25, `gate to tree ${d}`);
+  assert.ok(d >= 30 && d <= 50, `gate to tree ${d}`);
   const j = glbJson(GLB), byName = Object.fromEntries(j.nodes.map(n => [n.name, n])), acc = j.accessors;
   const h = n => acc[j.meshes[byName[n].mesh].primitives[0].attributes.POSITION].max[1];
   const normal = Math.max(h('Tree_Round_A'), h('Tree_Round_B'), h('Tree_Tall_A'), h('Tree_Tall_B'));

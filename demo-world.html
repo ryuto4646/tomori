@@ -1361,7 +1361,7 @@ function applyUI() {
       break;
     case S.MISSION_FOUND:
       openPanel('panel-mission');
-      mbar.textContent = '光るポイントに着いた！';
+      mbar.textContent = '光るポイントで見つけたことを教えてね';   // FLOW-02：「着いた！」をくり返し出さない
       hint.style.opacity = '0';
       break;
     case S.PHOTO_PANEL:
@@ -1485,9 +1485,9 @@ renderer.shadowMap.enabled = false;
 
 const scene = new THREE.Scene();
 // 空は CSS（html, body の背景）。霧は地平線の色：遠くほど淡く、少し青みがかる
-scene.fog = new THREE.Fog(0xd6ecef, 24, 88);
+scene.fog = new THREE.Fog(0xd6ecef, 48, 176);   // FLOW-02：世界を2倍に広げたので、霧も2倍の距離から（前は 24, 88）
 
-const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 120);
+const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 240);   // FLOW-02：遠くまで（前は 120）
 const CAM_OFF = new THREE.Vector3(0, 5, 8);
 const CAM_LOOK = new THREE.Vector3(0, 1, 0);   // カメラが見る高さ（ヒロリの足もとから。ワールドV2 で変える：WORLD-V2）
 camera.position.copy(CAM_OFF);
@@ -1504,27 +1504,28 @@ scene.add(new THREE.HemisphereLight(0xbfe3f2, 0x78ad5a, 0.7));
 
 // ── 地面 ──────────────────────────────────────────────────────────
 const ground = new THREE.Mesh(
-  new THREE.PlaneGeometry(80,80,8,8),
+  new THREE.PlaneGeometry(160,160,8,8),   // FLOW-02：2倍の世界（前は 80）
   new THREE.MeshLambertMaterial({ color:0x6aaa4f })
 );
 ground.rotation.x = -Math.PI/2; ground.name = 'ground'; scene.add(ground);
 
 // 新しい道（解放後に出現）
 const newPath = new THREE.Mesh(
-  new THREE.PlaneGeometry(3,14),
+  new THREE.PlaneGeometry(3,28),   // FLOW-02：2倍の世界
   new THREE.MeshLambertMaterial({ color:0x9ace74 })
 );
 newPath.rotation.x = -Math.PI/2;
-newPath.position.set(13, 0.01, -10);
+newPath.position.set(26, 0.01, -20);
 newPath.rotation.z = 0.15;
 newPath.visible = false;
 scene.add(newPath);
 
 // ── 木 ────────────────────────────────────────────────────────────
 // 木の見た目は WORLD-ART で、共有の形（InstancedMesh）を使って描く。TREE_SPOTS はカメラが木をよける計算にも使う
-const TREE_SPOTS=[[-5,-6],[-8,2],[6,-7],[9,1],[-3,8],[4,9],[-10,-3],[11,-4],[0,-12],
- [-7,11],[8,-12],[-12,7],[13,6],[-14,-8],[7,13],[-6,-14],[12,-9],[-9,13],
- [17,-5],[19,2],[17,6],[21,-2]
+// FLOW-02：場所どうしの間を2倍に広げた（前の場所の2倍）。ミナのそばの丸い木と、下を向いた花の上の丸い木は、相手のそばのまま
+const TREE_SPOTS=[[-10,-12],[-13.6,3.6],[12,-14],[18,2],[-6,16],[8,18],[-19.4,-4.9],[22,-8],[0,-24],
+ [-14,22],[16,-24],[-24,14],[26,12],[-28,-16],[14,26],[-12,-28],[24,-18],[-18,26],
+ [34,-10],[38,4],[34,12],[42,-4]
 ];
 
 // ── 岩 ────────────────────────────────────────────────────────────
@@ -1537,7 +1538,7 @@ function mkRock(x,z){
   m.rotation.set(Math.random(),Math.random(),Math.random());
   return m;
 }
-const v1Rocks=[[-4,-3],[5,-2],[-2,5],[6,4],[-6,6]].map(([x,z])=>{ const r=mkRock(x,z); scene.add(r); return r; });   // V2 では隠す（WORLD-V2）
+const v1Rocks=[[-8,-6],[10,-4],[-4,10],[12,8],[-12,12]].map(([x,z])=>{ const r=mkRock(x,z); scene.add(r); return r; });   // V2 では隠す（WORLD-V2）
 
 // ── つる障害物 ────────────────────────────────────────────────────
 const vineGroup = new THREE.Group(); scene.add(vineGroup);
@@ -1546,18 +1547,18 @@ const vineLf  = new THREE.MeshLambertMaterial({color:0x3a7a2a});
 for(let i=0;i<9;i++){
   const h=1.4+Math.random()*1.8;
   const v=new THREE.Mesh(new THREE.CylinderGeometry(.06,.09,h,5),vineMat);
-  v.position.set(12+(Math.random()-.5)*2.5,h/2,-10+(Math.random()-.5)*3.5);
+  v.position.set(24+(Math.random()-.5)*2.5,h/2,-20+(Math.random()-.5)*3.5);
   v.rotation.z=(Math.random()-.5)*.35; vineGroup.add(v);
 }
 for(let i=0;i<7;i++){
   const lb=new THREE.Mesh(new THREE.SphereGeometry(.35+Math.random()*.3,6,6),vineLf);
-  lb.position.set(12+(Math.random()-.5)*3.2,1.0+Math.random()*1.2,-10+(Math.random()-.5)*3.5);
+  lb.position.set(24+(Math.random()-.5)*3.2,1.0+Math.random()*1.2,-20+(Math.random()-.5)*3.5);
   vineGroup.add(lb);
 }
 
 // ── ミッション探索ポイント（黄色） ──────────────────────────────
 // 木・岩から4.5以上離れた開けた場所。出発点から見て、奥に木が重ならない
-const MISSION_POS = new THREE.Vector3(1.5, 0, -6.5);
+const MISSION_POS = new THREE.Vector3(3, 0, -13);   // FLOW-02：出発点からの距離を2倍に（前は 1.5, -6.5）
 const mpGroup = new THREE.Group();
 mpGroup.position.copy(MISSION_POS); scene.add(mpGroup);
 
@@ -1615,13 +1616,13 @@ for(let i=0;i<18;i++){
 const secretGroup = new THREE.Group(); secretGroup.visible=false; scene.add(secretGroup);
 const secGround=new THREE.Mesh(new THREE.CircleGeometry(4.5,16),
   new THREE.MeshLambertMaterial({color:0x8aca5a}));
-secGround.rotation.x=-Math.PI/2; secGround.position.set(16,.01,-8); secretGroup.add(secGround);
+secGround.rotation.x=-Math.PI/2; secGround.position.set(32,.01,-16); secretGroup.add(secGround);
 const secLight=new THREE.PointLight(0xff7744,1.5,9);
-secLight.position.set(16,2,-8); secretGroup.add(secLight);
+secLight.position.set(32,2,-16); secretGroup.add(secLight);
 
 // ── 次の探索ポイント（非表示・遠距離） ──────────────────────────
 const nextGroup=new THREE.Group();
-nextGroup.position.set(22,0,-20); nextGroup.visible=false; scene.add(nextGroup);
+nextGroup.position.set(44,0,-40); nextGroup.visible=false; scene.add(nextGroup);
 const nxRing=new THREE.Mesh(new THREE.TorusGeometry(.9,.09,8,32),
   new THREE.MeshBasicMaterial({color:0xaaddff}));
 nxRing.rotation.x=Math.PI/2; nxRing.position.y=.05; nextGroup.add(nxRing);
@@ -1681,7 +1682,7 @@ const worldArt = (() => {
   bladeGeo.computeVertexNormals();
 
   const START = [0, 0], MP = [MISSION_POS.x, MISSION_POS.z];
-  const PATH_PTS = [[0.15, -0.95], [0.75, -2.3], [0.55, -3.7], [1.05, -4.85], [1.35, -5.35]];
+  const PATH_PTS = [[0.15, -0.95], [1.5, -4.6], [1.1, -7.4], [2.1, -9.7], [2.75, -11.6]];   // FLOW-02：2倍の世界（祠の約1.4m手前まで）
   const pathCurve = new THREE.CatmullRomCurve3(PATH_PTS.map(([x, z]) => new THREE.Vector3(x, 0, z)));
   const pathSamples = pathCurve.getSpacedPoints(40);
   const pathDist = (x, z) => { let m = 1e9; for (const p of pathSamples) m = Math.min(m, (p.x - x) ** 2 + (p.z - z) ** 2); return Math.sqrt(m); };
@@ -1689,12 +1690,12 @@ const worldArt = (() => {
 
   // ── 地面：今の地面（タップ移動の対象）を細かくし、頂点色で大きくゆるやかな明暗をつける ──
   // ヒロリのまわりは少し明るく、画面手前の左右は少し暗く、小道のまわりは暖かく、遠くは霧の色へ近づける
-  const groundGeo = new THREE.PlaneGeometry(80, 80, 16, 16);
+  const groundGeo = new THREE.PlaneGeometry(160, 160, 24, 24);
   const gp = groundGeo.attributes.position, gc = new Float32Array(gp.count * 3);
   for (let i = 0; i < gp.count; i++) {
     const x = gp.getX(i), z = -gp.getY(i);                       // 地面は x 軸で -90° 回してあるので、y が奥行き（-z）になる
     const c = col2.set(0x72b052);
-    c.lerp(col.set(0x8cc462), .55 * Math.exp(-(x * x + (z + 1.5) ** 2) / 20));
+    c.lerp(col.set(0x8cc462), .55 * Math.exp(-(x * x + (z + 3) ** 2) / 80));
     c.lerp(col.set(0x5f9c44), .5 * smooth(1, 6, z) * smooth(2.5, 7, Math.abs(x)));
     c.lerp(col.set(0x63a046), .3 * smooth(2.5, 8, z));                // 画面のいちばん手前は、中央も少しだけ暗く
     c.lerp(col.set(0xa8c86c), .4 * Math.exp(-(pathDist(x, z) ** 2) / 4) * smooth(-9, -1, z));
@@ -1706,7 +1707,7 @@ const worldArt = (() => {
   ground.material.vertexColors = true; ground.material.color.set(0xffffff); ground.material.needsUpdate = true;
 
   // ── 遠景：歩ける範囲の外に、地面の続き・低い丘・森のかたまり。霧で淡く青みがかる ──
-  const farGround = new THREE.InstancedMesh(new THREE.RingGeometry(39.5, 90, 24, 1), decorMat, 1);
+  const farGround = new THREE.InstancedMesh(new THREE.RingGeometry(79, 180, 24, 1), decorMat, 1);
   eul.set(-Math.PI / 2, 0, 0, 'XYZ'); q.setFromEuler(eul); farGround.setMatrixAt(0, m4.compose(pos.set(0, -.02, 0), q, scl.set(1, 1, 1)));
   farGround.setColorAt(0, col.set(0x8cc06a)); group.add(farGround);
 
@@ -1724,7 +1725,7 @@ const worldArt = (() => {
   // 背の高い木（円すい2段・大きさと位置をずらす）、丸い木（葉のかたまり2〜3個）、小さな若木
   // 色は奥行きで変える：手前は黄緑、中ほどは落ち着いた緑、奥は青緑
   const treeColor = (x, z, v) => {
-    const far = smooth(-4, -16, z), near = smooth(1, 7, z);
+    const far = smooth(-8, -32, z), near = smooth(1, 7, z);
     const c = lerpHex(0x4f9a4a, 0x4b8c74, far + v * .15); return c.lerp(col.set(0x7dbb4c), near * .7);
   };
   const shadeSpots = [];
@@ -1779,11 +1780,11 @@ const worldArt = (() => {
   };
   const ROCK_SPOTS = [[-4, -3], [5, -2], [-2, 5], [6, 4], [-6, 6]];
   ROCK_SPOTS.forEach(([x, z]) => { tuft(x + .45, z + .2, .3); tuft(x - .35, z + .35, .24); });
-  TREE_SPOTS.forEach(([x, z], k) => { if (k % 3 === 0 && Math.abs(x) < 14 && Math.abs(z) < 14) tuft(x + .7, z + .55, .32); });
+  TREE_SPOTS.forEach(([x, z], k) => { if (k % 3 === 0 && Math.abs(x) < 28 && Math.abs(z) < 28) tuft(x + .7, z + .55, .32); });
   // 聖域の外周：花は少しだけ（左と奥）
   [[-2.5, .9, 0xffe08a], [-2.6, -.4, 0xf4a09a], [-2.0, -1.6, 0xfff7e6], [-1.3, -2.45, 0xa8d8f0], [.1, -2.55, 0xffe08a], [-2.2, 1.8, 0xfff7e6]].forEach(([dx, dz, hex]) => { flower(MP[0] + dx, MP[1] + dz, hex); tuft(MP[0] + dx * 1.12, MP[1] + dz * 1.12, .26); });
   // 中景：花は小さなまとまりで2か所だけ
-  [[-6.5, -8.5], [7.5, -9.5]].forEach(([cx, cz]) => { for (let k = 0; k < 4; k++) flower(cx + (rnd() - .5) * 1.6, cz + (rnd() - .5) * 1.2, [0xfff7e6, 0xffe08a, 0xf4a09a][k % 3]); tuft(cx, cz, .3); });
+  [[-13, -17], [15, -19]].forEach(([cx, cz]) => { for (let k = 0; k < 4; k++) flower(cx + (rnd() - .5) * 1.6, cz + (rnd() - .5) * 1.2, [0xfff7e6, 0xffe08a, 0xf4a09a][k % 3]); tuft(cx, cz, .3); });
   // 画面手前の左右：背の高い濃い株。ふちで切れても植物に見える大きさ
   const FRONT = [[-4.6, 3.9], [4.9, 3.3]];
   // スマホの縦長の画面でも手前が空白にならないよう、中央寄りに小さな株を2つ（ヒロリの足もとからは離す）
@@ -1891,9 +1892,9 @@ const worldV2 = (() => {
 
   // TERRAIN-BEGIN（地形の高さ。test-world-v2.mjs がこの範囲だけを取り出して、傾き・平らさを確かめる）
   // 歩ける範囲：だ円の内側。出発点・小道・祠・秘密の場所は高さ0で平ら。その外はゆるい起伏、さらに外へ行くほど丘が重なる
-  const WALK = { cx: 3, cz: -3.5, rx: 15, rz: 9.5 };
-  const GATE = { x: 7.0, z: -12.6 };                 // 根の門（歩ける範囲のふち。この先へは進めない）
-  const WORD_TREE = { x: 15.8, z: -28.3, scale: 1 }; // ことばの樹（根の門の先、谷の奥およそ18m。遠くからも見える目標）
+  const WALK = { cx: 6, cz: -7, rx: 30, rz: 19 };   // FLOW-02：2倍に広げた（前は 3, -3.5, 15, 9.5）
+  const GATE = { x: 14.0, z: -25.2 };                 // 根の門（歩ける範囲のふち。この先へは進めない）
+  const WORD_TREE = { x: 31.6, z: -56.6, scale: 1 }; // ことばの樹（根の門の先、谷の奥およそ18m。遠くからも見える目標）
   const smooth = (a, b, x) => { const k = Math.min(1, Math.max(0, (x - a) / (b - a))); return k * k * (3 - 2 * k); };
   const segDist = (x, z, ax, az, bx, bz) => {
     const vx = bx - ax, vz = bz - az, t = Math.min(1, Math.max(0, ((x - ax) * vx + (z - az) * vz) / (vx * vx + vz * vz)));
@@ -1901,27 +1902,27 @@ const worldV2 = (() => {
   };
   // 平らにしておく場所（x, z, 平らな半径, なじませる幅）と、平らな帯（両端, 半径, なじませる幅）
   // 秘密の道：門から、ゆるいS字でことばの樹へ（東へ出て岩をまわり、水色の芽のそばで折り返し、若木の陰を抜けると樹が開ける）
-  const SECRET_ROUTE = [[GATE.x, GATE.z], [9.8, -15.4], [15.6, -15.9], [17.8, -18.9], [16.4, -21.9], [10.8, -22.4], [8.8, -25.2], [10.4, -29.0], [13.0, -29.6]];
+  const SECRET_ROUTE = [[GATE.x, GATE.z], [19.6, -30.8], [31.2, -31.8], [35.6, -37.8], [32.8, -43.8], [21.6, -44.8], [17.6, -50.4], [20.8, -58.0], [28.8, -57.9]];   // FLOW-02：2倍（最後の点は、ことばの樹との位置関係を前と同じに）
   const routeDist = (x, z) => { let d = 1e9; for (let i = 0; i < SECRET_ROUTE.length - 1; i++) d = Math.min(d, segDist(x, z, SECRET_ROUTE[i][0], SECRET_ROUTE[i][1], SECRET_ROUTE[i + 1][0], SECRET_ROUTE[i + 1][1])); return d; };
-  const FLAT = [[0, 0, 3.4, 8], [1.5, -6.5, 4.4, 8], [16, -8, 5.6, 7], [WORD_TREE.x, WORD_TREE.z, 4.4, 3]];   // 最後の1つは、ことばの樹のまわり（秘密の場所）
-  const FLAT_SEG = [[0, 0, 1.5, -6.5, 2.4, 8], [13.8, -2.5, 12.2, -17.5, 2.2, 7]];
+  const FLAT = [[0, 0, 3.4, 8], [3, -13, 4.4, 8], [32, -16, 5.6, 7], [WORD_TREE.x, WORD_TREE.z, 4.4, 3]];   // 最後の1つは、ことばの樹のまわり（秘密の場所）
+  const FLAT_SEG = [[0, 0, 3, -13, 2.4, 8], [27.6, -5, 24.4, -35, 2.2, 7]];
   // 盛り上がり（x, z, 高さ, 広がり）：歩ける範囲の中はゆるく、外は大きく
-  const INNER = [[-10.5, -3.5, .45, 6], [10, 2, .4, 5.5], [-6.5, 5, .25, 5], [10.5, -6.5, .3, 5], [-4, -12.5, .55, 6]];
+  const INNER = [[-21, -7, .45, 9.6], [20, 4, .4, 8.8], [-13, 10, .25, 8], [21, -13, .3, 8], [-8, -25, .55, 9.6]];   // FLOW-02：場所を2倍、広がりを1.6倍
   // 外の丘は高さを3段階にして、地平線を一直線にしない（低い丘・中くらいの丘・遠くの高い丘）
-  const OUTER = [[-15, -15, 1.2, 6.5], [-2, -21, 2.2, 6], [26, -12, 1.6, 6], [-19, 4, 1.0, 6], [25, 7, 1.2, 6],
-    [-30, -34, 3.3, 9], [-9, -40, 2.4, 8], [36, -30, 3.1, 9], [-38, -12, 2.0, 8], [6, -46, 1.6, 7]];
+  const OUTER = [[-30, -30, 1.8, 10.4], [-4, -42, 3.3, 9.6], [52, -24, 2.4, 9.6], [-38, 8, 1.5, 9.6], [50, 14, 1.8, 9.6],
+    [-60, -68, 5.0, 14.4], [-18, -80, 3.6, 12.8], [72, -60, 4.7, 14.4], [-76, -24, 3.0, 12.8], [12, -92, 2.4, 11.2]];   // FLOW-02：場所を2倍、広がりを1.6倍、遠いので高さを1.5倍
   // EXPANSION-03：巨木への道（草原の南西のはしの古い門 → 巨木の根もとの広場 → 途切れた道 → 光のつるの橋 → 向こう岸）
   // 6 番目（広場の先）から 7 番目（向こう岸）のあいだは川。橋ができるまでは渡れない。道・広場・向こう岸・川のまわりは平ら
-  const GREAT_ROUTE = [[-7.6, -9.6], [-9.2, -12.6], [-10.8, -16.4], [-13.0, -20.0], [-16.4, -23.0], [-19.6, -25.4], [-24.2, -23.4], [-28.6, -22.0], [-31.6, -21.2]];
+  const GREAT_ROUTE = [[-16.3, -20.5], [-17.9, -23.5], [-21.6, -32.8], [-26.0, -40.0], [-32.8, -46.0], [-39.2, -50.8], [-43.8, -48.8], [-48.2, -47.4], [-51.2, -46.6]];   // FLOW-02：道は2倍。門・広場・橋・向こう岸のまわりは、前と同じ位置関係
   const GREAT = Object.freeze({
-    gate: { x: -8.7, z: -10.9 },                 // 道の入口の古い門（かべの絵と同じもよう）
-    clearing: { x: -19.6, z: -25.4, r: 5.0 },    // 巨木の根もとの広場
-    tree: { x: -22.8, z: -28.9, r: 2.6 },        // 巨木の幹（中には入らない）
-    being: { x: -20.9, z: -27.3, r: 1.6 },       // 根もとでねむる大きな生きもの（体の中には入らない）
-    plant: { x: -23.6, z: -23.6 },               // タネを植える場所（途切れた道のはし）
+    gate: { x: -17.4, z: -21.8 },                 // 道の入口の古い門（かべの絵と同じもよう）
+    clearing: { x: -39.2, z: -50.8, r: 5.0 },    // 巨木の根もとの広場
+    tree: { x: -42.4, z: -54.3, r: 2.6 },        // 巨木の幹（中には入らない）
+    being: { x: -40.5, z: -52.7, r: 1.6 },       // 根もとでねむる大きな生きもの（体の中には入らない）
+    plant: { x: -43.2, z: -49.0 },               // タネを植える場所（途切れた道のはし）
     bridgeFrom: 6,                               // GREAT_ROUTE の 6→7 が橋
-    overlook: { x: -31.6, z: -21.2, r: 3.0 },    // 向こう岸（新しい景色）
-    river: [[-23.7, -14.1], [-26.4, -22.7], [-29.1, -31.3]], riverW: 2.4,
+    overlook: { x: -51.2, z: -46.6, r: 3.0 },    // 向こう岸（新しい景色）
+    river: [[-40.6, -30.9], [-46.0, -48.1], [-51.4, -65.3]], riverW: 2.4,
   });
   const greatDist = (x, z) => { let d = 1e9; for (let i = 0; i < GREAT_ROUTE.length - 1; i++) d = Math.min(d, segDist(x, z, GREAT_ROUTE[i][0], GREAT_ROUTE[i][1], GREAT_ROUTE[i + 1][0], GREAT_ROUTE[i + 1][1])); return d; };
   const riverDist = (x, z) => Math.min(segDist(x, z, ...GREAT.river[0], ...GREAT.river[1]), segDist(x, z, ...GREAT.river[1], ...GREAT.river[2]));
@@ -1932,7 +1933,7 @@ const worldV2 = (() => {
     // 外周の丘：歩ける範囲の外へ行くほど高い。カメラのある手前側（+z）は低く、奥は高く
     const e = Math.hypot((x - WALK.cx) / WALK.rx, (z - WALK.cz) / WALK.rz), out = smooth(1.0, 1.7, e);
     for (const [bx, bz, a, s] of OUTER) h += out * a * Math.exp(-((x - bx) ** 2 + (z - bz) ** 2) / (2 * s * s));
-    let rim = smooth(1.0, 2.0, e) * (0.5 + 1.4 * smooth(6, -12, z)) + smooth(2.4, 4.5, e) * 1.6;
+    let rim = (smooth(1.0, 2.0, e) * (0.5 + 1.4 * smooth(12, -24, z)) + smooth(2.4, 4.5, e) * 1.6) * 1.5;   // FLOW-02：丘は2倍遠いので、高さを1.5倍
     // 根の門の先は谷：秘密の道に沿って丘が切れ、道のまわりだけ低くなる（曲がり角のあいだは丘が残る）
     const rd = routeDist(x, z), valley = Math.exp(-(rd ** 2) / (2 * 2.2 * 2.2));
     h += rim * (1 - .8 * valley) - .25 * valley * smooth(1.6, .9, e);
@@ -2219,6 +2220,7 @@ const worldV2 = (() => {
   const questSproutBase = new THREE.Matrix4();
   const gatePlace = new THREE.Matrix4(), fruitPos = [], fruitBase = [];
   const FLOWER_MAX = 48; let flowerStem = null, flowerHead = null;
+  const FADE_KINDS = new Set(['Tree_Round_A', 'Tree_Round_B', 'Tree_Tall_A', 'Tree_Tall_B', 'Tree_Sapling_A', 'Stone_Standing_A', 'Stone_Standing_B']), fadeSets = [];   // FLOW-02：透かす物
   const flowerM = new THREE.Matrix4(), flowerPM = new THREE.Matrix4(), flowerFr = new THREE.Frustum(), flowerS = new THREE.Sphere(new THREE.Vector3(), .6);
   function build(kit) {
     const need = n => { const k = kit.get(n); if (!k) throw new Error('node ' + n); return k; };
@@ -2239,17 +2241,17 @@ const worldV2 = (() => {
     };
     // 奥行きで色を変える：手前は暖かく、奥は青みを足す
     const depthTint = (x, z) => {
-      const far = smooth(-6, -26, z) + smooth(16, 30, Math.abs(x - 3)) * .6, near = smooth(2, 8, z);
+      const far = smooth(-12, -52, z) + smooth(32, 60, Math.abs(x - 6)) * .6, near = smooth(2, 8, z);
       return c3.setRGB(1 + near * .04 - far * .12, 1 - far * .03, 1 - near * .08 + far * .08).getHex();
     };
     // EXPANSION-03：巨木への道・川・広場・向こう岸のまわりには、木を置かない（大きさ0。乱数の並びは変えない）
     const greatClear = (x, z) => greatDist(x, z) < 3.6 || riverDist(x, z) < 3 || Math.hypot(x - GREAT.clearing.x, z - GREAT.clearing.z) < GREAT.clearing.r + 2.5
       || Math.hypot(x - GREAT.overlook.x, z - GREAT.overlook.z) < GREAT.overlook.r + 2.5;
-    const blocked = (x, z) => Math.hypot(x, z) < 2.6 || segDist(x, z, 0, 0, 1.5, -6.5) < 1.6 || Math.hypot(x - 1.5, z + 6.5) < 3.2
-      || segDist(x, z, 1.5, -6.5, GATE.x, GATE.z) < 1.4 || Math.hypot(x - 16, z + 8) < 5;
+    const blocked = (x, z) => Math.hypot(x, z) < 2.6 || segDist(x, z, 0, 0, MISSION_POS.x, MISSION_POS.z) < 1.6 || Math.hypot(x - MISSION_POS.x, z - MISSION_POS.z) < 3.2
+      || segDist(x, z, MISSION_POS.x, MISSION_POS.z, GATE.x, GATE.z) < 1.4 || Math.hypot(x - 32, z + 16) < 5;
 
     // 地形：中心ほど細かい格子（奥と外周は粗く）。頂点色で草原の色を混ぜる
-    const N = HIGH ? 72 : 26, SPAN = 78;
+    const N = HIGH ? 90 : 34, SPAN = 156;   // FLOW-02：2倍の広さ（前は 72 / 26、78）
     const g = new THREE.PlaneGeometry(2, 2, N, N); g.rotateX(-Math.PI / 2);
     const gp = g.attributes.position, gc = new Float32Array(gp.count * 3);
     const warp = u => SPAN * (.34 * u + .66 * Math.sign(u) * Math.abs(u) ** 2.1);
@@ -2259,9 +2261,9 @@ const worldV2 = (() => {
       gp.setXYZ(i, x, h, z);
       const n1 = .5 + .5 * Math.sin(x * .09 + 1.3) * Math.cos(z * .07 - .6), n2 = .5 + .5 * Math.sin((x - z) * .05 + .4);
       c3.copy(cMid).lerp(cWarm, n1 * .8).lerp(cBlue, n2 * .45).lerp(cDry, smooth(.8, 4, h) * .5);
-      c3.lerp(cLight, .5 * Math.exp(-((x - .8) ** 2) / 40) * Math.exp(-((z + 4.5) ** 2) / 16));   // 中景（小道から祠）は明るく
+      c3.lerp(cLight, .5 * Math.exp(-((x - 1.6) ** 2) / 160) * Math.exp(-((z + 9) ** 2) / 64));   // 中景（小道から祠）は明るく
       c3.lerp(cFore, .38 * smooth(2.5, 8, z));                                                       // 画面の手前は少し暗く
-      c3.lerp(cPath, .35 * Math.exp(-(segDist(x, z, 0, 0, 1.5, -6.5) ** 2) / 3) + .3 * Math.exp(-(segDist(x, z, 1.5, -6.5, GATE.x, GATE.z) ** 2) / 2.5));
+      c3.lerp(cPath, .35 * Math.exp(-(segDist(x, z, 0, 0, MISSION_POS.x, MISSION_POS.z) ** 2) / 3) + .3 * Math.exp(-(segDist(x, z, MISSION_POS.x, MISSION_POS.z, GATE.x, GATE.z) ** 2) / 2.5));
       const eDist = Math.hypot((x - WALK.cx) / WALK.rx, (z - WALK.cz) / WALK.rz);
       c3.lerp(cFar, smooth(1.4, 3.2, eDist) * .8);
       // Step 11K：丘の上は明るく、谷は少し濃く。いちばん遠い丘は霧の青緑へ（空との境に帯を作らない）
@@ -2278,55 +2280,76 @@ const worldV2 = (() => {
     const TREES = ['Tree_Round_A', 'Tree_Round_B', 'Tree_Tall_A', 'Tree_Tall_B', 'Tree_Sapling_A'];
     // EXPANSION-02：宝さがしの西の草原の木。歩くときにカメラが上から見通せる高さへ（とがった木は小さく、ミナのそばは幹のまわりがあく丸い木）
     // 下を向いた花のそばの「丸い大きな木」は、ヒントの目印なので大きいまま
-    const WEST_TREES = { '-5,-6': ['Tree_Tall_B', .7], '-8,2': ['Tree_Round_A', .7], '-10,-3': ['Tree_Round_B', .95] };
+    const WEST_TREES = { '-10,-12': ['Tree_Tall_B', .7], '-13.6,3.6': ['Tree_Round_A', .7], '-19.4,-4.9': ['Tree_Round_B', .95] };
     TREE_SPOTS.forEach(([x, z], k) => {
       // ヒロリの頭のうしろ・祠から根の門への見通しをふさぐ場所は、低い若木にする（場所はカメラが木をよける計算でも使うので変えない）
-      const open = (Math.abs(x) < 2 && z < -8) || segDist(x, z, 1.5, -6.5, GATE.x, GATE.z) < 4 || Math.hypot(x - GATE.x, z - GATE.z) < 5;
+      const open = (Math.abs(x) < 4 && z < -16) || segDist(x, z, MISSION_POS.x, MISSION_POS.z, GATE.x, GATE.z) < 8 || Math.hypot(x - GATE.x, z - GATE.z) < 10;   // FLOW-02：2倍の世界
       const west = WEST_TREES[x + ',' + z];   // EXPANSION-02：[形, 大きさの倍率]（乱数の数と順番は変えない）
       const type = open ? 'Tree_Sapling_A' : west ? west[0] : TREES[(k * 7 + 3) % 4];
       put(type, x, z, (.85 + rnd() * .35) * (west ? west[1] : 1), undefined, depthTint(x, z), (rnd() - .5) * .08);
       if (!open) occluders.push([x, z, 1.6 * (west ? west[1] : 1)]);
     });
     // 外周の木立：歩ける範囲のふちの外側。門の前と、カメラ側（手前）はあける
-    for (let i = 0, n = HIGH ? 46 : 10; i < n; i++) {
+    for (let i = 0, n = HIGH ? 64 : 14; i < n; i++) {   // FLOW-02：ふちが2倍長いので、少し増やす（前は 46 / 10）
       const a = i / n * Math.PI * 2 + rnd() * .12, r = 1.14 + rnd() * .55;
       const x = WALK.cx + Math.cos(a) * WALK.rx * r, z = WALK.cz + Math.sin(a) * WALK.rz * r;
-      if (z > 7 || segDist(x, z, GATE.x, GATE.z, WORD_TREE.x, WORD_TREE.z) < 3.2 || Math.hypot(x - 16, z + 8) < 6) continue;
+      if (z > 14 || segDist(x, z, GATE.x, GATE.z, WORD_TREE.x, WORD_TREE.z) < 3.2 || Math.hypot(x - 32, z + 16) < 6) continue;
       const clear = routeDist(x, z) < 3.4 || Math.hypot(x - WORD_TREE.x, z - WORD_TREE.z) < 5.5 || greatClear(x, z) ? 0 : 1;   // 秘密の道・巨木への道の上には置かない
       put(TREES[i % 4], x, z, (1 + rnd() * .45) * clear, undefined, depthTint(x, z), (rnd() - .5) * .1);
       if (clear) occluders.push([x, z, 1.8]);
     }
     // 遠くの木：丘の上に、まとまりで
     // まとまりの大きさ・広がり・間隔をそろえない。ことばの樹のまわり（谷の奥）はあけて、空が見える切れ目を残す
-    [[-17, -18, 8, 9], [-3, -24, 4, 5], [5, -21, 3, 4], [27, -16, 6, 7], [-24, 3, 5, 6], [31, -3, 3, 5]].forEach(([cx, cz, n, sp]) => {
+    [[-34, -36, 8, 13.5], [-6, -48, 4, 7.5], [10, -42, 3, 6], [54, -32, 6, 10.5], [-48, 6, 5, 9], [62, -6, 3, 7.5]].forEach(([cx, cz, n, sp]) => {
       for (let i = 0; i < (HIGH ? n : 0); i++) {
         const x = cx + (rnd() - .5) * sp, z = cz + (rnd() - .5) * sp * .6, sc = 1.1 + rnd() * .7;   // 乱数の順番は前と同じ（x・z・大きさ）
-        put(i % 3 ? 'Tree_Tall_A' : 'Tree_Tall_B', x, z, greatClear(x, z) ? 0 : sc, undefined, depthTint(cx, cz - 10));
+        put(i % 3 ? 'Tree_Tall_A' : 'Tree_Tall_B', x, z, greatClear(x, z) ? 0 : sc, undefined, depthTint(cx, cz - 20));
       }
     });
 
     // 岩：V1 の岩と同じ場所に、苔のある岩。小石は小道のふちに少しだけ。門の左右と見晴らしの丘に立ち石
-    [[-4, -3], [5, -2], [-2, 5], [6, 4], [-6, 6]].forEach(([x, z], k) => put(k % 2 ? 'Rock_Medium_A' : 'Rock_Medium_B', x, z, .7 + rnd() * .3));
-    const gYaw = Math.atan2(1.5 - GATE.x, -6.5 - GATE.z);
+    [[-8, -6], [10, -4], [-4, 10], [12, 8], [-12, 12]].forEach(([x, z], k) => put(k % 2 ? 'Rock_Medium_A' : 'Rock_Medium_B', x, z, .7 + rnd() * .3));
+    const gYaw = Math.atan2(MISSION_POS.x - GATE.x, MISSION_POS.z - GATE.z);
     const side = (d, f) => [GATE.x + Math.cos(gYaw) * d + Math.sin(gYaw) * f, GATE.z - Math.sin(gYaw) * d + Math.cos(gYaw) * f];
     [[-2.7, .3, 'Stone_Standing_A'], [2.8, .1, 'Stone_Standing_B'], [-3.4, -.8, 'Rock_Medium_A'], [3.5, -.6, 'Rock_Medium_B']].forEach(([d, f, n]) => { const [x, z] = side(d, f); put(n, x, z, 1.1 + rnd() * .2); });
-    put('Stone_Standing_A', -4.6, -12.2, 1.2); put('Stone_Standing_B', -3.2, -13.2, .9);
+    put('Stone_Standing_A', -9.2, -24.4, 1.2); put('Stone_Standing_B', -6.4, -26.4, .9);
 
     // 植物：岩と木の根もと・小道のふち・祠の外周・門の左右・画面手前の左右（額縁）
     let pi = 0;
-    const depthSize = (x, z) => 1 + .14 * smooth(1, 6, z) - .16 * smooth(-8, -22, z) - .08 * smooth(12, 22, Math.abs(x - 3));   // 手前は大きく、奥は小さく
+    const depthSize = (x, z) => 1 + .14 * smooth(1, 6, z) - .16 * smooth(-16, -44, z) - .08 * smooth(24, 44, Math.abs(x - 6));   // 手前は大きく、奥は小さく
     const plant = (name, x, z, s = 1) => { if (!blocked(x, z) && keep(pi++)) put(name, x, z, s * (.85 + rnd() * .35) * depthSize(x, z), undefined, depthTint(x, z)); };
-    [[-4, -3], [5, -2], [-2, 5], [6, 4], [-6, 6]].forEach(([x, z]) => { plant('Grass_A', x + .7, z + .3); plant('Grass_B', x - .5, z + .6); });
+    [[-8, -6], [10, -4], [-4, 10], [12, 8], [-12, 12]].forEach(([x, z]) => { plant('Grass_A', x + .7, z + .3); plant('Grass_B', x - .5, z + .6); });
     TREE_SPOTS.forEach(([x, z], k) => { plant(k % 3 ? 'Grass_A' : 'Bush_A', x + .9, z + .6); if (k % 2) plant('Grass_C', x - .8, z + .4); });
-    for (let k = 0; k <= 10; k++) { const t = k / 10, x = 1.5 * t, z = -6.5 * t, s = k % 2 ? 1 : -1; plant(k % 3 ? 'Grass_B' : 'Flowers_A', x + s * (1.9 + rnd() * .5), z + (rnd() - .5)); }
-    [[-2.9, .8, 'Flowers_A'], [-3.0, -.9, 'Flowers_B'], [-2.2, -2.4, 'Grass_A'], [-.8, -3.0, 'Flowers_C'], [.9, -3.1, 'Grass_C'], [-2.6, 2.0, 'Bush_B']].forEach(([dx, dz, n]) => plant(n, 1.5 + dx, -6.5 + dz));
+    for (let k = 0; k <= 20; k++) { const t = k / 20, x = MISSION_POS.x * t, z = MISSION_POS.z * t, s = k % 2 ? 1 : -1; plant(k % 3 ? 'Grass_B' : 'Flowers_A', x + s * (1.9 + rnd() * .5), z + (rnd() - .5)); }
+    [[-2.9, .8, 'Flowers_A'], [-3.0, -.9, 'Flowers_B'], [-2.2, -2.4, 'Grass_A'], [-.8, -3.0, 'Flowers_C'], [.9, -3.1, 'Grass_C'], [-2.6, 2.0, 'Bush_B']].forEach(([dx, dz, n]) => plant(n, MISSION_POS.x + dx, MISSION_POS.z + dz));
     [[-1.8, .9], [1.9, .8], [-2.4, -.4], [2.5, -.5]].forEach(([d, f], k) => { const [x, z] = side(d, f); plant(k % 2 ? 'Bush_A' : 'Grass_C', x, z, 1.2); });
     // 画面手前の左右（額縁）：横長の画面と縦長の画面で、映る範囲に合わせて置く。ヒロリのまわり（半径2.6）は空ける
     const FRAME = camera.aspect < .8 ? [[-2.15, 3.9], [-0.3, 4.4], [-1.95, 3.0], [-0.05, 3.5]] : [[-3.3, 3.2], [3.5, 2.9], [-2.2, 4.4], [2.5, 4.6]];
     FRAME.forEach(([cx, cz], k) => { for (let i = 0; i < 3; i++) plant(['Grass_A', 'Flowers_B', 'Grass_C'][(i + k) % 3], cx + (rnd() - .5) * 1.0, cz + (rnd() - .5) * .8, k < 2 ? 1.3 : 1.1); });
     put('Rock_Medium_B', FRAME[0][0] - .6, FRAME[0][1] + .5, .8);
-    [[-7, -8.5], [8, -2.5], [-9, 1], [10.5, -9], [-5.5, -1.5]].forEach(([cx, cz], k) => { plant(['Flowers_A', 'Flowers_B', 'Flowers_C'][k % 3], cx, cz); plant('Grass_A', cx + .8, cz + .4); plant(k % 2 ? 'Bush_B' : 'Grass_B', cx - .9, cz - .3); });
+    [[-14, -17], [16, -5], [-18, 2], [21, -18], [-11, -3]].forEach(([cx, cz], k) => { plant(['Flowers_A', 'Flowers_B', 'Flowers_C'][k % 3], cx, cz); plant('Grass_A', cx + .8, cz + .4); plant(k % 2 ? 'Bush_B' : 'Grass_B', cx - .9, cz - .3); });
 
+    // FLOW-02：広げた草原の「場所と場所のあいだ」に、小さな木立と花の群れ（景色を見ながら歩ける区間。人・物・道・出発点の前はあける）
+    // 乱数はここだけの別の列を使う（ほかの物の並びは変えない）。スマホ（low）は木を半分にする
+    {
+      let s2 = 917331; const r2 = () => { s2 = (s2 * 16807) % 2147483647; return s2 / 2147483647; };
+      const spots = Object.values(TREASURE_SPOTS).concat(DETOUR_DEFS, [{ x: MISSION_POS.x, z: MISSION_POS.z }]);
+      const clear = (x, z) => blocked(x, z) || Math.hypot(x, z - 3) < 8 || spots.some(s => Math.hypot(x - s.x, z - s.z) < 4.5) || TREE_SPOTS.some(([tx, tz]) => Math.hypot(x - tx, z - tz) < 4)
+        || segDist(x, z, 0, 0, MISSION_POS.x, MISSION_POS.z) < 3 || segDist(x, z, MISSION_POS.x, MISSION_POS.z, GATE.x, GATE.z) < 3 || Math.hypot((x - WALK.cx) / WALK.rx, (z - WALK.cz) / WALK.rz) > .9;
+      const plant2 = (name, x, z) => { if (!blocked(x, z) && (HIGH || r2() < .5)) put(name, x, z, (.85 + r2() * .35) * depthSize(x, z), r2() * 6.283, depthTint(x, z)); };
+      let nt = 0;
+      for (let gx = -24; gx <= 34; gx += 7) for (let gz = -22; gz <= 10; gz += 6.5) {
+        const x = gx + (r2() - .5) * 4, z = gz + (r2() - .5) * 3.5, kind = r2(), yaw = r2() * 6.283;
+        if (clear(x, z)) continue;
+        if (kind < .3) {   // 木を1〜2本（目印になる大きさ）。木のそばにも少し草
+          if (HIGH || nt++ % 2 === 0) { put(TREES[Math.floor(r2() * 4)], x, z, .9 + r2() * .3, yaw, depthTint(x, z), (r2() - .5) * .08); occluders.push([x, z, 1.6]); }
+          plant2('Grass_A', x + .9, z + .5); plant2('Bush_A', x - .8, z + .7);
+        } else {           // 花の群れ（色をそろえた小さなまとまり）
+          const f = ['Flowers_A', 'Flowers_B', 'Flowers_C'][Math.floor(r2() * 3)];
+          for (let k = 0; k < 4; k++) plant2(k % 2 ? 'Grass_B' : f, x + (r2() - .5) * 1.8, z + (r2() - .5) * 1.4);
+        }
+      }
+    }
     // 秘密の谷の草花：道の両側と、ことばの樹のまわり（歩ける道の幅より外に置く）
     const VALLEY = HIGH ? ['Grass_A', 'Flowers_B', 'Grass_B', 'Flowers_A', 'Grass_C', 'Bush_A'] : ['Grass_A', 'Grass_B'];   // スマホ（low）は草だけ（三角形を増やしすぎない）
     const SEGS = PASSAGE.length - 1;
@@ -2342,7 +2365,7 @@ const worldV2 = (() => {
       let bx = (px - vx) / Math.hypot(px - vx, pz - vz) + (nx - vx) / Math.hypot(nx - vx, nz - vz), bz = (pz - vz) / Math.hypot(px - vx, pz - vz) + (nz - vz) / Math.hypot(nx - vx, nz - vz);
       const bl = Math.hypot(bx, bz); put(name, vx + bx / bl * 2.4, vz + bz / bl * 2.4, sc);
     }
-    if (HIGH) put('Tree_Round_B', 12.2, -26.0, .8, 1.1, depthTint(12.2, -26.0));   // スマホ（low）は置かない（三角形の上限のため）
+    if (HIGH) put('Tree_Round_B', WORD_TREE.x - 3.6, WORD_TREE.z + 2.3, .8, 1.1, depthTint(WORD_TREE.x - 3.6, WORD_TREE.z + 2.3));   // スマホ（low）は置かない（三角形の上限のため）
     for (let i = 0, n = HIGH ? 12 : 4; i < n; i++) {
       const a = i / n * 6.283 + .3, r = 5.4 + (i % 3) * .55;
       put(VALLEY[(i + 2) % VALLEY.length], WORD_TREE.x + Math.cos(a) * r, WORD_TREE.z + Math.sin(a) * r, 1 + (i % 2) * .15);
@@ -2364,9 +2387,23 @@ const worldV2 = (() => {
     const hash2 = (x, z) => frac(Math.sin(x * 12.9898 + z * 78.233) * 43758.5453);
     // InstancedMesh：形ごとに1つ。大きな木と岩だけが影を落とす（PC）
     const CASTERS = new Set(['Tree_Round_A', 'Tree_Round_B', 'Tree_Tall_A', 'Tree_Tall_B', 'Rock_Medium_A', 'Rock_Medium_B', 'Stone_Standing_A', 'Stone_Standing_B']);
+    // FLOW-02：木と立ち石は、カメラとヒロリ（パネルのときは調べる物も）のあいだに入ったときだけ、点を抜いて透かす（形ごとに1つの素材。並べかえ不要）
+    const treeMat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });   // kitMat と同じ設定
+    treeMat.onBeforeCompile = sh => {
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float aFade;\nvarying float vFade;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvFade = aFade;');
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vFade;')
+        .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\nif (vFade < .995 && fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(.06711056, .00583715)))) > vFade) discard;');
+    };
+    treeMat.customProgramCacheKey = () => 'tomori-tree-fade';
     for (const [name, items] of lists) {
-      const k = need(name), im = new THREE.InstancedMesh(k.geometry, kitMat, items.length);
+      const k = need(name), fade = FADE_KINDS.has(name), im = new THREE.InstancedMesh(k.geometry, fade ? treeMat : kitMat, items.length);
       const vary = VARY.has(name);
+      if (fade) {
+        const bb = k.geometry.boundingBox || (k.geometry.computeBoundingBox(), k.geometry.boundingBox);
+        const attr = new THREE.InstancedBufferAttribute(new Float32Array(items.length).fill(1), 1); k.geometry.setAttribute('aFade', attr);
+        fadeSets.push({ attr, items: items.map(([x, y, z, s]) => [x, y, z, Math.max(bb.max.x - bb.min.x, bb.max.z - bb.min.z) * .5 * s * .85, bb.max.y * s]),
+          cur: new Float32Array(items.length).fill(1), hold: new Float32Array(items.length) });
+      }
       items.forEach(([x, y, z, s, yaw, tint, tilt], i) => {
         e3.set(tilt, yaw, 0, 'YXZ'); q.setFromEuler(e3);
         const hs = vary ? hash2(x, z) : 0;
@@ -2406,7 +2443,7 @@ const worldV2 = (() => {
 
     // 光る小道：ヒロリの足もとから祠の入口へ（はっきり）、祠の出口から根の門へ（弱く）。中心だけ淡い金色、外は透明
     // 地形の高さに合わせて細かく分け、地面から少しだけ浮かせる
-    const ROUTES = [[[0, -.55], [.6, -2.2], [.45, -3.8], [1.15, -4.95]], [[2.35, -7.45], [3.9, -9.0], [5.5, -10.9], [6.6, -12.1]]];
+    const ROUTES = [[[0, -.55], [1.2, -4.4], [1.4, -8.0], [2.65, -11.45]], [[3.85, -13.95], [7.8, -18.0], [11.0, -21.8], [13.6, -24.7]]];
     const STRENGTH = [1, .45], OFF = [-1.7, -.6, 0, .6, 1.7], PA = [0, .28, .85, .28, 0], PN = HIGH ? 40 : 26, pos = [], colr = [], idx = [];
     const gold = new THREE.Color(0xffe29a), cream = new THREE.Color(0xfff3d0);
     secretN = HIGH ? 96 : 40;
@@ -2708,7 +2745,7 @@ const worldV2 = (() => {
   let birthT = -1, collectT = -1, openT = -1, litT = -1, msgAt = -1, msgNext = '', sparkT = -1, finaleAt = -1, sparkIn = false;
   // ことばのタネ（Step 11K-B）：生まれたときの大きさ（GLB の全高 0.249m × 2.0 ＝ 約0.5m）と、地面からの高さ（ヒロリの目線より少し上）
   const SEED_S = 2.0, SEED_LIFT = .8;
-  const SPROUT = [16.2, -20.0];   // 水色の芽（S字の2つ目の曲がりの内側。道の中心から約1m。タップで歩くと、すぐそばを通る）
+  const SPROUT = [34.0, -38.9];   // FLOW-02：2倍の世界（道の曲がりとの位置関係は前と同じ）   // 水色の芽（S字の2つ目の曲がりの内側。道の中心から約1m。タップで歩くと、すぐそばを通る）
   const SECRET_YAW = Math.atan2(GATE.x - WORD_TREE.x, GATE.z - WORD_TREE.z);   // ことばの樹から門のほうを見た向き（カメラを置く側。S字の道でも向きを振らない）
   const GATE_SLIDE = .45, GATE_LEAN = .14, GATE_LIFT = .35, GATE_WIDEN = .6;   // 門がひらいたときの、根のずれ・傾き・持ち上がり・広がり
   const treeCam = new THREE.Vector3(), treeLook = new THREE.Vector3();
@@ -2722,11 +2759,52 @@ const worldV2 = (() => {
   function say(text) { mbarText.textContent = text; }
   function sayLater(text, at) { msgNext = text; msgAt = at; }
   const ease = x => x * x * (3 - 2 * x);
+  // FLOW-02：カメラから「ヒロリの胸・頭」（パネルのときは調べる物も）までの線に、木・立ち石がかかっていたら透かす
+  // かかったらすぐ（約0.2秒）薄く、はずれても 0.5 秒は薄いまま待ってから、ゆっくり（約0.45秒）戻す（境目で点滅しない）
+  const FADE_LOW = .3, FADE_HOLD = .5, seeP = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+  function treeOnLine(C, P, x, y, z, r, h) {
+    const vx = P.x - C.x, vz = P.z - C.z, L2 = vx * vx + vz * vz;
+    const u = L2 > 1e-6 ? Math.min(1, Math.max(0, ((x - C.x) * vx + (z - C.z) * vz) / L2)) : 0;
+    if (u > .97) return false;   // 見たい物のうしろ・すぐそばの物は、そのまま
+    if (Math.hypot(C.x + vx * u - x, C.z + vz * u - z) > r) return false;
+    const yy = C.y + (P.y - C.y) * u;
+    return yy > y - .2 && yy < y + h;
+  }
+  function fadeOccluders(dt, still) {
+    if (!character || !fadeSets.length) return;
+    const C = camera.position; let n = 0;
+    seeP[n++].set(character.position.x, character.position.y + .9, character.position.z);
+    seeP[n++].set(character.position.x, character.position.y + 1.7, character.position.z);
+    if (!canMove()) {
+      const tp = treasure && treasure.focusPoint(), ft = tp || focusTarget || mpGroup.position;
+      seeP[n++].set(ft.x, (tp ? tp.y : heightAt(ft.x, ft.z)) + .4, ft.z);
+    } else {
+      const ns = treasure && treasure.nearSpot();
+      if (ns) seeP[n++].set(ns.x, heightAt(ns.x, ns.z) + .4, ns.z);
+    }
+    for (const set of fadeSets) {
+      let dirty = false;
+      for (let i = 0; i < set.items.length; i++) {
+        const it = set.items[i];
+        let hit = false;
+        for (let k = 0; k < n && !hit; k++) hit = treeOnLine(C, seeP[k], it[0], it[1], it[2], it[3], it[4]);
+        if (hit) set.hold[i] = FADE_HOLD; else if (set.hold[i] > 0) set.hold[i] -= dt;
+        const want = set.hold[i] > 0 ? FADE_LOW : 1, c = set.cur[i];
+        if (c === want) continue;
+        const v = still ? want : want < c ? Math.max(want, c - dt / .18) : Math.min(want, c + dt / .45);
+        set.cur[i] = v; set.attr.array[i] = v; dirty = true;
+      }
+      if (dirty) set.attr.needsUpdate = true;
+    }
+  }
   function update(t) {
     if (!active) return;
     const still = reduceMotionQuery.matches;
     const dt = Math.min(.1, Math.max(0, t - lastT)); lastT = t;
     adventure(t, dt, still);
+    fadeOccluders(dt, still);
+    // FLOW-02：影を作る範囲（48m四方）を、ヒロリといっしょに動かす（世界が広くなったので。1m ずつ動かして、影がちらつかないように）
+    if (sun.castShadow && character) { const sx = Math.round(character.position.x), sz = Math.round(character.position.z); if (sun.target.position.x !== sx || sun.target.position.z !== sz) { sun.target.position.set(sx, 0, sz); sun.position.set(sx + 12 * 2.2, 9 * 2.2, sz + 4 * 2.2); } }
     // 祠の光：探しているあいだは呼びかけるように、到着したあとは落ち着かせる
     calm += ((state === S.EXPLORE ? 1 : .4) - calm) * Math.min(1, dt * 3);
     crystalMat.emissiveIntensity = .55 + .45 * calm; ringMat.opacity = .25 + .35 * calm; bowlGlow.material.opacity = .25 + .3 * calm;
@@ -3121,7 +3199,7 @@ const hiroriMotion = {
   facing: 0,           // 目標の向き（ラジアン）
 };
 const ARRIVAL_SEC = 0.9;
-const STRIDE_UNITS = 1.6;   // 1周期（左右1歩ずつ）で進む距離。移動速度と足の動きを合わせる
+const STRIDE_UNITS = 3.2;   // 1周期（左右1歩ずつ）で進む距離。移動速度と足の動きを合わせる（FLOW-02：前は 1.6。速さと歩幅を2倍にして、足を動かす速さは同じ）
 
 function startHiroriArrival(){ hiroriMotion.arrivalT = 0; }
 function resetHiroriMotion(){
@@ -3333,8 +3411,8 @@ const fieldHirori = (() => {
   // 足が地面に着いている前半は、足が体に対して一定の速さで後ろへ動く。後半で少し持ち上げて前へ戻す
   // 前後の動きは、股のまわりの回転と、脚の前後のずれで作る。足の骨は脚と逆に回し、足の裏をいつも水平に保つ
   // 体は、2本の足のうち低いほうがちょうど地面に着く高さへ上げ下げする（足が地面に沈まない）。値はゲームの座標（全高1）
-  const STRIDE_RIG = 1.5, RIG_REACH = .1, RIG_SHIFT = .45, RIG_LIFT = .05, RIG_SIN_MAX = .6;   // EXPANSION-02：前は .9 / .075 / .028（1秒に約9歩の小走り → 約4.4歩）
-  const STEP_BOB = .035, STEP_LEAN = .07, STEP_PACE = .22;   // 一歩ごとの体の上下・前かがみ・速さの強弱
+  const STRIDE_RIG = 3.0, RIG_REACH = .17, RIG_SHIFT = .4, RIG_LIFT = .075, RIG_SIN_MAX = .75;   // FLOW-02：一歩で進む距離を2倍（1秒に約4.4歩のまま）。足を前後に大きく出し、少し高く上げる（前は 1.5 / .1 / .45 / .05 / .6）
+  const STEP_BOB = .045, STEP_LEAN = .11, STEP_PACE = .32;   // 一歩ごとの体の上下・前かがみ・速さの強弱（FLOW-02：着地で足が止まって見えるよう、着地の前後をゆっくりに。前は .035 / .07 / .22）
   const GAIT = { dz: 0, lift: 0 }, LEGPOSE = { a: 0, dy: 0, dz: 0 };
   function gait(u) {   // u：その足の周期の位置（0〜1）。dz＝股に対する足の前後、lift＝持ち上げる高さ
     u -= Math.floor(u);
@@ -3869,7 +3947,7 @@ function finalLine(original, chosen) {
 const QUEST_DEFS = Object.freeze([
   { id: 'first', title: 'はじめての冒険' },
   { id: 'second', title: 'ちがうところから、見てみよう', after: 'first', needsWorldV2: true,
-    start: { x: 14.2, z: -25.4, r: 1.3 },   // ことばの樹のそばの新しい芽（樹のまわりの、平らで歩ける輪の中。道の側なので、帰り道が幹にかからない）
+    start: { x: 30.0, z: -53.7, r: 1.3 },   // FLOW-02：ことばの樹といっしょに移した（樹との位置関係は同じ）   // ことばの樹のそばの新しい芽（樹のまわりの、平らで歩ける輪の中。道の側なので、帰り道が幹にかからない）
     sub: 'さっきとちがうところに、目を向けてみよう。同じ写真でも大丈夫。',
     question: '今度は、どこに目が止まった？', flowers: 6, reward: 'ことばの樹に、2つ目の実が灯った！' },
 ]);
@@ -3886,15 +3964,15 @@ const VIEWPOINT_KEYS = [
 // 道くさ：近づくと気配の案内が出て、「調べる」を押したときだけ問いが出る。香りは文と演出で想像する遊び（本物のにおいは出ない）
 // 位置は、ふだんのカメラとヒロリのあいだに木が入らない場所（草原の東側。木陰は木の手前、花のそばは花の群れの横）
 const DETOUR_DEFS = Object.freeze([
-  { id: 'grass', place: '草むら', x: 15.0, z: -3.5, hint: 'どこからか、甘い香りがする…', question: 'どんなものの香りに似ている？',
+  { id: 'grass', place: '草むら', x: 30.0, z: -7.0, hint: 'どこからか、甘い香りがする…', question: 'どんなものの香りに似ている？',
     item: { id: 'kaori-no-mi', name: 'かおりの実', icon: '🍑' }, starters: ['くだもののような', 'お菓子のような', '花のような'],
     reaction: '思い出の中の香りは、そのときの景色までつれてくることがあるよ。',
     cover: [['Grass_C', .5, .55, 1.25], ['Bush_B', -.45, .7, 1.05], ['Grass_A', .05, 1.0, 1.15]] },
-  { id: 'shade', place: '木陰', x: 10.5, z: 3.0, hint: 'すっと、さわやかな香りがする…', question: 'この香りから、何を思い浮かべる？',
+  { id: 'shade', place: '木陰', x: 21.0, z: 6.0, hint: 'すっと、さわやかな香りがする…', question: 'この香りから、何を思い浮かべる？',
     item: { id: 'soyokaze-no-ha', name: 'そよかぜの葉', icon: '🍃' }, starters: ['雨あがりの', '森の中の', '朝の'],
     reaction: '香りから浮かぶ景色は、人によってちがうところがおもしろいね。',
     cover: [['Bush_A', -.6, .6, 1.1], ['Grass_B', .55, .75, 1.1]] },
-  { id: 'flower', place: '花のそば', x: 6.3, z: -1.8, hint: 'ふしぎな香りの花を見つけた', question: 'この香りに、名前をつけるなら？',
+  { id: 'flower', place: '花のそば', x: 12.6, z: -3.6, hint: 'ふしぎな香りの花を見つけた', question: 'この香りに、名前をつけるなら？',
     item: { id: 'namae-no-hana', name: 'なまえの花', icon: '🌼' }, starters: ['〇〇の香り', 'ふわっとした', 'ひみつの'],
     reaction: '名前をつけると、その香りがきみだけの発見になるね。',
     cover: [['Flowers_B', .55, .45, 1.2], ['Flowers_A', -.5, .6, 1.15], ['Grass_A', 0, .95, 1.1]] },
@@ -4145,11 +4223,7 @@ const questHub = (() => {
     }
     if (!character || !detoursOpen(st)) return;
     const x = character.position.x, z = character.position.z, still = reduceMotionQuery.matches;
-    // 第2クエストの芽：自由に歩いているときに近づくと始まる（入力中・道くさの最中は始まらない）
-    if (state === S.FREE_EXPLORE && q2Usable()) {
-      if (Math.hypot(x - Q2.start.x, z - Q2.start.z) <= Q2.start.r) { if (!q2NeedsLeave) startSecond(); }
-      else q2NeedsLeave = false;
-    }
+    // 第2クエストの芽：近づいただけでは始まらない。近くに出る「新しい芽が光っている｜はじめる」を押したときに始まる（FLOW-02。sproutCall）
     // 道くさの光：遠くでは小さく、近づくと少し大きく。取ったあとは消える
     glow.visible = true;
     DETOUR_DEFS.forEach((d, i) => {
@@ -4160,7 +4234,8 @@ const questHub = (() => {
     });
     glow.instanceMatrix.needsUpdate = true;
     releaseDismissed(st, x, z);
-    const near = state === S.FREE_EXPLORE ? nearestDetour(st, x, z) : null;
+    let near = state === S.FREE_EXPLORE ? nearestDetour(st, x, z) : null;
+    if (near && treasure && !treasure.canSee(near.x, near.z)) near = null;   // FLOW-02：木のかげ・岩の向こうの気配は出さない
     if (near !== detourNear) { detourNear = near; applyUI(); }
   }
   // 「見つけたもの」ボタンは歩けるときだけ。道くさの案内は自由に歩いているときだけ（入力中・パネルが開いているときは隠す）
@@ -4220,7 +4295,7 @@ const questHub = (() => {
     box.style.display = '';
     resetVocabState();
     setState(S.MISSION_FOUND);
-    el('mbar-text').textContent = '新しい芽に着いた！';
+    el('mbar-text').textContent = '新しい芽のそばで、もう一度見てみよう';   // FLOW-02：「着いた！」をくり返し出さない
   }
   // 第2クエストの終わり：樹に2つ目の実が灯り、芽のまわりに花が咲いて、自由な散歩へ戻る（1回だけ）
   function finishSecond() {
@@ -4391,6 +4466,7 @@ const questHub = (() => {
     el('detour-input').value = ''; el('found-list').replaceChildren();
   }
   return { update, applyUI, freeMessage, showBar, fadeBarLater, toFree, current: () => current, noteAnswer, finishSecond, abortSecond,
+    startSecond, sproutCall: () => state === S.FREE_EXPLORE && q2Usable() ? Q2.start : null,   // FLOW-02：芽のそばの「はじめる」
     openDetour, sendDetour, closeDetour, openFound, closeFound, reset, state: () => st };
 })();
 // ボタンは addEventListener でつなぐ（HTML の onclick は増やさない）
@@ -4412,22 +4488,23 @@ document.getElementById('detour-input').addEventListener('input', function () {
 const TREASURE_SAVE_KEY = 'tomori-treasure-v1';
 const TREASURE_TALK_R = 2.0;   // この距離まで近づくと「話す／しらべる」を出す
 // 場所は草原の西側（まだ何も置いていない側）。approach：タップしたとき、物の中心からどれだけ手前で止まるか
+// FLOW-02：場所どうしの間を2倍に広げた（どれも前の2倍の場所。巨木のまわりは、広場との位置関係を前と同じに）
 const TREASURE_SPOTS = Object.freeze({
-  popo:   { x: -1.7, z: -2.6, approach: 1.2, name: 'ふくろうのポポ', icon: '🦉', call: 'ふくろうのポポがいる', callNew: 'ふくろうがいる', verb: '話す' },
-  mina:   { x: -5.6, z: 1.6, approach: 1.2, name: 'うさぎのミナ', icon: '🐰', call: 'うさぎのミナがいる', callNew: 'うさぎがいる', verb: '話す' },
-  cat:    { x: -1.8, z: -9.8, approach: 1.4, name: 'ひなたの平たい岩', icon: '🐈', call: 'ねこがねている', verb: 'しらべる' },
-  bell:   { x: -9.4, z: -1.9, approach: 1.1, name: '下を向いてさく花', icon: '🔔', call: '下を向いた花がある', verb: 'しらべる' },
-  spring: { x: -8.8, z: -7.6, approach: 1.4, name: '小さな泉', icon: '💧', call: '水の音がする', verb: 'しらべる' },
-  chest:  { x: -11.0, z: -5.6, approach: 1.1, name: '古い宝箱', icon: '🧰', call: '古い宝箱がある', verb: 'しらべる' },
-  cave:   { x: -5.2, z: -11.0, approach: 0.3, name: '暗いほらあな', icon: '🌑', call: '暗いほらあながある', verb: 'しらべる' },
-  rock:   { x: -4.0, z: -3.0, approach: 1.0, name: 'まるい岩', icon: '🪨', call: 'まるい岩がある', verb: 'しらべる' },
-  bloom:  { x: -6.8, z: -3.6, approach: 1.0, name: '空を向いてさく花', icon: '🌼', call: '花がさいている', verb: 'しらべる' },
-  dazzle: { x: -6.4, z: -8.2, approach: 1.0, name: 'まばゆく輝く花', icon: '🌟', call: 'まぶしい花がさいている', verb: 'しらべる' },   // LANGUAGE-01：「ほのかに」とくらべる花
+  popo:   { x: -3.4, z: -5.2, approach: 1.2, name: 'ふくろうのポポ', icon: '🦉', call: 'ふくろうのポポがいる', callNew: 'ふくろうがいる', verb: '話す' },
+  mina:   { x: -11.2, z: 3.2, approach: 1.2, name: 'うさぎのミナ', icon: '🐰', call: 'うさぎのミナがいる', callNew: 'うさぎがいる', verb: '話す' },
+  cat:    { x: -3.6, z: -19.6, approach: 1.4, name: 'ひなたの平たい岩', icon: '🐈', call: 'ねこがねている', verb: 'しらべる' },
+  bell:   { x: -18.8, z: -3.8, approach: 1.1, name: '下を向いてさく花', icon: '🔔', call: '下を向いた花がある', verb: 'しらべる' },
+  spring: { x: -17.6, z: -15.2, approach: 1.4, name: '小さな泉', icon: '💧', call: '水の音がする', verb: 'しらべる' },
+  chest:  { x: -22.0, z: -11.2, approach: 1.1, name: '古い宝箱', icon: '🧰', call: '古い宝箱がある', verb: 'しらべる' },
+  cave:   { x: -10.4, z: -22.0, approach: 0.3, name: '暗いほらあな', icon: '🌑', call: '暗いほらあながある', verb: 'しらべる' },
+  rock:   { x: -8.0, z: -6.0, approach: 1.0, name: 'まるい岩', icon: '🪨', call: 'まるい岩がある', verb: 'しらべる' },
+  bloom:  { x: -13.6, z: -7.2, approach: 1.0, name: '空を向いてさく花', icon: '🌼', call: '花がさいている', verb: 'しらべる' },
+  dazzle: { x: -12.8, z: -16.4, approach: 1.0, name: 'まばゆく輝く花', icon: '🌟', call: 'まぶしい花がさいている', verb: 'しらべる' },   // LANGUAGE-01：「ほのかに」とくらべる花
   // EXPANSION-03：巨木への道（場所は worldV2 の GREAT と同じ。道がひらくまで、門より先へは行けない）
-  gate:   { x: -8.7, z: -10.9, approach: 1.0, name: '古い石の門', icon: '🚪', call: '古い石の門がある', verb: 'しらべる' },
-  giant:  { x: -20.0, z: -26.0, approach: 1.6, name: 'オオネ', icon: '🦌', call: 'オオネがいる', callNew: 'なにか大きなものが、ねむっている', verb: 'しらべる', verbMet: '話す' },
-  plant:  { x: -23.6, z: -23.6, approach: 0.8, name: '途切れた道', icon: '🌊', call: '道が、とちゅうで切れている', verb: 'しらべる' },
-  cairn:  { x: -32.4, z: -22.6, approach: 1.0, name: 'うずまきの石', icon: '🌀', call: 'ふしぎな石がある', verb: 'しらべる' },
+  gate:   { x: -17.4, z: -21.8, approach: 1.0, name: '古い石の門', icon: '🚪', call: '古い石の門がある', verb: 'しらべる' },
+  giant:  { x: -39.6, z: -51.4, approach: 1.6, name: 'オオネ', icon: '🦌', call: 'オオネがいる', callNew: 'なにか大きなものが、ねむっている', verb: 'しらべる', verbMet: '話す' },
+  plant:  { x: -43.2, z: -49.0, approach: 0.8, name: '途切れた道', icon: '🌊', call: '道が、とちゅうで切れている', verb: 'しらべる' },
+  cairn:  { x: -52.0, z: -48.0, approach: 1.0, name: 'うずまきの石', icon: '🌀', call: 'ふしぎな石がある', verb: 'しらべる' },
 });
 const TREASURE_STEPS = ['cat', 'bell', 'spring', 'chest', 'cave'];   // この順番でしか先へ進まない
 // ヒント：聞くたびに1つずつくわしくなる（3つ目がいちばんくわしい）。gloss は、むずかしいことばの説明
@@ -4931,7 +5008,7 @@ treasure = (() => {
       [SPH, 0xf2a0ac, [0, -.04, .195], [.025, .018, .015]],
       [SPH, 0xf6c8cc, [.12, -.04, .14], [.04, .025, .02]], [SPH, 0xf6c8cc, [-.12, -.04, .14], [.04, .025, .02]],
     ], 'Mina_Head');
-    minaHead.position.y = .78; minaBody.add(minaHead); mina.add(minaBody); faceTo(mina, -2, -1); hitArea('mina', .7, .55);
+    minaHead.position.y = .78; minaBody.add(minaHead); mina.add(minaBody); faceTo(mina, -4, -2); hitArea('mina', .7, .55);
 
     // ひなたの平たい岩とねこ：岩は平たく明るい色（まわりのまるい岩とちがう形）。上から光がさしこむ
     const cat = root('cat');
@@ -4945,7 +5022,7 @@ treasure = (() => {
       [SPH, 0xfbe8d0, [0, -.03, .09], [.06, .04, .04]],
       [SPH, 0x4a3018, [.045, .015, .108], [.03, .007, .01]], [SPH, 0x4a3018, [-.045, .015, .108], [.03, .007, .01]],
     ], 'Cat_Head');
-    catBody.add(catHead); cat.add(catBody); faceTo(cat, 0, -4);
+    catBody.add(catHead); cat.add(catBody); faceTo(cat, 0, -8);
     const sun = new THREE.Mesh(new THREE.CylinderGeometry(.55, 1.05, 4.2, 16, 1, true), glowMat(0xfff1b8, .14)); sun.position.y = 2.25; sun.renderOrder = 3; sun.name = 'Cat_Sunbeam'; cat.add(sun);
     const sunSpot = new THREE.Mesh(new THREE.CircleGeometry(1.25, 24), glowMat(0xfff4c4, .3)); sunSpot.rotation.x = -Math.PI / 2; sunSpot.position.y = .04; sunSpot.renderOrder = 2; cat.add(sunSpot);
     hitArea('cat', .8, .25);
@@ -4958,7 +5035,7 @@ treasure = (() => {
     });
     const bells = root('bell'); bells.add(mesh(bp, 'Bell_Flowers'));
     tablet = mesh([[BOX, 0x9d978a, [0, .14, 0], [.36, .28, .06], [-.25, 0, 0]], [BOX, 0xc4bead, [0, .15, .03], [.27, .19, .012], [-.25, 0, 0]]], 'Bell_Tablet');
-    tablet.position.set(.05, 0, .5); bells.add(tablet); faceTo(bells, -6, 0); hitArea('bell', .75, .4);
+    tablet.position.set(.05, 0, .5); bells.add(tablet); faceTo(bells, -12, 0); hitArea('bell', .75, .4);
 
     // 小さな泉：石でかこみ、水の輪がゆっくり広がる。泉から細い流れが宝箱のほうへ
     const spring = root('spring');
@@ -4974,7 +5051,9 @@ treasure = (() => {
     hitArea('spring', .85, .15);
 
     // 水の流れ：泉のふちから宝箱の手前まで、地面の高さに合わせた細い帯
-    const FLOW = [[-9.55, -7.05], [-9.95, -6.65], [-10.3, -6.3], [-10.55, -6.05]];
+    // FLOW-02：泉のふちから宝箱の手前までを、ゆるく曲がりながらつなぐ（場所を広げても、流れが途中で切れない）
+    const FLOW = [], SPw = TREASURE_SPOTS.spring, CHw = TREASURE_SPOTS.chest, fa = [SPw.x - .75, SPw.z + .55], fb = [CHw.x + .45, CHw.z - .45], fn = Math.hypot(fb[0] - fa[0], fb[1] - fa[1]);
+    for (let i = 0; i <= 8; i++) { const u = i / 8, k = .35 * Math.sin(Math.PI * 2 * u); FLOW.push([fa[0] + (fb[0] - fa[0]) * u - (fb[1] - fa[1]) / fn * k, fa[1] + (fb[1] - fa[1]) * u + (fb[0] - fa[0]) / fn * k]); }
     const fp = [], fi = [];
     FLOW.forEach(([x, z], i) => {
       const [nx, nz] = FLOW[Math.min(i + 1, FLOW.length - 1)], [px, pz] = FLOW[Math.max(i - 1, 0)], tx = nx - px, tz = nz - pz, tl = Math.hypot(tx, tz), w = .1;
@@ -4994,10 +5073,10 @@ treasure = (() => {
     lid.add(mesh([[CYL, 0x96643a, [0, 0, .21], [.21, .62, .21], [0, 0, Math.PI / 2]], [BOX, 0xd8a840, [.25, .02, .21], [.05, .38, .44]], [BOX, 0xd8a840, [-.25, .02, .21], [.05, .38, .44]]], 'Chest_Lid'));
     burst = softGlow(0xffe9a8); burst.position.y = .55; chest.add(burst);   // 宝箱の中からあふれる光（やわらかい丸）
     shardPop = new THREE.Mesh(new THREE.OctahedronGeometry(.1), new THREE.MeshBasicMaterial({ color: 0xbfe8ff })); shardPop.visible = false; chest.add(shardPop);
-    faceTo(chest, -8.5, -5.4); hitArea('chest', .7, .3);
+    faceTo(chest, -17, -10.8); hitArea('chest', .7, .3);
 
     // 暗いほらあな：立ち石のとなりの岩に、真っ暗な入口。ランタンで照らすと、かべの絵が見える
-    const cave = root('cave', -5.6, -12.6); caveRoot = cave;
+    const cave = root('cave', TREASURE_SPOTS.cave.x - .4, TREASURE_SPOTS.cave.z - 1.6); caveRoot = cave;   // FLOW-02：入口（しらべる場所）との位置関係は前と同じ
     cave.add(mesh([[SPH, 0x7f7a6e, [0, .3, 0], [1.6, 1.25, 1.2]], [SPH, 0x8a8478, [-1.15, .12, .3], [.8, .62, .66]], [SPH, 0x746f64, [-.4, 1.2, -.2], [.9, .5, .8]]], 'Cave_Rock'));
     mouth = new THREE.Mesh(new THREE.CircleGeometry(.62, 20, 0, Math.PI), new THREE.MeshBasicMaterial({ color: 0x15120f })); mouth.position.set(0, -.02, 1.19); mouth.name = 'Cave_Mouth'; cave.add(mouth);
     mural = new THREE.Mesh(new THREE.PlaneGeometry(.78, .46), new THREE.MeshBasicMaterial({ map: muralTexture(false), transparent: true, depthWrite: false })); mural.position.set(0, .26, 1.2); mural.visible = false; mural.name = 'Cave_Mural'; cave.add(mural);
@@ -5124,6 +5203,46 @@ treasure = (() => {
     lab.classList.toggle('show', !!on);
     if (on) { lab.style.left = ((_v.x + 1) / 2 * innerWidth) + 'px'; lab.style.top = ((1 - _v.y) / 2 * innerHeight) + 'px'; }
   }
+  // FLOW-02：近くの「話す／しらべる／はじめる」は1か所だけ。近くにいて、あいだに木の幹・岩がないときだけ出す（近づいただけでは、パネルを開かない）
+  // 出ている相手は少し遠く（+0.6m）まで保ち、ほかの相手のほうがはっきり近い（ヒロリの前にある）ときだけ切りかえる（境目でちらつかない）
+  // 写真のクエストの光るポイント（mission）と、第2クエストの芽（sprout）も、同じ案内から「はじめる」で始める
+  const CALL_KEEP = .6, CALL_SWITCH = .5, TRUNK_R = .4, MISSION_CALL_R = 2.4, SPROUT_CALL_R = 2.0;
+  const missionCallable = () => state === S.EXPLORE && !missionTriggered && !(missionHold && missionHold.held());
+  function callSpot(id) {
+    if (id === 'mission') return { x: mpGroup.position.x, z: mpGroup.position.z, r: MISSION_CALL_R };
+    if (id === 'sprout') { const s = questHub.sproutCall(); return s && { x: s.x, z: s.z, r: SPROUT_CALL_R }; }
+    return TREASURE_SPOTS[id];
+  }
+  // ヒロリ（x, z）から（tx, tz）まで、木の幹・岩・ほらあなの岩などにさえぎられていないか（相手のすぐそばの物は数えない）
+  function canSee(x, z, tx, tz) {
+    const vx = tx - x, vz = tz - z, L = Math.hypot(vx, vz);
+    if (L < .3) return true;
+    const ux = vx / L, uz = vz / L;
+    const hit = (cx, cz, r) => { const s = (cx - x) * ux + (cz - z) * uz; if (s < .2 || s > L - .2 || Math.hypot(cx - tx, cz - tz) < r + .35) return false; return Math.abs((cx - x) * uz - (cz - z) * ux) < r; };
+    for (const o of worldV2.occluders()) if (hit(o[0], o[1], TRUNK_R)) return false;
+    for (const o of OBSTACLES) if (hit(o[0], o[1], o[2] * .8)) return false;
+    return true;
+  }
+  let nearLost = 0;
+  function chooseNear(x, z, dt) {
+    const f = hiroriMotion.facing, fx = Math.sin(f), fz = Math.cos(f);
+    const ids = Object.keys(TREASURE_SPOTS);
+    if (missionCallable()) ids.push('mission');
+    if (questHub.sproutCall()) ids.push('sprout');
+    let best = null, bs = Infinity, cur = Infinity;
+    for (const id of ids) {
+      const s = callSpot(id), r = s.r || TREASURE_TALK_R, d = Math.hypot(x - s.x, z - s.z), keep = id === near;
+      if (d > r + (keep ? CALL_KEEP : 0)) continue;
+      if (!canSee(x, z, s.x, s.z)) { if (!keep || (nearLost += dt) > .3) continue; }
+      else if (keep) nearLost = 0;
+      const sc = d - .6 * ((s.x - x) * fx + (s.z - z) * fz) / (d || 1);   // 近いほど・ヒロリの前にあるほど選ぶ
+      if (keep) cur = sc;
+      if (sc < bs) { bs = sc; best = id; }
+    }
+    if (near && cur < Infinity && best !== near && bs > cur - CALL_SWITCH) return near;
+    if (best !== near) nearLost = 0;
+    return best;
+  }
   function update(t, dt) {
     if (!built || !character) return;
     const x = character.position.x, z = character.position.z, calm = still(), w = walkable();
@@ -5166,9 +5285,8 @@ treasure = (() => {
     }
 
     if (guardUntil && performance.now() > guardUntil) { guardUntil = 0; el('btn-found').style.pointerEvents = ''; }
-    // 近くの1か所（いちばん近い場所だけ）
-    let best = null, bd = TREASURE_TALK_R;
-    for (const id in TREASURE_SPOTS) { const s = TREASURE_SPOTS[id], d = Math.hypot(x - s.x, z - s.z); if (d <= bd) { bd = d; best = id; } }
+    // 近くの1か所（見えていて、近い場所だけ。FLOW-02）
+    const best = w ? chooseNear(x, z, dt) : null;
     // タップで選んだ場所に着いたら開く（着いても遠いまま＝歩ける範囲のふちで止まったときは、あきらめる）
     if (w && pending && !isMoving) {
       const s = TREASURE_SPOTS[pending], id = pending;
@@ -5182,16 +5300,19 @@ treasure = (() => {
     const md = Math.hypot(x - roots.mina.position.x, z - roots.mina.position.z);
     project(roots.mina.position.x, roots.mina.position.y + 1.45, roots.mina.position.z, el('label-mina'), w && st.met.mina && md < NAME_R);
     const sd = Math.hypot(x - TREASURE_SPOTS.spring.x, z - TREASURE_SPOTS.spring.z);
-    project(TREASURE_SPOTS.spring.x, roots.spring.position.y + .7, TREASURE_SPOTS.spring.z, el('sfx-spring'), w && sd < 6.5);
+    project(TREASURE_SPOTS.spring.x, roots.spring.position.y + .7, TREASURE_SPOTS.spring.z, el('sfx-spring'), w && sd < 9.5);   // FLOW-02：広い世界なので、水の音は少し遠くから（前は 6.5）
     const cd = Math.hypot(x - TREASURE_SPOTS.cat.x, z - TREASURE_SPOTS.cat.z);
-    project(TREASURE_SPOTS.cat.x + .3, roots.cat.position.y + .9, TREASURE_SPOTS.cat.z, el('sfx-cat'), w && cd < 6 && !st.found.cat);
+    project(TREASURE_SPOTS.cat.x + .3, roots.cat.position.y + .9, TREASURE_SPOTS.cat.z, el('sfx-cat'), w && cd < 9 && !st.found.cat);   // FLOW-02：前は 6
   }
 
   // 「話す／しらべる」の案内と、冒険メモのボタン：歩けるときだけ（入力中・パネルが開いているときは隠す）
   function applyUI() {
     const w = walkable() && built;
     const on = w && !!near && !el('detour-call').classList.contains('show');
-    if (on) {
+    if (on && (near === 'mission' || near === 'sprout')) {   // FLOW-02：写真のクエスト・第2クエストも、押したときに始める
+      el('treasure-call-text').textContent = near === 'mission' ? '光るポイントがある' : '新しい芽が光っている';
+      el('btn-treasure-open').textContent = 'はじめる';
+    } else if (on) {
       const s = TREASURE_SPOTS[near], met = near === 'giant' ? st.giantAwake : st.met[near];
       const resume = near === 'giant' && heldGiant();   // オオネとの話を「あとで」で閉じていたら、続きから
       el('treasure-call-text').textContent = resume ? 'オオネとの話の続きができるよ' : s.callNew && !met ? s.callNew : s.call;
@@ -5358,7 +5479,7 @@ treasure = (() => {
     applyVisuals();
   }
 
-  [['btn-treasure-open', () => { if (near) open(near); }], ['btn-talk-close', close], ['btn-talk-more', moreHint], ['btn-talk-memo', openNotebook],
+  [['btn-treasure-open', () => { if (near === 'mission') { if (missionCallable()) triggerMission(); } else if (near === 'sprout') questHub.startSecond(); else if (near) open(near); }], ['btn-talk-close', close], ['btn-talk-more', moreHint], ['btn-talk-memo', openNotebook],
    ['btn-talk-lantern', lanternAtCave], ['btn-notebook', openNotebook], ['btn-notebook-close', closeNotebook],
    ['btn-talk-plant', plantSeed], ['btn-giant-next', giantNext], ['btn-giant-voice', giantVoice]]
     .forEach(([id, fn]) => el(id).addEventListener('click', fn));
@@ -5366,6 +5487,7 @@ treasure = (() => {
   // テスト用（読むだけ）：進み具合と、場所が画面のどこに映っているか
   const screen = (x, y, z) => { _v.set(x, y, z).project(camera); return { x: (_v.x + 1) / 2 * innerWidth, y: (1 - _v.y) / 2 * innerHeight, front: _v.z < 1 }; };
   window.__tomoriTreasure = { state: () => JSON.parse(JSON.stringify(st)), goal: () => treasureGoal(st), spots: TREASURE_SPOTS, saveKey: SAVE_KEY,
+    greatRoute: () => ROUTE.map(p => [p[0], p[1]]), mission: () => ({ x: mpGroup.position.x, z: mpGroup.position.z }), sprout: () => questHub.sproutCall(), call: () => near,   // FLOW-02：場所はページから読む（テストで座標を決め打ちしない）
     screenOf: id => { const s = TREASURE_SPOTS[id]; return s ? screen(s.x, worldV2.groundAt(s.x, s.z) + .4, s.z) : null; },
     screenAt: (x, z) => screen(x, worldV2.groundAt(x, z), z),
     // 見えているか：カメラからヒロリの胸・調べる物までのあいだに、ほかの物（木・岩・地形）があれば、その名前
@@ -5374,7 +5496,8 @@ treasure = (() => {
       const see = (x, y, z, own) => {
         const d = _p.set(x, y, z).sub(camera.position), L = d.length(); rc.set(camera.position, d.normalize()); rc.far = L - .35;
         rc.camera = camera;
-        const h = rc.intersectObjects(scene.children, true).find(i => !inside(i.object, own) && !i.object.isPoints && !i.object.isSprite && i.object.visible && i.object.material && i.object.material.visible !== false && !(i.object.material.transparent && i.object.material.opacity < .5) && i.object.name !== 'ground');
+        const h = rc.intersectObjects(scene.children, true).find(i => !inside(i.object, own) && !i.object.isPoints && !i.object.isSprite && i.object.visible && i.object.material && i.object.material.visible !== false && !(i.object.material.transparent && i.object.material.opacity < .5) && i.object.name !== 'ground'
+          && !(i.instanceId !== undefined && i.object.geometry.attributes.aFade && i.object.geometry.attributes.aFade.array[i.instanceId] < .5));   // FLOW-02：透かしている木は数えない
         return h ? (h.object.name || h.object.type) : null;
       };
       const s = TREASURE_SPOTS[id];
@@ -5642,7 +5765,7 @@ treasure = (() => {
     const sp = []; for (let i = 0; i <= 40; i++) { const a = i / 40 * 9.4, r = .03 + i / 40 * .2; sp.push(new THREE.Vector3(Math.cos(a) * r, .57 + Math.sin(a) * r, .3)); }
     great.spiral = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(sp), 60, .012, 4, false), ADD(0xbfe8ff, .3)); great.spiral.renderOrder = 4; cr.add(great.spiral);
     hitArea('cairn', .7, .5);
-    great.island = new THREE.Group(); great.island.name = 'Sky_Island'; great.island.position.set(-48, 19, -66); G.add(great.island);
+    great.island = new THREE.Group(); great.island.name = 'Sky_Island'; great.island.position.set(GR.overlook.x - 16.4, 19, GR.overlook.z - 44.8);   // FLOW-02：向こう岸との位置関係は前と同じ G.add(great.island);
     great.island.add(mesh([[CONE, 0x8a7e6c, [0, -2.2, 0], [4.2, 4.4, 4.2], [Math.PI, 0, 0]], [SPH, 0x7fb06a, [0, .1, 0], [4.4, .9, 4.0]], [CYL, 0x7a6650, [.8, 1.6, -.4], [.35, 2.6, .35]], [SPH, 0x6a9a58, [.8, 3.4, -.4], [1.8, 1.4, 1.6]],
       [SPH, 0x9a8e7c, [-2.6, -.6, 1.2], [1.0, .7, .9]]], 'Sky_Island_Rock'));
     great.islandGlow = softGlow(0xbfe8ff); great.islandGlow.scale.setScalar(6); great.islandGlow.position.set(.8, 2.2, 0); great.island.add(great.islandGlow);
@@ -6043,8 +6166,10 @@ treasure = (() => {
     return TREASURE_GUIDE[g === 'done' && greatGoal(st) !== 'locked' ? greatGoal(st) : g] || null;   // EXPANSION-03：宝さがしのあとは、巨木への道の案内
   }
   // パネルの構図でよける、宝さがしの大きな物（ほらあなの岩）
-  const OBSTACLES = [[-5.6, -12.6, 1.7], [GR.tree.x, GR.tree.z, 3.2], [GR.being.x, GR.being.z, 2.0], [GR.gate.x, GR.gate.z, 1.2]];   // EXPANSION-03：巨木・オオネ・門も
+  const OBSTACLES = [[TREASURE_SPOTS.cave.x - .4, TREASURE_SPOTS.cave.z - 1.6, 1.7], [GR.tree.x, GR.tree.z, 3.2], [GR.being.x, GR.being.z, 2.0], [GR.gate.x, GR.gate.z, 1.2]];   // EXPANSION-03：巨木・オオネ・門も
   return { pick, clearPending, update, applyUI, reset, guide, focusPoint, obstacles: () => OBSTACLES, guardTap, tapBlocked, eventFrame,
+    canSee: (tx, tz) => !character || canSee(character.position.x, character.position.z, tx, tz),   // FLOW-02：道くさの案内も、見えるときだけ
+    nearSpot: () => near && callSpot(near),   // FLOW-02：歩いているときも、話しかけられる相手を木で隠さない
     holdSpot: () => TREASURE_SPOTS.giant };   // EXPANSION-03：オオネとの話を「あとで」で閉じた場所
 })();
 // TREASURE-UI-END
@@ -6156,6 +6281,7 @@ function doReset(){
 
 // ── カメラ追従 ───────────────────────────────────────────────────
 const camTgt=new THREE.Vector3();
+const _lead=new THREE.Vector3(), _leadS=new THREE.Vector3(), _lastPos=new THREE.Vector3(), _camWant=new THREE.Vector3();   // FLOW-02：進む向きへ少し先を見る
 
 // パネル表示中・到着時の構図（focus）。
 // ヒロリを斜め前（顔の正面から約50°）から、少し上から見下ろして映す。
@@ -6334,9 +6460,14 @@ function updateCamera(dt){
   if(!character) return;
   const focus=!canMove();
   camUser.step(dt);
+  // FLOW-02：速く歩いても画面のはしへ行かないよう、追いかけを時間で決め（前は1コマごとに .08）、進む向きへ 0.18 秒ぶん先を見る（最大 1.4m）
+  _lead.copy(character.position).sub(_lastPos).setY(0).multiplyScalar(dt>0&&!focus?.18/dt:0); _lastPos.copy(character.position);
+  if(_lead.lengthSq()>1.96) _lead.setLength(1.4);
+  _leadS.lerp(_lead,reduceMotionQuery.matches?1:1-Math.exp(-dt/.3));
   if(!focus){
-    camera.position.lerp(character.position.clone().add(worldV2.cameraFramed()?CAM_OFF:camUser.offset(character.position.x,character.position.z)),.08);   // 視点の操作（CAMERA-USER）。樹の構図のあいだは決めた構図
-    camTgt.lerp(character.position.clone().add(CAM_LOOK),.08);
+    const kf=reduceMotionQuery.matches?1:1-Math.exp(-dt/.11);
+    camera.position.lerp(_camWant.copy(character.position).add(_leadS).add(worldV2.cameraFramed()?CAM_OFF:camUser.offset(character.position.x,character.position.z)),kf);   // 視点の操作（CAMERA-USER）。樹の構図のあいだは決めた構図
+    camTgt.lerp(_camWant.copy(character.position).add(_leadS).add(CAM_LOOK),kf);
   } else {
     // 0.3〜0.5秒でなめらかに移る。動きを減らす設定では、すぐに落ち着いた位置へ
     const k=reduceMotionQuery.matches?1:1-Math.exp(-dt/FOCUS_TAU);
@@ -6380,7 +6511,7 @@ function updateCamera(dt){
 
 // ── ゲームループ ─────────────────────────────────────────────────
 const clock=new THREE.Clock();
-const SPEED=3.3, ARRIVE=0.6;   // EXPANSION-02：一歩ずつの間が感じられる速さ（前は 4.0）
+const SPEED=6.6, ARRIVE=0.6;   // FLOW-02：一歩で進む距離を2倍に（足を動かす速さは同じ。前は 3.3）
 const canMove=()=>state===S.EXPLORE||state===S.DEMO_COMPLETE||state===S.FREE_EXPLORE;
 
 function animate(){
@@ -6434,12 +6565,8 @@ function animate(){
     if(state===S.EXPLORE){
       const md=Math.hypot(character.position.x-mpGroup.position.x, character.position.z-mpGroup.position.z);   // 平面の距離（WORLD-V2：起伏で判定がぶれない）
       const mbar=document.getElementById('mbar-text');
-      if(md<MISSION_RADIUS){
-        if(!missionNeedsLeave) triggerMission();
-      } else {
-        missionNeedsLeave=false;
-        mbar.textContent = md<CALLOUT_RADIUS ? 'なにかが呼んでいる…' : (treasure&&treasure.guide()) || '光るポイントを探して歩こう！';   // 祠に近づいたら写真のクエストの案内へ（EXPANSION-01）
-      }
+      // FLOW-02：近づいただけでは開かない。近くに出る「光るポイントがある｜はじめる」を押したときに開く（案内は treasure.update がまとめて出す）
+      mbar.textContent = md<CALLOUT_RADIUS&&!missionTriggered&&!missionHold.held() ? 'なにかが呼んでいる…' : (treasure&&treasure.guide()) || '光るポイントを探して歩こう！';   // 祠に近づいたら写真のクエストの案内へ（EXPANSION-01）
     }
   }
 

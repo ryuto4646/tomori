@@ -316,10 +316,13 @@ test('28. care の文面は改行どおりに表示する', () => {
   assert.match(HTML.match(/\.care-msg \{([\s\S]*?)\}/)[1], /white-space:pre-line/);
 });
 
-test('29. 「冒険にもどる」後は、離れてから近づくとミッションが再び始まる', () => {
+test('29. 「冒険にもどる」後は、近くの「はじめる」を押すとミッションが再び始まる（FLOW-02：近づいただけでは始まらない）', () => {
   const back = HTML.match(/window\.careBack = \(\) => \{([\s\S]*?)\n\};/)[1];
   assert.match(back, /missionTriggered = false;\s*missionNeedsLeave = true;/);
-  assert.match(HTML, /if\(md<MISSION_RADIUS\)\{\s*if\(!missionNeedsLeave\) triggerMission\(\);\s*\} else \{\s*missionNeedsLeave=false;/);
+  const anim = HTML.match(/function animate\(\)\{([\s\S]*?)\n\}/)[1];
+  assert.ok(!/triggerMission\(/.test(anim), 'no auto start while walking');
+  assert.match(HTML, /const missionCallable = \(\) => state === S\.EXPLORE && !missionTriggered && !\(missionHold && missionHold\.held\(\)\);/);
+  assert.match(HTML, /\['btn-treasure-open', \(\) => \{ if \(near === 'mission'\) \{ if \(missionCallable\(\)\) triggerMission\(\); \}/);
   const reset = HTML.match(/function doReset\(\)\{([\s\S]*?)\n\}/)[1];
   assert.match(reset, /missionNeedsLeave=false/);
 });

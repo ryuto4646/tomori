@@ -1913,9 +1913,9 @@ const worldV2 = (() => {
     [-60, -68, 5.0, 14.4], [-18, -80, 3.6, 12.8], [72, -60, 4.7, 14.4], [-76, -24, 3.0, 12.8], [12, -92, 2.4, 11.2]];   // FLOW-02：場所を2倍、広がりを1.6倍、遠いので高さを1.5倍
   // EXPANSION-03：巨木への道（草原の南西のはしの古い門 → 巨木の根もとの広場 → 途切れた道 → 光のつるの橋 → 向こう岸）
   // 6 番目（広場の先）から 7 番目（向こう岸）のあいだは川。橋ができるまでは渡れない。道・広場・向こう岸・川のまわりは平ら
-  const GREAT_ROUTE = [[-16.3, -20.5], [-17.9, -23.5], [-21.6, -32.8], [-26.0, -40.0], [-32.8, -46.0], [-39.2, -50.8], [-43.8, -48.8], [-48.2, -47.4], [-51.2, -46.6]];   // FLOW-02：道は2倍。門・広場・橋・向こう岸のまわりは、前と同じ位置関係
+  const GREAT_ROUTE = [[-15.6, -19.5], [-17.2, -22.5], [-21.6, -32.8], [-26.0, -40.0], [-32.8, -46.0], [-39.2, -50.8], [-43.8, -48.8], [-48.2, -47.4], [-51.2, -46.6]];   // FLOW-02：道は2倍。門は草原のふちからの距離を前と同じ（約1.2m）に。広場・橋・向こう岸のまわりは、前と同じ位置関係
   const GREAT = Object.freeze({
-    gate: { x: -17.4, z: -21.8 },                 // 道の入口の古い門（かべの絵と同じもよう）
+    gate: { x: -16.7, z: -20.8 },                 // 道の入口の古い門（かべの絵と同じもよう）
     clearing: { x: -39.2, z: -50.8, r: 5.0 },    // 巨木の根もとの広場
     tree: { x: -42.4, z: -54.3, r: 2.6 },        // 巨木の幹（中には入らない）
     being: { x: -40.5, z: -52.7, r: 1.6 },       // 根もとでねむる大きな生きもの（体の中には入らない）
@@ -2220,6 +2220,7 @@ const worldV2 = (() => {
   const questSproutBase = new THREE.Matrix4();
   const gatePlace = new THREE.Matrix4(), fruitPos = [], fruitBase = [];
   const FLOWER_MAX = 48; let flowerStem = null, flowerHead = null;
+  let clearSpots = [], lookPoint = null;   // FLOW-02：木立を足さない場所・透かして見せたい点（ほかの部分から渡す）
   const FADE_KINDS = new Set(['Tree_Round_A', 'Tree_Round_B', 'Tree_Tall_A', 'Tree_Tall_B', 'Tree_Sapling_A', 'Stone_Standing_A', 'Stone_Standing_B']), fadeSets = [];   // FLOW-02：透かす物
   const flowerM = new THREE.Matrix4(), flowerPM = new THREE.Matrix4(), flowerFr = new THREE.Frustum(), flowerS = new THREE.Sphere(new THREE.Vector3(), .6);
   function build(kit) {
@@ -2333,7 +2334,7 @@ const worldV2 = (() => {
     // 乱数はここだけの別の列を使う（ほかの物の並びは変えない）。スマホ（low）は木を半分にする
     {
       let s2 = 917331; const r2 = () => { s2 = (s2 * 16807) % 2147483647; return s2 / 2147483647; };
-      const spots = Object.values(TREASURE_SPOTS).concat(DETOUR_DEFS, [{ x: MISSION_POS.x, z: MISSION_POS.z }]);
+      const spots = clearSpots.concat(DETOUR_DEFS, [{ x: MISSION_POS.x, z: MISSION_POS.z }]);   // clearSpots：人・物の場所（宝さがしが setClearSpots で渡す）
       const clear = (x, z) => blocked(x, z) || Math.hypot(x, z - 3) < 8 || spots.some(s => Math.hypot(x - s.x, z - s.z) < 4.5) || TREE_SPOTS.some(([tx, tz]) => Math.hypot(x - tx, z - tz) < 4)
         || segDist(x, z, 0, 0, MISSION_POS.x, MISSION_POS.z) < 3 || segDist(x, z, MISSION_POS.x, MISSION_POS.z, GATE.x, GATE.z) < 3 || Math.hypot((x - WALK.cx) / WALK.rx, (z - WALK.cz) / WALK.rz) > .9;
       const plant2 = (name, x, z) => { if (!blocked(x, z) && (HIGH || r2() < .5)) put(name, x, z, (.85 + r2() * .35) * depthSize(x, z), r2() * 6.283, depthTint(x, z)); };
@@ -2775,13 +2776,8 @@ const worldV2 = (() => {
     const C = camera.position; let n = 0;
     seeP[n++].set(character.position.x, character.position.y + .9, character.position.z);
     seeP[n++].set(character.position.x, character.position.y + 1.7, character.position.z);
-    if (!canMove()) {
-      const tp = treasure && treasure.focusPoint(), ft = tp || focusTarget || mpGroup.position;
-      seeP[n++].set(ft.x, (tp ? tp.y : heightAt(ft.x, ft.z)) + .4, ft.z);
-    } else {
-      const ns = treasure && treasure.nearSpot();
-      if (ns) seeP[n++].set(ns.x, heightAt(ns.x, ns.z) + .4, ns.z);
-    }
+    const lp = lookPoint && lookPoint();   // パネルのときは調べる物、歩いているときは近くの話しかけられる相手（setLookPoint で渡す）
+    if (lp) seeP[n++].set(lp.x, (lp.y !== undefined ? lp.y : heightAt(lp.x, lp.z)) + .4, lp.z);
     for (const set of fadeSets) {
       let dirty = false;
       for (let i = 0; i < set.items.length; i++) {
@@ -3046,7 +3042,7 @@ const worldV2 = (() => {
   }
   // PER-FRAME-V2-END
   return { ready, update, reset, groundCharacter, clampToWalkable, heightAt, isActive: () => active, progress: () => progress, quality: WORLD_QUALITY,
-    showQuestSprout, lightNextFruit, groundAt: (x, z) => active ? heightAt(x, z) : 0, wordTree: WORD_TREE, markerHeight: () => markerY, meshyTree: () => meshyTree, cameraFramed: () => treeFrame, occluders: () => occluders,
+    showQuestSprout, lightNextFruit, groundAt: (x, z) => active ? heightAt(x, z) : 0, wordTree: WORD_TREE, markerHeight: () => markerY, meshyTree: () => meshyTree, cameraFramed: () => treeFrame, setClearSpots: l => { clearSpots = l; }, setLookPoint: f => { lookPoint = f; }, occluders: () => occluders,
     // EXPANSION-03：巨木への道（ひらく・橋ができる は宝さがしの記録で決める）
     setGreatOpen: (path, bridge) => { GREAT_OPEN.path = !!path; GREAT_OPEN.bridge = !!(path && bridge); }, steerGreat, great: GREAT, greatRoute: GREAT_ROUTE, greatTotal: GREAT_TOTAL, greatS, greatAt, riverDist };
 })();
@@ -4501,7 +4497,7 @@ const TREASURE_SPOTS = Object.freeze({
   bloom:  { x: -13.6, z: -7.2, approach: 1.0, name: '空を向いてさく花', icon: '🌼', call: '花がさいている', verb: 'しらべる' },
   dazzle: { x: -12.8, z: -16.4, approach: 1.0, name: 'まばゆく輝く花', icon: '🌟', call: 'まぶしい花がさいている', verb: 'しらべる' },   // LANGUAGE-01：「ほのかに」とくらべる花
   // EXPANSION-03：巨木への道（場所は worldV2 の GREAT と同じ。道がひらくまで、門より先へは行けない）
-  gate:   { x: -17.4, z: -21.8, approach: 1.0, name: '古い石の門', icon: '🚪', call: '古い石の門がある', verb: 'しらべる' },
+  gate:   { x: -16.7, z: -20.8, approach: 1.0, name: '古い石の門', icon: '🚪', call: '古い石の門がある', verb: 'しらべる' },
   giant:  { x: -39.6, z: -51.4, approach: 1.6, name: 'オオネ', icon: '🦌', call: 'オオネがいる', callNew: 'なにか大きなものが、ねむっている', verb: 'しらべる', verbMet: '話す' },
   plant:  { x: -43.2, z: -49.0, approach: 0.8, name: '途切れた道', icon: '🌊', call: '道が、とちゅうで切れている', verb: 'しらべる' },
   cairn:  { x: -52.0, z: -48.0, approach: 1.0, name: 'うずまきの石', icon: '🌀', call: 'ふしぎな石がある', verb: 'しらべる' },
@@ -5484,6 +5480,14 @@ treasure = (() => {
    ['btn-talk-plant', plantSeed], ['btn-giant-next', giantNext], ['btn-giant-voice', giantVoice]]
     .forEach(([id, fn]) => el(id).addEventListener('click', fn));
   worldV2.ready.then(build, build);   // 地形の高さがわかってから置く（V2 が使えないときは平らな地面に置く）
+  // FLOW-02：草原に足す木立は、人・物のそばに置かない。木を透かすときは、調べている物・近くの相手も見えるように
+  worldV2.setClearSpots(Object.values(TREASURE_SPOTS));
+  const _lp = new THREE.Vector3();
+  worldV2.setLookPoint(() => {
+    if (!character) return null;
+    if (!canMove()) { const tp = focusPoint(); if (tp) return tp; const ft = focusTarget || mpGroup.position; return _lp.set(ft.x, worldV2.groundAt(ft.x, ft.z), ft.z); }
+    const s = near && callSpot(near); return s ? _lp.set(s.x, worldV2.groundAt(s.x, s.z), s.z) : null;
+  });
   // テスト用（読むだけ）：進み具合と、場所が画面のどこに映っているか
   const screen = (x, y, z) => { _v.set(x, y, z).project(camera); return { x: (_v.x + 1) / 2 * innerWidth, y: (1 - _v.y) / 2 * innerHeight, front: _v.z < 1 }; };
   window.__tomoriTreasure = { state: () => JSON.parse(JSON.stringify(st)), goal: () => treasureGoal(st), spots: TREASURE_SPOTS, saveKey: SAVE_KEY,
@@ -6169,7 +6173,6 @@ treasure = (() => {
   const OBSTACLES = [[TREASURE_SPOTS.cave.x - .4, TREASURE_SPOTS.cave.z - 1.6, 1.7], [GR.tree.x, GR.tree.z, 3.2], [GR.being.x, GR.being.z, 2.0], [GR.gate.x, GR.gate.z, 1.2]];   // EXPANSION-03：巨木・オオネ・門も
   return { pick, clearPending, update, applyUI, reset, guide, focusPoint, obstacles: () => OBSTACLES, guardTap, tapBlocked, eventFrame,
     canSee: (tx, tz) => !character || canSee(character.position.x, character.position.z, tx, tz),   // FLOW-02：道くさの案内も、見えるときだけ
-    nearSpot: () => near && callSpot(near),   // FLOW-02：歩いているときも、話しかけられる相手を木で隠さない
     holdSpot: () => TREASURE_SPOTS.giant };   // EXPANSION-03：オオネとの話を「あとで」で閉じた場所
 })();
 // TREASURE-UI-END

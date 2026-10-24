@@ -21,7 +21,7 @@ return { TREASURE_SAVE_KEY, TREASURE_GUIDE, TREASURE_TALK_R, TREASURE_SPOTS, TRE
   createTreasureState, treasureGoal, treasureItems, treasureTalk, treasureMoreHint, treasureInspect, treasureLantern, treasureMemo, restoreTreasure };`)();
 const Q = new Function(QUEST + '\nreturn { DETOUR_DEFS, QUEST_DEFS };')();
 const W = new Function(TERRAIN + ADV + '\nreturn { inWalk, GATE, WORD_TREE };')();
-const MISSION = { x: 1.5, z: -6.5 };
+const MISSION = (([x, z]) => ({ x: +x, z: +z }))(HTML.match(/const MISSION_POS = new THREE\.Vector3\(([-0-9.]+), 0, ([-0-9.]+)\);/).slice(1));   // FLOW-02：ページの値を読む
 
 // 最後まで進める（テストの準備用）
 function playThrough(st) {
@@ -163,14 +163,18 @@ test('9. 置き場所：人・手がかりは、門を開ける前から歩け�
   for (const id of ids) {
     const s = S[id];
     assert.ok(W.inWalk(s.x, s.z, false), `${id} inside the meadow`);
-    assert.ok(Math.hypot(s.x - MISSION.x, s.z - MISSION.z) > 3.0, `${id} away from the shrine`);
-    assert.ok(Math.hypot(s.x - W.GATE.x, s.z - W.GATE.z) > 6, `${id} away from the gate`);
-    for (const d of Q.DETOUR_DEFS) assert.ok(Math.hypot(s.x - d.x, s.z - d.z) > 6, `${id} away from detour ${d.id}`);
+    // FLOW-02：場所どうしの間を2倍に広げた（離れている距離の下限も2倍）
+    assert.ok(Math.hypot(s.x - MISSION.x, s.z - MISSION.z) > 6.0, `${id} away from the shrine`);
+    assert.ok(Math.hypot(s.x - W.GATE.x, s.z - W.GATE.z) > 12, `${id} away from the gate`);
+    for (const d of Q.DETOUR_DEFS) assert.ok(Math.hypot(s.x - d.x, s.z - d.z) > 12, `${id} away from detour ${d.id}`);
     assert.ok(s.x < 0, `${id} on the west side`);
-    for (const o of ids) if (o !== id) assert.ok(Math.hypot(s.x - S[o].x, s.z - S[o].z) > 2.2, `${id} vs ${o}`);
+    for (const o of ids) if (o !== id) assert.ok(Math.hypot(s.x - S[o].x, s.z - S[o].z) > 4.4, `${id} vs ${o}`);
   }
-  // 宝さがしの始まり（ポポ）は出発点から近く、最初の小道のそば
-  assert.ok(Math.hypot(S.popo.x, S.popo.z) < 3.5);
+  // 宝さがしの始まり（ポポ）は出発点から近く、最初の小道のそば（前の2倍の距離。歩いて約1秒）
+  assert.ok(Math.hypot(S.popo.x, S.popo.z) < 7);
+  // 前の場所の2倍（巨木のまわりは test-great-tree.mjs）
+  const OLD = { popo: [-1.7, -2.6], mina: [-5.6, 1.6], cat: [-1.8, -9.8], bell: [-9.4, -1.9], spring: [-8.8, -7.6], chest: [-11.0, -5.6], cave: [-5.2, -11.0], rock: [-4.0, -3.0], bloom: [-6.8, -3.6], dazzle: [-6.4, -8.2] };   // 門は、草原のふちからの距離を前と同じにした（2倍ではない。test-great-tree.mjs）
+  for (const [id, [x, z]] of Object.entries(OLD)) assert.ok(Math.abs(S[id].x - 2 * x) < 1e-9 && Math.abs(S[id].z - 2 * z) < 1e-9, id);
   assert.ok(T.TREASURE_TALK_R >= 1.6 && T.TREASURE_TALK_R <= 2.4);
 });
 
@@ -267,7 +271,8 @@ test('17. 上の知らせ：宝さがしの途中は、いまの目標がわか�
   const g = between(UI, 'function guide(free) {', '\n  }\n');
   assert.match(g, /if \(free !== undefined && free !== FREE_TEXT\) return null;/);
   assert.match(UI, /const FREE_TEXT = '自由に歩いてみよう。気になる場所があるかも。';/);
-  assert.match(HTML, /mbar\.textContent = md<CALLOUT_RADIUS \? 'なにかが呼んでいる…' : \(treasure&&treasure\.guide\(\)\) \|\| '光るポイントを探して歩こう！';/);
+  // FLOW-02：写真のクエストを始めたあと・「あとで」で閉じているあいだは、「なにかが呼んでいる…」を出さない
+  assert.match(HTML, /mbar\.textContent = md<CALLOUT_RADIUS&&!missionTriggered&&!missionHold\.held\(\) \? 'なにかが呼んでいる…' : \(treasure&&treasure\.guide\(\)\) \|\| '光るポイントを探して歩こう！';/);
   assert.match(HTML, /mbar\.textContent = \(treasure && treasure\.guide\(\)\) \|\| '光るポイントを探して歩こう！';/);
 });
 

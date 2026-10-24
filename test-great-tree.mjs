@@ -190,14 +190,14 @@ test('9. 地形：巨木への道・広場・向こう岸・川は平らで、�
   assert.ok(worst <= 12, `route slope ${worst.toFixed(1)}`);
   for (const a of [G.clearing, G.overlook]) for (let k = 0; k < 16; k++) { const x = a.x + Math.cos(k) * a.r * .9, z = a.z + Math.sin(k) * a.r * .9; assert.ok(Math.abs(W.heightAt(x, z)) < .05, `flat ${x},${z}`); }
   for (const p of G.river) assert.ok(Math.abs(W.heightAt(p[0], p[1])) < .05, 'river flat');
-  assert.ok(W.heightAt(-18, -14) > 1 && W.heightAt(0, -24) > 1, 'hills outside');
+  assert.ok(W.heightAt(-36, -28) > 1 && W.heightAt(0, -48) > 1, 'hills outside');   // FLOW-02：2倍の場所
 });
 
 test('10. 道に沿って歩く：草原から巨木・向こう岸へ、角で止まらずに着く（タップ1回）。帰りも同じ。毎フレームの計算で物を作らない', () => {
   open(true, true);
   const walk = (from, to) => {
     const p = { x: from[0], z: from[1] }, o = { x: 0, z: 0 };
-    for (let i = 0; i < 900; i++) {
+    for (let i = 0; i < 2000; i++) {   // FLOW-02：道が2倍に長い
       W.steerGreat(p.x, p.z, to[0], to[1], o);
       const dx = o.x - p.x, dz = o.z - p.z, d = Math.hypot(dx, dz);
       if (Math.hypot(to[0] - p.x, to[1] - p.z) < .6) return i;
@@ -205,10 +205,11 @@ test('10. 道に沿って歩く：草原から巨木・向こう岸へ、角で�
     }
     return -1;
   };
-  const toTree = walk([-4, -6], [W.GREAT.clearing.x + 1.5, W.GREAT.clearing.z + 1]);
-  assert.ok(toTree > 0, 'meadow → clearing'); assert.ok(toTree * .055 / 3.3 < 14, `${(toTree * .055 / 3.3).toFixed(1)}s`);
+  // FLOW-02：道は前の2倍・速さも2倍（6.6m/秒）なので、かかる時間は前と同じくらい
+  const toTree = walk([-8, -12], [W.GREAT.clearing.x + 1.5, W.GREAT.clearing.z + 1]);
+  assert.ok(toTree > 0, 'meadow → clearing'); assert.ok(toTree * .055 / 6.6 < 14, `${(toTree * .055 / 6.6).toFixed(1)}s`);
   assert.ok(walk([W.GREAT.clearing.x + 1.5, W.GREAT.clearing.z + 1], [W.GREAT.overlook.x, W.GREAT.overlook.z]) > 0, 'clearing → far bank (bridge)');
-  assert.ok(walk([W.GREAT.overlook.x, W.GREAT.overlook.z], [-2, -5]) > 0, 'far bank → meadow');
+  assert.ok(walk([W.GREAT.overlook.x, W.GREAT.overlook.z], [-4, -10]) > 0, 'far bank → meadow');
   const steer = ADV.slice(ADV.indexOf('function greatS('));
   assert.ok(!/\bnew\b|=>|\[\s*\]|\{\s*x:/.test(steer), 'no allocation while steering');
   open(false, false);

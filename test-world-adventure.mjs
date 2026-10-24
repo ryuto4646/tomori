@@ -145,7 +145,7 @@ test('10. タップ先（limit 0.97）は、道のふちより少し内側へ戻
   assert.match(HTML, /worldV2\.clampToWalkable\(targetPos, 0\.97\);/);
 });
 
-test('11. 秘密の道（S字）は 28〜42m。SPEED 3.3（EXPANSION-02。前は 4.0）で計算上 8〜13秒。道とことばの樹のまわりは平ら', () => {
+test('11. 秘密の道（S字）は 56〜84m（FLOW-02 で2倍）。SPEED 6.6（前は 3.3）で計算上 8〜13秒（前と同じくらい）。道とことばの樹のまわりは平ら', () => {
   // 歩ける場所はすべて平ら（道のカプセルの中・樹のまわり）
   for (let i = 0; i < A.PASSAGE.length - 1; i++) for (let k = 0; k <= 8; k++) for (const o of [-1.3, 0, 1.3]) {
     const [ax, az] = A.PASSAGE[i], [bx, bz] = A.PASSAGE[i + 1], tl = Math.hypot(bx - ax, bz - az), x = ax + (bx - ax) * k / 8 - (bz - az) / tl * o, z = az + (bz - az) * k / 8 + (bx - ax) / tl * o;
@@ -154,9 +154,9 @@ test('11. 秘密の道（S字）は 28〜42m。SPEED 3.3（EXPANSION-02。前は
   let max = 0;
   for (let a = 0; a < 6.28; a += .2) for (const r of [2, 3, A.TREE_AREA.r]) max = Math.max(max, Math.abs(A.heightAt(A.WORD_TREE.x + Math.cos(a) * r, A.WORD_TREE.z + Math.sin(a) * r)));
   assert.ok(max < 1e-6, `tree area height ${max}`);
-  assert.ok(A.ROUTE_TOTAL >= 28 && A.ROUTE_TOTAL <= 42, `route ${A.ROUTE_TOTAL}`);
+  assert.ok(A.ROUTE_TOTAL >= 56 && A.ROUTE_TOTAL <= 84, `route ${A.ROUTE_TOTAL}`);
   const speed = +HTML.match(/const SPEED=([\d.]+), ARRIVE=0\.6;/)[1];
-  assert.equal(speed, 3.3);
+  assert.equal(speed, 6.6);
   assert.ok(A.ROUTE_TOTAL / speed >= 8 && A.ROUTE_TOTAL / speed <= 13, `time ${A.ROUTE_TOTAL / speed}`);
   // 一本道の直線ではない：門から樹への直線より十分に長く、左右に曲がる（向きの変化が2回以上）
   assert.ok(A.ROUTE_TOTAL > 1.5 * Math.hypot(A.WORD_TREE.x - A.GATE.x, A.WORD_TREE.z - A.GATE.z));
@@ -166,8 +166,8 @@ test('11. 秘密の道（S字）は 28〜42m。SPEED 3.3（EXPANSION-02。前は
     if (cr && cr !== last) { turns++; last = cr; }
   }
   assert.ok(turns >= 3, `S-curve turns ${turns}`);
-  // ことばの樹そのものは動かしていない（初期画面・門越しの構図はそのまま）
-  assert.deepEqual([A.WORD_TREE.x, A.WORD_TREE.z], [15.8, -28.3]);
+  // ことばの樹は、FLOW-02 で前の2倍の場所へ（門越しの構図は、樹との位置関係で決まる）
+  assert.deepEqual([A.WORD_TREE.x, A.WORD_TREE.z], [31.6, -56.6]);
 });
 
 test('12. 判定の距離：タネ 1.1〜1.4m・門 3〜4m・ことばの樹 2.5〜3.5m（平面の距離）', () => {
@@ -343,7 +343,7 @@ test('26. 描く回数を増やしすぎない：秘密の谷の草花・芽・�
   assert.match(build, /for \(let i = 0, n = HIGH \? 12 : 4; i < n; i\+\+\)/);
   // スマホ（low）の秘密の谷は草だけ・若木なし・道の点は少なめ。秘密の道は、門がひらくまで描かない（根元の光だけ描く）
   assert.match(build, /const VALLEY = HIGH \? \[[^\]]+\] : \['Grass_A', 'Grass_B'\];/);
-  assert.match(build, /if \(HIGH\) put\('Tree_Round_B', 12\.2, -26\.0,/);
+  assert.match(build, /if \(HIGH\) put\('Tree_Round_B', WORD_TREE\.x - 3\.6, WORD_TREE\.z \+ 2\.3,/);   // FLOW-02：ことばの樹との位置関係で置く
   assert.match(build, /secretN = HIGH \? 96 : 40;/);
   assert.match(build, /sgeo\.setIndex\(si\); sgeo\.setDrawRange\(secretRibbonN, Infinity\);/);
   assert.match(ADVENTURE_FN, /openT = t; secretPath\.geometry\.setDrawRange\(0, Infinity\);/);
@@ -362,18 +362,20 @@ const simWalk = (sx, sz, gx, gz) => {
     A.steerToward(p.x, p.z, T.x, T.z, w);
     const dx = w.x - p.x, dz = w.z - p.z, d = Math.hypot(dx, dz);
     if (d < .6 && w.x === T.x && w.z === T.z) return { arrived: i / 60, reach, p };
-    const st = Math.min(d, 4 / 60); p.x += dx / d * st; p.z += dz / d * st; A.clampWalk(p, true, 1);
+    const st = Math.min(d, 6.6 / 60); p.x += dx / d * st; p.z += dz / d * st; A.clampWalk(p, true, 1);   // FLOW-02：今の速さ（前は 4）
   }
   return { arrived: -1, reach, p };
 };
 
 test('27. タップ1回で、門の先から道に沿って樹まで歩ける（7〜12秒・角で止まらない）。帰りも同じ', () => {
-  const g = simWalk(A.GATE.x - .4, A.GATE.z + .6, 15.0, -26.0);
+  // FLOW-02：場所は前の2倍（樹のまわりは樹との位置関係が同じ）
+  const TX = A.WORD_TREE.x - 15.8, TZ = A.WORD_TREE.z + 28.3;
+  const g = simWalk(A.GATE.x - .4, A.GATE.z + .6, 15.0 + TX, -26.0 + TZ);
   assert.ok(g.arrived > 0, 'arrived');
   assert.ok(g.reach >= 7 && g.reach <= 12, `gate to tree ${g.reach}s`);
-  const m = simWalk(1, -4, 15.0, -26.0);
+  const m = simWalk(2, -8, 15.0 + TX, -26.0 + TZ);
   assert.ok(m.arrived > 0 && m.reach > g.reach, `meadow to tree ${m.reach}s`);
-  const back = simWalk(14.6, -27.0, 2, -4);
+  const back = simWalk(14.6 + TX, -27.0 + TZ, 4, -8);
   assert.ok(back.arrived > 0, 'back to the meadow');
   // 幹の中心をタップしても止まらずに着く
   assert.ok(simWalk(A.GATE.x - .4, A.GATE.z + .6, A.WORD_TREE.x, A.WORD_TREE.z).arrived > 0);
@@ -430,8 +432,9 @@ test('31. PC（high）の見た目は、秘密の谷と道の向きだけが変�
   assert.match(V2_CODE, /const clear = routeDist\(x, z\) < 3\.4 \|\| Math\.hypot\(x - WORD_TREE\.x, z - WORD_TREE\.z\) < 5\.5 \|\| greatClear\(x, z\) \? 0 : 1;/);
   assert.match(V2_CODE, /put\(TREES\[i % 4\], x, z, \(1 \+ rnd\(\) \* \.45\) \* clear, undefined, depthTint\(x, z\), \(rnd\(\) - \.5\) \* \.1\);/);
   // 門の位置・ことばの樹の位置・草原のだ円は変えていない
-  assert.deepEqual([A.GATE.x, A.GATE.z], [7, -12.6]);
-  assert.deepEqual([A.WALK.cx, A.WALK.cz, A.WALK.rx, A.WALK.rz], [3, -3.5, 15, 9.5]);
+  // FLOW-02：門・草原のだ円は前の2倍（場所どうしの間を2倍に広げた）
+  assert.deepEqual([A.GATE.x, A.GATE.z], [14, -25.2]);
+  assert.deepEqual([A.WALK.cx, A.WALK.cz, A.WALK.rx, A.WALK.rz], [6, -7, 30, 19]);
   assert.deepEqual(A.SECRET_ROUTE[0], [A.GATE.x, A.GATE.z]);
 });
 

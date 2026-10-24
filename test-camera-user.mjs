@@ -84,7 +84,8 @@ test('5. PC：ホイールで寄る／引く、Q／E で回る。回したら、
 });
 
 test('6. 組み込み：樹の構図のあいだは決めた構図。タップの判定・デモのリセット・iPhone の画面拡大', () => {
-  assert.match(HTML, /camera\.position\.lerp\(character\.position\.clone\(\)\.add\(worldV2\.cameraFramed\(\)\?CAM_OFF:camUser\.offset\(character\.position\.x,character\.position\.z\)\),\.08\);/);
+  // FLOW-02：追いかけは時間で決め、進む向きへ少し先を見る（視点の操作 camUser.offset はそのまま使う）
+  assert.match(HTML, /camera\.position\.lerp\(_camWant\.copy\(character\.position\)\.add\(_leadS\)\.add\(worldV2\.cameraFramed\(\)\?CAM_OFF:camUser\.offset\(character\.position\.x,character\.position\.z\)\),kf\);/);
   assert.match(HTML, /cameraFramed: \(\) => treeFrame/);
   assert.match(HTML, /canvas\.addEventListener\('touchend',e=>\{e\.preventDefault\(\);if\(camUser\.wasGesture\(e\)\)return;onTap\(e\);\},\{passive:false\}\);/);
   assert.match(HTML, /resetHiroriMotion\(\); camUser\.reset\(\);/);

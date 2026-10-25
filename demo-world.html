@@ -4920,6 +4920,7 @@ treasure = (() => {
   // ── 見た目：基本の形（球・円すい・円柱・箱）だけ。人・物ごとに 1〜2 個の Mesh にまとめて、描く回数を増やしすぎない ──
   const G = new THREE.Group(); G.name = 'TreasureHunt'; scene.add(G);
   const MAT = new THREE.MeshLambertMaterial({ vertexColors: true });
+  const caveRockMat = new THREE.MeshLambertMaterial({ vertexColors: true, transparent: true });   // FLOW-02：ほらあなの岩だけ、透かせるように
   const SPH = new THREE.SphereGeometry(1, 12, 8), CONE = new THREE.ConeGeometry(1, 1, 10), BELL = new THREE.ConeGeometry(1, 1, 10, 1, true);
   const CYL = new THREE.CylinderGeometry(1, 1, 1, 12), BOX = new THREE.BoxGeometry(1, 1, 1);
   const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _c = new THREE.Color(), _v = new THREE.Vector3();
@@ -4964,6 +4965,14 @@ treasure = (() => {
     const h = new THREE.Mesh(HIT_GEO, HIT); h.scale.setScalar(r); h.position.y = y; h.userData.treasureId = id; on.add(h); hits.push(h);
   }
   const faceTo = (g, x, z) => { g.rotation.y = Math.atan2(x - g.position.x, z - g.position.z); };
+  // 線分 a→b と点 c のいちばん近い距離（c が a の後ろ・b の先にあるときは、遠いとみなす）
+  const _cr = new THREE.Vector3(), _cc = new THREE.Vector3();
+  function segNear(a, b, c) {
+    const vx = b.x - a.x, vy = b.y - a.y, vz = b.z - a.z, L2 = vx * vx + vy * vy + vz * vz;
+    const u = L2 > 1e-6 ? ((c.x - a.x) * vx + (c.y - a.y) * vy + (c.z - a.z) * vz) / L2 : 0;
+    if (u < 0 || u > .95) return 99;
+    return Math.hypot(a.x + vx * u - c.x, a.y + vy * u - c.y, a.z + vz * u - c.z);
+  }
   let popoHead, minaHead, minaBody, catHead, catBody, tablet, keyGlint, ripples = [], lid, burst, shardPop, mouth, mural, lantern, glint, farGlow, chestRoot, caveRoot, farTree;
   // EXPANSION-03：巨木への道の物（門・道の石・草花・オオネ・川・橋・向こう岸・空の島）
   const GR = worldV2.great, ROUTE = worldV2.greatRoute;
@@ -5073,7 +5082,7 @@ treasure = (() => {
 
     // 暗いほらあな：立ち石のとなりの岩に、真っ暗な入口。ランタンで照らすと、かべの絵が見える
     const cave = root('cave', TREASURE_SPOTS.cave.x - .4, TREASURE_SPOTS.cave.z - 1.6); caveRoot = cave;   // FLOW-02：入口（しらべる場所）との位置関係は前と同じ
-    cave.add(mesh([[SPH, 0x7f7a6e, [0, .3, 0], [1.6, 1.25, 1.2]], [SPH, 0x8a8478, [-1.15, .12, .3], [.8, .62, .66]], [SPH, 0x746f64, [-.4, 1.2, -.2], [.9, .5, .8]]], 'Cave_Rock'));
+    cave.add(mesh([[SPH, 0x7f7a6e, [0, .3, 0], [1.6, 1.25, 1.2]], [SPH, 0x8a8478, [-1.15, .12, .3], [.8, .62, .66]], [SPH, 0x746f64, [-.4, 1.2, -.2], [.9, .5, .8]]], 'Cave_Rock', caveRockMat));   // FLOW-02：カメラとヒロリのあいだに入ったら透かす（専用の素材）
     mouth = new THREE.Mesh(new THREE.CircleGeometry(.62, 20, 0, Math.PI), new THREE.MeshBasicMaterial({ color: 0x15120f })); mouth.position.set(0, -.02, 1.19); mouth.name = 'Cave_Mouth'; cave.add(mouth);
     mural = new THREE.Mesh(new THREE.PlaneGeometry(.78, .46), new THREE.MeshBasicMaterial({ map: muralTexture(false), transparent: true, depthWrite: false })); mural.position.set(0, .26, 1.2); mural.visible = false; mural.name = 'Cave_Mural'; cave.add(mural);
     faceTo(cave, TREASURE_SPOTS.cave.x, TREASURE_SPOTS.cave.z); hitArea('cave', 1.1, .4);
@@ -5259,6 +5268,13 @@ treasure = (() => {
       r.scale.setScalar(.2 + .62 * u); r.material.opacity = calm ? .25 : .45 * (1 - u);
     });
     if (keyGlint.visible) keyGlint.rotation.y = calm ? 0 : t * 2;
+    // FLOW-02：ほらあなの岩が、カメラとヒロリ（会話のときは調べる物も）のあいだに入ったら透かす。はずれたら、ゆっくり戻す
+    caveRoot.getWorldPosition(_cr); _cr.y += .5;
+    let rockHit = segNear(camera.position, _cc.set(x, character.position.y + 1, z), _cr) < 1.5;
+    if (!rockHit && !walkable()) { const fp = focusPoint(); if (fp && openId !== 'cave') rockHit = segNear(camera.position, fp, _cr) < 1.5; }
+    const ro = rockHit ? .35 : 1;
+    caveRockMat.opacity += (ro - caveRockMat.opacity) * (calm ? 1 : 1 - Math.exp(-dt / (rockHit ? .12 : .35)));
+    caveRockMat.depthWrite = caveRockMat.opacity > .95;
     if (ev) stepEvent(dt, t, calm);   // 発見の演出（EXPANSION-02）
     updateGreat(t, dt, x, z, calm, w);   // 巨木への道（EXPANSION-03）
     // ランタン：ヒロリの右手のあたりに浮かぶ。ほらあなに近づくと、入口が少しずつ明るくなる
@@ -5491,6 +5507,7 @@ treasure = (() => {
   // テスト用（読むだけ）：進み具合と、場所が画面のどこに映っているか
   const screen = (x, y, z) => { _v.set(x, y, z).project(camera); return { x: (_v.x + 1) / 2 * innerWidth, y: (1 - _v.y) / 2 * innerHeight, front: _v.z < 1 }; };
   window.__tomoriTreasure = { state: () => JSON.parse(JSON.stringify(st)), goal: () => treasureGoal(st), spots: TREASURE_SPOTS, saveKey: SAVE_KEY,
+    cam: () => ({ p: camera.position.toArray().map(v => +v.toFixed(2)), view: camera.view && camera.view.enabled ? [Math.round(camera.view.offsetX), Math.round(camera.view.offsetY)] : null, state, ground: +worldV2.groundAt(camera.position.x, camera.position.z).toFixed(2), hy: character ? +character.position.y.toFixed(2) : null }),
     greatRoute: () => ROUTE.map(p => [p[0], p[1]]), mission: () => ({ x: mpGroup.position.x, z: mpGroup.position.z }), sprout: () => questHub.sproutCall(), call: () => near,   // FLOW-02：場所はページから読む（テストで座標を決め打ちしない）
     screenOf: id => { const s = TREASURE_SPOTS[id]; return s ? screen(s.x, worldV2.groundAt(s.x, s.z) + .4, s.z) : null; },
     screenAt: (x, z) => screen(x, worldV2.groundAt(x, z), z),
@@ -6419,7 +6436,7 @@ const camUser=(()=>{
   let pull=1;
   // EXPANSION-01：西の草原（宝さがしの場所）では、元の視点のとき、木にかからない向きへカメラをゆっくり回す（自分で回した・寄せたときは、その向きのまま）
   let auto=0, autoT=0;
-  const AUTO_CANDS=[0,.35,-.35,.7,-.7,1.05,-1.05,1.4,-1.4];
+  const AUTO_CANDS=[0,.13,-.13,.26,-.26];   // FLOW-02：木は透かすので、カメラを大きく回さない（約15°まで。前は約80°まで）
   function autoTurn(px,pz){
     let want=0;
     if(px<WEST_PULL_X&&Math.abs(yawT)<.02&&Math.abs(zoomT-1)<.02&&worldV2.isActive()){
@@ -6449,7 +6466,7 @@ const camUser=(()=>{
       for(let i=0;i<spots.length;i++){
         const s=spots[i], dx=s[0]-px, dz=s[1]-pz, along=dx*ux+dz*uz, r=s[2]||TREE_RADIUS;
         if(along<1.2||along>L+r) continue;                         // ヒロリのすぐそば・カメラより後ろの木は見ない
-        if(Math.abs(dx*uz-dz*ux)<r+.4) want=Math.min(want,Math.max(px<WEST_PULL_X?.55:.35,(along-r-.6)/L));   // EXPANSION-02：西の草原は .55 まで（ヒロリの真後ろまで寄らない）
+        if(Math.abs(dx*uz-dz*ux)<r+.4) want=Math.min(want,Math.max(px<WEST_PULL_X?.8:.35,(along-r-.6)/L));   // FLOW-02：木は透かすので、極端に寄らない（前は .55）   // EXPANSION-02：西の草原は .55 まで（ヒロリの真後ろまで寄らない）
       }
     }
     pull+=(want-pull)*(want<pull?.25:.05);   // 木に近づくときは早めに寄り、離れるときはゆっくり戻す

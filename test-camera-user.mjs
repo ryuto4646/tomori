@@ -133,10 +133,11 @@ test('8. EXPANSION-01：宝さがしの西の草原（x < -2.5）では、元の
     return { d: Math.hypot(o.x, o.z), x: o.x, z: o.z };
   };
   const full = 8.2;
-  // 西：木がカメラの線にかかるときは、木にかからない向きへ回る（回れないときは木の手前へ寄せる）。どちらでも、ヒロリとカメラのあいだに木が残らない
-  const clearOf = (o, px, [tx, tz, r]) => { const L = Math.hypot(o.x, o.z), ux = o.x / L, uz = o.z / L, dx = tx - px, dz = tz, along = dx * ux + dz * uz; return along < .6 || along > L || Math.abs(dx * uz - dz * ux) > r; };
+  // FLOW-02：西で木がカメラの線にかかっても、カメラは大きく回らず（約15°まで）、極端に寄らない（0.8倍まで）。木そのものは透かす（test-flow02.mjs）
   const westRes = run(-6, [[-6, 4, 1.6]]);
-  assert.ok(clearOf(westRes, -6, [-6, 4, 1.6]), `west: the tree is not between Hirori and the camera: ${JSON.stringify(westRes)}`);
+  assert.ok(Math.abs(Math.atan2(westRes.x, westRes.z)) <= .27, `west: small turn only ${JSON.stringify(westRes)}`);
+  assert.ok(westRes.d >= .8 * full - 1e-6, `west: not pulled in too close ${JSON.stringify(westRes)}`);
+  assert.match(CU, /const AUTO_CANDS=\[0,\.13,-\.13,\.26,-\.26\];/);
   const nt = run(-6, []);
   assert.ok(Math.abs(nt.d - full) < 1e-6 && Math.abs(nt.x) < 1e-6, 'west, no tree: no pull, no turn');
   const st = run(-2, [[-2, 4, 1.6]]);

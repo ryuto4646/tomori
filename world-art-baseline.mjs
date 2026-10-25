@@ -1648,6 +1648,10 @@ const EXPANSION_BLOCKS = [
 ];
 // FLOW-02（2026-10-21）：歩く速さと歩幅を2倍・世界を2倍に広げた・近づいただけでは開かない・木を透かす。新しい順に元へ戻す
 export const FLOW02_EDITS = [
+  [`  const AUTO_CANDS=[0,.35,-.35,.7,-.7,1.05,-1.05,1.4,-1.4];`,
+   `  const AUTO_CANDS=[0,.13,-.13,.26,-.26];   // FLOW-02：木は透かすので、カメラを大きく回さない（約15°まで。前は約80°まで）`],
+  [`Math.max(px<WEST_PULL_X?.55:.35,(along-r-.6)/L));`,
+   `Math.max(px<WEST_PULL_X?.8:.35,(along-r-.6)/L));   // FLOW-02：木は透かすので、極端に寄らない（前は .55）`],
   [`  new THREE.PlaneGeometry(80,80,8,8),
   new THREE.MeshLambertMaterial({ color:0x6aaa4f })`,
    `  new THREE.PlaneGeometry(160,160,8,8),   // FLOW-02：2倍の世界（前は 80）

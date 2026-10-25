@@ -176,7 +176,7 @@ test('13. 歩ける範囲の傾きは10°以下、外は丘で閉じる（起伏
   }
   assert.ok(max <= 10, `max slope ${max.toFixed(2)}`);
   assert.ok(hi > .3, 'gentle rolling inside');
-  assert.ok(T.heightAt(0, -48) > 1 && T.heightAt(-36, -28) > 1, 'hills outside');
+  assert.ok(T.heightAt(0, -48) > 1 && T.heightAt(-40, -10) > 1, 'hills outside');   // FLOW-02：巨木への道の谷（2倍に広げた）の横はさける
   // V2 のカメラ（横長：+z 8.2・+3.4、縦長：-x 4.2・+z 7.6・+4.4）が、歩ける範囲のどこでも地面より上にある
   for (const [ox, oy, oz] of [[0, 3.4, 8.2], [-4.2, 4.4, 7.6]]) for (let a = 0; a < 360; a += 5) {
     const x = T.WALK.cx + Math.cos(a * Math.PI / 180) * T.WALK.rx, z = T.WALK.cz + Math.sin(a * Math.PI / 180) * T.WALK.rz;

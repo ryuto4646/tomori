@@ -54,9 +54,9 @@ test('2. 場所どうしの間をおよそ2倍に。人・物・調べる範囲�
   // 草原の「場所と場所のあいだ」に小さな木立と花（人・物・道・出発点の前はあける。乱数は別の列）
   assert.match(V2, /let s2 = 917331;/);
   assert.match(V2, /spots\.some\(s => Math\.hypot\(x - s\.x, z - s\.z\) < 4\.5\)/);
-  // 門は、草原のふちから前と同じ距離（閉じていても、しらべられる）
+  // 門は草原のふちのすぐ外（タップで近づいて止まった場所から、閉じていても、しらべられる）
   const e = Math.hypot((W.GREAT.gate.x - W.WALK.cx) / W.WALK.rx, (W.GREAT.gate.z - W.WALK.cz) / W.WALK.rz);
-  assert.ok(e > 1 && e < 1.1, `gate ${e}`);
+  assert.ok(e > 1 && e < 1.06, `gate ${e}`);
 });
 
 test('3. 近づいただけでは開かない：写真のクエスト・第2クエストの芽・道くさは、押したときだけ', () => {

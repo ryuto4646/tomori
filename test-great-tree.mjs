@@ -190,7 +190,7 @@ test('9. 地形：巨木への道・広場・向こう岸・川は平らで、�
   assert.ok(worst <= 12, `route slope ${worst.toFixed(1)}`);
   for (const a of [G.clearing, G.overlook]) for (let k = 0; k < 16; k++) { const x = a.x + Math.cos(k) * a.r * .9, z = a.z + Math.sin(k) * a.r * .9; assert.ok(Math.abs(W.heightAt(x, z)) < .05, `flat ${x},${z}`); }
   for (const p of G.river) assert.ok(Math.abs(W.heightAt(p[0], p[1])) < .05, 'river flat');
-  assert.ok(W.heightAt(-36, -28) > 1 && W.heightAt(0, -48) > 1, 'hills outside');   // FLOW-02：2倍の場所
+  assert.ok(W.heightAt(-40, -10) > 1 && W.heightAt(0, -48) > 1, 'hills outside');   // FLOW-02：2倍の場所（巨木への道の谷は広げたので、その横はさける）
 });
 
 test('10. 道に沿って歩く：草原から巨木・向こう岸へ、角で止まらずに着く（タップ1回）。帰りも同じ。毎フレームの計算で物を作らない', () => {

@@ -1905,7 +1905,7 @@ const worldV2 = (() => {
   const SECRET_ROUTE = [[GATE.x, GATE.z], [19.6, -30.8], [31.2, -31.8], [35.6, -37.8], [32.8, -43.8], [21.6, -44.8], [17.6, -50.4], [20.8, -58.0], [28.8, -57.9]];   // FLOW-02：2倍（最後の点は、ことばの樹との位置関係を前と同じに）
   const routeDist = (x, z) => { let d = 1e9; for (let i = 0; i < SECRET_ROUTE.length - 1; i++) d = Math.min(d, segDist(x, z, SECRET_ROUTE[i][0], SECRET_ROUTE[i][1], SECRET_ROUTE[i + 1][0], SECRET_ROUTE[i + 1][1])); return d; };
   const FLAT = [[0, 0, 3.4, 8], [3, -13, 4.4, 8], [32, -16, 5.6, 7], [WORD_TREE.x, WORD_TREE.z, 4.4, 3]];   // 最後の1つは、ことばの樹のまわり（秘密の場所）
-  const FLAT_SEG = [[0, 0, 3, -13, 2.4, 8], [27.6, -5, 24.4, -35, 2.2, 7]];
+  const FLAT_SEG = [[0, 0, 3, -13, 3.6, 8], [27.6, -5, 24.4, -35, 3.3, 7]];
   // 盛り上がり（x, z, 高さ, 広がり）：歩ける範囲の中はゆるく、外は大きく
   const INNER = [[-21, -7, .45, 9.6], [20, 4, .4, 8.8], [-13, 10, .25, 8], [21, -13, .3, 8], [-8, -25, .55, 9.6]];   // FLOW-02：場所を2倍、広がりを1.6倍
   // 外の丘は高さを3段階にして、地平線を一直線にしない（低い丘・中くらいの丘・遠くの高い丘）
@@ -1913,9 +1913,9 @@ const worldV2 = (() => {
     [-60, -68, 5.0, 14.4], [-18, -80, 3.6, 12.8], [72, -60, 4.7, 14.4], [-76, -24, 3.0, 12.8], [12, -92, 2.4, 11.2]];   // FLOW-02：場所を2倍、広がりを1.6倍、遠いので高さを1.5倍
   // EXPANSION-03：巨木への道（草原の南西のはしの古い門 → 巨木の根もとの広場 → 途切れた道 → 光のつるの橋 → 向こう岸）
   // 6 番目（広場の先）から 7 番目（向こう岸）のあいだは川。橋ができるまでは渡れない。道・広場・向こう岸・川のまわりは平ら
-  const GREAT_ROUTE = [[-15.6, -19.5], [-17.2, -22.5], [-21.6, -32.8], [-26.0, -40.0], [-32.8, -46.0], [-39.2, -50.8], [-43.8, -48.8], [-48.2, -47.4], [-51.2, -46.6]];   // FLOW-02：道は2倍。門は草原のふちからの距離を前と同じ（約1.2m）に。広場・橋・向こう岸のまわりは、前と同じ位置関係
+  const GREAT_ROUTE = [[-15.2, -19.0], [-16.8, -22.0], [-21.6, -32.8], [-26.0, -40.0], [-32.8, -46.0], [-39.2, -50.8], [-43.8, -48.8], [-48.2, -47.4], [-51.2, -46.6]];   // FLOW-02：道は2倍。門は草原のふちのすぐ外（約0.6m。タップで近づいて止まった場所から「しらべる」が届く）。広場・橋・向こう岸のまわりは、前と同じ位置関係
   const GREAT = Object.freeze({
-    gate: { x: -16.7, z: -20.8 },                 // 道の入口の古い門（かべの絵と同じもよう）
+    gate: { x: -16.3, z: -20.3 },                 // 道の入口の古い門（かべの絵と同じもよう）
     clearing: { x: -39.2, z: -50.8, r: 5.0 },    // 巨木の根もとの広場
     tree: { x: -42.4, z: -54.3, r: 2.6 },        // 巨木の幹（中には入らない）
     being: { x: -40.5, z: -52.7, r: 1.6 },       // 根もとでねむる大きな生きもの（体の中には入らない）
@@ -1935,19 +1935,19 @@ const worldV2 = (() => {
     for (const [bx, bz, a, s] of OUTER) h += out * a * Math.exp(-((x - bx) ** 2 + (z - bz) ** 2) / (2 * s * s));
     let rim = (smooth(1.0, 2.0, e) * (0.5 + 1.4 * smooth(12, -24, z)) + smooth(2.4, 4.5, e) * 1.6) * 1.5;   // FLOW-02：丘は2倍遠いので、高さを1.5倍
     // 根の門の先は谷：秘密の道に沿って丘が切れ、道のまわりだけ低くなる（曲がり角のあいだは丘が残る）
-    const rd = routeDist(x, z), valley = Math.exp(-(rd ** 2) / (2 * 2.2 * 2.2));
+    const rd = routeDist(x, z), valley = Math.exp(-(rd ** 2) / (2 * 4.4 * 4.4));   // FLOW-02：道のまわりの谷も2倍の幅
     h += rim * (1 - .8 * valley) - .25 * valley * smooth(1.6, .9, e);
     // EXPANSION-03：巨木への道のまわりは、丘を低くして谷にする（スマホの粗い地面でも、道の上に丘がかぶらない）
     // 草原（歩ける範囲のだ円）の中は今までどおり。ふちの外から谷になる
-    const gd = greatDist(x, z), go = smooth(.96, 1.5, e), gv = go * Math.exp(-(gd ** 2) / (2 * 3.4 * 3.4));
+    const gd = greatDist(x, z), go = smooth(.96, 1.5, e), gv = go * Math.exp(-(gd ** 2) / (2 * 6.8 * 6.8));
     h *= 1 - .75 * gv;
     // 平らにする場所
     let flat = 0;
     for (const [fx, fz, r, w] of FLAT) flat = Math.max(flat, smooth(r + w, r, Math.hypot(x - fx, z - fz)));
     for (const [ax, az, bx, bz, r, w] of FLAT_SEG) flat = Math.max(flat, smooth(r + w, r, segDist(x, z, ax, az, bx, bz)));
-    flat = Math.max(flat, smooth(4.4, 1.9, rd));   // 秘密の道（両側は土手のように少し高い）
-    flat = Math.max(flat, go * smooth(4.2, 2.0, gd), go * smooth(5.0, 1.8, riverDist(x, z)));   // EXPANSION-03：巨木への道と川（草原の外だけ）
-    for (const a of [GREAT.clearing, GREAT.overlook]) flat = Math.max(flat, smooth(a.r + 3.5, a.r + .6, Math.hypot(x - a.x, z - a.z)));
+    flat = Math.max(flat, smooth(8.8, 3.8, rd));   // 秘密の道（両側は土手のように少し高い）
+    flat = Math.max(flat, go * smooth(8.4, 4.0, gd), go * smooth(10.0, 3.6, riverDist(x, z)));   // FLOW-02：地面の網目が粗くなるので、平らな帯を2倍に（道の上に丘がかぶらない）   // EXPANSION-03：巨木への道と川（草原の外だけ）
+    for (const a of [GREAT.clearing, GREAT.overlook]) flat = Math.max(flat, smooth(a.r + 7, a.r + 1.2, Math.hypot(x - a.x, z - a.z)));
     return h * (1 - flat);
   }
   // TERRAIN-END
@@ -2252,7 +2252,7 @@ const worldV2 = (() => {
       || segDist(x, z, MISSION_POS.x, MISSION_POS.z, GATE.x, GATE.z) < 1.4 || Math.hypot(x - 32, z + 16) < 5;
 
     // 地形：中心ほど細かい格子（奥と外周は粗く）。頂点色で草原の色を混ぜる
-    const N = HIGH ? 90 : 34, SPAN = 156;   // FLOW-02：2倍の広さ（前は 72 / 26、78）
+    const N = HIGH ? 120 : 48, SPAN = 156;   // FLOW-02：2倍の広さ。網目の細かさを前と同じくらいに（前は 72 / 26、78）
     const g = new THREE.PlaneGeometry(2, 2, N, N); g.rotateX(-Math.PI / 2);
     const gp = g.attributes.position, gc = new Float32Array(gp.count * 3);
     const warp = u => SPAN * (.34 * u + .66 * Math.sign(u) * Math.abs(u) ** 2.1);
@@ -4497,7 +4497,7 @@ const TREASURE_SPOTS = Object.freeze({
   bloom:  { x: -13.6, z: -7.2, approach: 1.0, name: '空を向いてさく花', icon: '🌼', call: '花がさいている', verb: 'しらべる' },
   dazzle: { x: -12.8, z: -16.4, approach: 1.0, name: 'まばゆく輝く花', icon: '🌟', call: 'まぶしい花がさいている', verb: 'しらべる' },   // LANGUAGE-01：「ほのかに」とくらべる花
   // EXPANSION-03：巨木への道（場所は worldV2 の GREAT と同じ。道がひらくまで、門より先へは行けない）
-  gate:   { x: -16.7, z: -20.8, approach: 1.0, name: '古い石の門', icon: '🚪', call: '古い石の門がある', verb: 'しらべる' },
+  gate:   { x: -16.3, z: -20.3, approach: 1.0, name: '古い石の門', icon: '🚪', call: '古い石の門がある', verb: 'しらべる' },
   giant:  { x: -39.6, z: -51.4, approach: 1.6, name: 'オオネ', icon: '🦌', call: 'オオネがいる', callNew: 'なにか大きなものが、ねむっている', verb: 'しらべる', verbMet: '話す' },
   plant:  { x: -43.2, z: -49.0, approach: 0.8, name: '途切れた道', icon: '🌊', call: '道が、とちゅうで切れている', verb: 'しらべる' },
   cairn:  { x: -52.0, z: -48.0, approach: 1.0, name: 'うずまきの石', icon: '🌀', call: 'ふしぎな石がある', verb: 'しらべる' },
@@ -6171,7 +6171,10 @@ treasure = (() => {
   }
   // パネルの構図でよける、宝さがしの大きな物（ほらあなの岩）
   const OBSTACLES = [[TREASURE_SPOTS.cave.x - .4, TREASURE_SPOTS.cave.z - 1.6, 1.7], [GR.tree.x, GR.tree.z, 3.2], [GR.being.x, GR.being.z, 2.0], [GR.gate.x, GR.gate.z, 1.2]];   // EXPANSION-03：巨木・オオネ・門も
-  return { pick, clearPending, update, applyUI, reset, guide, focusPoint, obstacles: () => OBSTACLES, guardTap, tapBlocked, eventFrame,
+  // FLOW-02：パネルの構図では、オオネの頭（体の円より前へ出ている）もよける。カメラとヒロリのあいだに頭が入らないように
+  const HEAD_OB = [GR.being.x, GR.being.z, 1.1], CAM_OBST = OBSTACLES.concat([HEAD_OB]), _oh = new THREE.Vector3();
+  function camObstacles() { if (being.head) { being.head.getWorldPosition(_oh); HEAD_OB[0] = _oh.x; HEAD_OB[1] = _oh.z; } return CAM_OBST; }
+  return { pick, clearPending, update, applyUI, reset, guide, focusPoint, obstacles: camObstacles, guardTap, tapBlocked, eventFrame,
     canSee: (tx, tz) => !character || canSee(character.position.x, character.position.z, tx, tz),   // FLOW-02：道くさの案内も、見えるときだけ
     holdSpot: () => TREASURE_SPOTS.giant };   // EXPANSION-03：オオネとの話を「あとで」で閉じた場所
 })();

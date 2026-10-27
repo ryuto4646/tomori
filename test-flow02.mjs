@@ -123,7 +123,8 @@ test('6. 木と立ち石を透かす：カメラと「ヒロリ・調べる物�
   const C = { x: 0, y: 5, z: 8 }, P = { x: 0, y: 1, z: 0 };
   assert.equal(f(C, P, 0, 0, 4, 1.2, 5), true, 'tree in front of Hirori');
   assert.equal(f(C, P, 3, 0, 4, 1.2, 5), false, 'tree to the side');
-  assert.equal(f(C, P, 0, 0, -1, 1.2, 5), false, 'tree behind Hirori');
+  assert.equal(f(C, P, 0, 0, -1.5, 1.2, 5), false, 'tree behind Hirori');
+  assert.equal(f(C, P, 0, 0, -.4, 1.2, 5), true, 'Hirori under the leaves');
   assert.equal(f(C, P, 0, 0, 4, 1.2, .5), false, 'short bush under the line');
   // 透かしている木は、見えているかの確かめ（probe）でも数えない
   assert.match(UI, /i\.object\.geometry\.attributes\.aFade\.array\[i\.instanceId\] < \.5\)\);/);

@@ -9,7 +9,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { artBlock, revertWorldArt, revertExpansion } from './world-art-baseline.mjs';
+import { artBlock, revertWorldArt, revertExpansion, revertFlow02 } from './world-art-baseline.mjs';
 
 const REPO = dirname(fileURLToPath(import.meta.url));
 const ROOT = process.env.WORLD_VISUALS_ROOT || REPO;
@@ -32,7 +32,7 @@ const ART_V1_CODE = ART_V1.split('\n').map(l => l.replace(/\/\/.*$/, '')).join('
 const OLD = gitShow(TAG, 'demo-world.html');
 const BASE_DEMO = gitShow(BASE, 'demo-world.html');
 // 美術を外した今のファイル（美術以外の部分を比べるのに使う）
-const noArt = () => revertWorldArt(NOW);
+const noArt = () => revertWorldArt(NOW);   // FLOW-02 の変更も元へ戻る（revertExpansion の中）。新しい値は下の各テストで確かめる
 const between = (s, a, b) => { const i = s.indexOf(a), j = s.indexOf(b, i + 1); assert.ok(i >= 0 && j > i, `markers ${a} / ${b}`); return s.slice(i, j); };
 const count = (s, re) => (s.match(re) || []).length;
 const fnBody = (s, head) => { const i = s.indexOf(head); assert.ok(i >= 0, head); return s.slice(i, s.indexOf('\n}\n', i) + 3); };
@@ -83,11 +83,15 @@ test('2. 光る小道・草花・小石に当たり判定が無く、タップ�
 test('3. ミッション地点の座標・順番の定義は収録版タグと同じ', () => {
   const lines = s => s.split('\n').filter(l => /MISSION_POS\s*=|SECRET_POS|NEXT_POS|mpGroup\.position|secretGroup\.position|nextGroup\.position/.test(l));
   assert.deepEqual(lines(noArt()), lines(OLD));
-  assert.match(NOW, /const MISSION_POS = new THREE\.Vector3\(1\.5, 0, -6\.5\);/);
+  // FLOW-02：場所どうしの間を2倍に（祠・秘密の場所・次の光も2倍の場所）
+  assert.match(NOW, /const MISSION_POS = new THREE\.Vector3\(3, 0, -13\);/);
+  assert.match(NOW, /secGround\.position\.set\(32,\.01,-16\);/); assert.match(NOW, /nextGroup\.position\.set\(44,0,-40\);/);
 });
 
 test('4. ヒロリの形・色・表情・動き（HIRORI-BEGIN〜END）は収録版タグと同じ', () => {
-  assert.equal(between(NOW, '// HIRORI-BEGIN', '// HIRORI-END'), between(OLD, '// HIRORI-BEGIN', '// HIRORI-END'));
+  assert.equal(between(revertFlow02(NOW), '// HIRORI-BEGIN', '// HIRORI-END'), between(OLD, '// HIRORI-BEGIN', '// HIRORI-END'));
+  // FLOW-02：変えたのは、1周期で進む距離（速さと歩幅を2倍。足を動かす速さは同じ）だけ
+  assert.match(between(NOW, '// HIRORI-BEGIN', '// HIRORI-END'), /const STRIDE_UNITS = 3\.2;/);
 });
 
 test('5. カメラの動かし方・構図（CAM_OFF・追いかけ・注目・リセット）は収録版タグと同じ', () => {
@@ -102,7 +106,7 @@ test('6. 移動の速さ・キー操作・タップ移動（animate とキー入
   assert.equal(fnBody(noArt(), 'function animate(){'), fnBody(OLD, 'function animate(){'));
   const lines = s => s.split('\n').filter(l => /SPEED|ARRIVE|addEventListener\('key|keys\[/.test(l));
   assert.deepEqual(lines(noArt()), lines(OLD));
-  assert.match(NOW, /const SPEED=3\.3, ARRIVE=0\.6;/);
+  assert.match(NOW, /const SPEED=6\.6, ARRIVE=0\.6;/);   // FLOW-02：前の2倍（到着の判定は同じ）
 });
 
 test('7. AI スイッチは true のまま', () => {
@@ -197,7 +201,12 @@ test('19. 空の旧方式（空の筒・scene.background）が残っておらず
 test('20. 木は共有の形（InstancedMesh）で描き、木ごとに形や素材を作らない。木の位置（TREE_SPOTS）は変えない', () => {
   assert.ok(!/function mkTree|mkTree\(/.test(NOW), 'mkTree removed');
   const spots = s => s.match(/const TREE_SPOTS=\[[\s\S]*?\n\];/)[0];
-  assert.equal(spots(NOW), spots(OLD));
+  assert.equal(spots(revertFlow02(NOW)), spots(OLD));
+  // FLOW-02：木の場所は前の2倍。ミナのそばと、下を向いた花の上の丸い木だけは、相手のそばのまま
+  const pts = s => JSON.parse(spots(s).replace('const TREE_SPOTS=', '').replace(/;$/, '').replace(/\s+/g, ''));
+  const now = pts(NOW), old = pts(OLD), keep = ['-8,2', '-10,-3'];
+  assert.equal(now.length, old.length);
+  old.forEach(([x, z], i) => { if (!keep.includes(x + ',' + z)) assert.deepEqual(now[i], [x * 2, z * 2], x + ',' + z); });
   const trees = between(ART, 'TREE_SPOTS.forEach(([x, z], k) => {', '\n  });');
   assert.ok(!/\bnew\b/.test(trees), 'no new objects per tree');
   assert.match(trees, /place\(cones, ci\+\+/);

@@ -210,8 +210,12 @@ test('12. 骨で歩く（Step 11O）：骨の行列を読める。脚は左右�
   assert.match(upd, /B\.Root\.position\.y = B\.Root\.userData\.rest\.y - Math\.min\(yL \+ hL, yR \+ hR\);/);
   assert.match(upd, /P\.upper\.rotation\.z = s \* \.025 \* w \* deco;/);
   // 歩幅と周期：1周期で STRIDE_RIG 進む。phase は移動速度から進める（速さと足の動きを合わせる）
-  // EXPANSION-02：一歩ずつの間が感じられる歩き方（1周期 1.5m・足を大きく前へ・高く上げる。前は .9 / .075 / .028）
-  assert.match(FH, /const STRIDE_RIG = 1\.5, RIG_REACH = \.1, RIG_SHIFT = \.45, RIG_LIFT = \.05, RIG_SIN_MAX = \.6;/);
+  // FLOW-02：一歩で進む距離を2倍（1周期 3.0m）。足を動かす速さは同じ（SPEED も2倍なので、1秒あたりの周期は 3.3 / 1.5 と同じ）
+  // 歩幅が広いぶん、足を大きく前後に出し、少し高く上げる。着地の前後はゆっくり（足が止まって見える）。前は 1.5 / .1 / .45 / .05 / .6
+  assert.match(FH, /const STRIDE_RIG = 3\.0, RIG_REACH = \.17, RIG_SHIFT = \.4, RIG_LIFT = \.075, RIG_SIN_MAX = \.75;/);
+  assert.match(FH, /const STEP_BOB = \.045, STEP_LEAN = \.11, STEP_PACE = \.32;/);
+  const speed = +HTML.match(/const SPEED=([\d.]+), ARRIVE/)[1];
+  assert.ok(Math.abs(speed / 3.0 - 3.3 / 1.5) < 1e-9, 'same steps per second as before');
   assert.match(upd, /m\.phase \+= dt \* SPEED \* \(Math\.PI \* 2\) \/ \(P\.rig \? STRIDE_RIG : STRIDE\);/);
   // 歩き方の計算（gait・legPose）も、毎フレーム新しい物を作らない
   const helpers = stripComments(between(FH, 'function gait(u) {', 'function update(root'));

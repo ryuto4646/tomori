@@ -186,21 +186,24 @@ test('14. 新しい描画ループ・タイマーを足さない。光は1回で
 test('15. 門がひらいたあと、草原の中どうし（東のふちを含む）は、秘密の道へ寄り道せずに歩く。樹へ向かうときは今までどおり門へ', () => {
   const H = new Function(TERRAIN + ADV + '\nreturn { steerToward };')();
   const o = { x: 0, z: 0 };
-  for (const [s, g] of [[[7.5, -2.7], [16.2, -4.4]], [[6.3, -1.8], [15, -3.5]], [[10.5, 3], [15, -3.5]], [[0, 0], [-6, -2]]]) {
+  // FLOW-02：場所は前の2倍
+  for (const [s, g] of [[[15, -5.4], [32.4, -8.8]], [[12.6, -3.6], [30, -7]], [[21, 6], [30, -7]], [[0, 0], [-12, -4]]]) {
     H.steerToward(s[0], s[1], g[0], g[1], o);
     assert.ok(Math.hypot(o.x - g[0], o.z - g[1]) < .01, JSON.stringify([s, g]));
   }
-  H.steerToward(0, 0, 15, -26, o); assert.deepEqual([o.x, o.z], [W.GATE.x, W.GATE.z], 'to the tree: first the gate');
+  H.steerToward(0, 0, 30, -52, o); assert.deepEqual([o.x, o.z], [W.GATE.x, W.GATE.z], 'to the tree: first the gate');
 });
 
 test('16. ことばの樹のまわりでは、幹の向こう側から草原へ歩き出しても、幹に引っかからずに帰れる', () => {
   const H = new Function(TERRAIN + ADV + '\nreturn { steerToward, clampWalk };')();
-  for (const [sx, sz] of [[17.1, -26.9], [18.6, -27], [16, -31.5], [Q.QUEST_DEFS[1].start.x, Q.QUEST_DEFS[1].start.z]]) {
+  // FLOW-02：ことばの樹といっしょに移した場所（樹との位置関係は前と同じ）から、花のそば（12.6, -3.6）へ。速さは今の 6.6
+  const TX = W.WORD_TREE.x - 15.8, TZ = W.WORD_TREE.z + 28.3;
+  for (const [sx, sz] of [[17.1 + TX, -26.9 + TZ], [18.6 + TX, -27 + TZ], [16 + TX, -31.5 + TZ], [Q.QUEST_DEFS[1].start.x, Q.QUEST_DEFS[1].start.z]]) {
     const p = { x: sx, z: sz }, o = { x: 0, z: 0 }; let i = 0;
     for (; i < 1500; i++) {
-      if (Math.hypot(p.x - 6.3, p.z + 1.8) < .6) break;
-      H.steerToward(p.x, p.z, 6.3, -1.8, o);
-      const dx = o.x - p.x, dz = o.z - p.z, d = Math.hypot(dx, dz), st = Math.min(4 / 60, d);
+      if (Math.hypot(p.x - 12.6, p.z + 3.6) < .6) break;
+      H.steerToward(p.x, p.z, 12.6, -3.6, o);
+      const dx = o.x - p.x, dz = o.z - p.z, d = Math.hypot(dx, dz), st = Math.min(6.6 / 60, d);
       p.x += dx / d * st; p.z += dz / d * st; H.clampWalk(p, true, 1);
     }
     assert.ok(i < 1500, `stuck from ${sx},${sz} at ${p.x.toFixed(2)},${p.z.toFixed(2)}`);

@@ -30,7 +30,7 @@ function load({ reduce = false } = {}) {
   const fake = makeFakeThree();
   const matchMedia = () => ({ matches: reduce });
   const mod = new Function('THREE', 'matchMedia', 'SPEED', `${SRC}
-    return { createHiroriPlaceholder, updateHiroriMotion, startHiroriArrival, resetHiroriMotion, turnToward, hiroriMotion, ARRIVAL_SEC };`)(fake.THREE, matchMedia, 4.0);
+    return { createHiroriPlaceholder, updateHiroriMotion, startHiroriArrival, resetHiroriMotion, turnToward, hiroriMotion, ARRIVAL_SEC };`)(fake.THREE, matchMedia, 6.6);   // FLOW-02：今の速さ
   return { ...mod, fake };
 }
 // dt ごとに frames 回動かす
@@ -128,7 +128,9 @@ test('8. 歩行の周期は移動速度に合わせる（1周期で STRIDE 分�
   const root = m.createHiroriPlaceholder();
   run(m, root, 60, true); // 1秒歩く
   const cycles = m.hiroriMotion.phase / (Math.PI * 2);
-  assert.ok(Math.abs(cycles - 4.0 / 1.6) < 1e-6, `cycles per second ${cycles}`);
+  assert.ok(Math.abs(cycles - 6.6 / 3.2) < 1e-6, `cycles per second ${cycles}`);
+  // FLOW-02：速さと歩幅を2倍にしたので、足を動かす速さ（1秒あたりの周期）は前（3.3 / 1.6）と同じ
+  assert.ok(Math.abs(cycles - 3.3 / 1.6) < 1e-9);
 });
 
 test('9. 止まると急に固まらず、短い時間で待機の姿勢へ戻る', () => {
@@ -223,11 +225,12 @@ test('14. 既存の移動・到着・リセット・描画ループにつなが�
   assert.ok(!/mkPlaceholder/.test(HTML));
 });
 
-test('15. 移動速度・到着判定・カメラ追従・タップ判定は変えていない', () => {
-  assert.match(HTML, /const SPEED=3\.3, ARRIVE=0\.6;/);
+test('15. 移動速度は前の2倍（FLOW-02）。到着判定・タップ判定は同じ。カメラは時間で追いかけ、進む向きへ少し先を見る', () => {
+  assert.match(HTML, /const SPEED=6\.6, ARRIVE=0\.6;/);
   assert.match(HTML, /const CAM_OFF = new THREE\.Vector3\(0, 5, 8\);/);
-  // Step 11P：追いかけ方（.08 ずつ寄る）は元のまま。視点の操作（camUser）を回していなければ、CAM_OFF そのもの（回す角0・倍率1）
-  assert.match(HTML, /camera\.position\.lerp\(character\.position\.clone\(\)\.add\(worldV2\.cameraFramed\(\)\?CAM_OFF:camUser\.offset\(character\.position\.x,character\.position\.z\)\),\.08\);/);
+  // 視点の操作（camUser）を回していなければ、CAM_OFF そのもの（回す角0・倍率1）。追いかけは時間で（前は1コマ .08）、先を見る量は最大 1.4m
+  assert.match(HTML, /camera\.position\.lerp\(_camWant\.copy\(character\.position\)\.add\(_leadS\)\.add\(worldV2\.cameraFramed\(\)\?CAM_OFF:camUser\.offset\(character\.position\.x,character\.position\.z\)\),kf\);/);
+  assert.match(HTML, /if\(_lead\.lengthSq\(\)>1\.96\) _lead\.setLength\(1\.4\);/);
   assert.match(HTML, /const hits=raycaster\.intersectObject\(ground\);/);
   // EXPANSION-01：宝さがしの人・物のタップ（TREASURE-UI の中だけ）は test-treasure-hunt.mjs で調べる
   const noTreasure = HTML.replace(/\n\/\/ TREASURE-CORE-BEGIN[\s\S]*?\/\/ TREASURE-UI-END\n/, '');
@@ -244,7 +247,7 @@ test('16. GLB・外部素材・新しい通信に頼っていない', () => {
 
 // ═══ Step 9B：ミッション地点と構図（ソースの確認。見え方はブラウザで確認） ═══
 test('18. ミッション地点は MISSION_POS 1か所で決まり、リセットでも同じ場所に戻る', () => {
-  assert.match(HTML, /const MISSION_POS = new THREE\.Vector3\(1\.5, 0, -6\.5\);/);
+  assert.match(HTML, /const MISSION_POS = new THREE\.Vector3\(3, 0, -13\);/);   // FLOW-02：出発点からの距離を2倍に
   assert.match(HTML, /mpGroup\.position\.copy\(MISSION_POS\); scene\.add\(mpGroup\);/);
   assert.match(HTML, /function doReset\(\)\{[\s\S]*?mpGroup\.position\.copy\(MISSION_POS\);/);
   assert.ok(!/mpGroup\.position\.set\(0,0,-8\)/.test(HTML));
@@ -263,9 +266,10 @@ test('20. 名前ラベルは、動けないとき（到着後・パネル表示�
   assert.match(fn, /if\(!canMove\(\)\)\{charLabel\.style\.opacity='0';return;\}/);
 });
 
-test('21. 探索中のカメラ追従は元のまま。パネル中だけ構図を変え、動きを減らす設定では即座に落ち着く', () => {
+test('21. 探索中のカメラは時間で追いかける（FLOW-02）。パネル中だけ構図を変え、動きを減らす設定では即座に落ち着く', () => {
   const fn = HTML.match(/function updateCamera\(dt\)\{([\s\S]*?)\n\}/)[1];
-  assert.match(fn, /camUser\.step\(dt\);\s*if\(!focus\)\{\s*camera\.position\.lerp\(character\.position\.clone\(\)\.add\(worldV2\.cameraFramed\(\)\?CAM_OFF:camUser\.offset\(character\.position\.x,character\.position\.z\)\),\.08\);/);
+  assert.match(fn, /if\(!focus\)\{\s*const kf=reduceMotionQuery\.matches\?1:1-Math\.exp\(-dt\/\.11\);\s*camera\.position\.lerp\(_camWant/);
+  assert.match(fn, /_leadS\.lerp\(_lead,reduceMotionQuery\.matches\?1:1-Math\.exp\(-dt\/\.3\)\);/);
   assert.match(fn, /const k=reduceMotionQuery\.matches\?1:1-Math\.exp\(-dt\/FOCUS_TAU\);/);
   assert.match(fn, /camera\.clearViewOffset\(\)/);
   assert.match(HTML, /updateCamera\(dt\);/);

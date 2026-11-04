@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Marble 検証ページ（巨木のある聖域）</title>
+<!-- 検証用のページ。アプリ（demo-world.html）からは読み込まない。three はアプリ（0.160）と別に、Spark の例と同じ 0.180 を使う -->
+<!-- Spark は、スプラットのファイルを選んだときだけ読み込む（docs/MARBLE_PREP.md の「検証ページ」） -->
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
+  "@sparkjsdev/spark":"https://sparkjs.dev/releases/spark/2.3.1/spark.module.js"
+}}
+</script>
+<style>
+  :root { color-scheme: light dark; }
+  body { margin:0; font-family: system-ui, sans-serif; background:#cfe3ee; overflow:hidden; }
+  #ui { position:absolute; top:8px; left:8px; width:min(340px, calc(100vw - 16px)); max-height:calc(100vh - 16px); overflow:auto;
+        background:rgba(255,255,255,.92); color:#222; border-radius:10px; padding:10px 12px; font-size:13px; line-height:1.5; box-shadow:0 2px 10px rgba(0,0,0,.15); }
+  #ui h1 { font-size:15px; margin:0 0 6px; }
+  #ui fieldset { border:1px solid #ccc; border-radius:8px; margin:6px 0; padding:6px 8px; }
+  #ui legend { font-weight:bold; }
+  #ui label { display:block; margin:3px 0; }
+  #ui input[type=number] { width:70px; }
+  #ui button { margin:2px 2px 2px 0; padding:4px 8px; }
+  #stats { white-space:pre-wrap; font-family: ui-monospace, monospace; font-size:12px; }
+  .sw { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:4px; vertical-align:middle; }
+</style>
+</head>
+<body>
+<div id="ui">
+  <h1>Marble 検証（巨木のある聖域）</h1>
+  <fieldset><legend>ファイル（この端末から選ぶ。どこへも送らない）</legend>
+    <label>スプラット（.spz / .ply）<input type="file" id="f-splat" accept=".spz,.ply,.splat,.ksplat"></label>
+    <label>当たり判定（collider .glb）<input type="file" id="f-col" accept=".glb"></label>
+    <label><input type="checkbox" id="c-wire" checked> 当たり判定を線で見る</label>
+    <label><input type="checkbox" id="c-mark" checked> 配置の目印を見る</label>
+  </fieldset>
+  <fieldset><legend>位置合わせ（ゲームの座標へ）</legend>
+    <label><input type="checkbox" id="c-flip" checked> OpenCV → three（Y と Z を反転）</label>
+    <label>大きさ <input type="number" id="n-scale" value="1" step="0.1"></label>
+    <label>回転（度） <input type="number" id="n-rot" value="0" step="5"></label>
+    <label>X <input type="number" id="n-x" value="-22.8" step="0.5"> Y <input type="number" id="n-y" value="0" step="0.1"> Z <input type="number" id="n-z" value="-28.9" step="0.5"></label>
+  </fieldset>
+  <fieldset><legend>見る・歩く</legend>
+    <button data-cam="gate">入口</button><button data-cam="plaza">広場（会話）</button><button data-cam="bridge">橋</button><button data-cam="top">上から</button>
+    <label><input type="checkbox" id="c-walk"> 歩く（WASD・矢印キー。地面に沿い、当たり判定で止まる）</label>
+  </fieldset>
+  <fieldset><legend>測る</legend>
+    <button id="b-measure">フレーム時間を5秒測る</button>
+    <div id="stats">ファイルを選ぶと、容量と読み込み時間が出ます。</div>
+  </fieldset>
+  <div><span class="sw" style="background:#c9b98a"></span>入口の門 <span class="sw" style="background:#5f8f52"></span>巨木 <span class="sw" style="background:#8b8272"></span>大きな存在 <span class="sw" style="background:#9ff0c8"></span>植える場所 <span class="sw" style="background:#67b4d6"></span>川と橋 <span class="sw" style="background:#f2c94c"></span>向こう岸</div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+const $ = id => document.getElementById(id);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(2, devicePixelRatio)); renderer.setSize(innerWidth, innerHeight);
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0xcfe3ee);
+const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, .05, 400);
+const controls = new OrbitControls(camera, renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x88aa66, 1.4));
+addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+
+// ── ゲームの配置（demo-world.html の GREAT と同じ座標。1単位＝1m、Y が上） ──
+const GREAT = {
+  route: [[-7.6, -9.6], [-9.2, -12.6], [-10.8, -16.4], [-13.0, -20.0], [-16.4, -23.0], [-19.6, -25.4], [-24.2, -23.4], [-28.6, -22.0], [-31.6, -21.2]],
+  gate: [-8.7, -10.9], tree: [-22.8, -28.9, 2.9], being: [-20.9, -27.3, 1.6], clearing: [-19.6, -25.4, 5.0], plant: [-23.6, -23.6], overlook: [-31.6, -21.2, 3.0],
+  river: [[-23.7, -14.1], [-26.4, -22.7], [-29.1, -31.3]],
+};
+const marks = new THREE.Group(); scene.add(marks);
+const post = (x, z, h, r, color) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 16), new THREE.MeshLambertMaterial({ color, transparent: true, opacity: .75 })); m.position.set(x, h / 2, z); marks.add(m); return m; };
+const ring = (x, z, r, color) => { const m = new THREE.Mesh(new THREE.RingGeometry(r - .08, r, 48), new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide })); m.rotation.x = -Math.PI / 2; m.position.set(x, .03, z); marks.add(m); };
+post(GREAT.gate[0], GREAT.gate[1], 2.4, .35, 0xc9b98a);
+post(GREAT.tree[0], GREAT.tree[1], 9, GREAT.tree[2], 0x5f8f52);
+post(GREAT.being[0], GREAT.being[1], 2.2, GREAT.being[2], 0x8b8272);
+post(GREAT.plant[0], GREAT.plant[1], .6, .25, 0x9ff0c8);
+ring(GREAT.clearing[0], GREAT.clearing[1], GREAT.clearing[2], 0xffffff); ring(GREAT.overlook[0], GREAT.overlook[1], GREAT.overlook[2], 0xf2c94c);
+const line = (pts, color, y = .05) => { const g = new THREE.BufferGeometry().setFromPoints(pts.map(([x, z]) => new THREE.Vector3(x, y, z))); marks.add(new THREE.Line(g, new THREE.LineBasicMaterial({ color }))); };
+line(GREAT.route, 0x7a5a20); line(GREAT.river, 0x67b4d6); line(GREAT.route.slice(6, 8), 0x9ff0c8, .3);
+const hiro = new THREE.Mesh(new THREE.CapsuleGeometry(.3, .4, 4, 8), new THREE.MeshLambertMaterial({ color: 0xef8f6e })); hiro.position.set(-19, .5, -24.5); scene.add(hiro);   // ヒロリの大きさ（約1m）
+
+// ── 読み込んだ物を、ひとつの入れ物に入れて位置合わせ ──
+const holder = new THREE.Group(); scene.add(holder);
+function align() {
+  const s = +$('n-scale').value || 1, flip = $('c-flip').checked;
+  holder.position.set(+$('n-x').value, +$('n-y').value, +$('n-z').value);
+  holder.rotation.set(0, (+$('n-rot').value || 0) * Math.PI / 180, 0);
+  holder.scale.set(s, flip ? -s : s, flip ? -s : s);
+}
+['n-scale', 'n-rot', 'n-x', 'n-y', 'n-z', 'c-flip'].forEach(id => $(id).addEventListener('input', align)); align();
+$('c-mark').addEventListener('change', e => { marks.visible = e.target.checked; });
+
+const stats = {};
+const showStats = () => { $('stats').textContent = Object.entries(stats).map(([k, v]) => k + '：' + v).join('\n'); };
+let collider = null, splat = null;
+$('f-col').addEventListener('change', async e => {
+  const f = e.target.files[0]; if (!f) return;
+  const t0 = performance.now(), url = URL.createObjectURL(f);
+  const g = await new GLTFLoader().loadAsync(url);
+  if (collider) holder.remove(collider);
+  collider = g.scene; let tris = 0;
+  collider.traverse(o => { if (o.isMesh) { o.material = new THREE.MeshBasicMaterial({ color: 0x3355aa, wireframe: true, transparent: true, opacity: .35 }); tris += (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3; } });
+  collider.visible = $('c-wire').checked; holder.add(collider);
+  stats['当たり判定'] = (f.size / 1048576).toFixed(1) + 'MB・' + Math.round(tris).toLocaleString() + '三角形・読み込み ' + Math.round(performance.now() - t0) + 'ms';
+  showStats();
+});
+$('c-wire').addEventListener('change', e => { if (collider) collider.visible = e.target.checked; });
+$('f-splat').addEventListener('change', async e => {
+  const f = e.target.files[0]; if (!f) return;
+  const t0 = performance.now();
+  const { SparkRenderer, SplatMesh } = await import('@sparkjsdev/spark');   // ここで初めて Spark を読む
+  if (!scene.userData.spark) { scene.userData.spark = new SparkRenderer({ renderer }); scene.add(scene.userData.spark); }
+  if (splat) holder.remove(splat);
+  splat = new SplatMesh({ fileBytes: new Uint8Array(await f.arrayBuffer()), fileName: f.name });
+  holder.add(splat);
+  if (splat.initialized) await splat.initialized;
+  stats['スプラット'] = (f.size / 1048576).toFixed(1) + 'MB・読み込み ' + Math.round(performance.now() - t0) + 'ms' + (splat.numSplats ? '・' + splat.numSplats.toLocaleString() + '個' : '');
+  showStats();
+});
+
+// ── カメラの位置（ゲームの構図に近い高さ） ──
+const CAMS = { gate: [[-5.5, 3.2, -6.5], [-9.5, 1, -13]], plaza: [[-16.5, 2.6, -21.5], [-20.5, 1.6, -27]], bridge: [[-22, 4.2, -17], [-26.4, .4, -22.7]], top: [[-18, 45, -20], [-18, 0, -21]] };
+document.querySelectorAll('[data-cam]').forEach(b => b.addEventListener('click', () => { const [p, l] = CAMS[b.dataset.cam]; camera.position.set(...p); controls.target.set(...l); controls.update(); }));
+document.querySelector('[data-cam="plaza"]').click();
+
+// ── 歩く：地面は当たり判定へ下向きに光線、壁は8方向の光線（当たり判定が無いときは平らな地面） ──
+const keys = {}; addEventListener('keydown', e => keys[e.key.toLowerCase()] = true); addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+const rc = new THREE.Raycaster(), down = new THREE.Vector3(0, -1, 0), v = new THREE.Vector3(), dir = new THREE.Vector3();
+function walk(dt) {
+  if (!$('c-walk').checked) return;
+  v.set((keys.d || keys.arrowright ? 1 : 0) - (keys.a || keys.arrowleft ? 1 : 0), 0, (keys.s || keys.arrowdown ? 1 : 0) - (keys.w || keys.arrowup ? 1 : 0));
+  if (!v.lengthSq()) return;
+  v.normalize().multiplyScalar(3.3 * dt);   // ゲームと同じ速さ
+  if (collider) {
+    dir.copy(v).normalize(); rc.set(hiro.position.clone().setY(hiro.position.y + .2), dir); rc.far = .45;
+    if (rc.intersectObject(collider, true).length) return;   // 壁
+  }
+  hiro.position.add(v);
+  if (collider) { rc.set(hiro.position.clone().setY(hiro.position.y + 2), down); rc.far = 6; const h = rc.intersectObject(collider, true)[0]; if (h) hiro.position.y = h.point.y + .5; }
+  controls.target.copy(hiro.position); camera.position.add(v);
+}
+// ── フレーム時間 ──
+let rec = null;
+$('b-measure').addEventListener('click', () => { rec = { t0: performance.now(), gaps: [], last: 0 }; $('b-measure').disabled = true; });
+const clock = new THREE.Clock();
+renderer.setAnimationLoop(t => {
+  const dt = Math.min(.05, clock.getDelta());
+  walk(dt); controls.update(); renderer.render(scene, camera);
+  if (rec) {
+    if (rec.last) rec.gaps.push(t - rec.last); rec.last = t;
+    if (t - rec.t0 > 5000) {
+      const g = rec.gaps.sort((a, b) => a - b), q = p => g[Math.min(g.length - 1, Math.floor(p * g.length))].toFixed(1);
+      stats['フレーム時間'] = 'p50 ' + q(.5) + 'ms・p95 ' + q(.95) + 'ms・最大 ' + q(1) + 'ms（' + (1000 / (g.reduce((a, b) => a + b, 0) / g.length)).toFixed(0) + 'fps）';
+      showStats(); rec = null; $('b-measure').disabled = false;
+    }
+  }
+});
+</script>
+</body>
+</html>

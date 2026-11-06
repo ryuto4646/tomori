@@ -149,8 +149,10 @@ test('11. heightAt は1つだけで、地形の頂点・木や岩・祠・門・
   assert.match(V2, /const x = WALK\.cx \+ warp\(gp\.getX\(i\)\), z = WALK\.cz \+ warp\(gp\.getZ\(i\)\), h = heightAt\(x, z\);\s*gp\.setXYZ\(i, x, h, z\);/);
   assert.match(V2, /lists\.get\(name\)\.push\(\[x, heightAt\(x, z\) \+ dy, z/);
   assert.match(V2, /m4\.compose\(p3\.set\(x, heightAt\(x, z\), z\)/);
-  assert.match(V2, /c\.position\.y = \(mixer \? 0 : c\.position\.y\) \+ heightAt\(c\.position\.x, c\.position\.z\);/);
-  assert.match(V2, /const floor = heightAt\(camera\.position\.x, camera\.position\.z\) \+ 1\.2;/);
+  // FLOW-02：ヒロリとカメラは、もとの高さと「描いた地面（網目）の高さ」の高いほう（網目の下にもぐらない・足が沈まない）
+  assert.match(V2, /const groundHeight = \(x, z\) => tgPos \? Math\.max\(heightAt\(x, z\), meshHeightAt\(x, z\)\) : heightAt\(x, z\);/);
+  assert.match(V2, /c\.position\.y = \(mixer \? 0 : c\.position\.y\) \+ groundHeight\(c\.position\.x, c\.position\.z\);/);
+  assert.match(V2, /const floor = groundHeight\(camera\.position\.x, camera\.position\.z\) \+ 1\.2;/);
   // 同じ入力なら同じ高さ（乱数を使わない）
   assert.equal(T.heightAt(3.3, -4.7), T.heightAt(3.3, -4.7));
   assert.ok(!/Math\.random/.test(TERRAIN));

@@ -276,7 +276,7 @@ test('20. 根の門のまわりのカメラ：閉じているあいだは手前�
   assert.match(g, /if \(!gateOpen && Math\.abs\(lx\) < 4\.2 && lz < 1\.6 && lz > -3\)/);
   assert.match(g, /const need = heightAt\(GATE\.x, GATE\.z\) \+ 5\.6, w = smooth\(3\.4, 1\.2, Math\.abs\(lz\)\) \* smooth\(4\.8, 3\.6, Math\.abs\(lx\)\);/);
   const upd = between(FRAME, 'function update(t)', 'function adventure(');
-  assert.ok(upd.indexOf('guardCamera();') > 0 && upd.indexOf('guardCamera();') < upd.indexOf('const floor = heightAt('), 'before the ground floor');
+  assert.ok(upd.indexOf('guardCamera();') > 0 && upd.indexOf('guardCamera();') < upd.indexOf('const floor = groundHeight('), 'before the ground floor');   // FLOW-02：描いた地面の高さも見る
 });
 
 test('21. 小さなカメラの動き（生まれる・門・樹）は2秒以内か、歩き出すと戻る。reduced-motion では動かさない', () => {

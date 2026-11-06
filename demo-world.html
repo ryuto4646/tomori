@@ -2162,6 +2162,19 @@ const worldV2 = (() => {
   // ADVENTURE-END
 
   // 歩ける範囲の内側へ戻す（だ円の外に出た分だけ、中心の方向へ戻す。ふちに沿ってすべるので、壁へ瞬間移動しない）
+  // FLOW-02：描いた地面（網目）の高さ。網目は粗いので、丘やくぼみでは、もとの高さ（heightAt）より上になることがある
+  // カメラとヒロリは、どちらか高いほうに合わせる（描いた地面の下にもぐらない・足が沈まない）
+  let tgN = 0, tgWarp = null, tgPos = null;
+  function invWarp(v) { let lo = -1, hi = 1; for (let i = 0; i < 24; i++) { const m = (lo + hi) / 2; if (tgWarp(m) < v) lo = m; else hi = m; } return (lo + hi) / 2; }
+  function meshHeightAt(x, z) {
+    const N = tgN, W1 = N + 1, gu = (invWarp(x - WALK.cx) + 1) / 2 * N, gv = (invWarp(z - WALK.cz) + 1) / 2 * N;
+    const i = Math.min(N - 1, Math.max(0, Math.floor(gu))), j = Math.min(N - 1, Math.max(0, Math.floor(gv)));
+    const a = (j * W1 + i) * 3, d = a + 3, b = a + W1 * 3, c = b + 3, P = tgPos;
+    const fu = Math.min(1, Math.max(0, (x - P[a]) / ((P[d] - P[a]) || 1))), fv = Math.min(1, Math.max(0, (z - P[a + 2]) / ((P[b + 2] - P[a + 2]) || 1)));
+    return fu + fv <= 1 ? P[a + 1] + (P[d + 1] - P[a + 1]) * fu + (P[b + 1] - P[a + 1]) * fv
+      : P[c + 1] + (P[b + 1] - P[c + 1]) * (1 - fu) + (P[d + 1] - P[c + 1]) * (1 - fv);
+  }
+  const groundHeight = (x, z) => tgPos ? Math.max(heightAt(x, z), meshHeightAt(x, z)) : heightAt(x, z);
   function clampToWalkable(p, limit = 1) {
     if (!active) return p;
     return clampWalk(p, gateOpen, limit);
@@ -2172,7 +2185,7 @@ const worldV2 = (() => {
   function groundCharacter(c) {
     if (!active || !c) return;
     clampToWalkable(c.position, 1);
-    c.position.y = (mixer ? 0 : c.position.y) + heightAt(c.position.x, c.position.z);
+    c.position.y = (mixer ? 0 : c.position.y) + groundHeight(c.position.x, c.position.z);   // FLOW-02：描いた地面に足が沈まない
   }
 
   // ── GLB を読む（この素材のために必要な分だけ：位置・法線・頂点色・三角形の番号・ノードの位置）──
@@ -2252,10 +2265,11 @@ const worldV2 = (() => {
       || segDist(x, z, MISSION_POS.x, MISSION_POS.z, GATE.x, GATE.z) < 1.4 || Math.hypot(x - 32, z + 16) < 5;
 
     // 地形：中心ほど細かい格子（奥と外周は粗く）。頂点色で草原の色を混ぜる
-    const N = HIGH ? 120 : 48, SPAN = 156;   // FLOW-02：2倍の広さ。網目の細かさを前と同じくらいに（前は 72 / 26、78）
+    const N = HIGH ? 120 : 64, SPAN = 156;   // FLOW-02：2倍の広さ。網目の細かさを前と同じくらいに（前は 72 / 26、78）
     const g = new THREE.PlaneGeometry(2, 2, N, N); g.rotateX(-Math.PI / 2);
     const gp = g.attributes.position, gc = new Float32Array(gp.count * 3);
     const warp = u => SPAN * (.34 * u + .66 * Math.sign(u) * Math.abs(u) ** 2.1);
+    tgN = N; tgWarp = warp;   // FLOW-02：描いた地面の高さ（meshHeightAt）に使う
     const cWarm = new THREE.Color(0x86ba4f), cMid = new THREE.Color(0x6aa646), cBlue = new THREE.Color(0x5f9c6c), cDry = new THREE.Color(0xa9b862), cFar = new THREE.Color(0x8fbf86), cPath = new THREE.Color(0xb2c56c), cLight = new THREE.Color(0x96cc64), cFore = new THREE.Color(0x58913f), cHillSun = new THREE.Color(0xb7d684), cHaze = new THREE.Color(0x9fc8bd);
     for (let i = 0; i < gp.count; i++) {
       const x = WALK.cx + warp(gp.getX(i)), z = WALK.cz + warp(gp.getZ(i)), h = heightAt(x, z);
@@ -2275,7 +2289,7 @@ const worldV2 = (() => {
       gc[i * 3] = c3.r; gc[i * 3 + 1] = c3.g; gc[i * 3 + 2] = c3.b;
     }
     g.setAttribute('color', new THREE.BufferAttribute(gc, 3));
-    g.computeVertexNormals(); g.computeBoundingSphere();
+    g.computeVertexNormals(); g.computeBoundingSphere(); tgPos = gp.array;
 
     // 木：今までの場所（TREE_SPOTS）＋外周の木立＋遠くの木
     const TREES = ['Tree_Round_A', 'Tree_Round_B', 'Tree_Tall_A', 'Tree_Tall_B', 'Tree_Sapling_A'];
@@ -2838,7 +2852,7 @@ const worldV2 = (() => {
       flowerStem.instanceMatrix.needsUpdate = true; flowerHead.instanceMatrix.needsUpdate = true; flowerHead.instanceColor.needsUpdate = true;
     }
     guardCamera();
-    const floor = heightAt(camera.position.x, camera.position.z) + 1.2;
+    const floor = groundHeight(camera.position.x, camera.position.z) + 1.2;   // FLOW-02：描いた地面（網目）がもとの高さより上でも、その下にもぐらない
     if (camera.position.y < floor) camera.position.y = floor;
   }
   function adventure(t, dt, still) {
@@ -3043,7 +3057,7 @@ const worldV2 = (() => {
   }
   // PER-FRAME-V2-END
   return { ready, update, reset, groundCharacter, clampToWalkable, heightAt, isActive: () => active, progress: () => progress, quality: WORLD_QUALITY,
-    showQuestSprout, lightNextFruit, groundAt: (x, z) => active ? heightAt(x, z) : 0, wordTree: WORD_TREE, markerHeight: () => markerY, meshyTree: () => meshyTree, cameraFramed: () => treeFrame, setClearSpots: l => { clearSpots = l; }, setLookPoint: f => { lookPoint = f; }, occluders: () => occluders,
+    showQuestSprout, lightNextFruit, groundAt: (x, z) => active ? groundHeight(x, z) : 0, wordTree: WORD_TREE, markerHeight: () => markerY, meshyTree: () => meshyTree, cameraFramed: () => treeFrame, setClearSpots: l => { clearSpots = l; }, setLookPoint: f => { lookPoint = f; }, occluders: () => occluders,
     // EXPANSION-03：巨木への道（ひらく・橋ができる は宝さがしの記録で決める）
     setGreatOpen: (path, bridge) => { GREAT_OPEN.path = !!path; GREAT_OPEN.bridge = !!(path && bridge); }, steerGreat, great: GREAT, greatRoute: GREAT_ROUTE, greatTotal: GREAT_TOTAL, greatS, greatAt, riverDist };
 })();
@@ -5514,6 +5528,7 @@ treasure = (() => {
   const screen = (x, y, z) => { _v.set(x, y, z).project(camera); return { x: (_v.x + 1) / 2 * innerWidth, y: (1 - _v.y) / 2 * innerHeight, front: _v.z < 1 }; };
   window.__tomoriTreasure = { state: () => JSON.parse(JSON.stringify(st)), goal: () => treasureGoal(st), spots: TREASURE_SPOTS, saveKey: SAVE_KEY,
     cam: () => ({ p: camera.position.toArray().map(v => +v.toFixed(2)), view: camera.view && camera.view.enabled ? [Math.round(camera.view.offsetX), Math.round(camera.view.offsetY)] : null, state, ground: +worldV2.groundAt(camera.position.x, camera.position.z).toFixed(2), hy: character ? +character.position.y.toFixed(2) : null }),
+    groundCheck: (x, z) => { const rc = new THREE.Raycaster(new THREE.Vector3(x, 200, z), new THREE.Vector3(0, -1, 0)); const h = rc.intersectObject(ground)[0]; return [h ? +h.point.y.toFixed(3) : null, +worldV2.groundAt(x, z).toFixed(3)]; },   // テスト用：描いた地面と、立つ高さ
     greatRoute: () => ROUTE.map(p => [p[0], p[1]]), mission: () => ({ x: mpGroup.position.x, z: mpGroup.position.z }), sprout: () => questHub.sproutCall(), call: () => near,   // FLOW-02：場所はページから読む（テストで座標を決め打ちしない）
     screenOf: id => { const s = TREASURE_SPOTS[id]; return s ? screen(s.x, worldV2.groundAt(s.x, s.z) + .4, s.z) : null; },
     screenAt: (x, z) => screen(x, worldV2.groundAt(x, z), z),

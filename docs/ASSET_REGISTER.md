@@ -22,7 +22,8 @@
 
 ## Meshy（家・屋台は受け取りずみ。噴水は家・屋台の採用後）
 
-- 受け取り：2026-11-13。元のデータ（`town_house_A.glb` 47MB・`market_stall_A.glb` 42MB、どちらも 4096×4096 の PNG 3枚つき）は、リポジトリの外（制作者のダウンロードフォルダ）に置いたまま。SHA-256 は `assets/town-meshy/manifest.json` に記録した。
+- 生成・受け取り：2026-11-13（家・屋台とも。Pro プラン・Meshy 7.1）。ライセンス「プライベート」は、制作者が素材詳細画面で確認ずみ。Community へ公開したことがあるかは、別に未確認。
+- 受け取ったファイル：元のデータ（`town_house_A.glb` 47MB・`market_stall_A.glb` 42MB、どちらも 4096×4096 の PNG 3枚つき）は、リポジトリの外（制作者のダウンロードフォルダ）に置いたまま。SHA-256 は `assets/town-meshy/manifest.json` に記録した。
 - 軽くした版：形はそのまま（家 7,938・屋台 3,856 三角形。めやすの1万・5千以下）。色の絵1枚だけを 1024×1024 の JPEG にした。家 47MB → 0.9MB、屋台 42MB → 0.58MB。作り方は `tools/meshy_game.py`。
 - マテリアルは1つ（色の絵だけ）。法線・金属感の絵は外した（ゲームはランバートで描くため、使わない）。
 - 屋台の台の上に、小さな穴が1か所ある（Meshy の形のまま）。品物を台の上に置くので、遊ぶ画面ではほぼ隠れる（ヘッドレス Edge の画面で確認）。
@@ -30,13 +31,13 @@
 
 | 素材 | 生成日 | プラン | 公開設定 | 利用条件 | 三角形 | マテリアル | テクスチャ | 容量（ゲーム用） | 状態 |
 |---|---|---|---|---|---|---|---|---|---|
-| 家（town_house_A） | 2026-11-13 ごろ（ファイル受け取り日） | 制作者に確認中 | 制作者に確認中 | 制作者に確認中 | 7,938 | 1 | 1024 JPEG 1枚 | 0.9MB | 開発版で採用・実機未確認 |
-| 屋台（market_stall_A。Meshy 上の名前は Market Stall Mobile 4k） | 2026-11-13 13:52（Meshy 7.1） | Pro（当日の契約画面で確認） | プライベート（素材詳細画面で確認） | Pro プランで作った非公開の素材 | 3,856（Meshy のモデル画面と一致） | 1 | 1024 JPEG 1枚 | 0.58MB | 開発版で採用・実機未確認 |
+| 家（town_house_A。Meshy 上の名前は Medieval House Mobile 8k） | 2026-11-13 13:38（Meshy 7.1） | Pro（当日の契約画面で確認） | プライベート（素材詳細画面で確認）。Community への公開履歴は未確認 | Pro プランで作った非公開の素材 | 7,938（Meshy のモデル画面と一致） | 1 | 1024 JPEG 1枚 | 0.9MB | 開発版で採用・実機未確認 |
+| 屋台（market_stall_A。Meshy 上の名前は Market Stall Mobile 4k） | 2026-11-13 13:52（Meshy 7.1） | Pro（当日の契約画面で確認） | プライベート（素材詳細画面で確認）。Community への公開履歴は未確認 | Pro プランで作った非公開の素材 | 3,856（Meshy のモデル画面と一致） | 1 | 1024 JPEG 1枚 | 0.58MB | 開発版で採用・実機未確認 |
 | 噴水（Meshy） | ― | ― | ― | ― | ― | ― | ― | ― | 家・屋台の採用後（今は仮の形） |
 
-本番に入れる前に、プラン・公開設定・利用条件を制作者に確かめて、この表をうめます（公開条件の6番目）。
+家・屋台の生成日・プラン・公開設定は、2026-11-13 に制作者の確認どおり記録した（公開条件の6番目）。未確認として残すのは2点：Community への公開履歴と、生成プロンプトと HQ 原文の完全一致。
 
-プロンプト（HQ の指示どおり。屋台は「HQの指示に沿って制作。実際に送信された全文との完全一致は未確認」と制作者から回答あり（2026-11-13）。家は制作者に確認中）
+プロンプト（家・屋台とも、制作者の回答（2026-11-13）：HQ の指示に沿って制作。Meshy 側で展開された生成プロンプトと、HQ 原文が完全に一致するかは未確認）
 
 - 家：A single cozy medieval European rural market-town house, stylized storybook 3D game asset. Warm cream plaster, visible dark timber framing, a muted terracotta pitched roof with gently bowed eaves, a slightly tapered upper story, an offset gable, a simple wooden door and asymmetrically arranged small windows. （以下、HQ 指示 TOMORI-TOWN-01 の11節のとおり）
 - 屋台：A single small medieval European market stall for a stylized storybook 3D exploration game. Simple wooden counter, four sturdy wooden posts, a gently curved striped canvas awning in muted warm cream and sage green. （以下、同じ11節のとおり）

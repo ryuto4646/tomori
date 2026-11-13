@@ -192,10 +192,10 @@ test('12. 描く重さ：仮の家と屋台の品物は1つの形（家ごとの
   assert.match(u, /\.find\(i => fadeCur\[bidOf\(i\)\] > \.9\)/);
 });
 
-test('12b. Meshy の家・屋台：決まった2つのファイルだけ。軽くした版（三角形・容量の上限）。置く区画は道・ほかの家と重ならない', () => {
+test('12b. Meshy の家・屋台・パン屋：決まった3つのファイルだけ。軽くした版（三角形・容量の上限）。置く区画は道・ほかの家と重ならない', () => {
   const u = code(UI);
-  assert.deepEqual([...u.matchAll(/'(assets\/[^']+)'/g)].map(m => m[1]).sort(), ['assets/town-meshy/market-stall-a-game.glb', 'assets/town-meshy/town-house-a-game.glb']);
-  for (const [f, maxTri, maxBytes] of [['town-house-a-game.glb', 10000, 1.5e6], ['market-stall-a-game.glb', 5000, 1e6]]) {
+  assert.deepEqual([...u.matchAll(/'(assets\/[^']+)'/g)].map(m => m[1]).sort(), ['assets/town-meshy/market-stall-a-game.glb', 'assets/town-meshy/town-bakery-a-game.glb', 'assets/town-meshy/town-house-a-game.glb']);
+  for (const [f, maxTri, maxBytes] of [['town-house-a-game.glb', 10000, 1.5e6], ['market-stall-a-game.glb', 5000, 1e6], ['town-bakery-a-game.glb', 10000, 1.5e6]]) {
     const b = readFileSync(join(ROOT, 'assets', 'town-meshy', f));
     assert.ok(b.length <= maxBytes, f + ' size ' + b.length);
     const jl = b.readUInt32LE(12), j = JSON.parse(b.slice(20, 20 + jl).toString());
@@ -204,17 +204,17 @@ test('12b. Meshy の家・屋台：決まった2つのファイルだけ。軽�
   }
   // 区画：素材の正面を区画の正面にそろえ、奥へ深くなる。道・広場から 0.25m 以上、ほかの家とも重ならない
   const Q = L.meshyHouse;
-  const fp = h => { const [x, z, fx, fz, w, d, name] = h, yaw = Math.atan2(fx - x, fz - z); if (!L.meshyLots.includes(name)) return { x, z, yaw, w, d, name };
-    const sc = Math.min(w / Q.w, Q.maxScale), cz = d / 2 - Q.front * sc; return { x: x + Math.sin(yaw) * cz, z: z + Math.cos(yaw) * cz, yaw, w: Q.w * sc, d: Q.d * sc, name }; };
+  const fp = h => { const [x, z, fx, fz, w, d, name] = h, yaw = Math.atan2(fx - x, fz - z), B = L.meshyBakery, q = name === B.lot ? B : Q; if (!L.meshyLots.includes(name) && name !== B.lot) return { x, z, yaw, w, d, name };
+    const sc = Math.min(w / q.w, q.maxScale), cz = d / 2 - q.front * sc; return { x: x + Math.sin(yaw) * cz, z: z + Math.cos(yaw) * cz, yaw, w: q.w * sc, d: q.d * sc, name }; };
   const F = L.houses.map(fp), pts = b => { const c = Math.cos(b.yaw), s = Math.sin(b.yaw), o = []; for (let i = 0; i <= 6; i++) for (let k = 0; k <= 6; k++) { const lx = (i / 6 - .5) * b.w, lz = (k / 6 - .5) * b.d; o.push([b.x + lx * c + lz * s, b.z - lx * s + lz * c]); } return o; };
   const inside = (p, b) => { const c = Math.cos(b.yaw), s = Math.sin(b.yaw), dx = p[0] - b.x, dz = p[1] - b.z; return Math.abs(dx * c - dz * s) < b.w / 2 + .2 && Math.abs(dx * s + dz * c) < b.d / 2 + .2; };
-  for (const b of F.filter(b => L.meshyLots.includes(b.name))) assert.ok(Math.min(...pts(b).map(([x, z]) => W.townShapeSd(x, z))) >= .25, b.name);
+  for (const b of F.filter(b => L.meshyLots.includes(b.name) || b.name === L.meshyBakery.lot)) assert.ok(Math.min(...pts(b).map(([x, z]) => W.townShapeSd(x, z))) >= .25, b.name);
   F.forEach((a, i) => F.forEach((b, j) => { if (j > i) assert.ok(!pts(a).some(p => inside(p, b)) && !pts(b).some(p => inside(p, a)), a.name + ' / ' + b.name); }));
   // お届け先の庭の3軒は、庭の光・ひさしと組なので仮の形のまま
   for (const n of ['sun', 'shade', 'lantern']) assert.ok(!L.meshyLots.includes(n));
   // 読めないときは、仮の形で組み立てる
   assert.match(u, /loadMeshy\(\)\.then\(M => build\(M\)\)/);
-  assert.match(u, /if \(M && L\.meshyLots\.includes\(h\[6\]\)\) placeMeshyHouse\(M\.house, h, k\); else buildHouse\(acc, h, k\);/);
+  assert.match(u, /if \(M && L\.meshyLots\.includes\(h\[6\]\)\) placeMeshyHouse\(M\.house, h, k\); else if \(M && h\[6\] === L\.meshyBakery\.lot\) placeMeshyHouse\(M\.bakery, h, k, L\.meshyBakery, Math\.PI \/ 2\); else buildHouse\(acc, h, k\);/);
 });
 
 test('13. 元へ戻せる：市場町を外すと、前の demo-world.html と同じ形（まとまりと短いつなぎ）', () => {
@@ -238,4 +238,32 @@ test('15. 上の知らせ（街の中だけ）：いまの段階でやること�
   st.coins = 10; seen.push(G.townGuide(st)); st.seeds.sun = 'owned'; seen.push(G.townGuide(st));
   for (const t of seen) { assert.ok(t.length > 4 && t.length <= 32, t); assert.ok(!/2ばん|光の筋|下を向|ソラばあちゃん/.test(t), t); }
   assert.match(code(UI), /if \(inTown\) \{ if \(barSaved === null\) barSaved = mbarText\.textContent; mbarText\.textContent = townGuide\(st\); \}/);
+});
+
+test('16. ヒロリ（HIRORI-SOFT）：元の形のファイルは変えない。耳は左右おなじ位置・角度（鏡うつし）で花とぶつからない。顔の調整・耳は ?face=0・?ears=0 で前の姿', () => {
+  const S = code(between(HTML, '// HIRORI-SOFT-BEGIN', '// HIRORI-SOFT-END'));
+  assert.ok(!/FileLoader|fetch\(|localStorage|setTimeout|requestAnimationFrame/.test(S));
+  assert.match(S, /ear\.position\.set\(sd \* \.1, FACE \? neckY\(EARS\.y\) : EARS\.y, EARS\.z\);/);
+  assert.match(S, /ear\.rotation\.set\(EARS\.back, 0, -sd \* EARS\.tilt, 'XYZ'\);/);
+  assert.match(S, /get\('ears'\) === '0' \? null : \{ w: \.125, h: \.175, tilt: \.72, back: -\.15, z: -\.11, y: \.812 \}/);
+  assert.match(S, /get\('face'\) !== '0'/);
+  // 首を縮めるのは首の細いところだけ（肩より下＝羽・脚は動かさない）
+  assert.match(S, /const NECK = \{ y0: \.5, y1: \.64, d: \.035 \};/);
+  assert.match(S, /y <= NECK\.y0 \? y :/);
+  // 耳と花のすき間：花の点（Meshy ヒロリの青い頂点）から耳の面まで 0.03 以上（モデルの高さ1として）
+  const b = readFileSync(join(ROOT, 'assets/hirori-meshy/hirori-meshy.glb')), jl = b.readUInt32LE(12), j = JSON.parse(b.slice(20, 20 + jl).toString()), o0 = 20 + jl + 8, pr = j.meshes[0].primitives[0];
+  const rd = (i, n) => { const a = j.accessors[i], v = j.bufferViews[a.bufferView], o = o0 + (v.byteOffset || 0) + (a.byteOffset || 0); return { c: a.count, g: (k, m) => a.componentType === 5126 ? b.readFloatLE(o + (k * n + m) * 4) : b.readUInt16LE(o + (k * n + m) * 2) / 65535 }; };
+  const P = rd(pr.attributes.POSITION, 3), C = rd(pr.attributes.COLOR_0, 4), fl = [];
+  for (let k = 0; k < P.c; k++) if (C.g(k, 2) > C.g(k, 0) + .05 && P.g(k, 1) > .6) fl.push([P.g(k, 0), P.g(k, 1), P.g(k, 2)]);
+  const E = { w: .125, h: .175, tilt: .72, back: -.15, z: -.11, y: .812 };
+  for (const sd of [1, -1]) {
+    let dmin = 9;
+    for (let u = 0; u <= 10; u++) for (let v = 0; v <= 10; v++) {
+      const t = v / 10; let X = (u / 10 - .5) * E.w * (1 - t), Y = t * E.h, Z = 0;
+      const c = Math.cos(-sd * E.tilt), s = Math.sin(-sd * E.tilt); [X, Y] = [X * c - Y * s, X * s + Y * c];
+      const cb = Math.cos(E.back), sb = Math.sin(E.back); [Y, Z] = [Y * cb - Z * sb, Y * sb + Z * cb];
+      for (const f of fl) dmin = Math.min(dmin, Math.hypot(sd * .1 + X - f[0], E.y + Y - f[1], E.z + Z - f[2]));
+    }
+    assert.ok(dmin >= .03, 'ear ' + sd + ' gap ' + dmin.toFixed(3));
+  }
 });

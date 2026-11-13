@@ -6,7 +6,13 @@
    "bytes": 898352,
    "triangles": 7938,
    "texture": "1024x1024 JPEG (baseColor only)",
-   "source": { "file": "town_house_A.glb", "sha256": "f268812cad481ef22680b236dd2937d5efcdb60fc3ae4768069ec30bf8ab5be6", "bytes": 49316964, "triangles": 7938, "textures": "4096x4096 PNG x3 (baseColor, metallicRoughness, normal)" },
+   "source": {
+    "file": "town_house_A.glb",
+    "sha256": "f268812cad481ef22680b236dd2937d5efcdb60fc3ae4768069ec30bf8ab5be6",
+    "bytes": 49316964,
+    "triangles": 7938,
+    "textures": "4096x4096 PNG x3 (baseColor, metallicRoughness, normal)"
+   },
    "use": "市場町の家（10区画。幅を区画にあわせて 3.4〜3.6 倍、高さ約6.5m。左右反転と色味の小さな差）"
   },
   "market-stall-a-game.glb": {
@@ -14,8 +20,28 @@
    "bytes": 576808,
    "triangles": 3856,
    "texture": "1024x1024 JPEG (baseColor only)",
-   "source": { "file": "market_stall_A.glb", "sha256": "04bf94b885786c39465f9551b9933ae5012becf38fbe79f32499e79e0effa5a7", "bytes": 43956076, "triangles": 3856, "textures": "4096x4096 PNG x3 (baseColor, metallicRoughness, normal)" },
+   "source": {
+    "file": "market_stall_A.glb",
+    "sha256": "04bf94b885786c39465f9551b9933ae5012becf38fbe79f32499e79e0effa5a7",
+    "bytes": 43956076,
+    "triangles": 3856,
+    "textures": "4096x4096 PNG x3 (baseColor, metallicRoughness, normal)"
+   },
    "use": "広場の屋台4軒（1.3倍、台の高さ約0.77m）"
+  },
+  "town-bakery-a-game.glb": {
+   "sha256": "1825b3d07653766cb97bf337bc2c9221d58db95f2962d155bd12c300b9e1be32",
+   "bytes": 891624,
+   "triangles": 7864,
+   "texture": "1024x1024 JPEG (baseColor only)",
+   "source": {
+    "file": "town_bakery_A.glb",
+    "sha256": "ba9805c62bd9776887be61e523fd82cc9ecb9f10a8f7b6c947f7d2b64e68b120",
+    "bytes": 42822572,
+    "triangles": 7864,
+    "textures": "4096x4096 PNG x3 (baseColor, metallicRoughness, normal)"
+   },
+   "use": "広場の南のパン屋（区画 p82）。素材の正面（パンの並ぶ窓）は -X なので +90° 回して広場へ向ける。3.6 倍、高さ約6.8m"
   }
  },
  "tool": "meshy_game.py（GLB を読み、位置・法線・UV・三角形をそのまま写し、baseColor を Pillow で 1024 の JPEG に縮めて1枚だけ入れる）"

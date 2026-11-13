@@ -1979,6 +1979,7 @@ const TOWN_BLOCKS = [
   /<!-- TOWN-PANELS-BEGIN[\s\S]*?<!-- TOWN-PANELS-END -->\n/,
   /  \/\/ TOWN-LAYOUT-BEGIN[\s\S]*?\/\/ TOWN-LAYOUT-END\n/,
   /\n\/\/ TOWN-CORE-BEGIN[\s\S]*?\/\/ TOWN-CORE-END\n/,
+  /\n\/\/ HIRORI-SOFT-BEGIN[\s\S]*?\/\/ HIRORI-SOFT-END\n/,
   /\n\/\/ TOWN-BEGIN[\s\S]*?\/\/ TOWN-END\n/,
 ];
 export const TOWN_EDITS = [

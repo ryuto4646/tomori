@@ -7145,9 +7145,12 @@ var town = (() => {
     for (let k = 0; k <= 12; k++) { const a = k / 12 * Math.PI; A(SPH, FLOWERS[k % FLOWERS.length], [Math.cos(a) * half, 3.35 + Math.sin(a) * half * .32 + .05, .12], [.13, .11, .1], undefined, .1); A(SPH, 0x7fae5a, [Math.cos(a + .12) * half, 3.33 + Math.sin(a + .12) * half * .32, .1], [.14, .06, .09]); }
     // つるした丸い看板：木のふちと、花のしるし（文字は書かない）
     A(BOX, 0x6e4a32, [-.18, 3.28, .05], [.03, .3, .03]); A(BOX, 0x6e4a32, [.18, 3.28, .05], [.03, .3, .03]);
-    A(CYL, 0x8a5e3e, [0, 2.92, .03], [.34, .05, .34], [Math.PI / 2, 0, 0]); A(CYL, 0xf6ecd6, [0, 2.92, .06], [.28, .03, .28], [Math.PI / 2, 0, 0]);
-    for (let k = 0; k < 5; k++) { const a = k / 5 * Math.PI * 2; A(SPH, 0xe8907a, [Math.cos(a) * .1, 2.92 + Math.sin(a) * .1, .09], [.07, .07, .02]); }
-    A(SPH, 0xffd45a, [0, 2.92, .1], [.05, .05, .02]);
+    A(CYL, 0x8a5e3e, [0, 2.92, .05], [.34, .05, .34], [Math.PI / 2, 0, 0]);
+    for (const f of [1, -1]) {   // 草原から来ても、街から見ても、花のしるしが見える（両面）
+      A(CYL, 0xf6ecd6, [0, 2.92, .05 + f * .03], [.28, .03, .28], [Math.PI / 2, 0, 0]);
+      for (let k = 0; k < 5; k++) { const a = k / 5 * Math.PI * 2; A(SPH, 0xe8907a, [Math.cos(a) * .1, 2.92 + Math.sin(a) * .1, .05 + f * .06], [.07, .07, .02]); }
+      A(SPH, 0xffd45a, [0, 2.92, .05 + f * .07], [.05, .05, .02]);
+    }
     // 小旗：大通りの上と、広場の上（2本）
     const flag = (x0, z0, x1, z1, y0) => {
       const n = 14, line = new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(x0, y0, z0), new THREE.Vector3((x0 + x1) / 2, y0 - .6, (z0 + z1) / 2), new THREE.Vector3(x1, y0, z1)]), 12, .015, 4);

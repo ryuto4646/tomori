@@ -2001,14 +2001,17 @@ const worldV2 = (() => {
       { id: 'view', pts: [[66.4, -1.6], [69.8, 1.4], [73.9, 2.4]], r: 2.0 }],                   // 見晴らしの路地（広場の南東から）
     courts: [{ id: 'garden', x: 68.6, z: -23.2, r: 3.8 }, { id: 'view', x: 76.4, z: 2.0, r: 3.0 }],
     gate: { x: 45.2, z: -3.2 },                                                                // 街の門（木のアーチ）
-    // 通れない丸 [x, z, 半径, 名前]：噴水・屋台（花屋・タネ屋・パン屋・布屋）・花壇・見晴らしのベンチ
-    obstacles: [[61.6, -6.4, 2.1, 'fountain'], [57.2, -10.1, 1.4, 'florist'], [67.2, -7.4, 1.4, 'seeds'], [60.6, -0.8, 1.4, 'bread'], [56.7, -3.55, 1.4, 'cloth'],
+    // 通れない丸 [x, z, 半径, 名前]：噴水・屋台（花屋・タネ屋・パン屋・布屋。Meshy の屋台の大きさ）・花壇・見晴らしのベンチ
+    obstacles: [[61.6, -6.4, 2.1, 'fountain'], [57.2, -10.1, 1.6, 'florist'], [67.2, -7.4, 1.6, 'seeds'], [60.6, -0.8, 1.6, 'bread'], [56.7, -3.55, 1.6, 'cloth'],
       [60.6, -12.3, 1.3, 'bed'], [78.3, 2.9, .8, 'bench']],
     // 家 [x, z, 正面を向ける点 x, z, 幅, 奥行き, 名前]（道・広場から 0.25m 以上はなれている。test-town.mjs が確かめる）
     houses: [[41.0, -9.4, 41.0, -4, 4.6, 4.0, 'roadN1'], [46.8, -10.4, 47.0, -4.4, 5.0, 4.2, 'roadN2'], [37.4, 1.8, 37.6, -4.4, 4.0, 3.6, 'roadS1'], [49.4, 1.6, 49.6, -4.8, 4.4, 3.8, 'roadS2'],
       [55.6, -16.1, 61.6, -6.4, 4.4, 4.0, 'p-122'], [70.8, -14.7, 61.6, -6.4, 4.4, 3.8, 'p-42'], [73.0, -9.5, 61.6, -6.4, 4.2, 3.8, 'p-15'], [73.2, -3.3, 61.6, -6.4, 4.4, 3.8, 'p15'],
       [63.2, 4.7, 61.6, -6.4, 4.6, 3.8, 'p82'], [57.1, 3.6, 61.6, -6.4, 4.2, 3.6, 'p114'], [43.6, -16.2, 44, -9, 4.2, 3.8, 'back1'], [48.4, -17.8, 50, -10, 4.4, 3.8, 'back2'],
       [69.2, -29.4, 69.2, -23.2, 5.0, 4.0, 'sun'], [61.8, -24.4, 68.6, -23.6, 4.4, 4.0, 'shade'], [75.6, -22.6, 68.6, -23.0, 4.4, 4.0, 'lantern'], [71.4, 6.4, 71.4, 2.0, 4.0, 3.4, 'laneS']],
+    // Meshy の家（town_house_A）を置く区画。お届け先の庭の3軒・角の小さな家は、庭の光やひさしと組なので今の形のまま
+    meshyLots: ['roadN1', 'roadN2', 'roadS2', 'p-122', 'p-42', 'p-15', 'p82', 'p114', 'back1', 'back2'],
+    meshyHouse: { w: 1.23, d: 1.63, h: 1.9, front: .81, maxScale: 3.6 },   // 素材の大きさ（幅・奥行き・高さ・正面の位置）。幅を区画にあわせて大きくする
   });
   // 道・広場までの距離（中なら負）。r に limit をかけると、ふちより少し内側（タップ先に使う）
   function townShapeSd(x, z, limit = 1) {
@@ -6598,6 +6601,15 @@ function townPlant(st, id) {
   st.seeds[id] = 'planted';
   return true;
 }
+// 上の知らせ（街の中だけ）：いまの段階でやること。答え（どの鉢・どの家）は言わない
+function townGuide(st) {
+  if (st.errand === 'none') return '市場町を歩いてみよう。花屋さんが、こまっているみたい。';
+  if (st.errand === 'flower') return '花屋で、うつむくように咲く花をさがそう';
+  if (st.errand === 'deliver') return '日差しが差し込む庭のおうちへ、花を届けよう';
+  if (TOWN_SEED_IDS.some(id => st.seeds[id] === 'owned')) return '買ったタネを、広場の花壇に植えてみよう';
+  if (st.coins > 0 && TOWN_SEED_IDS.every(id => st.seeds[id] === 'none')) return 'もらったコインで、タネ屋をのぞいてみよう';
+  return '市場町を歩いてみよう';
+}
 const townStarted = st => st.errand !== 'none' || st.coins > 0 || TOWN_SEED_IDS.some(id => st.seeds[id] !== 'none');
 // 冒険メモ：お願い・ヒント・お礼・タネ（書いたことばは残さない）
 function townMemo(st) {
@@ -6831,11 +6843,14 @@ var town = (() => {
 
   // 屋台：木の台・少ししなる4本の柱・反った縞のひさし。品物は種類ごと
   const stalls = [];
-  function buildStall(acc, o, bid, kind) {
+  function buildStall(acc, o, bid, kind, meshy) {
     const [x, z] = o, yaw = Math.atan2(P.x - x, P.z - z);
     const place = new THREE.Matrix4().compose(_p.set(x, gy(x, z), z), _q.setFromEuler(_e.set(0, yaw, 0)), _s.set(1, 1, 1));
     const bow = v => { v.x += .05 * Math.sin(Math.PI * Math.min(1, Math.max(0, v.y / 2.3))) * Math.sign(v.x); };
-    const A = (geo, hex, p, s, r, j) => add(acc, geo, hex, bid, p, s, r, bow, place, j);
+    const lift = v => { v.y += STALL_DY; };
+    let A = (geo, hex, p, s, r, j) => add(acc, geo, hex, bid, p, s, r, bow, place, j);
+    if (meshy) { A = (geo, hex, p, s, r, j) => add(acc, geo, hex, bid + 4, p, s, r, lift, place, j); }   // 品物だけ（台の上へ下げる）
+    else {
     const col = { florist: 0x8fb07a, seeds: 0x4f948e, bread: 0xe08a6e, cloth: 0xdcb24c }[kind];
     A(BOX, 0x9c6e48, [0, .45, .15], [2.3, .9, .8]);
     A(BOX, 0xc69a6c, [0, .93, .2], [2.45, .07, .95]);
@@ -6847,6 +6862,7 @@ var town = (() => {
       const c = i % 2 ? col : CREAMT, a = pt(i / NU, k / NV), b = pt((i + 1) / NU, k / NV), cc = pt((i + 1) / NU, (k + 1) / NV), e = pt(i / NU, (k + 1) / NV);
       tri(acc, [a, b, cc, a, cc, e], c, bid, bow, place);
       if (k === NV - 1) { const m = pt((i + .5) / NU, 1); m[1] -= .18; tri(acc, [e, cc, m], c, bid, bow, place); }
+    }
     }
     // 品物
     if (kind === 'florist') {
@@ -6862,9 +6878,10 @@ var town = (() => {
       for (let k = 0; k < 3; k++) A(BOX, SHUT[k], [(k - 1) * .6, 1.02, -.28], [.5, .12, .36]);
     }
     // 木箱・かご（台のわき）
-    A(BOX, 0xb88a5c, [1.45, .25, .1], [.5, .5, .5], [0, .3, 0]);
-    A(CYL, 0xc8a46c, [-1.45, .2, .2], [.28, .4, .28]);
-    stalls.push({ x, z, yaw, w: 3.1, d: 2.2, H: 2.6, bid, kind });
+    const side = meshy ? (geo, hex, p, s, r) => add(acc, geo, hex, bid + 4, p, s, r, null, place) : A;   // 台のわきは地面に置く
+    side(BOX, 0xb88a5c, [meshy ? 1.6 : 1.45, .25, .1], [.5, .5, .5], [0, .3, 0]);
+    side(CYL, 0xc8a46c, [meshy ? -1.6 : -1.45, .2, .2], [.28, .4, .28]);
+    if (!meshy) stalls.push({ x, z, yaw, w: 3.1, d: 2.2, H: 2.6, bid, kind });
   }
 
   // 噴水：低い丸い水盤と、葉のもようの台。水・しぶき・音はここで作る
@@ -7047,7 +7064,7 @@ var town = (() => {
     TOWN_POTS.forEach((p, k) => {
       const g = new THREE.Group(); g.name = 'Town_Pot_' + p.id;
       const lx = (k - 1) * .72, lz = .5;
-      g.position.set(fl[0] + Math.sin(yaw) * lz + Math.cos(yaw) * lx, gy(fl[0], fl[1]) + .965, fl[1] + Math.cos(yaw) * lz - Math.sin(yaw) * lx);
+      g.position.set(fl[0] + Math.sin(yaw) * lz + Math.cos(yaw) * lx, gy(fl[0], fl[1]) + .965 + (meshyOn ? STALL_DY : 0), fl[1] + Math.cos(yaw) * lz - Math.sin(yaw) * lx);
       g.rotation.y = yaw; g.scale.setScalar(1.25);
       g.add(potMesh(p.id));
       const sgn = numberSign(k + 1); sgn.position.set(0, -.18, .2); g.add(sgn);
@@ -7126,7 +7143,11 @@ var town = (() => {
     const arc = new THREE.TorusGeometry(half, .13, 6, 18, Math.PI);
     A(arc, 0x8a5e3e, [0, 3.35, 0], [1, .32, 1]);
     for (let k = 0; k <= 12; k++) { const a = k / 12 * Math.PI; A(SPH, FLOWERS[k % FLOWERS.length], [Math.cos(a) * half, 3.35 + Math.sin(a) * half * .32 + .05, .12], [.13, .11, .1], undefined, .1); A(SPH, 0x7fae5a, [Math.cos(a + .12) * half, 3.33 + Math.sin(a + .12) * half * .32, .1], [.14, .06, .09]); }
-    A(CYL, 0xf6ecd6, [0, 3.0, .05], [.36, .05, .36], [Math.PI / 2, 0, 0]); A(SPH, 0xe8907a, [0, 3.0, .09], [.14, .14, .04]); A(SPH, 0x86a96f, [.16, 2.92, .09], [.08, .05, .03]);
+    // つるした丸い看板：木のふちと、花のしるし（文字は書かない）
+    A(BOX, 0x6e4a32, [-.18, 3.28, .05], [.03, .3, .03]); A(BOX, 0x6e4a32, [.18, 3.28, .05], [.03, .3, .03]);
+    A(CYL, 0x8a5e3e, [0, 2.92, .03], [.34, .05, .34], [Math.PI / 2, 0, 0]); A(CYL, 0xf6ecd6, [0, 2.92, .06], [.28, .03, .28], [Math.PI / 2, 0, 0]);
+    for (let k = 0; k < 5; k++) { const a = k / 5 * Math.PI * 2; A(SPH, 0xe8907a, [Math.cos(a) * .1, 2.92 + Math.sin(a) * .1, .09], [.07, .07, .02]); }
+    A(SPH, 0xffd45a, [0, 2.92, .1], [.05, .05, .02]);
     // 小旗：大通りの上と、広場の上（2本）
     const flag = (x0, z0, x1, z1, y0) => {
       const n = 14, line = new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(x0, y0, z0), new THREE.Vector3((x0 + x1) / 2, y0 - .6, (z0 + z1) / 2), new THREE.Vector3(x1, y0, z1)]), 12, .015, 4);
@@ -7157,16 +7178,74 @@ var town = (() => {
     add(acc, BOX, 0x9c6e48, 46, [bx2, gy(bx2, bz2) + .42, bz2], [1.4, .08, .5], [0, -.9, 0]); add(acc, BOX, 0x8a5e3e, 46, [bx2, gy(bx2, bz2) + .2, bz2], [1.2, .4, .3], [0, -.9, 0]);
   }
 
+  // ── Meshy の家・屋台（docs/ASSET_REGISTER.md）。色の絵1枚つきの GLB を、ここで読む（外の読みこみ部品は使わない） ──
+  const MESHY_URL = { house: 'assets/town-meshy/town-house-a-game.glb', stall: 'assets/town-meshy/market-stall-a-game.glb' }, MESHY_WAIT_MS = 6000;
+  const STALL_S = 1.3, STALL_TOP = (-.358 + .952) * 1.3, STALL_DY = STALL_TOP - .93;   // 屋台の台の高さ（約0.77m）。品物は、その上へ
+  async function readTexGlb(buf) {
+    const dv = new DataView(buf);
+    if (dv.getUint32(0, true) !== 0x46546C67) throw new Error('glb');
+    const jl = dv.getUint32(12, true), j = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 20, jl))), b0 = 20 + jl + 8;
+    const viewOf = i => { const v = j.bufferViews[i]; return [b0 + (v.byteOffset || 0), v.byteLength]; };
+    const acc = (i, T, n) => { const a = j.accessors[i], [o] = viewOf(a.bufferView); return new T(buf.slice(o + (a.byteOffset || 0), o + (a.byteOffset || 0) + a.count * n * T.BYTES_PER_ELEMENT)); };
+    const pr = j.meshes[0].primitives[0], g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(acc(pr.attributes.POSITION, Float32Array, 3), 3));
+    g.setAttribute('normal', new THREE.BufferAttribute(acc(pr.attributes.NORMAL, Float32Array, 3), 3));
+    g.setAttribute('uv', new THREE.BufferAttribute(acc(pr.attributes.TEXCOORD_0, Float32Array, 2), 2));
+    const ia = j.accessors[pr.indices];
+    g.setIndex(new THREE.BufferAttribute(acc(pr.indices, ia.componentType === 5125 ? Uint32Array : Uint16Array, 1), 1));
+    g.computeBoundingSphere();
+    const im = j.images[0], [io, il] = viewOf(im.bufferView);
+    const bmp = await createImageBitmap(new Blob([new Uint8Array(buf, io, il)], { type: im.mimeType }));
+    const tex = new THREE.Texture(bmp); tex.flipY = false; tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4; tex.needsUpdate = true;
+    return { geometry: g, texture: tex };
+  }
+  function loadMeshy() {
+    const one = url => new Promise((res, rej) => new THREE.FileLoader().setResponseType('arraybuffer').load(url, res, undefined, rej)).then(readTexGlb);
+    const all = Promise.all([one(MESHY_URL.house), one(MESHY_URL.stall)]).then(([house, stall]) => ({ house, stall }));
+    return Promise.race([all, new Promise(r => setTimeout(() => r(null), MESHY_WAIT_MS))]).catch(() => null);
+  }
+  // 1つの家・屋台ごとに素材を分け、濃さ（uOne）で点を抜いて透かす（形と絵は共有）
+  function meshyMat(tex, tint) {
+    const u = { value: 1 }, m = new THREE.MeshLambertMaterial({ map: tex, color: tint });
+    m.onBeforeCompile = sh => {
+      sh.uniforms.uOne = u;
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uOne;')
+        .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\nif (uOne < .995 && fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(.06711056, .00583715)))) > uOne) discard;');
+    };
+    m.customProgramCacheKey = () => 'tomori-town-meshy';
+    m.userData.u = u; return m;
+  }
+  const meshyMeshes = [];
+  function placeMeshyHouse(M, spec, bid) {
+    const [x, z, fx, fz, w0, d0, name] = spec, Q = L.meshyHouse, yaw = Math.atan2(fx - x, fz - z);
+    const sc = Math.min(w0 / Q.w, Q.maxScale), cz = d0 / 2 - Q.front * sc, mirror = bid % 2 ? -1 : 1, hy = 1 + ((bid * 37) % 7 - 3) * .015;
+    const tint = [0xffffff, 0xfff0e2, 0xffe9e2, 0xf4f7e6, 0xfff7dc][bid % 5];
+    const m = new THREE.Mesh(M.geometry, meshyMat(M.texture, tint)); m.name = 'Town_House_' + name; m.userData.bid = bid;
+    m.position.set(x, gy(x, z) + .952 * sc * hy, z); m.rotation.y = yaw; m.scale.set(sc * mirror, sc * hy, sc);
+    m.castShadow = HIGH; m.receiveShadow = true; G.add(m); meshyMeshes.push(m);
+    m.position.x += Math.sin(yaw) * cz; m.position.z += Math.cos(yaw) * cz;   // 素材の正面を、区画の正面にそろえる（奥へ深くなる）
+    houses.push({ x: m.position.x, z: m.position.z, yaw, w: Q.w * sc + .2, d: Q.d * sc + .2, H: Q.h * sc * hy + .1, bid, name, doorX: 0, front: d0 / 2, mat: m.material });
+  }
+  function placeMeshyStall(M, o, bid) {
+    const [x, z] = o, yaw = Math.atan2(P.x - x, P.z - z);
+    const m = new THREE.Mesh(M.geometry, meshyMat(M.texture, 0xffffff)); m.name = 'Town_Stall_Meshy'; m.userData.bid = bid;
+    m.position.set(x, gy(x, z) + .952 * STALL_S, z); m.rotation.y = yaw; m.scale.setScalar(STALL_S);
+    m.castShadow = HIGH; m.receiveShadow = true; G.add(m); meshyMeshes.push(m);
+    stalls.push({ x, z, yaw, w: 1.9 * STALL_S, d: 1.44 * STALL_S, H: 1.9 * STALL_S, bid: bid + 4, kind: 'meshy', mat: m.material });
+  }
+
   // ── 組み立て（地形の高さがわかってから。V2 が使えないときは作らない） ──
   let houseMesh = null, decoMesh = null, fadeables = [];
   const coinEl = el('town-coins'), LABELS = ['label-lili', 'label-mog', 'label-sora', 'sfx-fountain'].map(el);
   const fadeCur = new Float32Array(FADE_N).fill(1), fadeHold = new Float32Array(FADE_N);
-  function build() {
+  let meshyOn = false;
+  function build(M) {
     if (built || !worldV2.isActive()) return;
+    meshyOn = !!M;
     const acc = makeAcc();
-    L.houses.forEach((h, k) => buildHouse(acc, h, k));
+    L.houses.forEach((h, k) => { if (M && L.meshyLots.includes(h[6])) placeMeshyHouse(M.house, h, k); else buildHouse(acc, h, k); });
     const kinds = ['florist', 'seeds', 'bread', 'cloth'];
-    kinds.forEach((kind, k) => buildStall(acc, L.obstacles[k + 1], 20 + k, kind));
+    kinds.forEach((kind, k) => { buildStall(acc, L.obstacles[k + 1], 20 + k, kind, !!M); if (M) placeMeshyStall(M.stall, L.obstacles[k + 1], 20 + k); });
     houseMesh = finish(acc, fadeMat(), 'Town_Houses'); houseMesh.castShadow = HIGH; houseMesh.receiveShadow = true; G.add(houseMesh);
     const dacc = makeAcc();
     buildDecor(dacc); buildBed(dacc);
@@ -7226,13 +7305,13 @@ var town = (() => {
   function pick(rc) {
     if (!built || !character || !walkable()) return false;
     // 透かしている家・屋台は選ばない（その向こうの道をタップしたら、そこへ歩く）
-    const bidOf = i => Math.round(houseMesh.geometry.attributes.aBid.getX(i.face.a));
-    const h = rc.intersectObject(houseMesh, false).find(i => fadeCur[bidOf(i)] > .9);
+    const bidOf = i => i.object.userData.bid !== undefined ? i.object.userData.bid : Math.round(houseMesh.geometry.attributes.aBid.getX(i.face.a));
+    const h = rc.intersectObjects([houseMesh, ...meshyMeshes], false).find(i => fadeCur[bidOf(i)] > .9);
     if (!h) return false;
     const gh = rc.intersectObject(ground)[0];
     if (gh && gh.distance < h.distance - 1.5) return false;
     const bid = bidOf(h);
-    const b = houses.find(q => q.bid === bid) || stalls.find(q => q.bid === bid);
+    const b = houses.find(q => q.bid === bid) || stalls.find(q => q.bid === bid || q.bid === bid + 4);
     if (!b) return false;
     targetPos.set(b.x + Math.sin(b.yaw) * (b.d / 2 + 1.4), 0, b.z + Math.cos(b.yaw) * (b.d / 2 + 1.4)); worldV2.clampToWalkable(targetPos, .97);
     isMoving = true; playAnim('walk'); el('hint').style.opacity = '0';
@@ -7482,13 +7561,14 @@ var town = (() => {
   }
   const smooth01 = u => { const k = Math.min(1, Math.max(0, u)); return k * k * (3 - 2 * k); };
   const TOWN_VIEW = Math.atan2(-.95, .3);   // 街に入るときのカメラの向き：ヒロリの西（少し南）から、東の通りの先を見る
+  let barSaved = null; const mbarText = el('mbar-text');
   let baseOff = null, camTurned = false, viewA = TOWN_VIEW, viewWant = TOWN_VIEW, lastX = 0, lastZ = 0;
   function update(t, dt) {
     if (!built || !character) return;
     const x = character.position.x, z = character.position.z, calm = still(), w = walkable();
     // 街の中・街へ向かうときは、道すじをたどる（タップの目的地のときだけ。キーボードはそのまま）
     if (w && isMoving && worldV2.isActive()) {
-      if (targetPos.x !== steer.wx || targetPos.z !== steer.wz) { steer.gx = targetPos.x; steer.gz = targetPos.z; steer.at = 0; }
+      if (targetPos.x !== steer.wx || targetPos.z !== steer.wz) { steer.gx = targetPos.x; steer.gz = targetPos.z; steer.at = 0; steer.fresh = true; }
       if ((steer.at -= dt) <= 0) { steer.at = .12; steer.active = T.steer(x, z, steer.gx, steer.gz, steerOut); }
       if (steer.active) { targetPos.x = steerOut.x; targetPos.z = steerOut.z; }
       steer.wx = targetPos.x; steer.wz = targetPos.z;
@@ -7502,7 +7582,10 @@ var town = (() => {
       const sd = T.shapeSd(x, z), vb = z > -20 ? (calm ? (sd < 4 ? 1 : 0) : smooth01((7 - sd) / 6)) : 0;
       // タップで歩いているあいだは、歩いていく向きのうしろ（少し右）へ、ゆっくり回りこむ（行く先が画面の奥に見える）。止まっているとき・キーで歩くときは、そのまま
       const turn = d => Math.atan2(Math.sin(d), Math.cos(d));
-      if (isMoving && Math.hypot(x - px0, z - pz0) > .01) viewWant = turn(Math.atan2(x - px0, z - pz0) + Math.PI + .3);
+      // 新しくタップした目的地が近くても（うしろへもどるときなど）、その向きへ回りこむ
+      if (steer.fresh && Math.hypot(steer.gx - x, steer.gz - z) > .8) viewWant = turn(Math.atan2(steer.gx - x, steer.gz - z) + Math.PI + .3);
+      else if (isMoving && Math.hypot(x - px0, z - pz0) > .01) viewWant = turn(Math.atan2(x - px0, z - pz0) + Math.PI + .3);
+      steer.fresh = false;
       viewA = calm ? viewWant : viewA + turn(viewWant - viewA) * (1 - Math.exp(-dt / .8));
       if (vb > 0 || camTurned) {
         const b0 = Math.atan2(baseOff.x, baseOff.z), a = turn(viewA - b0) * vb, cs = Math.cos(a), sn = Math.sin(a);
@@ -7510,6 +7593,10 @@ var town = (() => {
       }
     }
     coinEl.classList.toggle('show', w && townStarted(st));
+    // 上の知らせ：街の中では、お手伝いのいまの段階（行き先の答えは言わない）。街を出たら、前の知らせへもどす
+    const inTown = (w || state === S.TOWN) && T.shapeSd(x, z) < 1 && Math.hypot((x - 6) / 30, (z + 7) / 19) > 1;
+    if (inTown) { if (barSaved === null) barSaved = mbarText.textContent; mbarText.textContent = townGuide(st); }
+    else if (barSaved !== null && w) { mbarText.textContent = barSaved; barSaved = null; }
     if (Math.hypot(x - P.x, z - P.z) > 60) { for (const l of LABELS) l.classList.remove('show'); return; }   // 街から遠いときは、ここまで
     // カメラが家の中に入ったら、ヒロリの側の、家の手前まで寄せる（かべの中から見ない）
     _hd.set(x, character.position.y + 1.3, z);
@@ -7529,7 +7616,7 @@ var town = (() => {
       if (hit) fadeHold[i] = .5; else if (fadeHold[i] > 0) fadeHold[i] -= dt;
       const want = fadeHold[i] > 0 ? FADE_LOW : 1, c = fadeCur[i];
       if (c === want) continue;
-      fadeCur[i] = calm ? want : want < c ? Math.max(want, c - dt / .18) : Math.min(want, c + dt / .45); fadeU.value[i] = fadeCur[i]; dirty = true;
+      fadeCur[i] = calm ? want : want < c ? Math.max(want, c - dt / .18) : Math.min(want, c + dt / .45); if (b.mat) b.mat.userData.u.value = fadeCur[i]; else fadeU.value[i] = fadeCur[i]; dirty = true;   // Meshy の家・屋台は素材の濃さ。屋台の品物（鉢・花・タネ袋）は透かさない（見たい物なので）
     }
     // 噴水：水の輪・しぶき・音
     ripples.forEach((r, i) => { const u = calm ? .5 : (t * .35 + i / 3) % 1; r.scale.setScalar(.5 + 1.1 * u); r.material.opacity = calm ? .2 : .4 * (1 - u); });
@@ -7616,12 +7703,13 @@ var town = (() => {
   function blockers() { return built ? houses.map(h => [h.x, h.z, Math.min(h.w, h.d) / 2]) : []; }
   const _fp = new THREE.Vector3();
   function focusPoint(out = _fp) { return state === S.TOWN && focusAt ? out.set(focusAt[0], gy(focusAt[0], focusAt[1]) + .6, focusAt[1]) : null; }
-  worldV2.ready.then(ok => { if (ok) build(); });
+  worldV2.ready.then(ok => { if (ok) loadMeshy().then(M => build(M)); });   // Meshy の家・屋台が読めないとき・6秒たっても届かないときは、仮の形で組み立てる
   // テスト用（読むだけ）
   const scr = (x, y, z) => { _v.set(x, y, z).project(camera); return { x: (_v.x + 1) / 2 * innerWidth, y: (1 - _v.y) / 2 * innerHeight, front: _v.z < 1 }; };
   window.__tomoriTown = { state: () => JSON.parse(JSON.stringify(st)), saveKey: SAVE_KEY, built: () => built, layout: L, spot: id => spot(id), ids, open: () => openId,
     houses: () => houses.map(h => ({ name: h.name, x: h.x, z: h.z, bid: h.bid })), fade: () => Array.from(fadeCur).map(v => +v.toFixed(2)),
-    screenAt: (x, z, y = 0) => scr(x, gy(x, z) + y, z), path: (x0, z0, x1, z1) => T.path(x0, z0, x1, z1), npc: id => NPC[id] && { x: NPC[id].x, z: NPC[id].z } };
+    screenAt: (x, z, y = 0) => scr(x, gy(x, z) + y, z), path: (x0, z0, x1, z1) => T.path(x0, z0, x1, z1), npc: id => NPC[id] && { x: NPC[id].x, z: NPC[id].z },
+    hitAt: (sx, sy) => { const rc = new THREE.Raycaster(); rc.setFromCamera(new THREE.Vector2(sx / innerWidth * 2 - 1, -(sy / innerHeight) * 2 + 1), camera); return rc.intersectObjects(scene.children, true).slice(0, 4).map(i => (i.object.name || i.object.type) + (i.object.parent && i.object.parent.name ? '<' + i.object.parent.name : '') + ' ' + i.distance.toFixed(1)); } };
   return { has, ids, spot, call, open, pick, update, memo, items, blockers, focusPoint, reset, started: () => townStarted(st), applyVisuals, tapBlocked: () => performance.now() < guardUntil };
 })();
 // TOWN-END

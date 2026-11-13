@@ -244,7 +244,10 @@ test('16. ヒロリ（HIRORI-SOFT）：元の形のファイルは変えない�
   const S = code(between(HTML, '// HIRORI-SOFT-BEGIN', '// HIRORI-SOFT-END'));
   assert.ok(!/FileLoader|fetch\(|localStorage|setTimeout|requestAnimationFrame/.test(S));
   assert.match(S, /part\.position\.set\(sd \* A\.mount\.x, A\.followFace && FACE \? neckY\(A\.mount\.y\) : A\.mount\.y, A\.mount\.z\);/);
-  assert.match(S, /part\.rotation\.set\(A\.rot\.back, 0, -sd \* A\.rot\.tilt, 'XYZ'\);/);\n  // 耳は交換できる飾り：装飾ID・骨・取付位置・角度・大きさを一覧にまとめ、初期装着は猫耳 B\n  assert.match(S, /mount: \{ x: \.1, y: \.812, z: -\.11 \}, rot: \{ back: -\.15, tilt: \.72 \}, size: \{ w: \.125, h: \.175, depth: \.02 \}/);\n  assert.match(S, /const HIRORI_DEFAULT_EQUIP = Object\.freeze\(\{ ears: 'ear-cat-b' \}\);/);
+  assert.match(S, /part\.rotation\.set\(A\.rot\.back, 0, -sd \* A\.rot\.tilt, 'XYZ'\);/);
+  // 耳は交換できる飾り：装飾ID・骨・取付位置・角度・大きさを一覧にまとめ、初期装着は猫耳 B
+  assert.match(S, /mount: \{ x: \.1, y: \.812, z: -\.11 \}, rot: \{ back: -\.15, tilt: \.72 \}, size: \{ w: \.125, h: \.175, depth: \.02 \}/);
+  assert.match(S, /const HIRORI_DEFAULT_EQUIP = Object\.freeze\(\{ ears: 'ear-cat-b' \}\);/);
   assert.match(S, /get\('ears'\) === '0'\) want\.ears = null;/);
   assert.match(S, /get\('face'\) !== '0'/);
   // 首を縮めるのは首の細いところだけ（肩より下＝羽・脚は動かさない）

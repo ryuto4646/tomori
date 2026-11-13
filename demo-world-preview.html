@@ -239,6 +239,41 @@ textarea, input { word-break:normal; }
   #panel-giant.show { transform:none; opacity:1; transition:opacity .25s, visibility 0s; }
 }
 /* TREASURE-CSS-END */
+/* TOWN-CSS-BEGIN（TOWN-01）：市場町の会話・えらぶボタン・タネのカード・コインの数・名前の札 */
+#town-coins { position:absolute; top:92px; right:12px; display:none; align-items:center; gap:6px; min-height:36px; padding:4px 12px;
+  background:rgba(254,249,240,.92); border:1.5px solid #c8b87a; border-radius:18px; color:#5a4830; font-size:14px; font-weight:bold; pointer-events:none; }
+#town-coins.show { display:flex; }
+@media (max-width: 600px) { #town-coins { top:calc(max(8px, env(safe-area-inset-top)) + 122px); right:max(8px, env(safe-area-inset-right)); } }
+#panel-town { padding-top:12px; }
+#panel-town .panel-handle { margin-bottom:10px; }
+#panel-town .talk-line { font-size:14px; line-height:1.65; margin-bottom:8px; }
+#panel-town .talk-hint { padding:8px 12px; margin-bottom:8px; }
+#panel-town .detour-item { padding:8px 12px; margin:6px 0 8px; gap:10px; }
+#town-gloss { white-space:pre-line; }
+.town-choices { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 10px; }
+.town-choice { flex:1 1 30%; min-height:48px; padding:8px 10px; border:2px solid #d08a3a; border-radius:14px; background:#fff; color:#8a5420; font-size:15px; font-weight:bold; cursor:pointer; }
+.town-choice.tried { border-style:dashed; color:#a08a6a; }
+.town-choice:focus-visible, .town-buy:focus-visible { outline:3px solid #3a3328; outline-offset:2px; }
+.town-card { background:#fff; border:2px solid #e8d4a0; border-radius:14px; padding:10px 12px; margin:0 0 10px; text-align:left; }
+.town-card-head { display:flex; align-items:center; gap:8px; font-size:15px; font-weight:bold; color:#3a3328; }
+.town-card-icon { font-size:20px; }
+.town-card-price { margin-left:auto; font-size:14px; color:#8a5420; white-space:nowrap; }
+.town-card-words { font-size:14px; line-height:1.65; color:#3a3328; margin:4px 0 8px; }
+.town-grown { display:flex; align-items:center; gap:10px; font-size:13px; color:#5a4830; line-height:1.55; margin:0 0 8px; }
+.town-grown canvas { flex:none; background:#f4f9ee; border-radius:10px; }
+.town-card-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.town-card-actions .btn-primary { width:auto; margin:0; padding:10px 16px; min-height:44px; font-size:14px; }
+.town-card-actions .btn-primary:disabled { background:#d8cdb8; color:#6a5a40; cursor:default; box-shadow:none; }
+.town-after { font-size:12px; color:#7a6a48; }
+@media (max-height: 700px) { #panel-town { max-height:58vh; } body:has(#panel-town.show) #mission-bar { display:none; } }
+@media (max-height: 460px) { #panel-town { max-height:64vh; } }
+@media (orientation: landscape) and (max-height: 500px) {
+  #panel-town { left:auto; top:0; width:min(440px,54vw); max-height:none; border-radius:24px 0 0 24px; border-top:none; border-left:2px solid #e8d4a0;
+    transform:none; opacity:0; transition:opacity .25s, visibility 0s linear .25s; padding-bottom:calc(16px + env(safe-area-inset-bottom, 0px)); }
+  #panel-town.show { transform:none; opacity:1; transition:opacity .25s, visibility 0s; }
+}
+#panel-town button { scroll-margin-bottom:72px; }
+/* TOWN-CSS-END */
 
 /* ── ボタン ─────────────────────────── */
 .btn-primary {
@@ -449,6 +484,13 @@ textarea, input { word-break:normal; }
   <div class="sfx-label" id="sfx-giant" aria-hidden="true">すう……ふう……</div>
   <div class="sfx-label" id="event-skip" aria-hidden="true">タップで先へ</div>
   <!-- TREASURE-UI-HTML-END -->
+  <!-- TOWN-UI-HTML-BEGIN（TOWN-01）：コインの数・住人の名前の札・噴水の音の文字 -->
+  <div id="town-coins" role="status" aria-label="もっているコイン"><span aria-hidden="true">🪙</span><span id="town-coins-n">0</span></div>
+  <div class="npc-label" id="label-lili">花屋のリリ</div>
+  <div class="npc-label" id="label-mog">タネ屋のモグじい</div>
+  <div class="npc-label" id="label-sora">ソラばあちゃん</div>
+  <div class="sfx-label" id="sfx-fountain" aria-hidden="true">さらさら…</div>
+  <!-- TOWN-UI-HTML-END -->
   <div id="demo-end">
     <div class="end-line1">遠くで、新しい"なにか"が光っている。</div>
     <div class="end-line2">つづきは、次の冒険で。</div>
@@ -613,7 +655,7 @@ textarea, input { word-break:normal; }
   <div class="found-section">もちもの</div>
   <div id="notebook-items"></div>
   <button class="btn-secondary" id="btn-notebook-close" type="button">冒険にもどる</button>
-  <div class="panel-note">宝さがしの記録ともちものは、この端末に残ります。「デモを最初から」を押すと消えます。</div>
+  <div class="panel-note">宝さがし・市場町の記録ともちもの（コイン・タネ）は、この端末に残ります。「デモを最初から」を押すと消えます。</div>
 </div>
 
 <!-- オオネとの対話（EXPANSION-03）：気になったことを選ぶか、短いことばで伝える。正しい・上手は言わない。書いたことばは、このページを開いているあいだだけ -->
@@ -634,6 +676,24 @@ textarea, input { word-break:normal; }
   <button class="btn-primary" id="btn-giant-next" type="button"></button>
 </div>
 <!-- TREASURE-PANELS-END -->
+<!-- TOWN-PANELS-BEGIN（TOWN-01）：市場町の話す・えらぶ・届ける・お店・花壇。正解やごほうびは決まったデータだけで決める -->
+<div class="panel" id="panel-town" aria-labelledby="town-name">
+  <div class="panel-handle"></div>
+  <div class="talk-head"><div class="panel-icon" id="town-icon" aria-hidden="true">🐑</div><div class="panel-title" id="town-name" tabindex="-1" data-autofocus></div></div>
+  <div class="talk-line" id="town-line"></div>
+  <div class="talk-hint" id="town-hint" style="display:none"><div class="talk-hint-label" id="town-hint-label"></div><div class="talk-hint-text" id="town-hint-text"></div></div>
+  <button class="talk-words-btn" id="btn-town-words" type="button" aria-expanded="false" aria-controls="town-gloss" style="display:none"></button>
+  <div class="talk-gloss" id="town-gloss" style="display:none"></div>
+  <div class="town-choices" id="town-choices" role="group"></div>
+  <div id="town-cards"></div>
+  <button class="btn-primary" id="btn-town-primary" type="button" style="display:none"></button>
+  <button class="btn-primary" id="btn-town-more" type="button" style="display:none">ヒントを見る</button>
+  <div class="talk-actions">
+    <button class="btn-secondary" id="btn-town-memo" type="button" style="display:none">冒険メモを見る</button>
+    <button class="btn-secondary" id="btn-town-close" type="button">冒険にもどる</button>
+  </div>
+</div>
+<!-- TOWN-PANELS-END -->
 
 <div id="loading"><div class="em">🌿</div><p>世界を読み込んでいます…</p></div>
 <div id="no-webgl" style="display:none">
@@ -723,6 +783,7 @@ const S = {
   TALK:'TALK', NOTEBOOK:'NOTEBOOK',
   EVENT:'EVENT',   // EXPANSION-02：宝箱・ランタン・秘密の発見を、3D の世界で見せているあいだ（そのあとで説明のパネル）
   GIANT:'GIANT',   // EXPANSION-03：巨木の根もとのオオネと話しているあいだ
+  TOWN:'TOWN',   // TOWN-01：市場町の住人と話す・えらぶ・届ける・お店（開いているあいだは歩かない）
 };
 let state = S.EXPLORE;
 let treasure = null;   // 宝さがし（EXPANSION-01）。QUEST-UI のあとで組み立てる
@@ -1429,6 +1490,10 @@ function applyUI() {
       openPanel('panel-notebook');
       hint.style.opacity = '0';
       break;
+    case S.TOWN:   // TOWN-01：市場町の会話・お店
+      openPanel('panel-town');
+      hint.style.opacity = '0';
+      break;
   }
   questHub.applyUI();   // 「見つけたもの」ボタン・道くさの案内は、歩けるときだけ出す（入力中は隠す）
   if (treasure) treasure.applyUI();   // 宝さがしの「話す」・冒険メモのボタン（EXPANSION-01。組み立てる前は何もしない）
@@ -1926,6 +1991,142 @@ const worldV2 = (() => {
   });
   const greatDist = (x, z) => { let d = 1e9; for (let i = 0; i < GREAT_ROUTE.length - 1; i++) d = Math.min(d, segDist(x, z, GREAT_ROUTE[i][0], GREAT_ROUTE[i][1], GREAT_ROUTE[i + 1][0], GREAT_ROUTE[i + 1][1])); return d; };
   const riverDist = (x, z) => Math.min(segDist(x, z, ...GREAT.river[0], ...GREAT.river[1]), segDist(x, z, ...GREAT.river[1], ...GREAT.river[2]));
+  // TOWN-LAYOUT-BEGIN（TOWN-01：市場町の道・広場・家・通れない物。THREE も画面も使わない計算だけ。test-town.mjs が取り出して確かめる）
+  // 草原の東のはしから、ゆるく曲がる大通りで街の門をくぐり、噴水の広場へ。広場から、庭の路地（北東）と見晴らしの路地（南東）が分かれる
+  // 歩ける場所は「道（線分のまわり）・広場・小さな広場」の内側。家はその外。噴水・屋台・花壇は、広場の中の通れない丸
+  const TOWN = Object.freeze({
+    road: [[34.0, -6.2], [39.6, -3.6], [45.2, -3.2], [50.4, -5.0], [54.6, -6.2]], roadR: 2.6,   // 大通り（幅5.2m。6.6m/秒で曲がれるゆるい曲がり）
+    plaza: { x: 61.6, z: -6.4, r: 7.8 },                                                       // 噴水の広場
+    lanes: [{ id: 'garden', pts: [[64.0, -12.4], [65.2, -16.8], [67.6, -20.6]], r: 2.1 },      // 庭の路地（広場の北東から）
+      { id: 'view', pts: [[66.4, -1.6], [69.8, 1.4], [73.9, 2.4]], r: 2.0 }],                   // 見晴らしの路地（広場の南東から）
+    courts: [{ id: 'garden', x: 68.6, z: -23.2, r: 3.8 }, { id: 'view', x: 76.4, z: 2.0, r: 3.0 }],
+    gate: { x: 45.2, z: -3.2 },                                                                // 街の門（木のアーチ）
+    // 通れない丸 [x, z, 半径, 名前]：噴水・屋台（花屋・タネ屋・パン屋・布屋）・花壇・見晴らしのベンチ
+    obstacles: [[61.6, -6.4, 2.1, 'fountain'], [57.2, -10.1, 1.4, 'florist'], [67.2, -7.4, 1.4, 'seeds'], [60.6, -0.8, 1.4, 'bread'], [56.7, -3.55, 1.4, 'cloth'],
+      [60.6, -12.3, 1.3, 'bed'], [78.3, 2.9, .8, 'bench']],
+    // 家 [x, z, 正面を向ける点 x, z, 幅, 奥行き, 名前]（道・広場から 0.25m 以上はなれている。test-town.mjs が確かめる）
+    houses: [[41.0, -9.4, 41.0, -4, 4.6, 4.0, 'roadN1'], [46.8, -10.4, 47.0, -4.4, 5.0, 4.2, 'roadN2'], [37.4, 1.8, 37.6, -4.4, 4.0, 3.6, 'roadS1'], [49.4, 1.6, 49.6, -4.8, 4.4, 3.8, 'roadS2'],
+      [55.6, -16.1, 61.6, -6.4, 4.4, 4.0, 'p-122'], [70.8, -14.7, 61.6, -6.4, 4.4, 3.8, 'p-42'], [73.0, -9.5, 61.6, -6.4, 4.2, 3.8, 'p-15'], [73.2, -3.3, 61.6, -6.4, 4.4, 3.8, 'p15'],
+      [63.2, 4.7, 61.6, -6.4, 4.6, 3.8, 'p82'], [57.1, 3.6, 61.6, -6.4, 4.2, 3.6, 'p114'], [43.6, -16.2, 44, -9, 4.2, 3.8, 'back1'], [48.4, -17.8, 50, -10, 4.4, 3.8, 'back2'],
+      [69.2, -29.4, 69.2, -23.2, 5.0, 4.0, 'sun'], [61.8, -24.4, 68.6, -23.6, 4.4, 4.0, 'shade'], [75.6, -22.6, 68.6, -23.0, 4.4, 4.0, 'lantern'], [71.4, 6.4, 71.4, 2.0, 4.0, 3.4, 'laneS']],
+  });
+  // 道・広場までの距離（中なら負）。r に limit をかけると、ふちより少し内側（タップ先に使う）
+  function townShapeSd(x, z, limit = 1) {
+    const R = TOWN.road, P = TOWN.plaza;
+    let d = Math.hypot(x - P.x, z - P.z) - P.r * limit;
+    for (let i = 0; i < R.length - 1; i++) d = Math.min(d, segDist(x, z, R[i][0], R[i][1], R[i + 1][0], R[i + 1][1]) - TOWN.roadR * limit);
+    for (const l of TOWN.lanes) { let ax = P.x, az = P.z; for (const [bx, bz] of l.pts) { d = Math.min(d, segDist(x, z, ax, az, bx, bz) - l.r * limit); ax = bx; az = bz; } }
+    for (const c of TOWN.courts) d = Math.min(d, Math.hypot(x - c.x, z - c.z) - c.r * limit);
+    return d;
+  }
+  // 通れない丸の中か（中なら、その番号）
+  function townObstacleAt(x, z, pad = 0) { for (let i = 0; i < TOWN.obstacles.length; i++) { const o = TOWN.obstacles[i]; if (Math.hypot(x - o[0], z - o[1]) < o[2] + pad) return i; } return -1; }
+  const inTownWalk = (x, z, limit = 1) => townShapeSd(x, z, limit) <= 0 && townObstacleAt(x, z) < 0;
+  // 街の地面は平ら（家の二列目まで）。草原の中は今までどおり（草原のふちから外で、だんだん平らにする）
+  function townFlat(x, z) {
+    const e = Math.hypot((x - WALK.cx) / WALK.rx, (z - WALK.cz) / WALK.rz);
+    if (e < .8) return 0;
+    return smooth(20, 12, townShapeSd(x, z)) * smooth(.8, .98, e);
+  }
+  // 草木・岩を置かない場所（道・広場・家のまわり）
+  const townBlocks = (x, z) => townShapeSd(x, z) < 12.5 && Math.hypot((x - WALK.cx) / WALK.rx, (z - WALK.cz) / WALK.rz) > .9;
+  // 通れない丸の中なら、ふちへ出す（出したら true）
+  function townPushOut(p) {
+    const i = townObstacleAt(p.x, p.z);
+    if (i < 0) return false;
+    const [ox, oz, r] = TOWN.obstacles[i], d = Math.hypot(p.x - ox, p.z - oz);
+    if (d < 1e-6) { p.x = ox + r; return true; }
+    p.x = ox + (p.x - ox) / d * r; p.z = oz + (p.z - oz) / d * r;
+    return true;
+  }
+  // 範囲の外の点に、いちばん近い街の道・広場のふちを探す（TN に入れる。中なら TN.inside）
+  const TN = { inside: false, best: 0, x: 0, z: 0 };
+  function nearestTown(p, limit) {
+    TN.inside = false;
+    const cand = (sx, sz) => { const e = (sx - p.x) ** 2 + (sz - p.z) ** 2; if (e < TN.best) { TN.best = e; TN.x = sx; TN.z = sz; } };
+    const seg = (ax, az, bx, bz, r) => {
+      const vx = bx - ax, vz = bz - az, t = Math.min(1, Math.max(0, ((p.x - ax) * vx + (p.z - az) * vz) / (vx * vx + vz * vz)));
+      const qx = ax + vx * t, qz = az + vz * t, dd = Math.hypot(p.x - qx, p.z - qz);
+      if (dd <= r) { TN.inside = true; return; }
+      cand(qx + (p.x - qx) / dd * r, qz + (p.z - qz) / dd * r);
+    };
+    const disc = (cx, cz, r) => { const d = Math.hypot(p.x - cx, p.z - cz); if (d <= r) { TN.inside = true; return; } cand(cx + (p.x - cx) / d * r, cz + (p.z - cz) / d * r); };
+    const R = TOWN.road, P = TOWN.plaza;
+    for (let i = 0; i < R.length - 1 && !TN.inside; i++) seg(R[i][0], R[i][1], R[i + 1][0], R[i + 1][1], TOWN.roadR * limit);
+    if (!TN.inside) disc(P.x, P.z, P.r * limit);
+    for (const l of TOWN.lanes) { let ax = P.x, az = P.z; for (const [bx, bz] of l.pts) { if (!TN.inside) seg(ax, az, bx, bz, l.r * limit); ax = bx; az = bz; } }
+    for (const c of TOWN.courts) if (!TN.inside) disc(c.x, c.z, c.r * limit);
+    return TN;
+  }
+  // 街の中を歩くとき：家・噴水・屋台にぶつからないよう、道すじ（ふちから少し内側の点の網）をたどり、見通せるいちばん先の点を目指す
+  // 草原から街へ・街から草原へ向かうときも使う。どちらも街の外なら false（out は目的地のまま）
+  const inMeadowE = (x, z) => Math.hypot((x - WALK.cx) / WALK.rx, (z - WALK.cz) / WALK.rz) <= .97;
+  const townFree = (x, z) => (inMeadowE(x, z) || townShapeSd(x, z) < -.35) && townObstacleAt(x, z, .35) < 0;
+  function townSees(ax, az, bx, bz) {
+    const L = Math.hypot(bx - ax, bz - az), n = Math.ceil(L / .35);
+    for (let i = 1; i < n; i++) if (!townFree(ax + (bx - ax) * i / n, az + (bz - az) * i / n)) return false;
+    return true;
+  }
+  // 道すじの点：大通りの点・噴水のまわり（屋台の内側）の輪・路地の点・小さな広場の中心
+  const TOWN_NODES = (() => {
+    const P = TOWN.plaza, out = TOWN.road.map(([x, z]) => [x, z]);
+    for (let k = 0; k < 10; k++) { const a = k / 10 * Math.PI * 2; out.push([P.x + Math.cos(a) * 3.3, P.z + Math.sin(a) * 3.3]); }
+    for (const l of TOWN.lanes) for (const p of l.pts) out.push([p[0], p[1]]);
+    for (const c of TOWN.courts) out.push([c.x, c.z]);
+    return out;
+  })();
+  let TOWN_EDGES = null;   // 見通せる点どうし（はじめて使うときに作る）
+  function townEdges() {
+    if (TOWN_EDGES) return TOWN_EDGES;
+    TOWN_EDGES = TOWN_NODES.map(() => []);
+    for (let i = 0; i < TOWN_NODES.length; i++) for (let j = i + 1; j < TOWN_NODES.length; j++) {
+      const [ax, az] = TOWN_NODES[i], [bx, bz] = TOWN_NODES[j], L = Math.hypot(bx - ax, bz - az);
+      if (L < 14 && townSees(ax, az, bx, bz)) { TOWN_EDGES[i].push([j, L]); TOWN_EDGES[j].push([i, L]); }
+    }
+    return TOWN_EDGES;
+  }
+  // 目的地までの道すじ（点の列。最初はいまの場所、最後は目的地）。たどれないときは null
+  function townPath(cx, cz, gx, gz) {
+    if (townSees(cx, cz, gx, gz)) return [[cx, cz], [gx, gz]];
+    const E = townEdges(), n = TOWN_NODES.length, dist = new Array(n).fill(Infinity), prev = new Array(n).fill(-1), done = new Array(n).fill(false);
+    for (let i = 0; i < n; i++) { const [x, z] = TOWN_NODES[i], L = Math.hypot(x - cx, z - cz); if (L < 18 && townSees(cx, cz, x, z)) dist[i] = L; }
+    let best = -1, bestD = Infinity;
+    for (;;) {
+      let u = -1; for (let i = 0; i < n; i++) if (!done[i] && dist[i] < Infinity && (u < 0 || dist[i] < dist[u])) u = i;
+      if (u < 0) break;
+      done[u] = true;
+      const [ux, uz] = TOWN_NODES[u], L = Math.hypot(gx - ux, gz - uz);
+      if (dist[u] + L < bestD && L < 18 && townSees(ux, uz, gx, gz)) { bestD = dist[u] + L; best = u; }
+      for (const [v, w] of E[u]) if (dist[u] + w < dist[v]) { dist[v] = dist[u] + w; prev[v] = u; }
+    }
+    if (best < 0) return null;
+    const out = [[gx, gz]];
+    for (let u = best; u >= 0; u = prev[u]) out.unshift(TOWN_NODES[u]);
+    out.unshift([cx, cz]);
+    return out;
+  }
+  // 道すじに沿って、いまの場所から見通せるいちばん先の点（最大12m先）を out に入れる
+  const inTownArea = (x, z) => townShapeSd(x, z) <= .3 && !inMeadowE(x, z);
+  function steerTown(cx, cz, gx, gz, out) {
+    out.x = gx; out.z = gz;
+    if (!inTownArea(cx, cz) && !inTownArea(gx, gz)) return false;
+    const path = townPath(cx, cz, gx, gz);
+    if (!path) return false;   // 街と草原の外（秘密の道・巨木への道）とのあいだ：ほかの道すじにまかせる
+    if (path.length === 2) return true;
+    let sx = path[1][0], sz = path[1][1], acc = 0;
+    for (let i = 0; i < path.length - 1 && acc < 12; i++) {
+      const [ax, az] = path[i], [bx, bz] = path[i + 1], L = Math.hypot(bx - ax, bz - az);
+      for (let s = .5; s <= L; s += .5) {
+        const px = ax + (bx - ax) * s / L, pz = az + (bz - az) * s / L;
+        if (acc + s > 12 || !townSees(cx, cz, px, pz)) { out.x = sx; out.z = sz; return true; }
+        sx = px; sz = pz;
+      }
+      acc += L; sx = bx; sz = bz;
+    }
+    out.x = sx; out.z = sz;
+    return true;
+  }
+  // TOWN-LAYOUT-END
   function heightAt(x, z) {
     // やわらかな波（周期と向きをずらして重ね、等間隔の模様にしない）
     let h = .13 * Math.sin(x * .19 + .7) * Math.cos(z * .23 - .4) + .1 * Math.sin((x + z * .6) * .11 + 1.9) + .05 * Math.cos((x * .7 - z) * .29 + .3);
@@ -1948,7 +2149,7 @@ const worldV2 = (() => {
     flat = Math.max(flat, smooth(8.8, 3.8, rd));   // 秘密の道（両側は土手のように少し高い）
     flat = Math.max(flat, go * smooth(8.4, 4.0, gd), go * smooth(10.0, 3.6, riverDist(x, z)));   // FLOW-02：地面の網目が粗くなるので、平らな帯を2倍に（道の上に丘がかぶらない）   // EXPANSION-03：巨木への道と川（草原の外だけ）
     for (const a of [GREAT.clearing, GREAT.overlook]) flat = Math.max(flat, smooth(a.r + 7, a.r + 1.2, Math.hypot(x - a.x, z - a.z)));
-    return h * (1 - flat);
+    return h * (1 - Math.max(flat, townFlat(x, z)));   // TOWN-01：市場町は平ら
   }
   // TERRAIN-END
 
@@ -2031,6 +2232,7 @@ const worldV2 = (() => {
   function inWalk(x, z, open) {
     if (Math.hypot((x - WALK.cx) / WALK.rx, (z - WALK.cz) / WALK.rz) <= 1) return true;
     if (inGreat(x, z)) return true;   // EXPANSION-03
+    if (inTownWalk(x, z)) return true;   // TOWN-01：市場町の道・広場（噴水・屋台の中はのぞく）
     if (!open) return false;
     for (let i = 0; i < PASSAGE.length - 1; i++) if (segDist(x, z, PASSAGE[i][0], PASSAGE[i][1], PASSAGE[i + 1][0], PASSAGE[i + 1][1]) <= PASSAGE_R) return true;
     const d = Math.hypot(x - TREE_AREA.x, z - TREE_AREA.z);
@@ -2047,12 +2249,14 @@ const worldV2 = (() => {
       return p;
     }
     if (pushOutGreat(p)) return p;   // EXPANSION-03：巨木の幹・大きな生きものの体には入らない
+    if (townPushOut(p) || townShapeSd(p.x, p.z, limit) <= 0) return p;   // TOWN-01：噴水・屋台の中には入らない。市場町の道・広場の中なら、そのまま
     const u = (p.x - WALK.cx) / WALK.rx, v = (p.z - WALK.cz) / WALK.rz, d = Math.hypot(u, v);
     if (d <= limit) return p;
     let bx = WALK.cx + u / d * limit * WALK.rx, bz = WALK.cz + v / d * limit * WALK.rz, best = (bx - p.x) ** 2 + (bz - p.z) ** 2;
     GN.best = best; nearestGreat(p, limit);   // EXPANSION-03：巨木への道（ひらいているところだけ）
     if (GN.inside) return p;
     if (GN.best < best) { best = GN.best; bx = GN.x; bz = GN.z; }
+    TN.best = best; nearestTown(p, limit); if (TN.best < best) { best = TN.best; bx = TN.x; bz = TN.z; }   // TOWN-01：市場町の道・広場のふち
     if (open) {
       for (let i = 0; i < PASSAGE.length - 1; i++) {
         const [ax, az] = PASSAGE[i], [cx, cz] = PASSAGE[i + 1], vx = cx - ax, vz = cz - az;
@@ -2096,6 +2300,7 @@ const worldV2 = (() => {
   function inTree(x, z) { return Math.hypot(x - TREE_AREA.x, z - TREE_AREA.z) <= TREE_AREA.r; }
   function inMeadow(x, z) { return Math.hypot((x - WALK.cx) / WALK.rx, (z - WALK.cz) / WALK.rz) <= 1; }
   function steerToward(cx, cz, gx, gz, out) {
+    if (inTownArea(cx, cz) || inTownArea(gx, gz)) { out.x = gx; out.z = gz; return out; }   // TOWN-01：市場町へ・市場町の中は、街の道すじ（steerTown）にまかせる
     steerRoute(cx, cz, gx, gz, out);
     // ことばの樹のまわり：次に目指す点までのまっすぐな線が幹にかかるときは、幹の外を少しずつまわる（Step 11M：幹の向こう側から歩き出しても引っかからない）
     // （樹そのもの・樹のまわりへ向かうときは今までどおり。まわりこむのは、樹のまわりから外へ出るときだけ）
@@ -2248,7 +2453,7 @@ const worldV2 = (() => {
     // スマホ（low）は、同じ仲間の形を1種類にまとめて描く回数を減らす（null は置かない）
     const LOW_ALIAS = { Tree_Tall_B: 'Tree_Tall_A', Grass_C: 'Grass_A', Flowers_C: 'Flowers_A', Bush_B: 'Bush_A', Rock_Medium_B: 'Rock_Medium_A', Stone_Standing_B: 'Stone_Standing_A', Rock_Pebbles: null };
     const put = (name, x, z, s = 1, yaw = rnd() * 6.283, tint = 0xffffff, tilt = 0, dy = 0) => {
-      if (!s) return;   // 大きさ0は置かない（引数の乱数はもう使ったので、ほかの物の配置は変わらない）
+      if (!s || townBlocks(x, z)) return;   // 大きさ0は置かない（引数の乱数はもう使ったので、ほかの物の配置は変わらない）。TOWN-01：市場町の道・家のまわりにも置かない
       if (!HIGH && name in LOW_ALIAS) { name = LOW_ALIAS[name]; if (!name) return; }
       if (!lists.has(name)) lists.set(name, []);
       lists.get(name).push([x, heightAt(x, z) + dy, z, s, yaw, tint, tilt]);
@@ -3059,7 +3264,8 @@ const worldV2 = (() => {
   return { ready, update, reset, groundCharacter, clampToWalkable, heightAt, isActive: () => active, progress: () => progress, quality: WORLD_QUALITY,
     showQuestSprout, lightNextFruit, groundAt: (x, z) => active ? groundHeight(x, z) : 0, wordTree: WORD_TREE, markerHeight: () => markerY, meshyTree: () => meshyTree, cameraFramed: () => treeFrame, setClearSpots: l => { clearSpots = l; }, setLookPoint: f => { lookPoint = f; }, occluders: () => occluders,
     // EXPANSION-03：巨木への道（ひらく・橋ができる は宝さがしの記録で決める）
-    setGreatOpen: (path, bridge) => { GREAT_OPEN.path = !!path; GREAT_OPEN.bridge = !!(path && bridge); }, steerGreat, great: GREAT, greatRoute: GREAT_ROUTE, greatTotal: GREAT_TOTAL, greatS, greatAt, riverDist };
+    setGreatOpen: (path, bridge) => { GREAT_OPEN.path = !!path; GREAT_OPEN.bridge = !!(path && bridge); }, steerGreat, great: GREAT, greatRoute: GREAT_ROUTE, greatTotal: GREAT_TOTAL, greatS, greatAt, riverDist,
+    town: { layout: TOWN, shapeSd: townShapeSd, steer: steerTown, path: townPath } };   // TOWN-01：市場町の道・広場と道すじ
 })();
 // WORLD-V2-END
 // WORLD-ART-END
@@ -4660,6 +4866,8 @@ const WORDS = Object.freeze([
   { id: 'mabayui', word: 'まばゆく', reading: '', forms: ['まばゆ'], meaning: '目をほそめるくらい、まぶしく' },
   { id: 'sashikomu', word: '差し込む', reading: 'さしこむ', forms: ['差し込'], meaning: '光が、すきまから入ってくること' },
   { id: 'kirameku', word: 'きらめく', reading: '', forms: ['きらめ'], meaning: '光が、ちらちらと細かく光ること' },
+  { id: 'hidamari', word: 'ひだまり', reading: '', forms: ['ひだまり'], meaning: 'お日さまが当たって、ぽかぽかあたたかいところ' },   // TOWN-01：タネ屋・花壇
+  { id: 'hokorobu', word: 'ほころぶ', reading: '', forms: ['ほころ'], meaning: 'つぼみが、少しずつひらきはじめること' },   // TOWN-01：花壇に植えたとき
 ]);
 const WORD_SCENES_MAX = 6;
 function wordsIn(text) { const t = String(text || ''); return WORDS.filter(w => w.forms.some(f => t.includes(f))).map(w => w.id); }
@@ -5202,6 +5410,7 @@ treasure = (() => {
 
   // ── タップ：人・物を押したら、そのそばまで歩き、着いたら開く ──
   function pick(rc) {
+    if (town && town.pick(rc)) return true;   // TOWN-01：家・屋台をタップしたら、その前の道まで歩く
     if (!built || !character || !walkable()) return false;
     // EXPANSION-03：ひらいた門・橋ができた場所は、タップで選ばない（その奥の道をタップしたら、歩く。しらべるのは近くの「しらべる」から）
     const h = rc.intersectObjects(hits, false).find(i => !(st.pathOpen && i.object.userData.treasureId === 'gate') && !(st.bridgeBuilt && i.object.userData.treasureId === 'plant'));
@@ -5231,6 +5440,7 @@ treasure = (() => {
   function callSpot(id) {
     if (id === 'mission') return { x: mpGroup.position.x, z: mpGroup.position.z, r: MISSION_CALL_R };
     if (id === 'sprout') { const s = questHub.sproutCall(); return s && { x: s.x, z: s.z, r: SPROUT_CALL_R }; }
+    if (town && town.has(id)) return town.spot(id);   // TOWN-01
     return TREASURE_SPOTS[id];
   }
   // ヒロリ（x, z）から（tx, tz）まで、木の幹・岩・ほらあなの岩などにさえぎられていないか（相手のすぐそばの物は数えない）
@@ -5241,6 +5451,7 @@ treasure = (() => {
     const hit = (cx, cz, r) => { const s = (cx - x) * ux + (cz - z) * uz; if (s < .2 || s > L - .2 || Math.hypot(cx - tx, cz - tz) < r + .35) return false; return Math.abs((cx - x) * uz - (cz - z) * ux) < r; };
     for (const o of worldV2.occluders()) if (hit(o[0], o[1], TRUNK_R)) return false;
     for (const o of OBSTACLES) if (hit(o[0], o[1], o[2] * .8)) return false;
+    if (town) for (const o of town.blockers()) if (hit(o[0], o[1], o[2])) return false;   // TOWN-01：市場町の家
     return true;
   }
   let nearLost = 0;
@@ -5249,6 +5460,7 @@ treasure = (() => {
     const ids = Object.keys(TREASURE_SPOTS);
     if (missionCallable()) ids.push('mission');
     if (questHub.sproutCall()) ids.push('sprout');
+    if (town) for (const id of town.ids()) ids.push(id);   // TOWN-01：市場町の住人・庭・花壇
     let best = null, bs = Infinity, cur = Infinity;
     for (const id of ids) {
       const s = callSpot(id), r = s.r || TREASURE_TALK_R, d = Math.hypot(x - s.x, z - s.z), keep = id === near;
@@ -5340,6 +5552,8 @@ treasure = (() => {
     if (on && (near === 'mission' || near === 'sprout')) {   // FLOW-02：写真のクエスト・第2クエストも、押したときに始める
       el('treasure-call-text').textContent = near === 'mission' ? '光るポイントがある' : '新しい芽が光っている';
       el('btn-treasure-open').textContent = 'はじめる';
+    } else if (on && town && town.has(near)) {   // TOWN-01：市場町の住人・庭・花壇
+      const c = town.call(near); el('treasure-call-text').textContent = c.text; el('btn-treasure-open').textContent = c.verb;
     } else if (on) {
       const s = TREASURE_SPOTS[near], met = near === 'giant' ? st.giantAwake : st.met[near];
       const resume = near === 'giant' && heldGiant();   // オオネとの話を「あとで」で閉じていたら、続きから
@@ -5348,7 +5562,7 @@ treasure = (() => {
     }
     if (state === S.GIANT) { openPanel('panel-giant'); el('hint').style.opacity = '0'; } else stopGiantVoice();   // EXPANSION-03
     el('treasure-call').classList.toggle('show', on);
-    el('btn-notebook').classList.toggle('show', w && st.started);
+    el('btn-notebook').classList.toggle('show', w && (st.started || !!(town && town.started())));   // TOWN-01：市場町のお手伝いを始めたときも
     if (!w) for (const id of ['label-popo', 'label-mina', 'sfx-spring', 'sfx-cat', 'label-giant', 'sfx-river', 'sfx-giant']) el(id).classList.remove('show');
   }
 
@@ -5453,7 +5667,7 @@ treasure = (() => {
   function renderNotebook() {
     const memo = el('notebook-memo'); memo.replaceChildren();
     const add = (parent, tag, cls, text) => { const e = document.createElement(tag); e.className = cls; e.textContent = text; parent.appendChild(e); return e; };
-    const list = treasureMemo(st);
+    const list = treasureMemo(st).concat(town ? town.memo() : []);   // TOWN-01：市場町のお願い・ヒント・お礼
     if (!list.length) add(memo, 'div', 'found-empty', 'まだメモはないよ。だれかに話しかけてみよう。');
     list.forEach(m => {
       const row = add(memo, 'div', 'memo-item', '');
@@ -5479,6 +5693,7 @@ treasure = (() => {
     if (it.lantern) rows.push([TREASURE_ITEMS.lantern.icon, TREASURE_ITEMS.lantern.name, st.lanternOn ? 'あかりがついている。' : TREASURE_ITEMS.lantern.words, true]);
     if (it.shards) rows.push([TREASURE_ITEMS.shard.icon, TREASURE_ITEMS.shard.name + '（' + it.shards + 'こ）', TREASURE_ITEMS.shard.words]);
     if (it.seed) rows.push([TREASURE_ITEMS.seed.icon, TREASURE_ITEMS.seed.name, TREASURE_ITEMS.seed.words]);   // EXPANSION-03：見た目と使い方
+    if (town) rows.push(...town.items());   // TOWN-01：鉢・コイン・タネ
     if (!rows.length) add(box, 'div', 'found-empty', 'まだ何も持っていないよ。');
     rows.forEach(([icon, name, words, lamp]) => {
       const c = add(box, 'div', 'detour-item', '');
@@ -5493,7 +5708,7 @@ treasure = (() => {
     });
   }
   function openNotebook() {
-    if (!st.started || !(walkable() || state === S.TALK)) return;
+    if (!(st.started || (town && town.started())) || !(walkable() || state === S.TALK || state === S.TOWN)) return;   // TOWN-01：市場町の会話からも開く（閉じたら会話へもどる）
     if (state !== S.TALK) returnState = state;
     openId = null; isMoving = false; playAnim('idle'); pending = null;
     if (character) { const f = hiroriMotion.facing; focusOn(character.position.x + Math.sin(f) * 3, character.position.z + Math.cos(f) * 3); }
@@ -5511,7 +5726,7 @@ treasure = (() => {
     applyVisuals();
   }
 
-  [['btn-treasure-open', () => { if (near === 'mission') { if (missionCallable()) triggerMission(); } else if (near === 'sprout') questHub.startSecond(); else if (near) open(near); }], ['btn-talk-close', close], ['btn-talk-more', moreHint], ['btn-talk-memo', openNotebook],
+  [['btn-treasure-open', () => { if (near === 'mission') { if (missionCallable()) triggerMission(); } else if (near === 'sprout') questHub.startSecond(); else if (town && town.has(near)) town.open(near); else if (near) open(near); }], ['btn-talk-close', close], ['btn-talk-more', moreHint], ['btn-talk-memo', openNotebook],
    ['btn-talk-lantern', lanternAtCave], ['btn-notebook', openNotebook], ['btn-notebook-close', closeNotebook],
    ['btn-talk-plant', plantSeed], ['btn-giant-next', giantNext], ['btn-giant-voice', giantVoice]]
     .forEach(([id, fn]) => el(id).addEventListener('click', fn));
@@ -5553,6 +5768,7 @@ treasure = (() => {
   const _fp = new THREE.Vector3();
   function focusPoint() {
     if (state === S.GIANT || (state === S.TALK && openId === 'giant')) return giantHead(_fp);   // EXPANSION-03：オオネの顔もパネルの上に
+    if (state === S.TOWN && town) return town.focusPoint(_fp);   // TOWN-01：市場町の話す相手・調べる物も、パネルの上に
     if (state !== S.TALK || !openId || !TREASURE_SPOTS[openId]) return null;
     const s = TREASURE_SPOTS[openId];
     return _fp.set(s.x, worldV2.groundAt(s.x, s.z) + .3, s.z);
@@ -6214,7 +6430,8 @@ treasure = (() => {
   function camObstacles() { if (being.head) { being.head.getWorldPosition(_oh); HEAD_OB[0] = _oh.x; HEAD_OB[1] = _oh.z; } return CAM_OBST; }
   return { pick, clearPending, update, applyUI, reset, guide, focusPoint, obstacles: camObstacles, guardTap, tapBlocked, eventFrame,
     canSee: (tx, tz) => !character || canSee(character.position.x, character.position.z, tx, tz),   // FLOW-02：道くさの案内も、見えるときだけ
-    holdSpot: () => TREASURE_SPOTS.giant };   // EXPANSION-03：オオネとの話を「あとで」で閉じた場所
+    holdSpot: () => TREASURE_SPOTS.giant,   // EXPANSION-03：オオネとの話を「あとで」で閉じた場所
+    openNotebook, meetWords: (text, scene) => { if (wordsIn(text).length) { treasureMeetWords(st, text, scene); save(); } } };   // TOWN-01：市場町から冒険メモを開く・出会ったことばを残す
 })();
 // TREASURE-UI-END
 
@@ -6275,8 +6492,1142 @@ missionHold = (() => {
 })();
 // MISSION-HOLD-END
 
+// TOWN-CORE-BEGIN（TOWN-01：市場町のお手伝い・コイン・お店・花壇の進み方と保存の形。THREE も画面も通信も使わない。test-town.mjs が取り出して確かめる）
+// 正解・ごほうび・進み方は、ここの固定データだけで決める（AI の返事では変わらない）。コインはゲームの中だけのもの（現実のお金・課金とは関係ない）
+const TOWN_SAVE_KEY = 'tomori-town-v1';
+const TOWN_REWARD = 10;   // 花屋のお届けもののお礼（1回だけ）
+// 花屋の3つの鉢：色は同じ。花の向きだけがちがう（色で決めない）
+const TOWN_POTS = Object.freeze([
+  { id: 'up', label: '1ばんの鉢', reply: 'この花は、空を見上げるように、上を向いてひらいているね。' },
+  { id: 'nod', label: '2ばんの鉢', reply: '' },
+  { id: 'side', label: '3ばんの鉢', reply: 'この花は、となりを見るように、横を向いて咲いているね。' },
+]);
+const TOWN_POT_RIGHT = 'nod';
+// 庭のある3軒：光のようすだけがちがう
+const TOWN_GARDENS = Object.freeze({
+  sun: { name: '光の筋がおりる庭のおうち', reply: '' },
+  shade: { name: '大きなひさしの庭のおうち', reply: 'この庭は、大きな布のひさしのかげになっている。日差しは、ここまで届いていないみたい。' },
+  lantern: { name: 'ランタンの庭のおうち', reply: 'この庭を照らしているのは、ランタンの明かり。お日さまの光とは、ちがうみたい。' },
+});
+const TOWN_GARDEN_RIGHT = 'sun';
+// ヒント：押すたびに1つずつくわしくなる（3つ目がいちばんくわしい）
+const TOWN_HINTS = Object.freeze({
+  flower: [
+    '色はどれも同じ。花が、どちらを向いているかを見くらべてみよう。',
+    'うつむくは、顔をふせて、下を向くこと。花の顔は、どこを見ているかな？',
+    '花の顔が、地面のほうを向いている鉢だよ。',
+  ],
+  house: [
+    '庭のある3軒を、光のようすで見くらべてみよう。',
+    '差し込むは、すきまから光が入ってくること。屋根と屋根のあいだを見てみよう。',
+    '屋根のすきまから、光の筋が庭へおりている家だよ。',
+  ],
+});
+// お店のタネ：特徴・値段・育った姿（ことばの説明と、育つ花の形が対応する）
+const TOWN_SEEDS = Object.freeze({
+  sun: { name: 'ひだまりのタネ', icon: '🌻', price: 5, words: 'ひだまりが好き。空を向いて、大きな黄色い花がひらく。せが高くなる。',
+    grown: 'つぼみがほころぶと、せの高いくきの先に、空を向いた大きな黄色い花。' },
+  bell: { name: 'つりがねのタネ', icon: '🔔', price: 8, words: '少しの日かげでも育つ。うつむくように、白い小さな鈴のような花がたくさん咲く。',
+    grown: 'つぼみがほころぶと、弓のようにしなるくきに、うつむいた白い鈴の花がならぶ。' },
+});
+const TOWN_SEED_IDS = ['sun', 'bell'];
+// 住人の話・庭と花壇のようす（子どもが読める短い行で。ことばの説明は、押したときだけ開く）
+const TOWN_TEXT = Object.freeze({
+  floristHello: 'いらっしゃい！ わたしは花屋のリリ。\nひとつ、お願いしてもいいかしら。うつむくように咲く花を、ある庭のおうちへ届けてほしいの。',
+  floristPick: 'うつむくように咲く花を、えらんでね。台の上の、1から3の鉢のどれかよ。\nじっくり、見くらべてみて。',
+  floristRight: 'そう、この花！ 下を向いて、そっと咲いているでしょう。\n届け先は「日差しが差し込む庭のおうち」。噴水のおくの路地の先に、庭のある家が3軒あるわ。',
+  floristDeliver: '届け先は「日差しが差し込む庭のおうち」。噴水のおくの路地の先よ。',
+  floristDone: 'ありがとう！ ソラばあちゃん、よろこんでいたでしょう。\nタネ屋のモグじいのところも、のぞいてみてね。',
+  moleHello: 'やあ、タネ屋のモグじいじゃ。\nタネは、育つ場所と咲く花の形が、それぞれちがう。説明を読んで、えらんでおくれ。',
+  moleNoCoin: 'コインは、街のお手伝いでもらえるよ。花屋のリリさんが、困っていたなあ。',
+  grandmaThanks: 'まあ、うつむくように咲く花！ 日差しが差し込むこの庭に、ぴったりだわ。\nとどけてくれて、ありがとう。これはお礼よ。',
+  grandmaAfter: '花は、この庭で元気にしているよ。光の筋の中で、ちいさく、うつむいてね。',
+  shadeEarly: '大きな布のひさしがある庭。すずしそうなかげになっている。',
+  lanternEarly: 'ランタンがつるしてある庭。夜になると、明るそうだ。',
+  sunEarly: '屋根のすきまから、光の筋が庭へおりている。だれかが、ベンチでひなたぼっこをしているみたい。',
+  bedEmpty: '広場の花壇。まだ、何も植わっていない。',
+  bedPlanted: '花壇で、植えた花が育っている。',
+  plant: Object.freeze({ sun: 'ひだまりのタネを植えた。\nつぼみが、ほころんできた！ 空を向いて、大きな黄色い花がひらいた。', bell: 'つりがねのタネを植えた。\nつぼみが、ほころんできた！ うつむくように、白い鈴の花がならんだ。' }),
+});
+function createTownState() {
+  return { v: 1, errand: 'none', tried: { pots: [], gardens: [] }, hint: { flower: 0, house: 0 }, coins: 0, rewarded: false,
+    seeds: { sun: 'none', bell: 'none' }, met: { florist: false, mole: false, grandma: false } };
+}
+// お手伝いを引き受ける
+function townAccept(st) { if (st.errand !== 'none') return false; st.errand = 'flower'; return true; }
+// 鉢をえらぶ：まちがえても罰はない（ちがいがわかるひとことだけ）
+function townPickPot(st, id) {
+  const pot = TOWN_POTS.find(p => p.id === id);
+  if (st.errand !== 'flower' || !pot) return null;
+  if (!st.tried.pots.includes(id)) st.tried.pots.push(id);
+  if (id !== TOWN_POT_RIGHT) return { kind: 'wrong', reply: pot.reply };
+  st.errand = 'deliver';
+  return { kind: 'right' };
+}
+// 庭のおうちへ届ける：正しい家なら、お礼のコインを1回だけ
+function townDeliver(st, id) {
+  const g = TOWN_GARDENS[id];
+  if (!g) return null;
+  if (st.errand !== 'deliver') return { kind: st.errand === 'done' ? 'after' : 'early' };
+  if (!st.tried.gardens.includes(id)) st.tried.gardens.push(id);
+  if (id !== TOWN_GARDEN_RIGHT) return { kind: 'wrong', reply: g.reply };
+  st.errand = 'done';
+  let reward = 0;
+  if (!st.rewarded) { st.rewarded = true; st.coins += TOWN_REWARD; reward = TOWN_REWARD; }
+  return { kind: 'done', reward };
+}
+// いまの段階のヒントを1つくわしくする（もうないときは 0）
+function townHintGoal(st) { return st.errand === 'flower' ? 'flower' : st.errand === 'deliver' ? 'house' : null; }
+function townMoreHint(st) {
+  const g = townHintGoal(st);
+  if (!g || st.hint[g] >= TOWN_HINTS[g].length) return 0;
+  return ++st.hint[g];
+}
+// 買う：コインが足りるときだけ。同じタネは1つまで。残高はマイナスにならない
+function townBuy(st, id) {
+  const s = TOWN_SEEDS[id];
+  if (!s) return { ok: false, reason: 'none' };
+  if (st.seeds[id] !== 'none') return { ok: false, reason: 'owned' };
+  if (st.coins < s.price) return { ok: false, reason: 'coins' };
+  st.coins -= s.price; st.seeds[id] = 'owned';
+  return { ok: true, left: st.coins };
+}
+// 花壇に植える：持っているタネだけ。植えたタネは、もう一度は使えない
+function townPlant(st, id) {
+  if (!TOWN_SEEDS[id] || st.seeds[id] !== 'owned') return false;
+  st.seeds[id] = 'planted';
+  return true;
+}
+const townStarted = st => st.errand !== 'none' || st.coins > 0 || TOWN_SEED_IDS.some(id => st.seeds[id] !== 'none');
+// 冒険メモ：お願い・ヒント・お礼・タネ（書いたことばは残さない）
+function townMemo(st) {
+  const out = [];
+  if (st.errand === 'none') return out;
+  out.push({ icon: '💐', label: '花屋のお願い', text: 'うつむくように咲く花を、花屋のリリさんからあずかって届ける。' });
+  if (st.hint.flower) out.push({ icon: '💡', label: 'ヒント ' + st.hint.flower + '/' + TOWN_HINTS.flower.length, text: TOWN_HINTS.flower[st.hint.flower - 1] });
+  if (st.errand === 'deliver' || st.errand === 'done') out.push({ icon: '🏡', label: '届け先', text: '日差しが差し込む庭のおうち。噴水のおくの路地の先に、庭のある家が3軒ある。' });
+  if (st.hint.house) out.push({ icon: '💡', label: 'ヒント ' + st.hint.house + '/' + TOWN_HINTS.house.length, text: TOWN_HINTS.house[st.hint.house - 1] });
+  if (st.errand === 'done') out.push({ icon: '🪙', label: '', text: '花を届けた。ソラばあちゃんから、お礼に' + TOWN_REWARD + 'コインもらった。' });
+  for (const id of TOWN_SEED_IDS) if (st.seeds[id] === 'planted') out.push({ icon: TOWN_SEEDS[id].icon, label: '', text: TOWN_SEEDS[id].name + 'を、広場の花壇に植えた。' });
+  return out;
+}
+// 端末の記録から戻す：形がちがう・こわれている記録は使わない。順番を飛ばした記録は、順番どおりのところまで。残高は 0 以上
+function restoreTown(raw) {
+  const st = createTownState();
+  if (!raw || typeof raw !== 'object' || raw.v !== 1) return st;
+  const order = ['none', 'flower', 'deliver', 'done'];
+  st.errand = order.includes(raw.errand) ? raw.errand : 'none';
+  const tried = raw.tried && typeof raw.tried === 'object' ? raw.tried : {};
+  st.tried.pots = Array.isArray(tried.pots) ? tried.pots.filter(id => TOWN_POTS.some(p => p.id === id)).slice(0, 3) : [];
+  st.tried.gardens = Array.isArray(tried.gardens) ? tried.gardens.filter(id => id in TOWN_GARDENS).slice(0, 3) : [];
+  for (const g of ['flower', 'house']) { const v = raw.hint && raw.hint[g]; st.hint[g] = Number.isInteger(v) ? Math.max(0, Math.min(TOWN_HINTS[g].length, v)) : 0; }
+  if (st.errand === 'none') st.hint.flower = st.hint.house = 0;
+  if (st.errand === 'none' || st.errand === 'flower') st.hint.house = 0;
+  st.rewarded = st.errand === 'done';   // 届けたなら、お礼は1回分もらっている
+  // 残高は、もらったお礼から買ったタネの値段を引いた額（記録の数字は使わない。増えも減りもしない・マイナスにならない）
+  let coins = st.rewarded ? TOWN_REWARD : 0;
+  for (const id of TOWN_SEED_IDS) {
+    const v = raw.seeds && raw.seeds[id];
+    if ((v === 'owned' || v === 'planted') && coins >= TOWN_SEEDS[id].price) { st.seeds[id] = v; coins -= TOWN_SEEDS[id].price; }
+  }
+  st.coins = coins;
+  for (const n of ['florist', 'mole', 'grandma']) st.met[n] = !!raw.met && raw.met[n] === true;
+  return st;
+}
+// TOWN-CORE-END
+
+// TOWN-BEGIN（TOWN-01：市場町の見た目・住人・お手伝い・お店・花壇。進み方と保存の形は TOWN-CORE、道と通れない物は worldV2 の TOWN-LAYOUT。新しい描画ループ・タイマーは作らない）
+// 明るい絵本の市場町：家は少しふくらみ、軒が反り、家ごとに高さ・幅・窓の位置がちがう。家・屋台は1つの形にまとめて描き、ヒロリや話す相手を隠すときだけ点を抜いて透かす
+var town = (() => {
+  const T = worldV2.town;
+  if (!T) return null;
+  const L = T.layout, P = L.plaza;
+  const el = id => document.getElementById(id);
+  const still = () => reduceMotionQuery.matches;
+  const walkable = () => state === S.EXPLORE || state === S.FREE_EXPLORE;
+  // 端末への保存。開発版（ファイル名に preview）は公開版と別の場所（宝さがしと同じ決まり）
+  const SAVE_KEY = TOWN_SAVE_KEY + (/preview/i.test(location.pathname) ? '-preview' : '');
+  function load() { try { const s = localStorage.getItem(SAVE_KEY); return restoreTown(s ? JSON.parse(s) : null); } catch (e) { return createTownState(); } }
+  function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(st)); } catch (e) {} }
+  function forget() { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} }
+  let st = load();
+  let built = false, openId = null, view = null, returnState = S.EXPLORE, guardUntil = 0;
+  const G = new THREE.Group(); G.name = 'Town'; G.visible = false; scene.add(G);
+  const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _c = new THREE.Color(), _v = new THREE.Vector3();
+  let seed = 20261113;
+  const rnd = () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const HIGH = worldV2.quality === 'high';
+  const gy = (x, z) => worldV2.groundAt(x, z);
+
+  // ── 形をまとめる：部品を家ごとの座標で作り、家ごとのゆがみ（ふくらみ・傾き）をかけてから世界へ置く。家の番号（aBid）で透かす ──
+  const BOX = new THREE.BoxGeometry(1, 1, 1), CYL6 = new THREE.CylinderGeometry(1, 1, 1, 6), CYL = new THREE.CylinderGeometry(1, 1, 1, 10), SPH = new THREE.SphereGeometry(1, 8, 6), CONE = new THREE.ConeGeometry(1, 1, 8);
+  function makeAcc() { return { pos: [], col: [], bid: [] }; }
+  function add(acc, geo, hex, bid, [px, py, pz] = [0, 0, 0], [sx, sy, sz] = [1, 1, 1], [rx, ry, rz] = [0, 0, 0], warp = null, place = null, jit = .05) {
+    const g = geo.index ? geo.toNonIndexed() : geo.clone();
+    g.applyMatrix4(_m.compose(_p.set(px, py, pz), _q.setFromEuler(_e.set(rx, ry, rz)), _s.set(sx, sy, sz)));
+    const A = g.attributes.position; _c.set(hex);
+    for (let i = 0; i < A.count; i++) {
+      if (i % 3 === 0) var j = 1 + (rnd() - .5) * jit;
+      _v.set(A.getX(i), A.getY(i), A.getZ(i));
+      if (warp) warp(_v);
+      if (place) _v.applyMatrix4(place);
+      acc.pos.push(_v.x, _v.y, _v.z); acc.col.push(_c.r * j, _c.g * j, _c.b * j); acc.bid.push(bid);
+    }
+    g.dispose();
+  }
+  // 三角形をじかに足す（屋根・妻かべ）。pts は家ごとの座標
+  function tri(acc, pts, hex, bid, warp, place, shade = 1) {
+    _c.set(hex);
+    for (const p of pts) { _v.set(p[0], p[1], p[2]); if (warp) warp(_v); if (place) _v.applyMatrix4(place); acc.pos.push(_v.x, _v.y, _v.z); acc.col.push(_c.r * shade, _c.g * shade, _c.b * shade); acc.bid.push(bid); }
+  }
+  // 透かせる素材：家の番号ごとの濃さ（uFade）で、点を抜く（木と同じ方法。並べかえ不要）
+  const FADE_N = 48, FADE_LOW = .14, fadeU = { value: new Float32Array(FADE_N).fill(1) };   // 家は大きいので、木（.3）よりうすく透かす
+  function fadeMat(opts) {
+    const m = new THREE.MeshLambertMaterial(Object.assign({ vertexColors: true, side: THREE.DoubleSide }, opts));
+    m.onBeforeCompile = sh => {
+      sh.uniforms.uFade = fadeU;
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uFade[' + FADE_N + '];\nattribute float aBid;\nvarying float vFade;')
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvFade = uFade[int(aBid + .5)];');
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vFade;')
+        .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\nif (vFade < .995 && fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(.06711056, .00583715)))) > vFade) discard;');
+    };
+    m.customProgramCacheKey = () => 'tomori-town-fade';
+    return m;
+  }
+  function finish(acc, mat, name) {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(acc.pos, 3));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(acc.col, 3));
+    g.setAttribute('aBid', new THREE.Float32BufferAttribute(acc.bid, 1));
+    g.computeVertexNormals(); g.computeBoundingSphere();
+    const m = new THREE.Mesh(g, mat); m.name = name; return m;
+  }
+
+  // ── 色：クリーム・淡い黄・珊瑚色・セージグリーン・青緑。屋根はおだやかなテラコッタを中心に ──
+  const WALLS = [0xf4e8cc, 0xf3dc9a, 0xeea58e, 0xbfd0a4, 0xa6d2c8, 0xf3cba6, 0xf6eedc];
+  const ROOFS = [0xc46c4c, 0xc97a58, 0xb8664a, 0x5f978f, 0xcf8a5e, 0x7d9a68];
+  const SHUT = [0x4f948e, 0x86a96f, 0xd9785e, 0xdcb24c, 0x6f8fb4];
+  const TIMBER = 0x6e4a32, STONE = 0xd6cdb9, DOOR = 0x8c5c38, GLASS = 0x34576a, CREAMT = 0xfbf3e2, BRICK = 0xb86a50;
+  const FLOWERS = [0xf28aa0, 0xffd45a, 0xffffff, 0xe86a5a, 0xb59ce6, 0xff9f6a];
+
+  // 家の形：幅 w・奥行き d。正面は +z。1階の高さ h1、2階 h2（ない家もある）。屋根の棟は、横向き（x）か、正面向き（z・妻が正面）
+  const houses = [];   // { x, z, yaw, w, d, H, bid, name }
+  function buildHouse(acc, spec, bid) {
+    const [x, z, fx, fz, w0, d0, name] = spec;
+    const yaw = Math.atan2(fx - x, fz - z);
+    const two = w0 >= 4.2 && name !== 'roadS1', h1 = 2.3 + rnd() * .35, h2 = two ? 2.0 + rnd() * .35 : 0, jet = two ? .22 : 0;
+    const w = w0 - .3, d = d0 - .3, top = h1 + h2, ridgeZ = (bid % 3) === 1 || name === 'sun';
+    const wall = WALLS[(bid * 3 + 1) % WALLS.length], roof = ROOFS[bid % ROOFS.length], shut = SHUT[(bid * 2) % SHUT.length];
+    const lean = (rnd() - .5) * .16, leanZ = (rnd() - .5) * .08, bulge = .05 + rnd() * .05, taper = two ? .04 : 0;
+    // ゆがみ：上へ行くほど少し傾き、かべの真ん中が少しふくらむ。2階は少しだけ細くなる（手作りの温かさ。こわれた感じにはしない）
+    const warp = v => {
+      const u = Math.min(1, Math.max(0, v.y / top)), b = Math.sin(Math.PI * Math.min(1, v.y / Math.max(1, top))) * bulge;
+      const tp = v.y > h1 ? 1 - taper * Math.min(1, (v.y - h1) / Math.max(.1, h2)) : 1;
+      v.x = v.x * tp * (1 + b / Math.max(1, w * .5)) + lean * u * u * top;
+      v.z = v.z * tp * (1 + b / Math.max(1, d * .5)) + leanZ * u * u * top;
+    };
+    const place = new THREE.Matrix4().compose(_p.set(x, gy(x, z), z), _q.setFromEuler(_e.set(0, yaw, 0)), _s.set(1, 1, 1));
+    const A = (geo, hex, p, s, r, j) => add(acc, geo, hex, bid, p, s, r, warp, place, j);
+    // 土台の石・1階・2階（前へ少し張り出す）
+    A(BOX, STONE, [0, .22, 0], [w + .1, .44, d + .1]);
+    const seg = new THREE.BoxGeometry(1, 1, 1, 4, 3, 3);
+    A(seg, wall, [0, .44 + (h1 - .44) / 2, 0], [w, h1 - .44, d], undefined, .03);
+    if (two) A(seg, wall, [0, h1 + h2 / 2, 0], [w + jet * 2, h2, d + jet * 2], undefined, .03);
+    // 木組み：すみの柱・床の線・上の線。2階の正面は、柱と斜めの筋かい
+    const bw = .14, fw = w / 2 + .02, fd = d / 2 + .02;
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) A(BOX, TIMBER, [sx * fw, .44 + (h1 - .44) / 2, sz * fd], [bw, h1 - .44, bw]);
+    A(BOX, TIMBER, [0, h1, fd + jet], [w + jet * 2 + .1, .16, bw]); A(BOX, TIMBER, [0, h1, -fd - jet], [w + jet * 2 + .1, .16, bw]);
+    for (const sx of [-1, 1]) A(BOX, TIMBER, [sx * (fw + jet), h1, 0], [bw, .16, d + jet * 2 + .1]);
+    if (two) {
+      const ux = fw + jet, uz = fd + jet;
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) A(BOX, TIMBER, [sx * ux, h1 + h2 / 2, sz * uz], [bw, h2, bw]);
+      A(BOX, TIMBER, [0, top - .06, uz], [w + jet * 2 + .1, .14, bw]); A(BOX, TIMBER, [0, top - .06, -uz], [w + jet * 2 + .1, .14, bw]);
+      const studs = w > 4 ? [-.5, .5] : [0];
+      for (const k of studs) A(BOX, TIMBER, [k * w * .5, h1 + h2 / 2, uz + .01], [bw * .9, h2, bw * .8]);
+      // 筋かい（斜めの梁）：正面のはしの2区画だけ（窓にかからない）
+      const bl = Math.hypot(w * .22, h2 * .8), ba = Math.atan2(h2 * .8, w * .22);
+      A(BOX, TIMBER, [-w * .39, h1 + h2 / 2, uz + .02], [bl, .11, .1], [0, 0, ba]);
+      A(BOX, TIMBER, [w * .39, h1 + h2 / 2, uz + .02], [bl, .11, .1], [0, 0, -ba]);
+    }
+    // 窓：家ごとに位置と大きさを少しずつ変える（左右そろえない）。よろい戸と、花の窓箱
+    const win = (wx, wy, ww, wh, face, box) => {
+      const zf = (face === 'f' || face === 'r' ? 1 : -1), base = face === 'f' || face === 'b';
+      const off = (wy > h1 ? jet : 0) + .05;
+      const P3 = base ? [wx, wy, zf * (d / 2 + off)] : [zf * (w / 2 + off), wy, wx], R = base ? [0, 0, 0] : [0, Math.PI / 2, 0];
+      const loc = (dx, dy, dz) => base ? [P3[0] + dx, P3[1] + dy, P3[2] + dz * zf] : [P3[0] + dz * zf, P3[1] + dy, P3[2] + dx];
+      A(BOX, CREAMT, loc(0, 0, 0), [ww + .14, wh + .14, .08], R);
+      A(BOX, GLASS, loc(0, 0, .03), [ww, wh, .06], R);
+      A(BOX, CREAMT, loc(0, 0, .05), [ww, .05, .07], R);
+      A(BOX, shut, loc(-ww / 2 - .2, 0, .02), [.26, wh, .05], R); A(BOX, shut, loc(ww / 2 + .2, 0, .02), [.26, wh, .05], R);
+      A(BOX, CREAMT, loc(0, -wh / 2 - .08, .06), [ww + .3, .07, .16], R);
+      if (box) {
+        A(BOX, 0x9a6a44, loc(0, -wh / 2 - .2, .14), [ww + .1, .18, .22], R);
+        for (let k = 0; k < 4; k++) A(SPH, FLOWERS[(bid + k) % FLOWERS.length], loc((k / 3 - .5) * ww, -wh / 2 - .06, .16), [.11, .09, .11], R, .1);
+      }
+    };
+    const side = bid % 2 ? 1 : -1, doorX = side * (w * (.18 + rnd() * .1));
+    win(-doorX * 1.25, h1 * .55, .7 + rnd() * .2, .8, 'f', false);
+    if (two) {
+      const a = -.28 + rnd() * .08, b = .2 + rnd() * .08;
+      win(a * w, h1 + h2 * .52, .62, .72, 'f', true);
+      if (w > 3.9) win(b * w, h1 + h2 * .58, .5, .6, 'f', bid % 2 === 0);
+      win(0, h1 + h2 * .5, .5, .6, 'l', false); win(.2, h1 + h2 * .5, .5, .6, 'r', bid % 3 === 0);
+      win(-.2 * w, h1 + h2 * .5, .6, .62, 'b', false);
+    } else { win(0, h1 * .55, .55, .65, 'l', false); win(-.2 * w, h1 * .55, .6, .7, 'b', false); }
+    // 戸口：上が丸い木の戸・石の段・戸の両わきに花の鉢
+    A(BOX, DOOR, [doorX, .44 + .62, d / 2 + .05], [.78, 1.24, .08]);
+    A(CYL, DOOR, [doorX, .44 + 1.24, d / 2 + .05], [.39, .08, .39], [Math.PI / 2, 0, 0]);
+    A(BOX, CREAMT, [doorX, .44 + 1.24, d / 2 + .06], [.92, .06, .09]);
+    A(SPH, 0xe0b84a, [doorX + .25, .44 + .66, d / 2 + .1], [.04, .04, .03]);
+    A(BOX, STONE, [doorX, .08, d / 2 + .32], [1.1, .16, .5]);
+    for (const k of [-1, 1]) { A(CYL, 0xc77a52, [doorX + k * .62, .2, d / 2 + .3], [.17, .4, .17]); A(SPH, FLOWERS[(bid + (k > 0 ? 2 : 4)) % FLOWERS.length], [doorX + k * .62, .5, d / 2 + .3], [.22, .17, .22], undefined, .12); }
+    // 布のひさし（いくつかの家だけ）：1階の窓の上に、ゆるく反った縞の布
+    if (bid % 3 === 2 || name === 'shade') awning(acc, bid, -doorX * 1.25, h1 * .55 + .62, d / 2 + .05, name === 'shade' ? 3.2 : 1.4, name === 'shade' ? 2.6 : .8, shut, warp, place);
+    // 屋根：反った軒、少したわむ棟、瓦の段。厚みのある2枚の面
+    const over = .38, W = (ridgeZ ? d : w) + jet * 2 + over * 2, D2 = (ridgeZ ? w : d) / 2 + jet + over, rise = D2 * (.8 + rnd() * .2), y0 = top - .1;
+    const RS = 8, VS = 4;
+    const rp = (u, v, sgn, th) => {   // u：棟にそった位置（-1〜1）、v：軒（0）〜棟（1）
+      const a = u * W / 2, b = sgn * D2 * (1 - v);
+      let y = y0 + rise * v - .12 * (1 - u * u) * v + .2 * Math.pow(1 - v, 3) + .14 * Math.pow(Math.abs(u), 4) * (1 - v) - th;
+      return ridgeZ ? [b, y, a] : [a, y, b];
+    };
+    for (const sgn of [-1, 1]) for (let i = 0; i < RS; i++) for (let k = 0; k < VS; k++) {
+      const u0 = i / RS * 2 - 1, u1 = (i + 1) / RS * 2 - 1, v0 = k / VS, v1 = (k + 1) / VS, sh = (k % 2 ? .93 : 1) * (1 + (rnd() - .5) * .05);
+      for (const th of [0, .12]) {
+        const q = [rp(u0, v0, sgn, th), rp(u1, v0, sgn, th), rp(u1, v1, sgn, th), rp(u0, v1, sgn, th)];
+        tri(acc, [q[0], q[1], q[2], q[0], q[2], q[3]], roof, bid, warp, place, th ? .7 : sh);
+      }
+      if (k === 0) { const e0 = rp(u0, 0, sgn, 0), e1 = rp(u1, 0, sgn, 0), f0 = rp(u0, 0, sgn, .12), f1 = rp(u1, 0, sgn, .12); tri(acc, [e0, e1, f1, e0, f1, f0], roof, bid, warp, place, .8); }
+    }
+    // 棟の木と、妻かべ（三角のかべ。木組みの十字）
+    const rx = rp(-1, 1, 1, -.04), rx2 = rp(1, 1, 1, -.04);
+    A(BOX, TIMBER, [(rx[0] + rx2[0]) / 2, rx[1] - .02, (rx[2] + rx2[2]) / 2], ridgeZ ? [.16, .14, W] : [W, .14, .16]);
+    const gw = (ridgeZ ? w : d) / 2 + jet, gx = (ridgeZ ? d : w) / 2 + jet;
+    for (const sg of [-1, 1]) {
+      const ap = ridgeZ ? [[-gw, y0, sg * gx], [gw, y0, sg * gx], [0, y0 + rise * (gw / D2) + .02, sg * gx]] : [[sg * gx, y0, -gw], [sg * gx, y0, gw], [sg * gx, y0 + rise * (gw / D2) + .02, 0]];
+      tri(acc, ap, wall, bid, warp, place, .96);
+      tri(acc, [ap[0], ap[2], ap[1]], wall, bid, warp, place, .96);
+      const ky = y0 + rise * (gw / D2) * .5;
+      A(BOX, TIMBER, ridgeZ ? [0, ky, sg * (gx + .03)] : [sg * (gx + .03), ky, 0], ridgeZ ? [.12, rise * (gw / D2), .08] : [.08, rise * (gw / D2), .12]);
+      A(BOX, TIMBER, ridgeZ ? [0, y0 + .5, sg * (gx + .03)] : [sg * (gx + .03), y0 + .5, 0], ridgeZ ? [gw * 1.4, .1, .08] : [.08, .1, gw * 1.4]);
+    }
+    // えんとつ（棟の片側）
+    const cx = (ridgeZ ? .3 : .25) * (bid % 2 ? 1 : -1) * (ridgeZ ? d : w) * .5, cz = -.35;
+    const cy = y0 + rise * (1 - Math.abs(ridgeZ ? cx / D2 : cz / D2)) * .9;
+    A(BOX, BRICK, ridgeZ ? [cz, cy + .35, cx] : [cx, cy + .35, cz], [.46, 1.1, .46]);
+    A(BOX, 0x8e5a46, ridgeZ ? [cz, cy + .92, cx] : [cx, cy + .92, cz], [.58, .1, .58]);
+    houses.push({ x, z, yaw, w: w0 + over * 2, d: d0 + over * 2, H: y0 + rise + .3, bid, name, doorX, front: d / 2 });
+  }
+  // 縞の布のひさし（家の正面・屋台）。ゆるく反り、先が波形にたれる
+  function awning(acc, bid, ax, ay, az, len, depth, hex, warp, place) {
+    const NU = 10, NV = 3, drop = depth * .45;
+    const pt = (u, v) => [ax + (u - .5) * len, ay - drop * v - .08 * Math.sin(Math.PI * u) * v + .06 * (1 - v), az + depth * v];
+    for (let i = 0; i < NU; i++) for (let k = 0; k < NV; k++) {
+      const col = i % 2 ? hex : CREAMT, a = pt(i / NU, k / NV), b = pt((i + 1) / NU, k / NV), c = pt((i + 1) / NU, (k + 1) / NV), e = pt(i / NU, (k + 1) / NV);
+      tri(acc, [a, b, c, a, c, e], col, bid, warp, place);
+      if (k === NV - 1) { const m = pt((i + .5) / NU, 1); m[1] -= .14; tri(acc, [e, c, m], col, bid, warp, place); }
+    }
+  }
+
+  // 屋台：木の台・少ししなる4本の柱・反った縞のひさし。品物は種類ごと
+  const stalls = [];
+  function buildStall(acc, o, bid, kind) {
+    const [x, z] = o, yaw = Math.atan2(P.x - x, P.z - z);
+    const place = new THREE.Matrix4().compose(_p.set(x, gy(x, z), z), _q.setFromEuler(_e.set(0, yaw, 0)), _s.set(1, 1, 1));
+    const bow = v => { v.x += .05 * Math.sin(Math.PI * Math.min(1, Math.max(0, v.y / 2.3))) * Math.sign(v.x); };
+    const A = (geo, hex, p, s, r, j) => add(acc, geo, hex, bid, p, s, r, bow, place, j);
+    const col = { florist: 0x8fb07a, seeds: 0x4f948e, bread: 0xe08a6e, cloth: 0xdcb24c }[kind];
+    A(BOX, 0x9c6e48, [0, .45, .15], [2.3, .9, .8]);
+    A(BOX, 0xc69a6c, [0, .93, .2], [2.45, .07, .95]);
+    for (let k = 0; k < 4; k++) A(BOX, 0x8a5e3e, [(k - 1.5) * .58, .45, .56], [.5, .7, .03]);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) A(CYL6, 0x7a5236, [sx * 1.12, 1.15, sz * .5 + .1], [.06, 2.3, .06]);
+    // ひさし
+    const NU = 10, NV = 4, pt = (u, v) => [(u - .5) * 2.9, 2.42 - .55 * v - .1 * Math.sin(Math.PI * u) + .06 * Math.sin(Math.PI * v), -.55 + 1.7 * v];
+    for (let i = 0; i < NU; i++) for (let k = 0; k < NV; k++) {
+      const c = i % 2 ? col : CREAMT, a = pt(i / NU, k / NV), b = pt((i + 1) / NU, k / NV), cc = pt((i + 1) / NU, (k + 1) / NV), e = pt(i / NU, (k + 1) / NV);
+      tri(acc, [a, b, cc, a, cc, e], c, bid, bow, place);
+      if (k === NV - 1) { const m = pt((i + .5) / NU, 1); m[1] -= .18; tri(acc, [e, cc, m], c, bid, bow, place); }
+    }
+    // 品物
+    if (kind === 'florist') {
+      for (let k = 0; k < 3; k++) { A(CYL, 0x6f8fb4, [(k - 1) * .8, 1.15, -.15], [.2, .38, .2]); for (let f = 0; f < 5; f++) A(SPH, FLOWERS[(k * 2 + f) % FLOWERS.length], [(k - 1) * .8 + (f % 3 - 1) * .1, 1.42 + (f % 2) * .08, -.15 + (f - 2) * .04], [.09, .08, .09], undefined, .1); }
+    } else if (kind === 'seeds') {
+      for (let k = 0; k < 5; k++) { A(SPH, 0xcfae7c, [(k - 2) * .42, 1.08, .25 - (k % 2) * .25], [.17, .14, .15], undefined, .1); A(BOX, CREAMT, [(k - 2) * .42, 1.12, .4 - (k % 2) * .25], [.12, .08, .01]); }
+      for (let k = 0; k < 3; k++) A(CYL, 0xbfe0dc, [(k - 1) * .6, 1.12, -.25], [.1, .3, .1]);
+    } else if (kind === 'bread') {
+      for (let k = 0; k < 2; k++) { A(CYL, 0xb98a52, [(k - .5) * 1.1, 1.02, .2], [.38, .14, .3]); for (let f = 0; f < 4; f++) A(SPH, 0xd9a050, [(k - .5) * 1.1 + (f - 1.5) * .16, 1.16, .2 + (f % 2 - .5) * .14], [.13, .08, .2], [0, f, 0], .12); }
+      A(SPH, 0xc98a40, [0, 1.1, -.25], [.28, .12, .14]);
+    } else {
+      for (let k = 0; k < 5; k++) A(CYL, [0xe8907a, 0xa6d2c8, 0xf3dc9a, 0x86a96f, 0xb59ce6][k], [(k - 2) * .38, 1.08, .1], [.13, .7, .13], [0, 0, Math.PI / 2], .08);
+      for (let k = 0; k < 3; k++) A(BOX, SHUT[k], [(k - 1) * .6, 1.02, -.28], [.5, .12, .36]);
+    }
+    // 木箱・かご（台のわき）
+    A(BOX, 0xb88a5c, [1.45, .25, .1], [.5, .5, .5], [0, .3, 0]);
+    A(CYL, 0xc8a46c, [-1.45, .2, .2], [.28, .4, .28]);
+    stalls.push({ x, z, yaw, w: 3.1, d: 2.2, H: 2.6, bid, kind });
+  }
+
+  // 噴水：低い丸い水盤と、葉のもようの台。水・しぶき・音はここで作る
+  let water = null, waterTop = null, spray = null, sprayN = 0, ripples = [];
+  function buildFountain() {
+    const [x, , ] = L.obstacles[0], z = L.obstacles[0][1], y = gy(x, z);
+    const stone = new THREE.MeshLambertMaterial({ color: 0xebdfc4 });
+    const basin = new THREE.LatheGeometry([[0, 0], [1.98, 0], [2.06, .12], [2.04, .55], [1.9, .62], [1.8, .58], [1.76, .26], [0, .26]].map(([a, b]) => new THREE.Vector2(a, b)), 28);
+    const bowl = new THREE.LatheGeometry([[.28, 1.05], [.78, 1.08], [.92, 1.24], [.86, 1.3], [.74, 1.16], [0, 1.16]].map(([a, b]) => new THREE.Vector2(a, b)), 20);
+    const f = new THREE.Group(); f.name = 'Town_Fountain'; f.position.set(x, y, z); G.add(f);
+    for (const g of [basin, bowl]) f.add(new THREE.Mesh(g, stone));
+    const ped = new THREE.Mesh(new THREE.CylinderGeometry(.24, .34, 1.1, 12), stone); ped.position.y = .55; f.add(ped);
+    const fin = new THREE.Mesh(new THREE.SphereGeometry(.16, 10, 8), stone); fin.position.y = 1.42; f.add(fin);
+    const leafM = new THREE.MeshLambertMaterial({ color: 0x9cbc8a });
+    for (let k = 0; k < 6; k++) { const lf = new THREE.Mesh(SPH, leafM); const a = k / 6 * Math.PI * 2; lf.position.set(Math.cos(a) * .3, .72, Math.sin(a) * .3); lf.scale.set(.09, .22, .05); lf.rotation.set(0, -a, .5); f.add(lf); }
+    water = new THREE.Mesh(new THREE.CircleGeometry(1.78, 28), new THREE.MeshLambertMaterial({ color: 0x86cdd0, transparent: true, opacity: .82, depthWrite: false }));
+    water.rotation.x = -Math.PI / 2; water.position.y = .47; water.renderOrder = 2; f.add(water);
+    waterTop = new THREE.Mesh(new THREE.CircleGeometry(.76, 20), water.material); waterTop.rotation.x = -Math.PI / 2; waterTop.position.y = 1.2; f.add(waterTop);
+    const ringM = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .4, depthWrite: false });
+    for (let k = 0; k < 3; k++) { const r = new THREE.Mesh(new THREE.RingGeometry(.9, .98, 24), ringM.clone()); r.rotation.x = -Math.PI / 2; r.position.y = .49; r.renderOrder = 3; f.add(r); ripples.push(r); }
+    // しぶき：上の丸い皿から水盤へ落ちる小さな粒（数は少なく）
+    sprayN = HIGH ? 72 : 40;
+    const sp = new THREE.BufferGeometry(); sp.setAttribute('position', new THREE.BufferAttribute(new Float32Array(sprayN * 3), 3));
+    spray = new THREE.Points(sp, new THREE.PointsMaterial({ color: 0xeefcff, size: .09, transparent: true, opacity: .85, depthWrite: false }));
+    spray.frustumCulled = false; spray.renderOrder = 3; f.add(spray);
+    return f;
+  }
+
+  // 石だたみ：道・広場の形（ふちからの距離）で、まがったふちを点で切る。絵はその場で描く（ファイルは使わない）
+  function cobbleTex() {
+    const cv = document.createElement('canvas'); cv.width = cv.height = 256;
+    const g = cv.getContext('2d'); g.fillStyle = '#b9ad94'; g.fillRect(0, 0, 256, 256);
+    let s = 7; const r = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
+    const tones = ['#e9dfc8', '#e2d6bc', '#ddd0b8', '#efe6d2', '#d8ccb0', '#e7d8c0', '#d6d9cf'];
+    for (let row = 0; row < 8; row++) for (let col = 0; col < 7; col++) {
+      const cx = (col + (row % 2) * .5) * 256 / 7 + (r() - .5) * 6, cy = (row + .5) * 32 + (r() - .5) * 5;
+      for (const ox of [-256, 0, 256]) for (const oy of [-256, 0, 256]) {
+        g.fillStyle = tones[Math.floor(r() * tones.length)];
+        g.beginPath(); g.ellipse(cx + ox, cy + oy, 15 + r() * 3, 12 + r() * 2, (r() - .5) * .5, 0, Math.PI * 2); g.fill();
+      }
+    }
+    const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+    return t;
+  }
+  function buildPaving() {
+    const step = HIGH ? .5 : .7, x0 = 31, x1 = 81, z0 = -29, z1 = 7, nx = Math.ceil((x1 - x0) / step), nz = Math.ceil((z1 - z0) / step);
+    const sdAt = new Float32Array((nx + 1) * (nz + 1));
+    for (let j = 0; j <= nz; j++) for (let i = 0; i <= nx; i++) {
+      const x = x0 + i * step, z = z0 + j * step, e = Math.hypot((x - 6) / 30, (z + 7) / 19);
+      sdAt[j * (nx + 1) + i] = T.shapeSd(x, z) + .25 + (e < 1 ? (1 - e) * 30 : 0);   // 草原の中では、道の石は少しずつ消える
+    }
+    const pos = [], sd = [], uv = [];
+    const v = (i, j) => { const x = x0 + i * step, z = z0 + j * step; pos.push(x, gy(x, z) + .035, z); sd.push(sdAt[j * (nx + 1) + i]); uv.push(x / 1.5, z / 1.5); };
+    for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
+      const a = sdAt[j * (nx + 1) + i], b = sdAt[j * (nx + 1) + i + 1], c = sdAt[(j + 1) * (nx + 1) + i], d = sdAt[(j + 1) * (nx + 1) + i + 1];
+      if (Math.min(a, b, c, d) > 0) continue;
+      v(i, j); v(i, j + 1); v(i + 1, j + 1); v(i, j); v(i + 1, j + 1); v(i + 1, j);
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('aSd', new THREE.Float32BufferAttribute(sd, 1)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    g.computeVertexNormals();
+    const m = new THREE.MeshLambertMaterial({ map: cobbleTex(), polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+    m.onBeforeCompile = sh => {
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float aSd;\nvarying float vSd;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvSd = aSd;');
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vSd;')
+        .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\nif (vSd > 0.) discard;')
+        .replace('#include <map_fragment>', '#include <map_fragment>\ndiffuseColor.rgb *= mix(1., .8, smoothstep(-.35, 0., vSd));');   // ふちの石は少し濃く
+    };
+    m.customProgramCacheKey = () => 'tomori-town-paving';
+    const mesh = new THREE.Mesh(g, m); mesh.name = 'Town_Paving'; mesh.receiveShadow = true; return mesh;
+  }
+
+  // 住人と動物：基本の形だけ（宝さがしの人たちと同じつくり）。名前は、話しかけたあとで近いときだけ
+  function figure(parts, name) {
+    const acc = makeAcc();
+    for (const [geo, hex, p, s, r] of parts) add(acc, geo, hex, 0, p, s, r, null, null, .02);
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(acc.pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(acc.col, 3));
+    g.computeVertexNormals(); g.computeBoundingSphere();
+    const m = new THREE.Mesh(g, figMat); m.name = name; return m;
+  }
+  const figMat = new THREE.MeshLambertMaterial({ vertexColors: true });
+  const eye = (x, y, z) => [[SPH, 0x2a1e14, [x, y, z], [.035, .04, .02]], [SPH, 0x2a1e14, [-x, y, z], [.035, .04, .02]]];
+  const NPC = {};   // id → { root, head, x, z, ... }
+  function npcRoot(id, x, z, faceX, faceZ) {
+    const g = new THREE.Group(); g.name = 'Town_' + id; g.position.set(x, gy(x, z), z); g.rotation.y = Math.atan2(faceX - x, faceZ - z); G.add(g); NPC[id] = { root: g, x, z }; return g;
+  }
+  function buildPeople() {
+    // 花屋のリリ（ひつじ）：ふわふわの毛・珊瑚色のエプロン。花屋の屋台のうしろ
+    const fl = L.obstacles[1], fdx = P.x - fl[0], fdz = P.z - fl[1], fdl = Math.hypot(fdx, fdz);
+    const lili = npcRoot('florist', fl[0] - fdx / fdl * .95, fl[1] - fdz / fdl * .95, P.x, P.z);
+    lili.add(figure([
+      [SPH, 0xf7f2ea, [0, .55, 0], [.32, .36, .28]], [SPH, 0xf7f2ea, [.18, .7, .05], [.18, .18, .16]], [SPH, 0xf7f2ea, [-.18, .7, .05], [.18, .18, .16]],
+      [SPH, 0xe8907a, [0, .48, .2], [.24, .26, .1]], [CYL, 0x5a4434, [.12, .12, 0], [.06, .24, .06]], [CYL, 0x5a4434, [-.12, .12, 0], [.06, .24, .06]],
+    ], 'Lili_Body'));
+    const lh = figure([
+      [SPH, 0xf2e2d0, [0, 0, .04], [.17, .2, .18]], [SPH, 0xfbf6ee, [0, .14, -.02], [.21, .14, .2]], ...eye(.07, .03, .19),
+      [SPH, 0xe8b8a8, [.19, .02, 0], [.1, .04, .06], [0, 0, -.4]], [SPH, 0xe8b8a8, [-.19, .02, 0], [.1, .04, .06], [0, 0, .4]],
+      [SPH, 0xf6b0b8, [.1, -.06, .17], [.035, .025, .015]], [SPH, 0xf6b0b8, [-.1, -.06, .17], [.035, .025, .015]], [SPH, 0xffd45a, [.12, .2, .08], [.06, .05, .06]],
+    ], 'Lili_Head');
+    lh.position.y = 1.0; lili.add(lh); NPC.florist.head = lh;
+    // タネ屋のモグじい（もぐら）：小さなめがね・緑の帽子。タネ屋の屋台のうしろ
+    const sd = L.obstacles[2], sdx = P.x - sd[0], sdz = P.z - sd[1], sdl = Math.hypot(sdx, sdz);
+    const mog = npcRoot('mole', sd[0] - sdx / sdl * .95, sd[1] - sdz / sdl * .95, P.x, P.z);
+    mog.add(figure([
+      [SPH, 0x7a6658, [0, .45, 0], [.3, .34, .27]], [SPH, 0xc9b8a0, [0, .42, .18], [.2, .24, .1]],
+      [SPH, 0xf2c8b4, [.26, .5, .08], [.09, .05, .07]], [SPH, 0xf2c8b4, [-.26, .5, .08], [.09, .05, .07]],
+    ], 'Mog_Body'));
+    const mh = figure([
+      [SPH, 0x7a6658, [0, 0, 0], [.2, .18, .2]], [SPH, 0xf2a0a8, [0, -.02, .21], [.06, .05, .05]], ...eye(.08, .05, .17),
+      [CYL, 0xc8a050, [.08, .05, .18], [.055, .01, .055], [Math.PI / 2, 0, 0]], [CYL, 0xc8a050, [-.08, .05, .18], [.055, .01, .055], [Math.PI / 2, 0, 0]],
+      [CONE, 0x5f8f5a, [0, .22, 0], [.2, .22, .2]], [CYL, 0x5f8f5a, [0, .13, 0], [.24, .03, .24]],
+    ], 'Mog_Head');
+    mh.position.y = .88; mog.add(mh); NPC.mole.head = mh;
+    // ソラばあちゃん（かめ）：日差しの庭のベンチ。お届けのあとで、鉢を置く
+    const sh = houses.find(h => h.name === 'sun');
+    const gx = sh.x + Math.sin(sh.yaw) * (sh.d / 2 - .1) + Math.cos(sh.yaw) * 1.6, gz = sh.z + Math.cos(sh.yaw) * (sh.d / 2 - .1) - Math.sin(sh.yaw) * 1.6;
+    const sora = npcRoot('grandma', gx, gz, L.courts[0].x, L.courts[0].z);
+    sora.add(figure([
+      [BOX, 0x9a6a44, [0, .28, -.05], [.9, .08, .4]], [BOX, 0x8a5e3e, [.38, .14, -.05], [.08, .28, .36]], [BOX, 0x8a5e3e, [-.38, .14, -.05], [.08, .28, .36]],
+      [SPH, 0x7fa36b, [0, .55, -.05], [.34, .26, .32]], [SPH, 0x9cbc84, [0, .62, -.05], [.26, .16, .24]], [SPH, 0xd8d2a8, [0, .48, .14], [.24, .2, .1]],
+    ], 'Sora_Body'));
+    const so = figure([
+      [SPH, 0xb8c89a, [0, 0, .05], [.15, .14, .17]], ...eye(.06, .03, .19), [SPH, 0xf2c0b0, [.08, -.04, .18], [.03, .02, .01]], [SPH, 0xf2c0b0, [-.08, -.04, .18], [.03, .02, .01]],
+      [SPH, 0xe8907a, [0, .1, -.02], [.17, .07, .17]], [SPH, 0xffffff, [.1, .14, .05], [.05, .05, .05]],
+    ], 'Sora_Head');
+    so.position.set(0, .82, .18); sora.add(so); NPC.grandma.head = so;
+    // 歩く住人：かごを持ったがちょう（広場を、ゆっくり大きく回る）
+    const goose = new THREE.Group(); goose.name = 'Town_Goose'; G.add(goose);
+    goose.add(figure([
+      [SPH, 0xfaf7f0, [0, .4, 0], [.24, .22, .32]], [CYL, 0xfaf7f0, [0, .62, .2], [.07, .32, .07], [-.3, 0, 0]], [SPH, 0xfaf7f0, [0, .82, .26], [.11, .1, .13]],
+      [CONE, 0xf0a040, [0, .8, .4], [.04, .12, .04], [Math.PI / 2, 0, 0]], ...eye(.06, .86, .33),
+      [CYL, 0xf0a040, [.08, .1, 0], [.025, .2, .025]], [CYL, 0xf0a040, [-.08, .1, 0], [.025, .2, .025]],
+      [CYL, 0xc8a46c, [.26, .38, .08], [.13, .14, .13]], [SPH, 0xe86a5a, [.26, .48, .08], [.06, .05, .06]], [SPH, 0xffd45a, [.22, .49, .12], [.05, .04, .05]], [SPH, 0x86a96f, [.3, .5, .04], [.05, .04, .05]],
+    ], 'Goose'));
+    NPC.goose = { root: goose, x: P.x, z: P.z };
+    // 動物：パン屋のそばでねている犬、噴水のまわりのはと（近づくと飛ぶ）
+    const br = L.obstacles[3];
+    const dog = npcRoot('dog', br[0] + 1.7, br[1] + .3, br[0] + 3, br[1] - 1);
+    const dogBody = figure([
+      [SPH, 0xd9a86c, [0, .2, 0], [.22, .17, .36]], [SPH, 0xf2e2c8, [0, .16, .12], [.16, .1, .2]], [SPH, 0xd9a86c, [0, .24, .36], [.15, .13, .15]],
+      [SPH, 0xa8723e, [.11, .3, .32], [.05, .1, .05], [0, 0, -.5]], [SPH, 0xa8723e, [-.11, .3, .32], [.05, .1, .05], [0, 0, .5]],
+      [SPH, 0x2a1e14, [0, .24, .52], [.035, .03, .03]], [SPH, 0xd9a86c, [0, .2, -.36], [.05, .05, .14], [.4, 0, 0]],
+    ], 'Dog');
+    dog.add(dogBody); NPC.dog.body = dogBody;
+    const birds = [];
+    for (let k = 0; k < 3; k++) {
+      const a = 2.4 + k * .9, bx = P.x + Math.cos(a) * 2.8, bz = P.z + Math.sin(a) * 2.8, b = npcRoot('bird' + k, bx, bz, P.x, P.z);
+      b.add(figure([[SPH, 0xb4bccb, [0, .12, 0], [.08, .07, .11]], [SPH, 0x9aa6b8, [0, .2, .07], [.05, .05, .05]], [CONE, 0xe0a040, [0, .2, .13], [.015, .04, .015], [Math.PI / 2, 0, 0]], [SPH, 0x8890a4, [0, .13, -.1], [.05, .02, .07]]], 'Bird'));
+      birds.push({ g: b, home: [bx, bz], fly: 0, peck: k * 1.3 });
+    }
+    NPC.birds = birds;
+    // 届けた鉢は、ソラばあちゃんのベンチのとなり（歩く場所には置かない）
+    const gr = NPC.grandma.root; gardenPot.position.set(gr.position.x - Math.cos(gr.rotation.y) * .75, gr.position.y, gr.position.z + Math.sin(gr.rotation.y) * .75);
+  }
+  // 花屋の3つの鉢：色は同じ。1＝上を向く、2＝うつむく、3＝横を向く。前に番号の札
+  const pots = {}; let carryPot = null, gardenPot = null;
+  function potMesh(kind) {
+    const parts = [[CYL, 0xc77a52, [0, .14, 0], [.16, .28, .16]], [CYL, 0x5a3e2a, [0, .28, 0], [.14, .02, .14]]];
+    const petal = 0xf6c2cc, heart = 0xffe08a;
+    for (let k = 0; k < 3; k++) {
+      const a = k / 3 * Math.PI * 2 + .4, ox = Math.cos(a) * .07, oz = Math.sin(a) * .07, hy = .62 + (k % 2) * .06;
+      parts.push([CYL6, 0x6f9a52, [ox * .6, .45, oz * .6], [.012, .34, .012]]);
+      if (kind === 'up') { parts.push([CONE, petal, [ox * 1.2, hy + .02, oz * 1.2], [.1, .12, .1], [Math.PI, 0, 0]]); parts.push([SPH, heart, [ox * 1.2, hy + .07, oz * 1.2], [.035, .02, .035]]); }
+      if (kind === 'nod') { parts.push([CYL6, 0x6f9a52, [ox * 1.6, hy - .02, oz * 1.6], [.012, .14, .012], [Math.cos(a) * 0 + .9 * Math.sin(a), 0, -.9 * Math.cos(a)]]); parts.push([CONE, petal, [ox * 2.4, hy - .1, oz * 2.4], [.09, .12, .09]]); parts.push([SPH, heart, [ox * 2.4, hy - .17, oz * 2.4], [.03, .02, .03]]); }
+      if (kind === 'side') { parts.push([CONE, petal, [ox * 1.2 + .09, hy, oz * 1.2], [.09, .13, .09], [0, 0, Math.PI / 2]]); parts.push([SPH, heart, [ox * 1.2 + .03, hy, oz * 1.2], [.03, .035, .035]]); }
+      parts.push([SPH, 0x7fae5a, [ox * .4, .36 + k * .05, oz * .4], [.07, .025, .04], [0, a, .3]]);
+    }
+    return figure(parts, 'Pot_' + kind);
+  }
+  function numberSign(n) {
+    const cv = document.createElement('canvas'); cv.width = cv.height = 64;
+    const g = cv.getContext('2d'); g.fillStyle = '#f6ecd6'; g.fillRect(0, 0, 64, 64); g.strokeStyle = '#8a5e3e'; g.lineWidth = 6; g.strokeRect(3, 3, 58, 58);
+    g.fillStyle = '#5a3e2a'; g.font = 'bold 44px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(n), 32, 35);
+    const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(.2, .2), new THREE.MeshLambertMaterial({ map: t })); return m;
+  }
+  function buildPots() {
+    const fl = L.obstacles[1], yaw = Math.atan2(P.x - fl[0], P.z - fl[1]);
+    TOWN_POTS.forEach((p, k) => {
+      const g = new THREE.Group(); g.name = 'Town_Pot_' + p.id;
+      const lx = (k - 1) * .72, lz = .5;
+      g.position.set(fl[0] + Math.sin(yaw) * lz + Math.cos(yaw) * lx, gy(fl[0], fl[1]) + .965, fl[1] + Math.cos(yaw) * lz - Math.sin(yaw) * lx);
+      g.rotation.y = yaw; g.scale.setScalar(1.25);
+      g.add(potMesh(p.id));
+      const sgn = numberSign(k + 1); sgn.position.set(0, -.18, .2); g.add(sgn);
+      G.add(g); pots[p.id] = g;
+    });
+    carryPot = potMesh('nod'); carryPot.scale.setScalar(.9); carryPot.visible = false; G.add(carryPot);
+    gardenPot = potMesh('nod'); gardenPot.scale.setScalar(1.3); gardenPot.visible = false; G.add(gardenPot);
+  }
+  // 庭の3軒の光：日差しの筋（屋根のすきまから斜めにおりる）・大きな布のひさしのかげ・ランタンの明かり
+  let beams = [], motes = null, lanternGlow = null;
+  function buildGardens() {
+    const C0 = L.courts[0];
+    const beamTex = (() => { const cv = document.createElement('canvas'); cv.width = 32; cv.height = 128; const g = cv.getContext('2d'); const gr = g.createLinearGradient(0, 0, 0, 128); gr.addColorStop(0, 'rgba(255,248,210,0)'); gr.addColorStop(.25, 'rgba(255,246,200,.85)'); gr.addColorStop(1, 'rgba(255,240,190,.15)'); g.fillStyle = gr; g.fillRect(0, 0, 32, 128); const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+    const sun = houses.find(h => h.name === 'sun'), fx = Math.sin(sun.yaw), fz = Math.cos(sun.yaw);
+    const gx = sun.x + fx * (sun.d / 2 + .7), gz = sun.z + fz * (sun.d / 2 + .7);
+    for (let k = 0; k < 4; k++) {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(.55 + k * .08, 6.5), new THREE.MeshBasicMaterial({ map: beamTex, transparent: true, opacity: .55, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+      const ox = (k - 1.5) * .7;
+      m.position.set(gx + Math.cos(sun.yaw) * ox - fx * .6, gy(gx, gz) + 3.1, gz - Math.sin(sun.yaw) * ox - fz * .6);
+      m.rotation.set(0, sun.yaw, 0); m.rotateX(-.42); m.rotateZ(.18);
+      m.renderOrder = 5; G.add(m); beams.push(m);
+    }
+    // 光の当たる地面（明るい楕円）と、光の中の小さなほこり
+    const spot = new THREE.Mesh(new THREE.CircleGeometry(1.3, 20), new THREE.MeshBasicMaterial({ color: 0xfff1b8, transparent: true, opacity: .45, depthWrite: false }));
+    spot.rotation.x = -Math.PI / 2; spot.scale.set(1.5, 1, 1); spot.position.set(gx, gy(gx, gz) + .05, gz); spot.renderOrder = 2; G.add(spot);
+    const mg = new THREE.BufferGeometry(), mp = new Float32Array(24 * 3);
+    for (let i = 0; i < 24; i++) { mp[i * 3] = gx + (rnd() - .5) * 2.4; mp[i * 3 + 1] = gy(gx, gz) + .4 + rnd() * 2.6; mp[i * 3 + 2] = gz + (rnd() - .5) * 1.4; }
+    mg.setAttribute('position', new THREE.BufferAttribute(mp, 3));
+    motes = new THREE.Points(mg, new THREE.PointsMaterial({ color: 0xfff6c8, size: .06, transparent: true, opacity: .8, depthWrite: false })); motes.userData.base = mp.slice(); G.add(motes);
+    // 日差しの庭の花だん（届けた鉢は、ここへ置く）
+    // ひさしの庭：かげ（暗い楕円）
+    const shd = houses.find(h => h.name === 'shade'), sx = shd.x + Math.sin(shd.yaw) * (shd.d / 2 + .9), sz = shd.z + Math.cos(shd.yaw) * (shd.d / 2 + .9);
+    const dark = new THREE.Mesh(new THREE.CircleGeometry(1.4, 20), new THREE.MeshBasicMaterial({ color: 0x3a4a40, transparent: true, opacity: .28, depthWrite: false }));
+    dark.rotation.x = -Math.PI / 2; dark.scale.set(1.3, 1, 1); dark.position.set(sx, gy(sx, sz) + .05, sz); dark.renderOrder = 2; G.add(dark);
+    // ランタンの庭：腕木につるしたランタンと、だいだい色の明かり
+    const ln = houses.find(h => h.name === 'lantern'), lx = ln.x + Math.sin(ln.yaw) * (ln.d / 2 - .1), lz = ln.z + Math.cos(ln.yaw) * (ln.d / 2 - .1);
+    const lant = figure([[CYL6, 0x5a3e2a, [0, 0, 0], [.13, .04, .13]], [CYL6, 0xffc870, [0, -.17, 0], [.11, .28, .11]], [CONE, 0x5a3e2a, [0, .08, 0], [.15, .12, .15]], [BOX, 0x5a3e2a, [0, .24, -.35], [.06, .06, .8]]], 'Lantern');
+    lant.position.set(lx + Math.sin(ln.yaw) * .55 + Math.cos(ln.yaw) * 1.3, gy(lx, lz) + 2.3, lz + Math.cos(ln.yaw) * .55 - Math.sin(ln.yaw) * 1.3); lant.rotation.y = ln.yaw; G.add(lant);
+    lanternGlow = new THREE.Mesh(new THREE.CircleGeometry(1.2, 20), new THREE.MeshBasicMaterial({ color: 0xffb860, transparent: true, opacity: .3, depthWrite: false }));
+    lanternGlow.rotation.x = -Math.PI / 2; lanternGlow.position.set(lant.position.x, gy(lx, lz) + .05, lant.position.z); lanternGlow.renderOrder = 2; G.add(lanternGlow);
+    const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: haloTex(), color: 0xffc070, transparent: true, opacity: .8, depthWrite: false, blending: THREE.AdditiveBlending }));
+    halo.scale.setScalar(1.1); halo.position.copy(lant.position).y -= .17; G.add(halo);
+  }
+  let _halo = null;
+  function haloTex() {
+    if (_halo) return _halo;
+    const cv = document.createElement('canvas'); cv.width = cv.height = 64; const g = cv.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.4, 'rgba(255,255,255,.35)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+    return (_halo = new THREE.CanvasTexture(cv));
+  }
+  // 広場の花壇：ひだまり（左）とつりがね（右）を植える場所。植えた花は、ことばの説明どおりの形に育つ
+  const bed = { sun: null, bell: null, grow: { sun: 1, bell: 1 } };
+  function buildBed(acc) {
+    const [x, z] = L.obstacles[5], yaw = Math.atan2(P.x - x, P.z - z);
+    const place = new THREE.Matrix4().compose(_p.set(x, gy(x, z), z), _q.setFromEuler(_e.set(0, yaw, 0)), _s.set(1, 1, 1));
+    const A = (geo, hex, p, s, r) => add(acc, geo, hex, 47, p, s, r, null, place);
+    A(BOX, 0x9c6e48, [0, .2, 0], [2.5, .4, 1.0]); A(BOX, 0x5a3e2a, [0, .41, 0], [2.3, .04, .82]);
+    for (const k of [-1, 0, 1]) A(SPH, 0x6f9a52, [k * .9, .44, .3], [.12, .05, .1]);
+    const mk = (kind, lx) => {
+      const parts = [];
+      if (kind === 'sun') for (let k = 0; k < 3; k++) { const ox = (k - 1) * .28; parts.push([CYL6, 0x5f8f42, [ox, .55, 0], [.025, 1.1, .025]], [CYL, 0xffcf3a, [ox, 1.12, .02], [.2, .04, .2], [-.25, 0, 0]], [CYL, 0x8a5a2a, [ox, 1.14, .04], [.08, .03, .08], [-.25, 0, 0]], [SPH, 0x7fae5a, [ox + .08, .6, 0], [.1, .03, .06]]); }
+      else for (let k = 0; k < 3; k++) { const ox = (k - 1) * .26; parts.push([CYL6, 0x5f8f42, [ox, .35, 0], [.02, .7, .02]]); for (let b = 0; b < 4; b++) parts.push([CYL6, 0x5f8f42, [ox + .04 + b * .05, .62 - b * .04, .05], [.008, .1, .008]], [CONE, 0xfbf8f0, [ox + .06 + b * .05, .56 - b * .05, .06], [.05, .08, .05]]); }
+      const m = figure(parts, 'Bed_' + kind);
+      const g = new THREE.Group(); g.add(m); g.position.set(x + Math.cos(yaw) * lx, gy(x, z) + .38, z - Math.sin(yaw) * lx); g.rotation.y = yaw; g.visible = false; G.add(g);
+      return g;
+    };
+    bed.sun = mk('sun', -.62); bed.bell = mk('bell', .62);
+  }
+  // 街の門（木のアーチと花かざり）・ガーランド（三角の小旗）・街灯
+  function buildDecor(acc) {
+    const R = L.road, gi = 2, [ax, az] = R[gi - 1], [bx, bz] = R[gi + 1], tx = bx - ax, tz = bz - az, tl = Math.hypot(tx, tz), nx = -tz / tl, nz = tx / tl;
+    const gx = L.gate.x, gz = L.gate.z, half = L.roadR + .45;
+    const place = new THREE.Matrix4().compose(_p.set(gx, gy(gx, gz), gz), _q.setFromEuler(_e.set(0, Math.atan2(tx, tz), 0)), _s.set(1, 1, 1));
+    const A = (geo, hex, p, s, r, j) => add(acc, geo, hex, 46, p, s, r, null, place, j);
+    for (const k of [-1, 1]) { A(CYL6, 0x8a5e3e, [k * half, 1.7, 0], [.16, 3.4, .16]); A(BOX, STONE, [k * half, .2, 0], [.5, .4, .5]); }
+    const arc = new THREE.TorusGeometry(half, .13, 6, 18, Math.PI);
+    A(arc, 0x8a5e3e, [0, 3.35, 0], [1, .32, 1]);
+    for (let k = 0; k <= 12; k++) { const a = k / 12 * Math.PI; A(SPH, FLOWERS[k % FLOWERS.length], [Math.cos(a) * half, 3.35 + Math.sin(a) * half * .32 + .05, .12], [.13, .11, .1], undefined, .1); A(SPH, 0x7fae5a, [Math.cos(a + .12) * half, 3.33 + Math.sin(a + .12) * half * .32, .1], [.14, .06, .09]); }
+    A(CYL, 0xf6ecd6, [0, 3.0, .05], [.36, .05, .36], [Math.PI / 2, 0, 0]); A(SPH, 0xe8907a, [0, 3.0, .09], [.14, .14, .04]); A(SPH, 0x86a96f, [.16, 2.92, .09], [.08, .05, .03]);
+    // 小旗：大通りの上と、広場の上（2本）
+    const flag = (x0, z0, x1, z1, y0) => {
+      const n = 14, line = new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(x0, y0, z0), new THREE.Vector3((x0 + x1) / 2, y0 - .6, (z0 + z1) / 2), new THREE.Vector3(x1, y0, z1)]), 12, .015, 4);
+      add(acc, line, 0x8a6a4a, 46);
+      for (let k = 1; k < n; k++) {
+        const u = k / n, x = x0 + (x1 - x0) * u, z = z0 + (z1 - z0) * u, y = y0 - .6 * 4 * u * (1 - u) * .98, a = Math.atan2(x1 - x0, z1 - z0) + Math.PI / 2;
+        const ca = Math.cos(a), sa = Math.sin(a), c = [0xe8907a, 0xf3dc9a, 0x86a96f, 0xa6d2c8, 0xf6ecd6][k % 5];
+        tri(acc, [[x - sa * .14, y, z - ca * .14], [x + sa * .14, y, z + ca * .14], [x, y - .32, z]], c, 46, null, null);
+      }
+    };
+    const hs = n => houses.find(h => h.name === n);
+    const H1 = hs('roadN2'), H2 = hs('roadS2'), H3 = hs('p-122'), H4 = hs('p82'), H5 = hs('p15'), H6 = hs('p114');
+    flag(H1.x, H1.z + 1.6, H2.x, H2.z - 1.6, gy(H1.x, H1.z) + 4.6);
+    flag(H3.x + 1, H3.z + 1.4, H4.x - .5, H4.z - 1.4, 4.9);
+    flag(H6.x + 1.2, H6.z - 1.2, H5.x - 1.4, H5.z, 4.7);
+    // 街灯（道のふちの外）
+    for (const [x, z] of [[37.2, -9.0], [52.4, -1.6], [55.2, -12.6], [66.8, -14.2], [69.9, -1.7], [64.6, -26.9]]) {
+      const y = gy(x, z); add(acc, CYL6, 0x4a4038, 46, [x, y + 1.3, z], [.06, 2.6, .06]); add(acc, BOX, 0xffe6a8, 46, [x, y + 2.75, z], [.24, .3, .24]); add(acc, CONE, 0x4a4038, 46, [x, y + 3.0, z], [.22, .18, .22]);
+    }
+    // 生け垣と花の群れ（家と家のあいだ・庭の路地の西）
+    for (const [x, z, n] of [[60.2, -19.6, 5], [44.0, -12.6, 3], [53.6, 3.4, 3], [66.6, 9.0, 3], [77.4, -17.0, 3], [58.2, -21.0, 3]]) for (let k = 0; k < n; k++) {
+      const px = x + (k - n / 2) * .7, pz = z + (rnd() - .5) * .5, y = gy(px, pz);
+      add(acc, SPH, 0x6f9a52, 46, [px, y + .35, pz], [.45, .4, .4], undefined, null, null, .12);
+      add(acc, SPH, FLOWERS[k % FLOWERS.length], 46, [px + .1, y + .62, pz + .2], [.12, .1, .12]);
+    }
+    // 見晴らしの路地の先：ベンチと、東へひらける景色
+    const [bx2, bz2] = L.obstacles[6];
+    add(acc, BOX, 0x9c6e48, 46, [bx2, gy(bx2, bz2) + .42, bz2], [1.4, .08, .5], [0, -.9, 0]); add(acc, BOX, 0x8a5e3e, 46, [bx2, gy(bx2, bz2) + .2, bz2], [1.2, .4, .3], [0, -.9, 0]);
+  }
+
+  // ── 組み立て（地形の高さがわかってから。V2 が使えないときは作らない） ──
+  let houseMesh = null, decoMesh = null, fadeables = [];
+  const coinEl = el('town-coins'), LABELS = ['label-lili', 'label-mog', 'label-sora', 'sfx-fountain'].map(el);
+  const fadeCur = new Float32Array(FADE_N).fill(1), fadeHold = new Float32Array(FADE_N);
+  function build() {
+    if (built || !worldV2.isActive()) return;
+    const acc = makeAcc();
+    L.houses.forEach((h, k) => buildHouse(acc, h, k));
+    const kinds = ['florist', 'seeds', 'bread', 'cloth'];
+    kinds.forEach((kind, k) => buildStall(acc, L.obstacles[k + 1], 20 + k, kind));
+    houseMesh = finish(acc, fadeMat(), 'Town_Houses'); houseMesh.castShadow = HIGH; houseMesh.receiveShadow = true; G.add(houseMesh);
+    const dacc = makeAcc();
+    buildDecor(dacc); buildBed(dacc);
+    decoMesh = finish(dacc, fadeMat(), 'Town_Decor'); G.add(decoMesh);
+    G.add(buildPaving());
+    buildFountain(); buildPots(); buildGardens(); buildPeople();
+    // 街の中の木（ほかで置いたもの）は、カメラがよける・ふさぐ計算から外す
+    const oc = worldV2.occluders();
+    for (let i = oc.length - 1; i >= 0; i--) if (T.shapeSd(oc[i][0], oc[i][1]) < 12.5 && Math.hypot((oc[i][0] - 6) / 30, (oc[i][1] + 7) / 19) > .9) oc.splice(i, 1);
+    fadeables = houses.concat(stalls);
+    baseOff = CAM_OFF.clone();   // 草原での元のカメラの位置（V2 の構図）
+    built = true; G.visible = true;
+    applyVisuals();
+  }
+  // 記録にあわせて見た目をそろえる（鉢・花壇）
+  function applyVisuals() {
+    if (!built) return;
+    const carrying = st.errand === 'deliver';
+    pots.nod.visible = st.errand === 'none' || st.errand === 'flower';
+    carryPot.visible = carrying; gardenPot.visible = st.errand === 'done';
+    for (const id of TOWN_SEED_IDS) { const g = bed[id]; g.visible = st.seeds[id] === 'planted'; if (g.visible && bed.grow[id] >= 1) g.scale.setScalar(1); }
+    coinEl.classList.toggle('show', walkable() && townStarted(st));
+    el('town-coins-n').textContent = String(st.coins);
+  }
+
+  // ── 話しかける相手・しらべる場所（近くの小さな案内から開く。近づいただけでは開かない） ──
+  const SPOT_IDS = ['town:florist', 'town:mole', 'town:bed', 'town:sun', 'town:shade', 'town:lantern'];
+  const spotCache = {};
+  function front(o, dist) { const dx = P.x - o[0], dz = P.z - o[1], l = Math.hypot(dx, dz); return { x: o[0] + dx / l * dist, z: o[1] + dz / l * dist }; }
+  function spot(id) {
+    if (spotCache[id]) return spotCache[id];
+    let s;
+    if (id === 'town:florist') s = front(L.obstacles[1], 2.0);
+    else if (id === 'town:mole') s = front(L.obstacles[2], 2.0);
+    else if (id === 'town:bed') s = front(L.obstacles[5], 1.85);
+    else { const h = houses.find(q => q.name === id.slice(5)); s = { x: h.x + Math.sin(h.yaw) * (h.d / 2 + .6), z: h.z + Math.cos(h.yaw) * (h.d / 2 + .6) }; const C0 = L.courts[0]; const dx = s.x - C0.x, dz = s.z - C0.z, dl = Math.hypot(dx, dz); if (dl > C0.r - .5) { s.x = C0.x + dx / dl * (C0.r - .5); s.z = C0.z + dz / dl * (C0.r - .5); } }
+    s.r = 2.0; return (spotCache[id] = s);
+  }
+  const has = id => typeof id === 'string' && id.startsWith('town:');
+  function ids() {
+    if (!built) return [];
+    const out = ['town:florist', 'town:mole'];
+    if (TOWN_SEED_IDS.some(id => st.seeds[id] === 'owned') || TOWN_SEED_IDS.some(id => st.seeds[id] === 'planted')) out.push('town:bed');
+    if (st.errand === 'deliver' || st.errand === 'done') out.push('town:sun', 'town:shade', 'town:lantern');
+    return out;
+  }
+  function call(id) {
+    if (id === 'town:florist') return { text: st.met.florist ? '花屋のリリさんがいる' : '花屋さんがいる', verb: st.errand === 'flower' ? '続ける' : '話す' };
+    if (id === 'town:mole') return { text: st.met.mole ? 'タネ屋のモグじいがいる' : 'タネ屋さんがいる', verb: '話す' };
+    if (id === 'town:bed') return { text: '広場の花壇がある', verb: TOWN_SEED_IDS.some(k => st.seeds[k] === 'owned') ? '植える' : 'しらべる' };
+    if (id === 'town:sun') return { text: st.errand === 'done' ? 'ソラばあちゃんの庭' : '光の筋がおりている庭', verb: st.errand === 'deliver' ? '届ける' : '話す' };
+    if (id === 'town:shade') return { text: '大きなひさしの庭', verb: st.errand === 'deliver' ? '届ける' : 'しらべる' };
+    return { text: 'ランタンの庭', verb: st.errand === 'deliver' ? '届ける' : 'しらべる' };
+  }
+  // 家・屋台をタップしたとき：その前の道まで歩く（家の裏の道へ回りこまない）
+  const hitList = [];
+  function pick(rc) {
+    if (!built || !character || !walkable()) return false;
+    // 透かしている家・屋台は選ばない（その向こうの道をタップしたら、そこへ歩く）
+    const bidOf = i => Math.round(houseMesh.geometry.attributes.aBid.getX(i.face.a));
+    const h = rc.intersectObject(houseMesh, false).find(i => fadeCur[bidOf(i)] > .9);
+    if (!h) return false;
+    const gh = rc.intersectObject(ground)[0];
+    if (gh && gh.distance < h.distance - 1.5) return false;
+    const bid = bidOf(h);
+    const b = houses.find(q => q.bid === bid) || stalls.find(q => q.bid === bid);
+    if (!b) return false;
+    targetPos.set(b.x + Math.sin(b.yaw) * (b.d / 2 + 1.4), 0, b.z + Math.cos(b.yaw) * (b.d / 2 + 1.4)); worldV2.clampToWalkable(targetPos, .97);
+    isMoving = true; playAnim('walk'); el('hint').style.opacity = '0';
+    return true;
+  }
+
+  // ── パネル：話す・えらぶ・ヒント・ことばの説明・お店 ──
+  const WORD_GLOSS = { 'ひさし': 'ひさし＝屋根のはしの、日よけ', 'ひだまり': '', 'ほころぶ': '' };
+  function render(o) {
+    view = o;
+    el('town-icon').textContent = o.icon; el('town-name').textContent = o.name; el('town-line').textContent = o.line || '';
+    const hb = el('town-hint'); hb.style.display = o.hint ? '' : 'none';
+    if (o.hint) { el('town-hint-label').textContent = 'ヒント ' + o.hint.lv + '/' + o.hint.max + (o.hint.lv === o.hint.max ? '（いちばんくわしいヒント）' : ''); el('town-hint-text').textContent = o.hint.text; }
+    // ことばの説明：押したときだけ開く。出会った言い回しは、冒険メモ（宝さがしと同じ場所）へ
+    const text = [o.line, o.hint ? o.hint.text : '', ...(o.cards || []).map(c => c.words + ' ' + (c.grown || ''))].join('\n');
+    const wids = wordsIn(text);
+    if (wids.length && treasure && treasure.meetWords) treasure.meetWords(text, o.scene || o.name);
+    const extra = Object.keys(WORD_GLOSS).filter(k => WORD_GLOSS[k] && text.includes(k));
+    const notes = wids.map(id => { const w = WORDS.find(x => x.id === id); return w.word + (w.reading ? '（' + w.reading + '）' : '') + '＝' + w.meaning; }).concat(extra.map(k => WORD_GLOSS[k]));
+    const names = wids.map(id => WORDS.find(w => w.id === id).word).concat(extra);
+    el('town-gloss').textContent = notes.join('\n'); el('town-gloss').style.display = 'none';
+    const wb = el('btn-town-words'); wb.style.display = notes.length ? '' : 'none'; wb.textContent = '「' + names.join('」「') + '」って？'; wb.setAttribute('aria-expanded', 'false');
+    // えらぶ（鉢）・カード（タネ）
+    const box = el('town-choices'); box.replaceChildren();
+    (o.choices || []).forEach(c => { const b = document.createElement('button'); b.type = 'button'; b.className = 'town-choice' + (c.tried ? ' tried' : ''); b.textContent = c.label; b.addEventListener('click', c.fn); box.appendChild(b); });
+    const cards = el('town-cards'); cards.replaceChildren();
+    (o.cards || []).forEach(c => cards.appendChild(seedCard(c)));
+    el('btn-town-more').style.display = o.more ? '' : 'none'; el('btn-town-more').textContent = o.hint ? 'もっとくわしいヒント' : 'ヒントを見る';
+    const pb = el('btn-town-primary'); pb.style.display = o.primary ? '' : 'none';
+    if (o.primary) { pb.textContent = o.primary.label; pb.onclick = o.primary.fn; }
+    el('btn-town-close').textContent = o.closeLabel || '冒険にもどる';
+    el('btn-town-memo').style.display = townStarted(st) ? '' : 'none';
+  }
+  el('btn-town-words').addEventListener('click', () => { const g = el('town-gloss'), o = g.style.display === 'none'; g.style.display = o ? '' : 'none'; el('btn-town-words').setAttribute('aria-expanded', String(o)); });
+  // タネのカード：特徴・値段・育った姿（押したときだけ）・買う／今は買わない
+  function seedCard(c) {
+    const s = TOWN_SEEDS[c.id], d = document.createElement('div'); d.className = 'town-card';
+    const head = document.createElement('div'); head.className = 'town-card-head';
+    const ic = document.createElement('span'); ic.className = 'town-card-icon'; ic.textContent = s.icon; ic.setAttribute('aria-hidden', 'true');
+    const nm = document.createElement('span'); nm.className = 'town-card-name'; nm.textContent = s.name;
+    const pr = document.createElement('span'); pr.className = 'town-card-price'; pr.textContent = s.price + 'コイン';
+    head.append(ic, nm, pr);
+    const w = document.createElement('div'); w.className = 'town-card-words'; w.textContent = s.words;
+    const gb = document.createElement('button'); gb.type = 'button'; gb.className = 'talk-words-btn'; gb.textContent = '育った姿を見る'; gb.setAttribute('aria-expanded', 'false');
+    const gv = document.createElement('div'); gv.className = 'town-grown'; gv.style.display = 'none';
+    gv.appendChild(grownPic(c.id)); const gt = document.createElement('div'); gt.textContent = s.grown; gv.appendChild(gt);
+    gb.addEventListener('click', () => { const o = gv.style.display === 'none'; gv.style.display = o ? '' : 'none'; gb.setAttribute('aria-expanded', String(o)); });
+    const act = document.createElement('div'); act.className = 'town-card-actions';
+    const buy = document.createElement('button'); buy.type = 'button'; buy.className = 'btn-primary town-buy';
+    const owned = st.seeds[c.id] !== 'none', short = st.coins < s.price;
+    buy.textContent = owned ? (st.seeds[c.id] === 'planted' ? '花壇に植えた' : '買った（もちもの）') : short ? 'コインが足りない' : s.price + 'コインで買う';
+    buy.disabled = owned || short;
+    if (!owned && !short) buy.addEventListener('click', () => buySeed(c.id));
+    act.appendChild(buy);
+    if (!owned && !short) { const after = document.createElement('div'); after.className = 'town-after'; after.textContent = '買ったあと：のこり ' + (st.coins - s.price) + 'コイン'; act.appendChild(after); }
+    d.append(head, w, gb, gv, act);
+    return d;
+  }
+  // 育った姿の絵（その場で描く。ことばの説明と同じ形）
+  // 育った姿の絵（その場で小さなキャンバスに描く。ことばの説明と同じ形。外の画像・URL は使わない）
+  function grownPic(id) {
+    const cv = document.createElement('canvas'), k = 2; cv.width = 120 * k; cv.height = 80 * k; cv.style.width = '120px'; cv.style.height = '80px'; cv.setAttribute('aria-hidden', 'true');
+    const g = cv.getContext('2d'); g.scale(k, k); g.lineCap = 'round';
+    g.fillStyle = '#9c6e48'; g.fillRect(10, 66, 100, 10);
+    if (id === 'sun') [30, 60, 90].forEach((x, i) => {
+      const y = 18 + (i % 2) * 6;
+      g.strokeStyle = '#5f8f42'; g.lineWidth = 3; g.beginPath(); g.moveTo(x, 66); g.lineTo(x, y + 2); g.stroke();
+      g.fillStyle = '#ffcf3a'; g.beginPath(); g.ellipse(x, y, 13, 6, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#8a5a2a'; g.beginPath(); g.ellipse(x, y, 5, 3, 0, 0, Math.PI * 2); g.fill();
+    });
+    else [32, 60, 88].forEach(x => {
+      g.strokeStyle = '#5f8f42'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(x, 66); g.quadraticCurveTo(x, 30, x + 22, 34); g.stroke();
+      for (let b = 0; b < 4; b++) { const bx = x + 6 + b * 5, by = 36 + b * 2; g.fillStyle = '#fbf8f0'; g.strokeStyle = '#c8c0b0'; g.lineWidth = .8; g.beginPath(); g.moveTo(bx, by); g.lineTo(bx - 4, by + 8); g.lineTo(bx + 4, by + 8); g.closePath(); g.fill(); g.stroke(); }
+    });
+    return cv;
+  }
+
+  // それぞれの相手の話
+  WORD_GLOSS['ほころぶ'] = '';   // ことばの一覧（WORDS）にあるので、そちらの説明を使う
+  const SCENES = { florist: '市場の花屋', mole: 'タネ屋', sun: '日差しの庭', shade: 'ひさしの庭', lantern: 'ランタンの庭', bed: '広場の花壇' };
+  function show(id, o) {
+    o.scene = SCENES[id.slice(5)] || o.name;
+    render(o);
+    if (state !== S.TOWN) { returnState = walkable() ? state : returnState; setState(S.TOWN); }
+  }
+  function hintView() {
+    const g = townHintGoal(st), lv = g ? st.hint[g] : 0;
+    return lv ? { lv, max: TOWN_HINTS[g].length, text: TOWN_HINTS[g][lv - 1] } : null;
+  }
+  function open(id) {
+    if (!walkable() || !has(id)) return;
+    openId = id; isMoving = false; playAnim('idle');
+    // 見る先：花屋は鉢の台、タネ屋は台、花壇、庭は庭のまん中（日差しの庭は、ソラばあちゃん）
+    const look = id === 'town:florist' ? L.obstacles[1] : id === 'town:mole' ? L.obstacles[2] : id === 'town:bed' ? L.obstacles[5] : id === 'town:sun' ? [NPC.grandma.x, NPC.grandma.z]
+      : (() => { const h = houses.find(q => q.name === id.slice(5)); return [h.x + Math.sin(h.yaw) * (h.d / 2 + .3), h.z + Math.cos(h.yaw) * (h.d / 2 + .3)]; })();
+    hiroriMotion.facing = Math.atan2(look[0] - character.position.x, look[1] - character.position.z);
+    focusOn(look[0], look[1]); focusAt = [look[0], look[1]];
+    renderFor(id);
+  }
+  let focusAt = null;
+  function renderFor(id, extra) {
+    if (id === 'town:florist') {
+      st.met.florist = true;
+      if (st.errand === 'none') return show(id, { icon: '🐑', name: '花屋のリリ', line: TOWN_TEXT.floristHello, primary: { label: '手伝う', fn: () => { townAccept(st); save(); applyVisuals(); renderFor(id); } }, closeLabel: 'あとで' });
+      if (st.errand === 'flower') return show(id, { icon: '🐑', name: '花屋のリリ', line: extra || TOWN_TEXT.floristPick, hint: hintView(), more: st.hint.flower < TOWN_HINTS.flower.length,
+        choices: TOWN_POTS.map(p => ({ label: p.label, tried: st.tried.pots.includes(p.id) && p.id !== TOWN_POT_RIGHT, fn: () => pickPot(p.id) })), closeLabel: 'あとで' });
+      if (st.errand === 'deliver') return show(id, { icon: '🐑', name: '花屋のリリ', line: extra || TOWN_TEXT.floristDeliver, hint: hintView(), more: st.hint.house < TOWN_HINTS.house.length });
+      return show(id, { icon: '🐑', name: '花屋のリリ', line: TOWN_TEXT.floristDone });
+    }
+    if (id === 'town:mole') {
+      st.met.mole = true; save();
+      return show(id, { icon: '🐹', name: 'タネ屋のモグじい', line: extra || (st.coins > 0 || TOWN_SEED_IDS.some(k => st.seeds[k] !== 'none') ? TOWN_TEXT.moleHello + '\nもっているコイン：' + st.coins : TOWN_TEXT.moleHello + '\n' + TOWN_TEXT.moleNoCoin),
+        cards: TOWN_SEED_IDS.map(k => ({ id: k, words: TOWN_SEEDS[k].words, grown: TOWN_SEEDS[k].grown })), closeLabel: '今は買わない' });
+    }
+    if (id === 'town:bed') {
+      const own = TOWN_SEED_IDS.filter(k => st.seeds[k] === 'owned');
+      return show(id, { icon: '🌱', name: '広場の花壇', line: extra || (own.length ? 'どのタネを植える？' : TOWN_SEED_IDS.some(k => st.seeds[k] === 'planted') ? TOWN_TEXT.bedPlanted : TOWN_TEXT.bedEmpty),
+        choices: own.map(k => ({ label: TOWN_SEEDS[k].icon + ' ' + TOWN_SEEDS[k].name + 'を植える', fn: () => plant(k) })), closeLabel: own.length ? 'あとで' : '冒険にもどる' });
+    }
+    const g = id.slice(5);
+    if (st.errand === 'deliver') {
+      return show(id, { icon: g === 'sun' ? '🌞' : g === 'shade' ? '⛱️' : '🏮', name: TOWN_GARDENS[g].name, line: extra || 'うつむくように咲く花を、ここへ届ける？', hint: hintView(), more: st.hint.house < TOWN_HINTS.house.length,
+        primary: { label: 'この庭に届ける', fn: () => deliver(g) }, closeLabel: 'あとで' });
+    }
+    if (g === 'sun') { st.met.grandma = st.met.grandma || st.errand === 'done'; return show(id, { icon: '🐢', name: st.errand === 'done' ? 'ソラばあちゃん' : TOWN_GARDENS.sun.name, line: st.errand === 'done' ? TOWN_TEXT.grandmaAfter : TOWN_TEXT.sunEarly }); }
+    return show(id, { icon: g === 'shade' ? '⛱️' : '🏮', name: TOWN_GARDENS[g].name, line: g === 'shade' ? TOWN_TEXT.shadeEarly : TOWN_TEXT.lanternEarly });
+  }
+  function pickPot(id) {
+    if (state !== S.TOWN || openId !== 'town:florist') return;
+    const r = townPickPot(st, id);
+    if (!r) return;
+    save();
+    if (r.kind === 'wrong') { sfx('soft'); return renderFor('town:florist', r.reply + '\nリリさんがさがしているのは、うつむくように咲く花。'); }
+    sfx('good'); applyVisuals(); renderFor('town:florist', TOWN_TEXT.floristRight);
+  }
+  // 届ける：記録を先に確かめて保存してから、お礼の演出
+  function deliver(g) {
+    if (state !== S.TOWN || !openId || openId.slice(5) !== g) return;
+    const r = townDeliver(st, g);
+    if (!r) return;
+    if (r.kind === 'wrong') { save(); sfx('soft'); return renderFor(openId, r.reply + '\nさがしているのは、日差しが差し込む庭。'); }
+    if (r.kind !== 'done') return;
+    st.met.grandma = true; save(); applyVisuals();
+    if (r.reward) coinBurst(NPC.grandma.root.position, r.reward);
+    sfx('coin');
+    show(openId, { icon: '🐢', name: 'ソラばあちゃん', line: TOWN_TEXT.grandmaThanks, items: [], reward: r.reward });
+    const box = el('town-cards'); box.replaceChildren(); if (r.reward) box.appendChild(rewardCard(r.reward));
+  }
+  function rewardCard(n) {
+    const c = document.createElement('div'); c.className = 'detour-item';
+    const i = document.createElement('div'); i.className = 'detour-item-icon'; i.textContent = '🪙'; i.setAttribute('aria-hidden', 'true');
+    const b = document.createElement('div'), a = document.createElement('div'), w = document.createElement('div');
+    a.className = 'detour-item-name'; a.textContent = n + 'コインをもらった！'; w.className = 'detour-item-words'; w.textContent = 'もっているコイン：' + st.coins + '。タネ屋で使えるよ。';
+    b.append(a, w); c.append(i, b); return c;
+  }
+  // 買う：二重に押しても1回だけ（記録を先に変えて保存してから、表示と音）
+  function buySeed(id) {
+    if (state !== S.TOWN || openId !== 'town:mole') return;
+    const r = townBuy(st, id);
+    if (!r.ok) return;
+    save(); applyVisuals(); sfx('coin');
+    renderFor('town:mole', TOWN_SEEDS[id].name + 'を買った。のこりは ' + r.left + 'コイン。\n広場の花壇に植えられるよ。');
+  }
+  function plant(id) {
+    if (state !== S.TOWN || openId !== 'town:bed' || !townPlant(st, id)) return;
+    save(); bed.grow[id] = 0; bed[id].visible = true; bed[id].scale.setScalar(.01); sfx('good');
+    renderFor('town:bed', TOWN_TEXT.plant[id]);
+  }
+  function moreHint() {
+    if (state !== S.TOWN || !openId) return;
+    if (!townMoreHint(st)) return;
+    save(); renderFor(openId);
+    if (st.errand === 'deliver' && st.hint.house === TOWN_HINTS.house.length) glowUntil = performance.now() / 1000 + 6;
+  }
+  let glowUntil = 0;
+  function close() { if (state === S.TOWN) { openId = null; view = null; focusTarget = null; focusAt = null; guardUntil = performance.now() + 450; setState(returnState === S.TOWN ? S.EXPLORE : returnState); applyVisuals(); } }
+  el('btn-town-close').addEventListener('click', close);
+  el('btn-town-more').addEventListener('click', moreHint);
+  el('btn-town-memo').addEventListener('click', () => { if (treasure && treasure.openNotebook) treasure.openNotebook(); });
+
+  // コインの演出：お礼をくれた人から、ヒロリのほうへ小さなコインがとぶ（記録はもう保存してある）
+  const coins = []; let coinTex = null;
+  function coinBurst(from, n) {
+    if (!coinTex) { const cv = document.createElement('canvas'); cv.width = cv.height = 64; const g = cv.getContext('2d'); g.fillStyle = '#f2c14a'; g.beginPath(); g.arc(32, 32, 28, 0, Math.PI * 2); g.fill(); g.strokeStyle = '#c8902a'; g.lineWidth = 5; g.stroke(); g.fillStyle = '#fff3c0'; g.beginPath(); g.arc(24, 24, 7, 0, Math.PI * 2); g.fill(); coinTex = new THREE.CanvasTexture(cv); }
+    for (let k = 0; k < Math.min(6, n); k++) {
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: coinTex, transparent: true, depthWrite: false })); sp.scale.setScalar(.28); sp.renderOrder = 6;
+      sp.position.set(from.x, from.y + 1, from.z); G.add(sp); coins.push({ sp, t: -k * .1, sx: from.x, sz: from.z });
+    }
+  }
+  // 音：その場で作る短い音（宝さがしと同じく、最初に画面へふれたあとから）。噴水の水の音は、近いときだけ小さく
+  let actx = null, noise = null, noiseGain = null;
+  const unlock = () => { try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); } catch (e) {} };
+  addEventListener('pointerdown', unlock, { passive: true });
+  function tone(f, at, len, vol) { const o = actx.createOscillator(), g = actx.createGain(); o.type = 'sine'; o.frequency.value = f; g.gain.setValueAtTime(0, at); g.gain.linearRampToValueAtTime(vol, at + .02); g.gain.exponentialRampToValueAtTime(.0001, at + len); o.connect(g).connect(actx.destination); o.start(at); o.stop(at + len + .05); }
+  function sfx(kind) {
+    if (!actx || actx.state !== 'running') return;
+    const t = actx.currentTime + .02;
+    if (kind === 'coin') { tone(988, t, .25, .05); tone(1319, t + .09, .35, .05); }
+    else if (kind === 'good') { tone(523, t, .3, .04); tone(659, t + .1, .3, .04); tone(784, t + .2, .45, .04); }
+    else tone(392, t, .3, .03);
+  }
+  function waterSound(d) {
+    if (!actx || actx.state !== 'running') return;
+    if (!noise) {
+      const len = actx.sampleRate * 2, buf = actx.createBuffer(1, len, actx.sampleRate), ch = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) ch[i] = Math.random() * 2 - 1;
+      noise = actx.createBufferSource(); noise.buffer = buf; noise.loop = true;
+      const f = actx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1800; f.Q.value = .6;
+      noiseGain = actx.createGain(); noiseGain.gain.value = 0;
+      noise.connect(f).connect(noiseGain).connect(actx.destination); noise.start();
+    }
+    const want = walkable() || state === S.TOWN ? .035 * Math.max(0, 1 - d / 11) : 0;
+    noiseGain.gain.setTargetAtTime(want, actx.currentTime, .3);
+  }
+
+  // ── 毎フレーム：道に沿って歩く・家を透かす・水・住人の小さな動き・案内 ──
+  const steerOut = { x: 0, z: 0 }, steer = { gx: 0, gz: 0, wx: NaN, wz: NaN, at: 0, active: false };
+  const _cam = new THREE.Vector3(), seeP = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+  // 家の箱（家ごとの座標）に、カメラから見たい点までの線がかかるか
+  function boxOnLine(b, C, Pt) {
+    const c = Math.cos(b.yaw), s = Math.sin(b.yaw);
+    const loc = (x, z) => [(x - b.x) * c - (z - b.z) * s, (x - b.x) * s + (z - b.z) * c];
+    const [ax, az] = loc(C.x, C.z), [bx, bz] = loc(Pt.x, Pt.z), hx = b.w / 2, hz = b.d / 2;
+    let t0 = 0, t1 = .97;
+    for (const [p, q, h] of [[ax, bx - ax, hx], [az, bz - az, hz]]) {
+      if (Math.abs(q) < 1e-6) { if (Math.abs(p) > h) return false; continue; }
+      let ta = (-h - p) / q, tb = (h - p) / q; if (ta > tb) [ta, tb] = [tb, ta];
+      t0 = Math.max(t0, ta); t1 = Math.min(t1, tb); if (t0 > t1) return false;
+    }
+    const y = C.y + (Pt.y - C.y) * t0;
+    return y < gy(b.x, b.z) + b.H;
+  }
+  // 線分 A→B が家の箱（少し広げる）に入る位置（0〜1。B が箱の外なら 1）。箱の高さより上は数えない
+  const _hd = new THREE.Vector3();
+  function boxEnter(b, A, B, pad) {
+    const c = Math.cos(b.yaw), s = Math.sin(b.yaw), hx = b.w / 2 + pad, hz = b.d / 2 + pad;
+    const loc = (x, z) => [(x - b.x) * c - (z - b.z) * s, (x - b.x) * s + (z - b.z) * c];
+    const [bx, bz] = loc(B.x, B.z);
+    if (Math.abs(bx) > hx || Math.abs(bz) > hz || B.y > gy(b.x, b.z) + b.H) return 1;
+    const [ax, az] = loc(A.x, A.z);
+    let t0 = 0;
+    for (const [p, q, h] of [[ax, bx - ax, hx], [az, bz - az, hz]]) {
+      if (Math.abs(q) < 1e-6) continue;
+      const ta = Math.min((-h - p) / q, (h - p) / q); t0 = Math.max(t0, ta);
+    }
+    return Math.min(1, Math.max(0, t0));
+  }
+  const smooth01 = u => { const k = Math.min(1, Math.max(0, u)); return k * k * (3 - 2 * k); };
+  const TOWN_VIEW = Math.atan2(-.95, .3);   // 街に入るときのカメラの向き：ヒロリの西（少し南）から、東の通りの先を見る
+  let baseOff = null, camTurned = false, viewA = TOWN_VIEW, viewWant = TOWN_VIEW, lastX = 0, lastZ = 0;
+  function update(t, dt) {
+    if (!built || !character) return;
+    const x = character.position.x, z = character.position.z, calm = still(), w = walkable();
+    // 街の中・街へ向かうときは、道すじをたどる（タップの目的地のときだけ。キーボードはそのまま）
+    if (w && isMoving && worldV2.isActive()) {
+      if (targetPos.x !== steer.wx || targetPos.z !== steer.wz) { steer.gx = targetPos.x; steer.gz = targetPos.z; steer.at = 0; }
+      if ((steer.at -= dt) <= 0) { steer.at = .12; steer.active = T.steer(x, z, steer.gx, steer.gz, steerOut); }
+      if (steer.active) { targetPos.x = steerOut.x; targetPos.z = steerOut.z; }
+      steer.wx = targetPos.x; steer.wz = targetPos.z;
+    } else if (w && !isMoving && steer.active && Math.hypot(x - steer.gx, z - steer.gz) > ARRIVE + .4 && Math.hypot(steer.wx - x, steer.wz - z) < ARRIVE + .05) {
+      isMoving = true; playAnim('walk'); steer.at = 0;   // 道すじの途中の点に着いただけ：目的地まで歩き続ける
+    }
+    if (!isMoving) steer.active = false;
+    const px0 = lastX, pz0 = lastZ; lastX = x; lastZ = z;
+    // カメラ：街へ近づくと、少しずつ回って通りの先（東）を見る（角の向こうの屋台や噴水が見える）。草原へもどると元の向き
+    if (baseOff && !worldV2.cameraFramed()) {
+      const sd = T.shapeSd(x, z), vb = z > -20 ? (calm ? (sd < 4 ? 1 : 0) : smooth01((7 - sd) / 6)) : 0;
+      // タップで歩いているあいだは、歩いていく向きのうしろ（少し右）へ、ゆっくり回りこむ（行く先が画面の奥に見える）。止まっているとき・キーで歩くときは、そのまま
+      const turn = d => Math.atan2(Math.sin(d), Math.cos(d));
+      if (isMoving && Math.hypot(x - px0, z - pz0) > .01) viewWant = turn(Math.atan2(x - px0, z - pz0) + Math.PI + .3);
+      viewA = calm ? viewWant : viewA + turn(viewWant - viewA) * (1 - Math.exp(-dt / .8));
+      if (vb > 0 || camTurned) {
+        const b0 = Math.atan2(baseOff.x, baseOff.z), a = turn(viewA - b0) * vb, cs = Math.cos(a), sn = Math.sin(a);
+        CAM_OFF.set(baseOff.x * cs + baseOff.z * sn, baseOff.y, -baseOff.x * sn + baseOff.z * cs); camTurned = vb > 0;
+      }
+    }
+    coinEl.classList.toggle('show', w && townStarted(st));
+    if (Math.hypot(x - P.x, z - P.z) > 60) { for (const l of LABELS) l.classList.remove('show'); return; }   // 街から遠いときは、ここまで
+    // カメラが家の中に入ったら、ヒロリの側の、家の手前まで寄せる（かべの中から見ない）
+    _hd.set(x, character.position.y + 1.3, z);
+    for (const b of houses) {
+      const t = boxEnter(b, _hd, camera.position, .35);
+      if (t < 1) { camera.position.lerpVectors(_hd, camera.position, Math.max(.3, t - .03)); camera.lookAt(camTgt); camera.updateMatrixWorld(); }
+    }
+    // 家・屋台が、カメラとヒロリ（パネルのときは話す相手・調べる物も）のあいだに入ったら透かす
+    let n = 0;
+    seeP[n++].set(x, character.position.y + .9, z); seeP[n++].set(x, character.position.y + 1.6, z);
+    if (state === S.TOWN && focusAt) seeP[n++].set(focusAt[0], gy(focusAt[0], focusAt[1]) + .8, focusAt[1]);
+    const C = camera.position; let dirty = false;
+    for (const b of fadeables) {
+      let hit = false;
+      for (let k = 0; k < n && !hit; k++) hit = boxOnLine(b, C, seeP[k]);
+      const i = b.bid;
+      if (hit) fadeHold[i] = .5; else if (fadeHold[i] > 0) fadeHold[i] -= dt;
+      const want = fadeHold[i] > 0 ? FADE_LOW : 1, c = fadeCur[i];
+      if (c === want) continue;
+      fadeCur[i] = calm ? want : want < c ? Math.max(want, c - dt / .18) : Math.min(want, c + dt / .45); fadeU.value[i] = fadeCur[i]; dirty = true;
+    }
+    // 噴水：水の輪・しぶき・音
+    ripples.forEach((r, i) => { const u = calm ? .5 : (t * .35 + i / 3) % 1; r.scale.setScalar(.5 + 1.1 * u); r.material.opacity = calm ? .2 : .4 * (1 - u); });
+    if (spray) {
+      const a = spray.geometry.attributes.position.array;
+      for (let i = 0; i < sprayN; i++) {
+        const ph = calm ? (i / sprayN) * .7 : ((t * .55 + i / sprayN) % 1), ang = i * 2.399, top = i % 3 === 0;
+        const r0 = top ? .05 : .82, r1 = top ? .7 : 1.6, h0 = top ? 1.5 : 1.22, sp = top ? .55 : .25;
+        const r = r0 + (r1 - r0) * ph, y = h0 + sp * Math.sin(Math.PI * ph * .5) * (1 - ph) - (top ? .3 : .75) * ph * ph;
+        a[i * 3] = Math.cos(ang) * r; a[i * 3 + 1] = y; a[i * 3 + 2] = Math.sin(ang) * r;
+      }
+      spray.geometry.attributes.position.needsUpdate = true;
+    }
+    waterSound(Math.hypot(x - P.x, z - P.z));
+    // 日差しの筋のほこり：ゆっくり上下
+    if (motes && !calm) { const a = motes.geometry.attributes.position.array, b0 = motes.userData.base; for (let i = 0; i < a.length; i += 3) a[i + 1] = b0[i + 1] + .15 * Math.sin(t * .6 + i); motes.geometry.attributes.position.needsUpdate = true; }
+    beams.forEach((m, k) => { m.material.opacity = calm ? .5 : .45 + .1 * Math.sin(t * .5 + k) + (performance.now() / 1000 < glowUntil ? .25 : 0); });
+    // 住人：近いとヒロリのほうへ顔を向ける。がちょうは広場を回る。はとは近づくと少し飛ぶ
+    for (const id of ['florist', 'mole', 'grandma']) {
+      const p = NPC[id]; if (!p || !p.head) continue;
+      const d = Math.hypot(x - p.x, z - p.z);
+      let want = d < 6 ? Math.atan2(x - p.x, z - p.z) - p.root.rotation.y : 0;
+      want = Math.atan2(Math.sin(want), Math.cos(want)); want = Math.max(-1, Math.min(1, want));
+      p.head.rotation.y += (want - p.head.rotation.y) * (calm ? 1 : 1 - Math.exp(-4 * dt));
+      if (!calm) p.head.position.y += (Math.sin(t * 2 + p.x) * .006);
+    }
+    const gs = NPC.goose; if (gs) {
+      const a = calm ? 2.1 : t * .09, R = 4.0, gx = P.x + Math.cos(a) * R, gz = P.z + Math.sin(a) * R;
+      gs.root.position.set(gx, gy(gx, gz) + (calm ? 0 : Math.abs(Math.sin(t * 6)) * .03), gz); gs.root.rotation.y = Math.atan2(-Math.sin(a), Math.cos(a)) + (calm ? 0 : .08 * Math.sin(t * 6));
+      gs.x = gx; gs.z = gz;
+    }
+    if (NPC.dog && !calm) NPC.dog.body.scale.y = 1 + .04 * Math.sin(t * 1.6);
+    for (const b of NPC.birds || []) {
+      const d = Math.hypot(x - b.home[0], z - b.home[1]);
+      if (d < 2.4 && b.fly <= 0) b.fly = 1;
+      if (b.fly > 0) b.fly = Math.max(0, b.fly - dt * .45);
+      const f = calm ? 0 : Math.sin(Math.PI * Math.min(1, b.fly)) ;
+      b.g.position.y = gy(b.home[0], b.home[1]) + f * 1.6;
+      b.g.position.x = b.home[0] + f * .8; b.g.position.z = b.home[1] - f * .5;
+      if (!calm && b.fly <= 0) b.g.rotation.x = Math.max(0, Math.sin(t * 3 + b.peck)) * .35;
+    }
+    // 運んでいる鉢：ヒロリの胸の前
+    if (carryPot.visible) {
+      const yaw = character.rotation.y;
+      carryPot.position.set(x + Math.sin(yaw) * .32, character.position.y + .38 + (calm ? 0 : .02 * Math.sin(t * 6)), z + Math.cos(yaw) * .32); carryPot.rotation.y = yaw;
+    }
+    // 植えた花が育つ（2.4秒。動きを減らす設定ではすぐ）
+    for (const id of TOWN_SEED_IDS) if (bed.grow[id] < 1) { bed.grow[id] = calm ? 1 : Math.min(1, bed.grow[id] + dt / 2.4); const g = bed.grow[id]; bed[id].scale.set(1, Math.max(.01, g * g * (3 - 2 * g)), 1); }
+    for (let i = coins.length - 1; i >= 0; i--) {
+      const c = coins[i]; c.t += dt; const u = Math.min(1, Math.max(0, c.t / .9));
+      c.sp.position.set(c.sx + (x - c.sx) * u, gy(c.sx, c.sz) + 1 + Math.sin(Math.PI * u) * 1.2 + (character.position.y + .6 - gy(c.sx, c.sz) - 1) * u, c.sz + (z - c.sz) * u);
+      c.sp.visible = c.t >= 0;
+      if (u >= 1) { G.remove(c.sp); c.sp.material.dispose(); coins.splice(i, 1); }
+    }
+    // 名前の札（話したあと・近いとき）
+    project(NPC.florist, el('label-lili'), w && st.met.florist, 1.45, x, z);
+    project(NPC.mole, el('label-mog'), w && st.met.mole, 1.3, x, z);
+    project(NPC.grandma, el('label-sora'), w && st.met.grandma, 1.25, x, z);
+    projectAt(P.x, gy(P.x, P.z) + 2.2, P.z, el('sfx-fountain'), w && Math.hypot(x - P.x, z - P.z) < 9);
+    if (performance.now() > guardUntil) guardUntil = 0;
+  }
+  function projectAt(x, y, z, lab, on) {
+    if (on) { _v.set(x, y, z).project(camera); on = _v.z < 1 && Math.abs(_v.x) < 1.05 && Math.abs(_v.y) < 1.05; }
+    lab.classList.toggle('show', !!on);
+    if (on) { lab.style.left = ((_v.x + 1) / 2 * innerWidth) + 'px'; lab.style.top = ((1 - _v.y) / 2 * innerHeight) + 'px'; }
+  }
+  function project(p, lab, met, h, x, z) { projectAt(p.x, p.root.position.y + h, p.z, lab, met && Math.hypot(x - p.x, z - p.z) < 5); }
+
+  // 「デモを最初から」：街の記録（お手伝い・コイン・タネ・花壇）を最初へ
+  function reset() {
+    forget(); st = createTownState(); openId = null; view = null; steer.active = false; viewA = viewWant = TOWN_VIEW;
+    for (const id of TOWN_SEED_IDS) bed.grow[id] = 1;
+    applyVisuals();
+  }
+  // 冒険メモ（宝さがしのメモのあとに続ける）・もちもの
+  function memo() { return townMemo(st); }
+  function items() {
+    const rows = [];
+    if (st.errand === 'deliver') rows.push(['🪴', 'うつむいて咲く花の鉢', '日差しが差し込む庭のおうちへ届ける。']);
+    if (townStarted(st)) rows.push(['🪙', 'コイン（' + st.coins + 'まい）', '街のお手伝いでもらえる、ゲームの中のお金。タネ屋で使える。']);
+    for (const id of TOWN_SEED_IDS) if (st.seeds[id] === 'owned') rows.push([TOWN_SEEDS[id].icon, TOWN_SEEDS[id].name, TOWN_SEEDS[id].words + '（広場の花壇に植えられる）']);
+    return rows;
+  }
+  function blockers() { return built ? houses.map(h => [h.x, h.z, Math.min(h.w, h.d) / 2]) : []; }
+  const _fp = new THREE.Vector3();
+  function focusPoint(out = _fp) { return state === S.TOWN && focusAt ? out.set(focusAt[0], gy(focusAt[0], focusAt[1]) + .6, focusAt[1]) : null; }
+  worldV2.ready.then(ok => { if (ok) build(); });
+  // テスト用（読むだけ）
+  const scr = (x, y, z) => { _v.set(x, y, z).project(camera); return { x: (_v.x + 1) / 2 * innerWidth, y: (1 - _v.y) / 2 * innerHeight, front: _v.z < 1 }; };
+  window.__tomoriTown = { state: () => JSON.parse(JSON.stringify(st)), saveKey: SAVE_KEY, built: () => built, layout: L, spot: id => spot(id), ids, open: () => openId,
+    houses: () => houses.map(h => ({ name: h.name, x: h.x, z: h.z, bid: h.bid })), fade: () => Array.from(fadeCur).map(v => +v.toFixed(2)),
+    screenAt: (x, z, y = 0) => scr(x, gy(x, z) + y, z), path: (x0, z0, x1, z1) => T.path(x0, z0, x1, z1), npc: id => NPC[id] && { x: NPC[id].x, z: NPC[id].z } };
+  return { has, ids, spot, call, open, pick, update, memo, items, blockers, focusPoint, reset, started: () => townStarted(st), applyVisuals, tapBlocked: () => performance.now() < guardUntil };
+})();
+// TOWN-END
+
 // ── リセット ─────────────────────────────────────────────────────
-window.confirmReset = ()=>{ if(confirm('デモを最初からやり直しますか？\n宝さがしと巨木への冒険の記録、もちものも消えます。')) doReset(); };
+window.confirmReset = ()=>{ if(confirm('デモを最初からやり直しますか？\n宝さがしと巨木への冒険の記録、もちもの、市場町のお手伝い・コイン・買ったタネ・花壇も消えます。')) doReset(); };
 
 function doReset(){
   stopVoice();
@@ -6301,6 +7652,7 @@ function doReset(){
   questHub.reset();  // クエスト・答え・道くさ・見つけたもの（Step 11M）
   treasure.reset();  // 宝さがしの進み具合・もちもの・端末の記録（EXPANSION-01）
   missionHold.reset();  // 後回しにしたミッション（EXPANSION-02）
+  if (town) town.reset();  // 市場町のお手伝い・コイン・タネ・花壇（TOWN-01）
   if(character){ character.position.set(0,0,0); character.rotation.set(0,0,0); }
   resetHiroriMotion(); camUser.reset();   // 視点も最初の構図へ（Step 11P）
   targetPos.set(0,0,0); isMoving=false;
@@ -6633,6 +7985,7 @@ function animate(){
   worldArt.update(t); worldV2.update(t);   // 小道の光・光の柱・ことばの樹の実を、ゆっくり動かす（WORLD-ART・WORLD-V2）
   questHub.update(t);   // 第2クエストの芽・道くさの気配（Step 11M。新しい描画ループは作らない）
   if(treasure) treasure.update(t,dt);   // 宝さがしの人・物の動きと「話す」の案内（EXPANSION-01。同じ描画ループの中）
+  if(town) town.update(t,dt);   // 市場町の道すじ・透かす・住人・噴水（TOWN-01。同じ描画ループの中）
   missionHold.update();   // 後回しにしたミッションの「続ける」（EXPANSION-02）
   renderer.render(scene,camera);
 }

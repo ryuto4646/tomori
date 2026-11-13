@@ -31,12 +31,12 @@
 | 素材 | 生成日 | プラン | 公開設定 | 利用条件 | 三角形 | マテリアル | テクスチャ | 容量（ゲーム用） | 状態 |
 |---|---|---|---|---|---|---|---|---|---|
 | 家（town_house_A） | 2026-11-13 ごろ（ファイル受け取り日） | 制作者に確認中 | 制作者に確認中 | 制作者に確認中 | 7,938 | 1 | 1024 JPEG 1枚 | 0.9MB | 開発版で採用・実機未確認 |
-| 屋台（market_stall_A） | 2026-11-13 ごろ（ファイル受け取り日） | 制作者に確認中 | 制作者に確認中 | 制作者に確認中 | 3,856 | 1 | 1024 JPEG 1枚 | 0.58MB | 開発版で採用・実機未確認 |
+| 屋台（market_stall_A。Meshy 上の名前は Market Stall Mobile 4k） | 2026-11-13 13:52（Meshy 7.1） | Pro（当日の契約画面で確認） | プライベート（素材詳細画面で確認） | Pro プランで作った非公開の素材 | 3,856（Meshy のモデル画面と一致） | 1 | 1024 JPEG 1枚 | 0.58MB | 開発版で採用・実機未確認 |
 | 噴水（Meshy） | ― | ― | ― | ― | ― | ― | ― | ― | 家・屋台の採用後（今は仮の形） |
 
 本番に入れる前に、プラン・公開設定・利用条件を制作者に確かめて、この表をうめます（公開条件の6番目）。
 
-プロンプト（HQ の指示どおり。制作者が実際に使った文と同じかは、制作者に確認中）
+プロンプト（HQ の指示どおり。屋台は「HQの指示に沿って制作。実際に送信された全文との完全一致は未確認」と制作者から回答あり（2026-11-13）。家は制作者に確認中）
 
 - 家：A single cozy medieval European rural market-town house, stylized storybook 3D game asset. Warm cream plaster, visible dark timber framing, a muted terracotta pitched roof with gently bowed eaves, a slightly tapered upper story, an offset gable, a simple wooden door and asymmetrically arranged small windows. （以下、HQ 指示 TOMORI-TOWN-01 の11節のとおり）
 - 屋台：A single small medieval European market stall for a stylized storybook 3D exploration game. Simple wooden counter, four sturdy wooden posts, a gently curved striped canvas awning in muted warm cream and sage green. （以下、同じ11節のとおり）

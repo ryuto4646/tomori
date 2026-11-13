@@ -178,16 +178,43 @@ test('11. つなぎ目：近づいただけでは開かない（押したとき�
   assert.ok(!/着いた/.test(code(CORE + UI)));
 });
 
-test('12. 描く重さ：家と屋台は1つの形（家ごとの番号で透かす）。新しい描画ループ・タイマー・点光源・外の素材なし', () => {
+test('12. 描く重さ：仮の家と屋台の品物は1つの形（家ごとの番号で透かす）。描画ループ・点光源は増やさない。外の読みこみ部品なし', () => {
   const u = code(UI);
-  assert.ok(!/requestAnimationFrame|setInterval|setTimeout\(/.test(u));
+  assert.ok(!/requestAnimationFrame|setInterval/.test(u));
+  // タイマーは、Meshy の素材を待つ上限の1つだけ（届かなければ仮の形で組み立てる）
+  assert.equal((u.match(/setTimeout\(/g) || []).length, 1);
+  assert.match(u, /return Promise\.race\(\[all, new Promise\(r => setTimeout\(\(\) => r\(null\), MESHY_WAIT_MS\)\)\]\)\.catch\(\(\) => null\);/);
   assert.ok(!/PointLight|SpotLight|DirectionalLight/.test(u));
   assert.ok(!/innerHTML|insertAdjacentHTML|https?:/.test(u));
-  assert.ok(!/GLTFLoader|FileLoader|TextureLoader/.test(u), 'no external assets yet');
+  assert.ok(!/GLTFLoader|TextureLoader|import\(/.test(u), 'no new loader modules');
   assert.match(u, /houseMesh = finish\(acc, fadeMat\(\), 'Town_Houses'\)/);
   assert.match(u, /uFade\[int\(aBid \+ \.5\)\]/);
-  // 透かす：カメラとヒロリ（会話のときは相手も）のあいだの家だけ。透けている家はタップで選ばない
   assert.match(u, /\.find\(i => fadeCur\[bidOf\(i\)\] > \.9\)/);
+});
+
+test('12b. Meshy の家・屋台：決まった2つのファイルだけ。軽くした版（三角形・容量の上限）。置く区画は道・ほかの家と重ならない', () => {
+  const u = code(UI);
+  assert.deepEqual([...u.matchAll(/'(assets\/[^']+)'/g)].map(m => m[1]).sort(), ['assets/town-meshy/market-stall-a-game.glb', 'assets/town-meshy/town-house-a-game.glb']);
+  for (const [f, maxTri, maxBytes] of [['town-house-a-game.glb', 10000, 1.5e6], ['market-stall-a-game.glb', 5000, 1e6]]) {
+    const b = readFileSync(join(ROOT, 'assets', 'town-meshy', f));
+    assert.ok(b.length <= maxBytes, f + ' size ' + b.length);
+    const jl = b.readUInt32LE(12), j = JSON.parse(b.slice(20, 20 + jl).toString());
+    assert.equal(j.meshes.length, 1); assert.equal(j.images.length, 1); assert.equal(j.images[0].mimeType, 'image/jpeg');
+    assert.ok(j.accessors[j.meshes[0].primitives[0].indices].count / 3 <= maxTri, f + ' triangles');
+  }
+  // 区画：素材の正面を区画の正面にそろえ、奥へ深くなる。道・広場から 0.25m 以上、ほかの家とも重ならない
+  const Q = L.meshyHouse;
+  const fp = h => { const [x, z, fx, fz, w, d, name] = h, yaw = Math.atan2(fx - x, fz - z); if (!L.meshyLots.includes(name)) return { x, z, yaw, w, d, name };
+    const sc = Math.min(w / Q.w, Q.maxScale), cz = d / 2 - Q.front * sc; return { x: x + Math.sin(yaw) * cz, z: z + Math.cos(yaw) * cz, yaw, w: Q.w * sc, d: Q.d * sc, name }; };
+  const F = L.houses.map(fp), pts = b => { const c = Math.cos(b.yaw), s = Math.sin(b.yaw), o = []; for (let i = 0; i <= 6; i++) for (let k = 0; k <= 6; k++) { const lx = (i / 6 - .5) * b.w, lz = (k / 6 - .5) * b.d; o.push([b.x + lx * c + lz * s, b.z - lx * s + lz * c]); } return o; };
+  const inside = (p, b) => { const c = Math.cos(b.yaw), s = Math.sin(b.yaw), dx = p[0] - b.x, dz = p[1] - b.z; return Math.abs(dx * c - dz * s) < b.w / 2 + .2 && Math.abs(dx * s + dz * c) < b.d / 2 + .2; };
+  for (const b of F.filter(b => L.meshyLots.includes(b.name))) assert.ok(Math.min(...pts(b).map(([x, z]) => W.townShapeSd(x, z))) >= .25, b.name);
+  F.forEach((a, i) => F.forEach((b, j) => { if (j > i) assert.ok(!pts(a).some(p => inside(p, b)) && !pts(b).some(p => inside(p, a)), a.name + ' / ' + b.name); }));
+  // お届け先の庭の3軒は、庭の光・ひさしと組なので仮の形のまま
+  for (const n of ['sun', 'shade', 'lantern']) assert.ok(!L.meshyLots.includes(n));
+  // 読めないときは、仮の形で組み立てる
+  assert.match(u, /loadMeshy\(\)\.then\(M => build\(M\)\)/);
+  assert.match(u, /if \(M && L\.meshyLots\.includes\(h\[6\]\)\) placeMeshyHouse\(M\.house, h, k\); else buildHouse\(acc, h, k\);/);
 });
 
 test('13. 元へ戻せる：市場町を外すと、前の demo-world.html と同じ形（まとまりと短いつなぎ）', () => {
@@ -202,4 +229,13 @@ test('14. カメラ：街の中だけ向きを回す（V2 のときだけ組み�
   assert.match(u, /if \(vb > 0 \|\| camTurned\) \{/);
   assert.match(u, /CAM_OFF\.set\(baseOff\.x \* cs \+ baseOff\.z \* sn, baseOff\.y, -baseOff\.x \* sn \+ baseOff\.z \* cs\); camTurned = vb > 0;/);
   assert.match(u, /z > -20 \?/, 'not in the secret valley');
+});
+
+test('15. 上の知らせ（街の中だけ）：いまの段階でやること。どの鉢・どの家が正解かは言わない', () => {
+  const G = new Function(CORE + '\nreturn { townGuide, createTownState };')();
+  const st = G.createTownState(), seen = [];
+  for (const e of ['none', 'flower', 'deliver', 'done']) { st.errand = e; seen.push(G.townGuide(st)); }
+  st.coins = 10; seen.push(G.townGuide(st)); st.seeds.sun = 'owned'; seen.push(G.townGuide(st));
+  for (const t of seen) { assert.ok(t.length > 4 && t.length <= 32, t); assert.ok(!/2ばん|光の筋|下を向|ソラばあちゃん/.test(t), t); }
+  assert.match(code(UI), /if \(inTown\) \{ if \(barSaved === null\) barSaved = mbarText\.textContent; mbarText\.textContent = townGuide\(st\); \}/);
 });

@@ -2010,7 +2010,8 @@ const worldV2 = (() => {
       [63.2, 4.7, 61.6, -6.4, 4.6, 3.8, 'p82'], [57.1, 3.6, 61.6, -6.4, 4.2, 3.6, 'p114'], [43.6, -16.2, 44, -9, 4.2, 3.8, 'back1'], [48.4, -17.8, 50, -10, 4.4, 3.8, 'back2'],
       [69.2, -29.4, 69.2, -23.2, 5.0, 4.0, 'sun'], [61.8, -24.4, 68.6, -23.6, 4.4, 4.0, 'shade'], [75.6, -22.6, 68.6, -23.0, 4.4, 4.0, 'lantern'], [71.4, 6.4, 71.4, 2.0, 4.0, 3.4, 'laneS']],
     // Meshy の家（town_house_A）を置く区画。お届け先の庭の3軒・角の小さな家は、庭の光やひさしと組なので今の形のまま
-    meshyLots: ['roadN1', 'roadN2', 'roadS2', 'p-122', 'p-42', 'p-15', 'p82', 'p114', 'back1', 'back2'],
+    meshyLots: ['roadN1', 'roadN2', 'roadS2', 'p-122', 'p-42', 'p-15', 'p114', 'back1', 'back2'],
+    meshyBakery: { lot: 'p82', w: 1.28, d: 1.42, h: 1.9, front: .715, maxScale: 3.6 },   // Meshy のパン屋（town_bakery_A）。パンの並ぶ窓（素材の -X 側）を広場へ向ける。パン屋の屋台の近く
     meshyHouse: { w: 1.23, d: 1.63, h: 1.9, front: .81, maxScale: 3.6 },   // 素材の大きさ（幅・奥行き・高さ・正面の位置）。幅を区画にあわせて大きくする
   });
   // 道・広場までの距離（中なら負）。r に limit をかけると、ふちより少し内側（タップ先に使う）
@@ -6648,6 +6649,118 @@ function restoreTown(raw) {
 }
 // TOWN-CORE-END
 
+// HIRORI-SOFT-BEGIN（TOWN-01：ヒロリの質感「起毛したマシュマロ」。形・色・顔・羽・花・足の動き・速さ・歩幅は変えない。光の当たり方と、止まったときの小さな余韻だけ）
+// 輪郭へ行くほど、温かいクリーム色の光が少し足される（短く密な毛が光を返す見え方）。つやは消し、かげも少し明るく（光が広くやわらかく当たる）
+// 止まったときに、体がほんの少し沈んで戻る（0.45秒。足もとを中心に縮むので、足は地面からはなれない）。「動きを減らす」設定では余韻を止める
+// ?soft=0 で、前の見え方にもどせる（くらべるため）
+var hiroriSoft = (() => {
+  const on = new URLSearchParams(location.search).get('soft') !== '0';
+  const FUZZ = .3, FUZZ_POW = 2.2, LIFT = .07, SETTLE_S = .45, SETTLE_AMP = .035;
+  const FUZZ_COLOR = 'vec3(1.0, .94, .88)';
+  const done = new WeakSet();
+  let found = 0, lookAt = 0, wasMoving = false, settle = -1;
+  function soften(m) {
+    m.roughness = 1; m.metalness = 0;
+    const prev = m.onBeforeCompile;
+    m.onBeforeCompile = (sh, r) => {
+      if (prev) prev(sh, r);
+      sh.fragmentShader = sh.fragmentShader.replace('#include <opaque_fragment>',
+        '{ float fz = pow(1. - clamp(dot(normalize(normal), normalize(vViewPosition)), 0., 1.), ' + FUZZ_POW.toFixed(2) + ');\n'
+        + '  outgoingLight += ' + FUZZ_COLOR + ' * fz * ' + FUZZ.toFixed(2) + ' + diffuseColor.rgb * ' + LIFT.toFixed(2) + '; }\n#include <opaque_fragment>');
+    };
+    m.customProgramCacheKey = () => 'tomori-hirori-soft';
+    m.needsUpdate = true;
+  }
+  function update(dt) {
+    if (!on || !character) return;
+    // 形が読みこまれるまで、ときどき探す（見つかったら、もう探さない）
+    if (found < 2 && (lookAt -= dt) <= 0) {
+      lookAt = 1;
+      let n = 0;
+      character.traverse(o => { if (o.isMesh && o.material && o.material.isMeshStandardMaterial && !done.has(o.material)) { soften(o.material); done.add(o.material); n++; } });
+      if (n) found++;
+      if (fieldHirori.active()) found = Math.max(found, 1);
+    }
+    // 止まったときの余韻：歩いていた → 止まった、の1回だけ
+    const moving = currentAnim === 'walk';
+    if (wasMoving && !moving && !reduceMotionQuery.matches) settle = 0;
+    wasMoving = moving;
+    if (settle >= 0) {
+      settle += dt;
+      const u = Math.min(1, settle / SETTLE_S), k = Math.sin(Math.PI * u) * (1 - u) * SETTLE_AMP;
+      character.scale.set(1 + k * .5, 1 - k, 1 + k * .5);
+      if (u >= 1) { settle = -1; character.scale.set(1, 1, 1); }
+    }
+  }
+  // 耳（2026-11-13 の追加指示の試し）：小さな丸みのある三角耳を左右に1つずつ。外は珊瑚色、内はクリーム色。花の側でも花にかからない位置
+  // 形は変えず、読みこんだあとで頭（Root の骨）に足すので、頭の動きにそのまま付いていく。決まるまでは ?ears=a（大きめ）・?ears=b（もっと大きめ）のときだけ
+  // 大きめの猫耳。頭の左右の外寄りに付ける。花の側（-x）は花とぶつからないよう、少しうしろ・少しうしろへ倒す（花との間は約0.035。test-town.mjs）
+  // 耳 B（2026-11-13 制作者が決定）：大きめの猫耳。先はななめ上（外へ約41°）。左右とも同じ位置・同じ角度（うしろから見ても左右がそろう）
+  // 付け根は頭の中心から左右0.1・少しうしろ（z -0.11）。花とのあいだは約0.042。?ears=0 で耳なし（くらべるため）
+  const EARS = new URLSearchParams(location.search).get('ears') === '0' ? null : { w: .125, h: .175, tilt: .72, back: -.15, z: -.11, y: .812 };
+  let earsOn = false;
+  function earGeo(w, h, depth, bevel) {
+    const r = w * .22, sh = new THREE.Shape();   // 角を丸めた三角（先はとがらせすぎない）
+    sh.moveTo(-w / 2 + r, 0); sh.lineTo(w / 2 - r, 0); sh.quadraticCurveTo(w / 2, 0, w / 2 - r * .4, r * .8);
+    sh.lineTo(r * .55, h - r * 1.1); sh.quadraticCurveTo(0, h + r * .2, -r * .55, h - r * 1.1);
+    sh.lineTo(-w / 2 + r * .4, r * .8); sh.quadraticCurveTo(-w / 2, 0, -w / 2 + r, 0);
+    const g = new THREE.ExtrudeGeometry(sh, { depth, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel * .8, bevelSegments: 3, curveSegments: 6 });
+    g.translate(0, 0, -depth / 2); g.computeVertexNormals(); return g;
+  }
+  function addEars() {
+    if (earsOn || !EARS || !fieldHirori.active()) return;
+    const root = character.getObjectByName('Root');
+    if (!root || !root.isBone) return;
+    const outer = new THREE.MeshStandardMaterial({ color: 0xEE8471, roughness: 1, metalness: 0 }), inner = new THREE.MeshStandardMaterial({ color: 0xF7EBDB, roughness: 1, metalness: 0 });
+    soften(outer); soften(inner);
+    const og = earGeo(EARS.w, EARS.h, .02, .014), ig = earGeo(EARS.w * .6, EARS.h * .66, .006, .004);
+    for (const sd of [1, -1]) {   // +x と -x（-x は花の側）
+      const ear = new THREE.Group(); ear.name = 'HiroriEar_' + (sd > 0 ? 'L' : 'R');
+      ear.position.set(sd * .1, FACE ? neckY(EARS.y) : EARS.y, EARS.z);   // 左右おなじ。首を短くしたときは、頭といっしょに下げる
+      ear.rotation.set(EARS.back, 0, -sd * EARS.tilt, 'XYZ');   // 先はななめ上（外へ）。左右は鏡うつし
+      const o = new THREE.Mesh(og, outer), i = new THREE.Mesh(ig, inner); i.position.set(0, EARS.h * .12, .018);
+      o.castShadow = i.castShadow = true; ear.add(o, i); root.add(ear);
+    }
+    earsOn = true;
+  }
+  // 顔の微調整（2026-11-13 の追加指示。採用）：首を少し短く・ほおを少しふっくら・瞳に小さな光
+  // ファイルの形は変えず、読みこんだあとで点を少し動かす。骨はすべて回転なしの向きなので、点を動かしても歩き・羽・花の動きはそのまま
+  const FACE = new URLSearchParams(location.search).get('face') !== '0';   // 2026-11-13 制作者が採用（?face=0 で前の顔）
+  const NECK = { y0: .5, y1: .64, d: .035 };   // 首の細いところ（高さ0.50〜0.64）を縮め、頭を0.035下げる（肩より下は動かさない）
+  const CHEEKS = [[.11, .69, .115, .05, .018], [-.11, .69, .115, .05, .018], [0, .662, .15, .042, .008]];   // [x, y, z, 広がり, ふくらみ]：口の左右の下・あご
+  const EYES = [[.085, .751, .141], [-.084, .752, .141]];
+  let faceOn = false;
+  const neckY = y => y <= NECK.y0 ? y : y >= NECK.y1 ? y - NECK.d : NECK.y0 + (y - NECK.y0) * (1 - NECK.d / (NECK.y1 - NECK.y0));
+  function applyFace() {
+    if (faceOn || !FACE || !fieldHirori.active()) return;
+    const sk = character.getObjectByProperty('isSkinnedMesh', true), root = character.getObjectByName('Root');
+    if (!sk || !root) return;
+    const pa = sk.geometry.attributes.position, A = pa.array;
+    for (let i = 0; i < pa.count; i++) {
+      let x = A[i * 3], y = A[i * 3 + 1], z = A[i * 3 + 2];
+      // ほお：頭の中心（0, 0.74, 0）から外へ、なだらかに（顔の前側だけ）
+      if (z > .02 && y > .6 && y < .8) {
+        let k = 0;
+        for (const [cx, cy, cz, sg, amp] of CHEEKS) k += amp * Math.exp(-((x - cx) ** 2 + (y - cy) ** 2 + (z - cz) ** 2) / (2 * sg * sg));
+        const dx = x, dy = y - .74, dz = z, L = Math.hypot(dx, dy, dz) || 1;
+        x += dx / L * k; y += dy / L * k; z += dz / L * k;
+      }
+      A[i * 3] = x; A[i * 3 + 1] = neckY(y); A[i * 3 + 2] = z;
+    }
+    pa.needsUpdate = true; sk.geometry.computeBoundingSphere();
+    // 瞳の小さな光：黒目の上寄りに1つずつ（目の大きさ・白目は変えない）
+    const hm = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .92 }), hg = new THREE.CircleGeometry(.0085, 12);
+    for (const [ex, ey, ez] of EYES) {
+      const nx = ex, nz = ez, L = Math.hypot(nx, nz), h = new THREE.Mesh(hg, hm); h.name = 'HiroriEyeLight';
+      h.position.set(ex + nx / L * .018 + .006, neckY(ey) + .011, ez + nz / L * .018); h.rotation.y = Math.atan2(nx, nz);
+      root.add(h);
+    }
+    faceOn = true;
+  }
+  return { update: dt => { update(dt); if (FACE && !faceOn && character) applyFace(); if (EARS && !earsOn && character && (!FACE || faceOn)) addEars(); }, active: () => on && found > 0, ears: () => earsOn, face: () => faceOn };
+})();
+// HIRORI-SOFT-END
+
 // TOWN-BEGIN（TOWN-01：市場町の見た目・住人・お手伝い・お店・花壇。進み方と保存の形は TOWN-CORE、道と通れない物は worldV2 の TOWN-LAYOUT。新しい描画ループ・タイマーは作らない）
 // 明るい絵本の市場町：家は少しふくらみ、軒が反り、家ごとに高さ・幅・窓の位置がちがう。家・屋台は1つの形にまとめて描き、ヒロリや話す相手を隠すときだけ点を抜いて透かす
 var town = (() => {
@@ -7017,7 +7130,8 @@ var town = (() => {
       [CYL, 0xf0a040, [.08, .1, 0], [.025, .2, .025]], [CYL, 0xf0a040, [-.08, .1, 0], [.025, .2, .025]],
       [CYL, 0xc8a46c, [.26, .38, .08], [.13, .14, .13]], [SPH, 0xe86a5a, [.26, .48, .08], [.06, .05, .06]], [SPH, 0xffd45a, [.22, .49, .12], [.05, .04, .05]], [SPH, 0x86a96f, [.3, .5, .04], [.05, .04, .05]],
     ], 'Goose'));
-    NPC.goose = { root: goose, x: P.x, z: P.z };
+    goose.position.set(P.x + 4, gy(P.x + 4, P.z), P.z);   // はじめから広場に（街から遠いあいだは動かさないので、置き場所を先に決める）
+    NPC.goose = { root: goose, x: P.x + 4, z: P.z };
     // 動物：パン屋のそばでねている犬、噴水のまわりのはと（近づくと飛ぶ）
     const br = L.obstacles[3];
     const dog = npcRoot('dog', br[0] + 1.7, br[1] + .3, br[0] + 3, br[1] - 1);
@@ -7182,7 +7296,7 @@ var town = (() => {
   }
 
   // ── Meshy の家・屋台（docs/ASSET_REGISTER.md）。色の絵1枚つきの GLB を、ここで読む（外の読みこみ部品は使わない） ──
-  const MESHY_URL = { house: 'assets/town-meshy/town-house-a-game.glb', stall: 'assets/town-meshy/market-stall-a-game.glb' }, MESHY_WAIT_MS = 6000;
+  const MESHY_URL = { house: 'assets/town-meshy/town-house-a-game.glb', stall: 'assets/town-meshy/market-stall-a-game.glb', bakery: 'assets/town-meshy/town-bakery-a-game.glb' }, MESHY_WAIT_MS = 6000;
   const STALL_S = 1.3, STALL_TOP = (-.358 + .952) * 1.3, STALL_DY = STALL_TOP - .93;   // 屋台の台の高さ（約0.77m）。品物は、その上へ
   async function readTexGlb(buf) {
     const dv = new DataView(buf);
@@ -7204,7 +7318,7 @@ var town = (() => {
   }
   function loadMeshy() {
     const one = url => new Promise((res, rej) => new THREE.FileLoader().setResponseType('arraybuffer').load(url, res, undefined, rej)).then(readTexGlb);
-    const all = Promise.all([one(MESHY_URL.house), one(MESHY_URL.stall)]).then(([house, stall]) => ({ house, stall }));
+    const all = Promise.all([one(MESHY_URL.house), one(MESHY_URL.stall), one(MESHY_URL.bakery)]).then(([house, stall, bakery]) => ({ house, stall, bakery }));
     return Promise.race([all, new Promise(r => setTimeout(() => r(null), MESHY_WAIT_MS))]).catch(() => null);
   }
   // 1つの家・屋台ごとに素材を分け、濃さ（uOne）で点を抜いて透かす（形と絵は共有）
@@ -7219,12 +7333,12 @@ var town = (() => {
     m.userData.u = u; return m;
   }
   const meshyMeshes = [];
-  function placeMeshyHouse(M, spec, bid) {
-    const [x, z, fx, fz, w0, d0, name] = spec, Q = L.meshyHouse, yaw = Math.atan2(fx - x, fz - z);
-    const sc = Math.min(w0 / Q.w, Q.maxScale), cz = d0 / 2 - Q.front * sc, mirror = bid % 2 ? -1 : 1, hy = 1 + ((bid * 37) % 7 - 3) * .015;
-    const tint = [0xffffff, 0xfff0e2, 0xffe9e2, 0xf4f7e6, 0xfff7dc][bid % 5];
+  function placeMeshyHouse(M, spec, bid, Q = L.meshyHouse, turn = 0) {   // turn：素材の正面が +Z でないとき（パン屋は -X が正面なので +90°）
+    const [x, z, fx, fz, w0, d0, name] = spec, yaw = Math.atan2(fx - x, fz - z);
+    const sc = Math.min(w0 / Q.w, Q.maxScale), cz = d0 / 2 - Q.front * sc, mirror = turn || bid % 2 === 0 ? 1 : -1, hy = turn ? 1 : 1 + ((bid * 37) % 7 - 3) * .015;
+    const tint = turn ? 0xffffff : [0xffffff, 0xfff0e2, 0xffe9e2, 0xf4f7e6, 0xfff7dc][bid % 5];
     const m = new THREE.Mesh(M.geometry, meshyMat(M.texture, tint)); m.name = 'Town_House_' + name; m.userData.bid = bid;
-    m.position.set(x, gy(x, z) + .952 * sc * hy, z); m.rotation.y = yaw; m.scale.set(sc * mirror, sc * hy, sc);
+    m.position.set(x, gy(x, z) + .952 * sc * hy, z); m.rotation.y = yaw + turn; m.scale.set(turn ? sc : sc * mirror, sc * hy, turn ? sc * 1 : sc);
     m.castShadow = HIGH; m.receiveShadow = true; G.add(m); meshyMeshes.push(m);
     m.position.x += Math.sin(yaw) * cz; m.position.z += Math.cos(yaw) * cz;   // 素材の正面を、区画の正面にそろえる（奥へ深くなる）
     houses.push({ x: m.position.x, z: m.position.z, yaw, w: Q.w * sc + .2, d: Q.d * sc + .2, H: Q.h * sc * hy + .1, bid, name, doorX: 0, front: d0 / 2, mat: m.material });
@@ -7246,7 +7360,7 @@ var town = (() => {
     if (built || !worldV2.isActive()) return;
     meshyOn = !!M;
     const acc = makeAcc();
-    L.houses.forEach((h, k) => { if (M && L.meshyLots.includes(h[6])) placeMeshyHouse(M.house, h, k); else buildHouse(acc, h, k); });
+    L.houses.forEach((h, k) => { if (M && L.meshyLots.includes(h[6])) placeMeshyHouse(M.house, h, k); else if (M && h[6] === L.meshyBakery.lot) placeMeshyHouse(M.bakery, h, k, L.meshyBakery, Math.PI / 2); else buildHouse(acc, h, k); });
     const kinds = ['florist', 'seeds', 'bread', 'cloth'];
     kinds.forEach((kind, k) => { buildStall(acc, L.obstacles[k + 1], 20 + k, kind, !!M); if (M) placeMeshyStall(M.stall, L.obstacles[k + 1], 20 + k); });
     houseMesh = finish(acc, fadeMat(), 'Town_Houses'); houseMesh.castShadow = HIGH; houseMesh.receiveShadow = true; G.add(houseMesh);
@@ -7567,6 +7681,7 @@ var town = (() => {
   let barSaved = null; const mbarText = el('mbar-text');
   let baseOff = null, camTurned = false, viewA = TOWN_VIEW, viewWant = TOWN_VIEW, lastX = 0, lastZ = 0;
   function update(t, dt) {
+    hiroriSoft.update(dt);   // ヒロリの質感と、止まったときの余韻（HIRORI-SOFT。街の外でも）
     if (!built || !character) return;
     const x = character.position.x, z = character.position.z, calm = still(), w = walkable();
     // 街の中・街へ向かうときは、道すじをたどる（タップの目的地のときだけ。キーボードはそのまま）

@@ -64,7 +64,7 @@ test('3. 近づいただけでは開かない：写真のクエスト・第2ク�
   assert.ok(!/triggerMission\(/.test(anim), 'shrine');
   const qu = between(HTML, '// QUEST-UI-BEGIN', '// QUEST-UI-END'), upd = between(qu, '  function update(t) {', '\n  }\n');
   assert.ok(!/startSecond\(|openDetour\(/.test(code(upd)), 'sprout / detour');
-  assert.match(UI, /\['btn-treasure-open', \(\) => \{ if \(near === 'mission'\) \{ if \(missionCallable\(\)\) triggerMission\(\); \} else if \(near === 'sprout'\) questHub\.startSecond\(\); else if \(near\) open\(near\); \}\]/);
+  assert.match(UI, /\['btn-treasure-open', \(\) => \{ if \(near === 'mission'\) \{ if \(missionCallable\(\)\) triggerMission\(\); \} else if \(near === 'sprout'\) questHub\.startSecond\(\); else if \(town && town\.has\(near\)\) town\.open\(near\); else if \(near\) open\(near\); \}\]/);   // TOWN-01：市場町の住人・庭・花壇も、押したときだけ
   assert.match(UI, /el\('treasure-call-text'\)\.textContent = near === 'mission' \? '光るポイントがある' : '新しい芽が光っている';/);
   // 「着いた！」をくり返し出さない
   assert.ok(!/光るポイントに着いた|新しい芽に着いた/.test(HTML));
@@ -78,7 +78,7 @@ test('3. 近づいただけでは開かない：写真のクエスト・第2ク�
 function makeChooser({ occluders = [], obstacles = [] } = {}) {
   const src = between(UI, '  const CALL_KEEP', '  function update(t, dt) {');
   const f = new Function('TREASURE_SPOTS', 'TREASURE_TALK_R', 'hiroriMotion', 'S', 'mpGroup', 'questHub', 'worldV2', 'OBSTACLES', 'env',
-    `let near = null; const state = env.state; let missionTriggered = false; const missionHold = null;
+    `let near = null; const state = env.state; let missionTriggered = false; const missionHold = null; const town = null;   // TOWN-01：市場町は test-town.mjs で調べる
      ${src}
      return { step(x, z, dt) { near = chooseNear(x, z, dt); return near; }, canSee };`);
   const spots = { a: { x: 0, z: 0 }, b: { x: 3, z: 0 } };

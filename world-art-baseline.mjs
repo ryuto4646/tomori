@@ -1971,10 +1971,158 @@ let viewShiftX=0;`],
   missionHold.reset();  // 後回しにしたミッション（EXPANSION-02）
 `],
 ];
+// TOWN-01（2026-11-13）：市場町。目印で囲んだまとまり（CSS・画面の部品・パネル・TOWN-LAYOUT・TOWN-CORE・TOWN）は丸ごと取り除き、
+// ほかの場所へ足した短いつなぎは、[変更前, 変更後] で元へ戻す。どれも demo-world.html にちょうど1回ずつ出てくる
+const TOWN_BLOCKS = [
+  /\/\* TOWN-CSS-BEGIN[\s\S]*?\/\* TOWN-CSS-END \*\/\n/,
+  /  <!-- TOWN-UI-HTML-BEGIN[\s\S]*?<!-- TOWN-UI-HTML-END -->\n/,
+  /<!-- TOWN-PANELS-BEGIN[\s\S]*?<!-- TOWN-PANELS-END -->\n/,
+  /  \/\/ TOWN-LAYOUT-BEGIN[\s\S]*?\/\/ TOWN-LAYOUT-END\n/,
+  /\n\/\/ TOWN-CORE-BEGIN[\s\S]*?\/\/ TOWN-CORE-END\n/,
+  /\n\/\/ TOWN-BEGIN[\s\S]*?\/\/ TOWN-END\n/,
+];
+export const TOWN_EDITS = [
+  [`宝さがしの記録ともちものは、この端末に残ります。`,
+   `宝さがし・市場町の記録ともちもの（コイン・タネ）は、この端末に残ります。`],
+  [`  { id: 'kirameku', word: 'きらめく', reading: '', forms: ['きらめ'], meaning: '光が、ちらちらと細かく光ること' },
+`,
+   `  { id: 'kirameku', word: 'きらめく', reading: '', forms: ['きらめ'], meaning: '光が、ちらちらと細かく光ること' },
+  { id: 'hidamari', word: 'ひだまり', reading: '', forms: ['ひだまり'], meaning: 'お日さまが当たって、ぽかぽかあたたかいところ' },   // TOWN-01：タネ屋・花壇
+  { id: 'hokorobu', word: 'ほころぶ', reading: '', forms: ['ほころ'], meaning: 'つぼみが、少しずつひらきはじめること' },   // TOWN-01：花壇に植えたとき
+`],
+  [`宝さがしと巨木への冒険の記録、もちものも消えます。`,
+   `宝さがしと巨木への冒険の記録、もちもの、市場町のお手伝い・コイン・買ったタネ・花壇も消えます。`],
+  [`  missionHold.reset();  // 後回しにしたミッション（EXPANSION-02）
+`,
+   `  missionHold.reset();  // 後回しにしたミッション（EXPANSION-02）
+  if (town) town.reset();  // 市場町のお手伝い・コイン・タネ・花壇（TOWN-01）
+`],
+  [`  if(treasure) treasure.update(t,dt);   // 宝さがしの人・物の動きと「話す」の案内（EXPANSION-01。同じ描画ループの中）
+`,
+   `  if(treasure) treasure.update(t,dt);   // 宝さがしの人・物の動きと「話す」の案内（EXPANSION-01。同じ描画ループの中）
+  if(town) town.update(t,dt);   // 市場町の道すじ・透かす・住人・噴水（TOWN-01。同じ描画ループの中）
+`],
+  [`    holdSpot: () => TREASURE_SPOTS.giant };   // EXPANSION-03：オオネとの話を「あとで」で閉じた場所
+`,
+   `    holdSpot: () => TREASURE_SPOTS.giant,   // EXPANSION-03：オオネとの話を「あとで」で閉じた場所
+    openNotebook, meetWords: (text, scene) => { if (wordsIn(text).length) { treasureMeetWords(st, text, scene); save(); } } };   // TOWN-01：市場町から冒険メモを開く・出会ったことばを残す
+`],
+  [`    if (state !== S.TALK || !openId || !TREASURE_SPOTS[openId]) return null;
+`,
+   `    if (state === S.TOWN && town) return town.focusPoint(_fp);   // TOWN-01：市場町の話す相手・調べる物も、パネルの上に
+    if (state !== S.TALK || !openId || !TREASURE_SPOTS[openId]) return null;
+`],
+  [`else if (near === 'sprout') questHub.startSecond(); else if (near) open(near); }]`,
+   `else if (near === 'sprout') questHub.startSecond(); else if (town && town.has(near)) town.open(near); else if (near) open(near); }]`],
+  [`    if (!st.started || !(walkable() || state === S.TALK)) return;
+`,
+   `    if (!(st.started || (town && town.started())) || !(walkable() || state === S.TALK || state === S.TOWN)) return;   // TOWN-01：市場町の会話からも開く（閉じたら会話へもどる）
+`],
+  [`    if (!rows.length) add(box, 'div', 'found-empty'`,
+   `    if (town) rows.push(...town.items());   // TOWN-01：鉢・コイン・タネ
+    if (!rows.length) add(box, 'div', 'found-empty'`],
+  [`    const list = treasureMemo(st);
+`,
+   `    const list = treasureMemo(st).concat(town ? town.memo() : []);   // TOWN-01：市場町のお願い・ヒント・お礼
+`],
+  [`el('btn-notebook').classList.toggle('show', w && st.started);`,
+   `el('btn-notebook').classList.toggle('show', w && (st.started || !!(town && town.started())));   // TOWN-01：市場町のお手伝いを始めたときも`],
+  [`    } else if (on) {
+      const s = TREASURE_SPOTS[near]`,
+   `    } else if (on && town && town.has(near)) {   // TOWN-01：市場町の住人・庭・花壇
+      const c = town.call(near); el('treasure-call-text').textContent = c.text; el('btn-treasure-open').textContent = c.verb;
+    } else if (on) {
+      const s = TREASURE_SPOTS[near]`],
+  [`    if (!built || !character || !walkable()) return false;
+    // EXPANSION-03`,
+   `    if (town && town.pick(rc)) return true;   // TOWN-01：家・屋台をタップしたら、その前の道まで歩く
+    if (!built || !character || !walkable()) return false;
+    // EXPANSION-03`],
+  [`    for (const o of OBSTACLES) if (hit(o[0], o[1], o[2] * .8)) return false;
+`,
+   `    for (const o of OBSTACLES) if (hit(o[0], o[1], o[2] * .8)) return false;
+    if (town) for (const o of town.blockers()) if (hit(o[0], o[1], o[2])) return false;   // TOWN-01：市場町の家
+`],
+  [`    if (id === 'sprout') { const s = questHub.sproutCall(); return s && { x: s.x, z: s.z, r: SPROUT_CALL_R }; }
+`,
+   `    if (id === 'sprout') { const s = questHub.sproutCall(); return s && { x: s.x, z: s.z, r: SPROUT_CALL_R }; }
+    if (town && town.has(id)) return town.spot(id);   // TOWN-01
+`],
+  [`    if (questHub.sproutCall()) ids.push('sprout');
+`,
+   `    if (questHub.sproutCall()) ids.push('sprout');
+    if (town) for (const id of town.ids()) ids.push(id);   // TOWN-01：市場町の住人・庭・花壇
+`],
+  [`  function steerToward(cx, cz, gx, gz, out) {
+`,
+   `  function steerToward(cx, cz, gx, gz, out) {
+    if (inTownArea(cx, cz) || inTownArea(gx, gz)) { out.x = gx; out.z = gz; return out; }   // TOWN-01：市場町へ・市場町の中は、街の道すじ（steerTown）にまかせる
+`],
+  [`greatS, greatAt, riverDist };
+`,
+   `greatS, greatAt, riverDist,
+    town: { layout: TOWN, shapeSd: townShapeSd, steer: steerTown, path: townPath } };   // TOWN-01：市場町の道・広場と道すじ
+`],
+  [`      if (!s) return;   // 大きさ0は置かない（引数の乱数はもう使ったので、ほかの物の配置は変わらない）
+`,
+   `      if (!s || townBlocks(x, z)) return;   // 大きさ0は置かない（引数の乱数はもう使ったので、ほかの物の配置は変わらない）。TOWN-01：市場町の道・家のまわりにも置かない
+`],
+  [`    if (GN.best < best) { best = GN.best; bx = GN.x; bz = GN.z; }
+`,
+   `    if (GN.best < best) { best = GN.best; bx = GN.x; bz = GN.z; }
+    TN.best = best; nearestTown(p, limit); if (TN.best < best) { best = TN.best; bx = TN.x; bz = TN.z; }   // TOWN-01：市場町の道・広場のふち
+`],
+  [`    if (pushOutGreat(p)) return p;   // EXPANSION-03：巨木の幹・大きな生きものの体には入らない
+`,
+   `    if (pushOutGreat(p)) return p;   // EXPANSION-03：巨木の幹・大きな生きものの体には入らない
+    if (townPushOut(p) || townShapeSd(p.x, p.z, limit) <= 0) return p;   // TOWN-01：噴水・屋台の中には入らない。市場町の道・広場の中なら、そのまま
+`],
+  [`    if (inGreat(x, z)) return true;   // EXPANSION-03
+`,
+   `    if (inGreat(x, z)) return true;   // EXPANSION-03
+    if (inTownWalk(x, z)) return true;   // TOWN-01：市場町の道・広場（噴水・屋台の中はのぞく）
+`],
+  [`    return h * (1 - flat);
+`,
+   `    return h * (1 - Math.max(flat, townFlat(x, z)));   // TOWN-01：市場町は平ら
+`],
+  [`      openPanel('panel-notebook');
+      hint.style.opacity = '0';
+      break;
+`,
+   `      openPanel('panel-notebook');
+      hint.style.opacity = '0';
+      break;
+    case S.TOWN:   // TOWN-01：市場町の会話・お店
+      openPanel('panel-town');
+      hint.style.opacity = '0';
+      break;
+`],
+  [`  GIANT:'GIANT',   // EXPANSION-03：巨木の根もとのオオネと話しているあいだ
+`,
+   `  GIANT:'GIANT',   // EXPANSION-03：巨木の根もとのオオネと話しているあいだ
+  TOWN:'TOWN',   // TOWN-01：市場町の住人と話す・えらぶ・届ける・お店（開いているあいだは歩かない）
+`]
+];
+// TOWN-01 の変更だけを元へ戻す（それより前の変更はそのまま）
+export function revertTown(html) {
+  let out = html;
+  for (const re of TOWN_BLOCKS) {
+    const n = (out.match(new RegExp(re.source, 'g')) || []).length;
+    if (n !== 1) throw new Error(`town block appears ${n} times: ${re.source.slice(0, 40)}`);
+    out = out.replace(re, '');
+  }
+  for (const [before, after] of TOWN_EDITS) {
+    const n = out.split(after).length - 1;
+    if (n !== 1) throw new Error(`town edit appears ${n} times: ${after.slice(0, 40)}`);
+    out = out.split(after).join(before);
+  }
+  return out;
+}
 // 宝さがし（EXPANSION-01）の変更だけを元へ戻す
 // FLOW-02 の変更だけを元へ戻す（それより前の拡張はそのまま）
-export function revertFlow02(html) {
-  let out = html;
+export function revertFlow02(html, townDone = false) {
+  let out = townDone ? html : revertTown(html);   // TOWN-01 を先に外す
   for (const [before, after] of FLOW02_EDITS) {
     const n = out.split(after).length - 1;
     if (n !== 1) throw new Error(`flow-02 edit appears ${n} times: ${after.slice(0, 40)}`);
@@ -1982,8 +2130,8 @@ export function revertFlow02(html) {
   }
   return out;
 }
-export function revertExpansion(html) {
-  let out = revertFlow02(html);
+export function revertExpansion(html, townDone = false) {
+  let out = revertFlow02(html, townDone);
   for (const re of EXPANSION_BLOCKS) {
     const n = (out.match(new RegExp(re.source, 'g')) || []).length;
     if (n !== 1) throw new Error(`expansion block appears ${n} times: ${re.source.slice(0, 40)}`);
@@ -2006,7 +2154,7 @@ export const artBlock = html => (html.match(ART_BLOCK) || [''])[0];
 export function revertWorldArt(html) {
   const blocks = html.match(new RegExp(ART_BLOCK.source, 'g')) || [];
   if (blocks.length !== 1) throw new Error(`WORLD-ART block count ${blocks.length}`);
-  let out = revertExpansion(html.replace(ART_BLOCK, ''));   // 先に宝さがし（EXPANSION-01）を外す（下の Step 11M・11P の変更と重なる場所があるため）
+  let out = revertExpansion(revertTown(html).replace(ART_BLOCK, ''), true);   // TOWN-01：市場町の道（TOWN-LAYOUT）は美術のまとまりの中にあるので、先に外す   // 先に宝さがし（EXPANSION-01）を外す（下の Step 11M・11P の変更と重なる場所があるため）
   for (const [before, after] of WORLD_ART_EDITS) {
     const n = out.split(after).length - 1;
     if (n !== 1) throw new Error(`art edit appears ${n} times: ${after.slice(0, 40)}`);

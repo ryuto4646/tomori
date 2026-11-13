@@ -243,9 +243,9 @@ test('15. 上の知らせ（街の中だけ）：いまの段階でやること�
 test('16. ヒロリ（HIRORI-SOFT）：元の形のファイルは変えない。耳は左右おなじ位置・角度（鏡うつし）で花とぶつからない。顔の調整・耳は ?face=0・?ears=0 で前の姿', () => {
   const S = code(between(HTML, '// HIRORI-SOFT-BEGIN', '// HIRORI-SOFT-END'));
   assert.ok(!/FileLoader|fetch\(|localStorage|setTimeout|requestAnimationFrame/.test(S));
-  assert.match(S, /ear\.position\.set\(sd \* \.1, FACE \? neckY\(EARS\.y\) : EARS\.y, EARS\.z\);/);
-  assert.match(S, /ear\.rotation\.set\(EARS\.back, 0, -sd \* EARS\.tilt, 'XYZ'\);/);
-  assert.match(S, /get\('ears'\) === '0' \? null : \{ w: \.125, h: \.175, tilt: \.72, back: -\.15, z: -\.11, y: \.812 \}/);
+  assert.match(S, /part\.position\.set\(sd \* A\.mount\.x, A\.followFace && FACE \? neckY\(A\.mount\.y\) : A\.mount\.y, A\.mount\.z\);/);
+  assert.match(S, /part\.rotation\.set\(A\.rot\.back, 0, -sd \* A\.rot\.tilt, 'XYZ'\);/);\n  // 耳は交換できる飾り：装飾ID・骨・取付位置・角度・大きさを一覧にまとめ、初期装着は猫耳 B\n  assert.match(S, /mount: \{ x: \.1, y: \.812, z: -\.11 \}, rot: \{ back: -\.15, tilt: \.72 \}, size: \{ w: \.125, h: \.175, depth: \.02 \}/);\n  assert.match(S, /const HIRORI_DEFAULT_EQUIP = Object\.freeze\(\{ ears: 'ear-cat-b' \}\);/);
+  assert.match(S, /get\('ears'\) === '0'\) want\.ears = null;/);
   assert.match(S, /get\('face'\) !== '0'/);
   // 首を縮めるのは首の細いところだけ（肩より下＝羽・脚は動かさない）
   assert.match(S, /const NECK = \{ y0: \.5, y1: \.64, d: \.035 \};/);

@@ -44,6 +44,15 @@
 - 家：A single cozy medieval European rural market-town house, stylized storybook 3D game asset. Warm cream plaster, visible dark timber framing, a muted terracotta pitched roof with gently bowed eaves, a slightly tapered upper story, an offset gable, a simple wooden door and asymmetrically arranged small windows. （以下、HQ 指示 TOMORI-TOWN-01 の11節のとおり）
 - 屋台：A single small medieval European market stall for a stylized storybook 3D exploration game. Simple wooden counter, four sturdy wooden posts, a gently curved striped canvas awning in muted warm cream and sage green. （以下、同じ11節のとおり）
 
+## ヒロリの飾り（アクセサリー）
+
+| 装飾ID | 場所 | 作り方 | 容量 | 三角形 | 状態 |
+|---|---|---|---|---|---|
+| `ear-cat-b`（大きめの猫耳） | 耳（左右の組） | `demo-world.html` の中で、角を丸めた三角に厚みをつけて作る（外は珊瑚色、内はクリーム色）。外のファイルなし | ファイルなし | 小さい（ヒロリ本体の6,802より十分少ない） | 採用（初期装着・2026-11-13）。実機未確認 |
+
+- 耳は体の一部ではなく、付け替えられる「耳飾り」として持つ。元の耳なしのヒロリ（`assets/hirori-meshy/hirori-meshy.glb`）は変えていない。
+- 新しい耳飾りの素材を足すときは、この表に1行足し、出どころ・利用条件・容量を書いてから採用する。仕様は `docs/HIRORI_FIELD_AND_EVENT_ART_DIRECTION.md` の8節。
+
 ## これまでの素材
 
 | 素材 | 場所 | 出どころ | 状態 |

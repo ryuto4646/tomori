@@ -6695,10 +6695,21 @@ var hiroriSoft = (() => {
   // 耳（2026-11-13 の追加指示の試し）：小さな丸みのある三角耳を左右に1つずつ。外は珊瑚色、内はクリーム色。花の側でも花にかからない位置
   // 形は変えず、読みこんだあとで頭（Root の骨）に足すので、頭の動きにそのまま付いていく。決まるまでは ?ears=a（大きめ）・?ears=b（もっと大きめ）のときだけ
   // 大きめの猫耳。頭の左右の外寄りに付ける。花の側（-x）は花とぶつからないよう、少しうしろ・少しうしろへ倒す（花との間は約0.035。test-town.mjs）
-  // 耳 B（2026-11-13 制作者が決定）：大きめの猫耳。先はななめ上（外へ約41°）。左右とも同じ位置・同じ角度（うしろから見ても左右がそろう）
-  // 付け根は頭の中心から左右0.1・少しうしろ（z -0.11）。花とのあいだは約0.042。?ears=0 で耳なし（くらべるため）
-  const EARS = new URLSearchParams(location.search).get('ears') === '0' ? null : { w: .125, h: .175, tilt: .72, back: -.15, z: -.11, y: .812 };
-  let earsOn = false;
+  // ── 飾り（アクセサリー）：耳は体の一部ではなく「耳飾り」（2026-11-13 決定）。今後の更新で、ほかの素材に付け替える ──
+  // 1つの飾り＝装飾ID・付ける場所（slot）・付ける骨・取付位置・角度・大きさ・色。左右の組は、+x 側の値を -x 側へ鏡うつしにする
+  // 付け替え：equip(slot, id)。外す：equip(slot, null)。頭の花はモデルの一部（Flower の骨）なので、耳飾りの付け替えでは触らない
+  // 元の耳なしのモデルはそのまま（飾りは読みこんだあとで足す）。着せ替えの画面・入手のしくみは、まだ作らない
+  const HIRORI_ACCESSORIES = Object.freeze({
+    'ear-cat-b': {   // 大きめの猫耳（初期装着）。2026-11-13 制作者が B・ななめ上・左右そろえるを決定。花とのあいだは約0.042（test-town.mjs 16）
+      slot: 'ears', bone: 'Root', mirror: true, followFace: true,
+      mount: { x: .1, y: .812, z: -.11 }, rot: { back: -.15, tilt: .72 }, size: { w: .125, h: .175, depth: .02 },
+      colors: { outer: 0xEE8471, inner: 0xF7EBDB }, shape: 'roundTriangle',
+    },
+  });
+  const HIRORI_DEFAULT_EQUIP = Object.freeze({ ears: 'ear-cat-b' });
+  const equipped = {};   // slot → 付けている飾りの Group（いまの装着）
+  const want = { ...HIRORI_DEFAULT_EQUIP };
+  if (new URLSearchParams(location.search).get('ears') === '0') want.ears = null;   // くらべるため：耳飾りなし
   function earGeo(w, h, depth, bevel) {
     const r = w * .22, sh = new THREE.Shape();   // 角を丸めた三角（先はとがらせすぎない）
     sh.moveTo(-w / 2 + r, 0); sh.lineTo(w / 2 - r, 0); sh.quadraticCurveTo(w / 2, 0, w / 2 - r * .4, r * .8);
@@ -6707,20 +6718,38 @@ var hiroriSoft = (() => {
     const g = new THREE.ExtrudeGeometry(sh, { depth, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel * .8, bevelSegments: 3, curveSegments: 6 });
     g.translate(0, 0, -depth / 2); g.computeVertexNormals(); return g;
   }
-  function addEars() {
-    if (earsOn || !EARS || !fieldHirori.active()) return;
-    const root = character.getObjectByName('Root');
-    if (!root || !root.isBone) return;
-    const outer = new THREE.MeshStandardMaterial({ color: 0xEE8471, roughness: 1, metalness: 0 }), inner = new THREE.MeshStandardMaterial({ color: 0xF7EBDB, roughness: 1, metalness: 0 });
+  // 飾りの形を作る（いまは角を丸めた三角の耳だけ。新しい素材を足すときは、shape をふやすか、GLB から読む）
+  function buildAccessory(id) {
+    const A = HIRORI_ACCESSORIES[id]; if (!A) return null;
+    const outer = new THREE.MeshStandardMaterial({ color: A.colors.outer, roughness: 1, metalness: 0 }), inner = new THREE.MeshStandardMaterial({ color: A.colors.inner, roughness: 1, metalness: 0 });
     soften(outer); soften(inner);
-    const og = earGeo(EARS.w, EARS.h, .02, .014), ig = earGeo(EARS.w * .6, EARS.h * .66, .006, .004);
-    for (const sd of [1, -1]) {   // +x と -x（-x は花の側）
-      const ear = new THREE.Group(); ear.name = 'HiroriEar_' + (sd > 0 ? 'L' : 'R');
-      ear.position.set(sd * .1, FACE ? neckY(EARS.y) : EARS.y, EARS.z);   // 左右おなじ。首を短くしたときは、頭といっしょに下げる
-      ear.rotation.set(EARS.back, 0, -sd * EARS.tilt, 'XYZ');   // 先はななめ上（外へ）。左右は鏡うつし
-      const o = new THREE.Mesh(og, outer), i = new THREE.Mesh(ig, inner); i.position.set(0, EARS.h * .12, .018);
-      o.castShadow = i.castShadow = true; ear.add(o, i); root.add(ear);
+    const og = earGeo(A.size.w, A.size.h, A.size.depth, .014), ig = earGeo(A.size.w * .6, A.size.h * .66, .006, .004);
+    const g = new THREE.Group(); g.name = 'HiroriAccessory_' + A.slot; g.userData.accessoryId = id;
+    for (const sd of A.mirror ? [1, -1] : [1]) {
+      const part = new THREE.Group(); part.name = 'HiroriAccessory_' + A.slot + '_' + (sd > 0 ? 'L' : 'R');
+      part.position.set(sd * A.mount.x, A.followFace && FACE ? neckY(A.mount.y) : A.mount.y, A.mount.z);   // 首を短くしたときは、頭といっしょに下げる
+      part.rotation.set(A.rot.back, 0, -sd * A.rot.tilt, 'XYZ');   // 左右は鏡うつし
+      const o = new THREE.Mesh(og, outer), i = new THREE.Mesh(ig, inner); i.position.set(0, A.size.h * .12, .018);
+      o.castShadow = i.castShadow = true; part.add(o, i); g.add(part);
     }
+    return g;
+  }
+  // 付け替え：同じ場所の飾りを外してから、新しい飾りを骨に付ける（頭の動きにそのまま付いていく）
+  function equip(slot, id) {
+    want[slot] = id;
+    if (!character || !fieldHirori.active()) return false;
+    const old = equipped[slot];
+    if (old) { old.parent && old.parent.remove(old); old.traverse(o => { if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); } }); delete equipped[slot]; }
+    if (!id) return true;
+    const A = HIRORI_ACCESSORIES[id], bone = A && character.getObjectByName(A.bone);
+    if (!A || A.slot !== slot || !bone) return false;
+    const g = buildAccessory(id); bone.add(g); equipped[slot] = g;
+    return true;
+  }
+  let earsOn = false;
+  function addEars() {
+    if (earsOn || !fieldHirori.active()) return;
+    for (const slot of Object.keys(want)) if (want[slot] && !equipped[slot]) equip(slot, want[slot]);
     earsOn = true;
   }
   // 顔の微調整（2026-11-13 の追加指示。採用）：首を少し短く・ほおを少しふっくら・瞳に小さな光
@@ -6757,7 +6786,8 @@ var hiroriSoft = (() => {
     }
     faceOn = true;
   }
-  return { update: dt => { update(dt); if (FACE && !faceOn && character) applyFace(); if (EARS && !earsOn && character && (!FACE || faceOn)) addEars(); }, active: () => on && found > 0, ears: () => earsOn, face: () => faceOn };
+  return { update: dt => { update(dt); if (FACE && !faceOn && character) applyFace(); if (!earsOn && character && (!FACE || faceOn)) addEars(); }, active: () => on && found > 0, ears: () => earsOn, face: () => faceOn,
+    accessories: HIRORI_ACCESSORIES, equip, equipped: () => Object.fromEntries(Object.entries(equipped).map(([k, g]) => [k, g.userData.accessoryId])) };
 })();
 // HIRORI-SOFT-END
 

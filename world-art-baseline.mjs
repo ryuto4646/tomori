@@ -1983,6 +1983,27 @@ const TOWN_BLOCKS = [
   /\n\/\/ TOWN-BEGIN[\s\S]*?\/\/ TOWN-END\n/,
 ];
 export const TOWN_EDITS = [
+  [`  return { update, applyUI, freeMessage, showBar, fadeBarLater, toFree,`,
+   `  // TOWN-01：上の知らせの文を入れかえる（quiet のときは、次に自由に歩くときから）
+  function setFree(msg, quiet) { freeMsg = msg; if (!quiet && state === S.FREE_EXPLORE) { el('mbar-text').textContent = (treasure && treasure.guide(msg)) || msg; showBar(); fadeBarLater(); } }
+  return { setFree, update, applyUI, freeMessage, showBar, fadeBarLater, toFree,`],
+  [`    freeMsg = Q2.reward;
+    worldTimeout(() => setState(S.FREE_EXPLORE), 900);
+`,
+   `    freeMsg = Q2.reward;
+    worldTimeout(() => setState(S.FREE_EXPLORE), 900);
+    worldTimeout(() => { const lg = town && town.leadGuide(); if (lg && freeMsg === Q2.reward) setFree(lg); }, 6200);   // TOWN-01：実の知らせのあとは、町への手がかりの案内へもどる
+`],
+  [`    freeMsg = kind === 'next' && q2Usable() ? Q2_GUIDE : FREE_DEFAULT;
+`,
+   `    // TOWN-01（2026-11-14）：2つ目以降の実（芽）は、より道。「次の冒険へ」は、市場町への手がかりさがしへ（芽は、近くを通れば「はじめる」が出る）
+    const lead = town ? town.leadStart() : null;
+    freeMsg = kind === 'next' ? (lead || (q2Usable() ? Q2_GUIDE : FREE_DEFAULT)) : FREE_DEFAULT;
+`],
+  [`    if (freeMsg === Q2_GUIDE) return;
+`,
+   `    if (freeMsg === Q2_GUIDE || (town && town.leadSticky(freeMsg))) return;   // TOWN-01：町への手がかりの案内も、行き先を示すので残す
+`],
   [`宝さがしの記録ともちものは、この端末に残ります。`,
    `宝さがし・市場町の記録ともちもの（コイン・タネ）は、この端末に残ります。`],
   [`  { id: 'kirameku', word: 'きらめく', reading: '', forms: ['きらめ'], meaning: '光が、ちらちらと細かく光ること' },

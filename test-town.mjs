@@ -237,7 +237,30 @@ test('15. 上の知らせ（街の中だけ）：いまの段階でやること�
   for (const e of ['none', 'flower', 'deliver', 'done']) { st.errand = e; seen.push(G.townGuide(st)); }
   st.coins = 10; seen.push(G.townGuide(st)); st.seeds.sun = 'owned'; seen.push(G.townGuide(st));
   for (const t of seen) { assert.ok(t.length > 4 && t.length <= 32, t); assert.ok(!/2ばん|光の筋|下を向|ソラばあちゃん/.test(t), t); }
-  assert.match(code(UI), /if \(inTown\) \{ if \(barSaved === null\) barSaved = mbarText\.textContent; mbarText\.textContent = townGuide\(st\); \}/);
+  assert.match(code(UI), /if \(inTown\) \{ if \(barSaved === null\) barSaved = mbarText\.textContent; mbarText\.textContent = townGuide\(st\);/);
+});
+
+test('17. 町への手がかり：最初の実のあと「次の冒険へ」で始まる（2つ目以降の実は、より道）。花びら → 道しるべ → 花の門。どこも歩いて行け、しらべる場所は歩ける場所', () => {
+  const G = new Function(CORE + '\nreturn { TOWN_LEAD, townLeadPoints };')();
+  const LD = G.TOWN_LEAD, pts = G.townLeadPoints();
+  // しらべる場所・花びらの道は歩ける。道しるべそのものは、草原のふちの外（ヒロリが通りぬけない）・大通りの外
+  assert.ok(W.inWalk(LD.petal.x, LD.petal.z, true), 'petal');   // 根の門がひらいたあと（最初の実が灯ったあと）
+  assert.ok(W.inWalk(LD.signSpot.x, LD.signSpot.z, false), 'signSpot');
+  assert.ok(!W.inWalk(LD.sign.x, LD.sign.z, true), 'sign post is not walkable');
+  assert.ok(Math.hypot(LD.sign.x - LD.signSpot.x, LD.sign.z - LD.signSpot.z) < LD.callR + 1, 'sign near its spot');
+  assert.ok(Math.hypot(LD.signSpot.x - L.road[0][0], LD.signSpot.z - L.road[0][1]) < LD.callR, 'spot reachable from the road start');
+  assert.ok(pts.length >= 20 && pts.length <= 40, 'trail ' + pts.length);
+  for (const [x, z] of pts) assert.ok(W.inWalk(x, z, true), 'trail ' + x.toFixed(1) + ',' + z.toFixed(1));
+  for (let i = 1; i < pts.length; i++) assert.ok(Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]) <= LD.gap + .01, 'gap');
+  // 案内の文は短く、答え（どの家・どの鉢）は言わない
+  for (const t of Object.values(LD.guide)) { assert.ok(t.length <= 34, t); assert.ok(!/ソラばあちゃん|うつむく/.test(t), t); }
+  // つなぎ目：「次の冒険へ」は手がかりへ（芽の案内は、手がかりがないときだけ）。案内は消さずに残す。街に入ったらおしまい
+  assert.match(HTML, /const lead = town \? town\.leadStart\(\) : null;\n    freeMsg = kind === 'next' \? \(lead \|\| \(q2Usable\(\) \? Q2_GUIDE : FREE_DEFAULT\)\) : FREE_DEFAULT;/);
+  assert.match(HTML, /if \(freeMsg === Q2_GUIDE \|\| \(town && town\.leadSticky\(freeMsg\)\)\) return;/);
+  assert.match(code(UI), /mbarText\.textContent = townGuide\(st\); if \(lead !== 'off' && lead !== 'done'\) leadDone\(\);/);
+  assert.match(code(UI), /if \(lead === 'petal'\) out\.push\('town:petal'\);/);
+  // 芽（2つ目の実）は、近くを通れば「はじめる」が出るまま（より道として残す）
+  assert.match(HTML, /sproutCall: \(\) => state === S\.FREE_EXPLORE && q2Usable\(\) \? Q2\.start : null/);
 });
 
 test('16. ヒロリ（HIRORI-SOFT）：元の形のファイルは変えない。耳は左右おなじ位置・角度（鏡うつし）で花とぶつからない。顔の調整・耳は ?face=0・?ears=0 で前の姿', () => {

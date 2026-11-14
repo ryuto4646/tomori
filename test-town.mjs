@@ -228,7 +228,7 @@ test('14. カメラ：街の中だけ向きを回す（V2 のときだけ組み�
   assert.match(u, /baseOff = CAM_OFF\.clone\(\);/);
   assert.match(u, /if \(vb > 0 \|\| camTurned\) \{/);
   assert.match(u, /CAM_OFF\.set\(baseOff\.x \* cs \+ baseOff\.z \* sn, baseOff\.y, -baseOff\.x \* sn \+ baseOff\.z \* cs\); camTurned = vb > 0;/);
-  assert.match(u, /z > -20 \?/, 'not in the secret valley');
+  assert.match(u, /zd > -20 \?/, 'not in the secret valley');   // 形の座標（もとの大きさ）で判定する
 });
 
 test('15. 上の知らせ（街の中だけ）：いまの段階でやること。どの鉢・どの家が正解かは言わない', () => {

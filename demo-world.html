@@ -1994,7 +1994,7 @@ const worldV2 = (() => {
   // TOWN-LAYOUT-BEGIN（TOWN-01：市場町の道・広場・家・通れない物。THREE も画面も使わない計算だけ。test-town.mjs が取り出して確かめる）
   // 草原の東のはしから、ゆるく曲がる大通りで街の門をくぐり、噴水の広場へ。広場から、庭の路地（北東）と見晴らしの路地（南東）が分かれる
   // 歩ける場所は「道（線分のまわり）・広場・小さな広場」の内側。家はその外。噴水・屋台・花壇は、広場の中の通れない丸
-  const TOWN = Object.freeze({
+  const TOWN_DESIGN = Object.freeze({
     road: [[34.0, -6.2], [39.6, -3.6], [45.2, -3.2], [50.4, -5.0], [54.6, -6.2]], roadR: 2.6,   // 大通り（幅5.2m。6.6m/秒で曲がれるゆるい曲がり）
     plaza: { x: 61.6, z: -6.4, r: 7.8 },                                                       // 噴水の広場
     lanes: [{ id: 'garden', pts: [[64.0, -12.4], [65.2, -16.8], [67.6, -20.6]], r: 2.1 },      // 庭の路地（広場の北東から）
@@ -2014,6 +2014,19 @@ const worldV2 = (() => {
     meshyBakery: { lot: 'p82', w: 1.28, d: 1.42, h: 1.9, front: .715, maxScale: 3.6 },   // Meshy のパン屋（town_bakery_A）。パンの並ぶ窓（素材の -X 側）を広場へ向ける。パン屋の屋台の近く
     meshyHouse: { w: 1.23, d: 1.63, h: 1.9, front: .81, maxScale: 3.6 },   // 素材の大きさ（幅・奥行き・高さ・正面の位置）。幅を区画にあわせて大きくする
   });
+  // 街の大きさ（2026-11-14 制作者：キャラクターに対して街並みが小さすぎる）：入口（大通りのはじまり）を中心に、道・広場・家・噴水・屋台を、まとめて TOWN_S 倍にする
+  // 形は TOWN_DESIGN（もとの大きさ）で作り、世界には TOWN_S 倍で置く。歩ける場所・道すじ・地面は、世界での大きさ（TOWN）を使う。?townscale=1 で、もとの大きさ（くらべるため）
+  const TOWN_PIVOT = Object.freeze({ x: 34.0, z: -6.2 });
+  const TOWN_S = (() => { const q = typeof location === 'undefined' ? NaN : +new URLSearchParams(location.search).get('townscale'); return q >= 1 && q <= 2.5 ? q : 1.6; })();
+  const townW = (x, z) => [TOWN_PIVOT.x + (x - TOWN_PIVOT.x) * TOWN_S, TOWN_PIVOT.z + (z - TOWN_PIVOT.z) * TOWN_S];
+  const TOWN = Object.freeze((() => {
+    const D = TOWN_DESIGN, S = TOWN_S, pt = ([x, z]) => townW(x, z), at = o => { const [x, z] = townW(o.x, o.z); return { x, z }; };
+    return { ...D, scale: S, pivot: TOWN_PIVOT, design: D,
+      road: D.road.map(pt), roadR: D.roadR * S, plaza: { ...at(D.plaza), r: D.plaza.r * S },
+      lanes: D.lanes.map(l => ({ id: l.id, pts: l.pts.map(pt), r: l.r * S })), courts: D.courts.map(c => ({ id: c.id, ...at(c), r: c.r * S })), gate: at(D.gate),
+      obstacles: D.obstacles.map(([x, z, r, n]) => [...townW(x, z), r * S, n]),
+      houses: D.houses.map(([x, z, fx, fz, w, d, n]) => [...townW(x, z), ...townW(fx, fz), w * S, d * S, n]) };
+  })());
   // 道・広場までの距離（中なら負）。r に limit をかけると、ふちより少し内側（タップ先に使う）
   function townShapeSd(x, z, limit = 1) {
     const R = TOWN.road, P = TOWN.plaza;
@@ -2030,10 +2043,10 @@ const worldV2 = (() => {
   function townFlat(x, z) {
     const e = Math.hypot((x - WALK.cx) / WALK.rx, (z - WALK.cz) / WALK.rz);
     if (e < .8) return 0;
-    return smooth(20, 12, townShapeSd(x, z)) * smooth(.8, .98, e);
+    return smooth(20 * TOWN_S, 12 * TOWN_S, townShapeSd(x, z)) * smooth(.8, .98, e);
   }
   // 草木・岩を置かない場所（道・広場・家のまわり）
-  const townBlocks = (x, z) => townShapeSd(x, z) < 12.5 && Math.hypot((x - WALK.cx) / WALK.rx, (z - WALK.cz) / WALK.rz) > .9;
+  const townBlocks = (x, z) => townShapeSd(x, z) < 12.5 * TOWN_S && Math.hypot((x - WALK.cx) / WALK.rx, (z - WALK.cz) / WALK.rz) > .9;
   // 通れない丸の中なら、ふちへ出す（出したら true）
   function townPushOut(p) {
     const i = townObstacleAt(p.x, p.z);
@@ -2074,7 +2087,7 @@ const worldV2 = (() => {
   // 道すじの点：大通りの点・噴水のまわり（屋台の内側）の輪・路地の点・小さな広場の中心
   const TOWN_NODES = (() => {
     const P = TOWN.plaza, out = TOWN.road.map(([x, z]) => [x, z]);
-    for (let k = 0; k < 10; k++) { const a = k / 10 * Math.PI * 2; out.push([P.x + Math.cos(a) * 3.3, P.z + Math.sin(a) * 3.3]); }
+    for (let k = 0; k < 10; k++) { const a = k / 10 * Math.PI * 2; out.push([P.x + Math.cos(a) * 3.3 * TOWN_S, P.z + Math.sin(a) * 3.3 * TOWN_S]); }
     for (const l of TOWN.lanes) for (const p of l.pts) out.push([p[0], p[1]]);
     for (const c of TOWN.courts) out.push([c.x, c.z]);
     return out;
@@ -2085,7 +2098,7 @@ const worldV2 = (() => {
     TOWN_EDGES = TOWN_NODES.map(() => []);
     for (let i = 0; i < TOWN_NODES.length; i++) for (let j = i + 1; j < TOWN_NODES.length; j++) {
       const [ax, az] = TOWN_NODES[i], [bx, bz] = TOWN_NODES[j], L = Math.hypot(bx - ax, bz - az);
-      if (L < 14 && townSees(ax, az, bx, bz)) { TOWN_EDGES[i].push([j, L]); TOWN_EDGES[j].push([i, L]); }
+      if (L < 14 * TOWN_S && townSees(ax, az, bx, bz)) { TOWN_EDGES[i].push([j, L]); TOWN_EDGES[j].push([i, L]); }
     }
     return TOWN_EDGES;
   }
@@ -2093,14 +2106,14 @@ const worldV2 = (() => {
   function townPath(cx, cz, gx, gz) {
     if (townSees(cx, cz, gx, gz)) return [[cx, cz], [gx, gz]];
     const E = townEdges(), n = TOWN_NODES.length, dist = new Array(n).fill(Infinity), prev = new Array(n).fill(-1), done = new Array(n).fill(false);
-    for (let i = 0; i < n; i++) { const [x, z] = TOWN_NODES[i], L = Math.hypot(x - cx, z - cz); if (L < 18 && townSees(cx, cz, x, z)) dist[i] = L; }
+    for (let i = 0; i < n; i++) { const [x, z] = TOWN_NODES[i], L = Math.hypot(x - cx, z - cz); if (L < 18 * TOWN_S && townSees(cx, cz, x, z)) dist[i] = L; }
     let best = -1, bestD = Infinity;
     for (;;) {
       let u = -1; for (let i = 0; i < n; i++) if (!done[i] && dist[i] < Infinity && (u < 0 || dist[i] < dist[u])) u = i;
       if (u < 0) break;
       done[u] = true;
       const [ux, uz] = TOWN_NODES[u], L = Math.hypot(gx - ux, gz - uz);
-      if (dist[u] + L < bestD && L < 18 && townSees(ux, uz, gx, gz)) { bestD = dist[u] + L; best = u; }
+      if (dist[u] + L < bestD && L < 18 * TOWN_S && townSees(ux, uz, gx, gz)) { bestD = dist[u] + L; best = u; }
       for (const [v, w] of E[u]) if (dist[u] + w < dist[v]) { dist[v] = dist[u] + w; prev[v] = u; }
     }
     if (best < 0) return null;
@@ -6829,7 +6842,9 @@ var hiroriSoft = (() => {
 var town = (() => {
   const T = worldV2.town;
   if (!T) return null;
-  const L = T.layout, P = L.plaza;
+  const LW = T.layout, L = LW.design, P = L.plaza;   // L・P：形の座標（もとの大きさ）。LW：世界での大きさ
+  const TS = LW.scale, PV = LW.pivot;   // TS：街の大きさの倍率（S は状態の名前なので使わない）
+  const toW = (x, z) => [PV.x + (x - PV.x) * TS, PV.z + (z - PV.z) * TS], toD = (x, z) => [PV.x + (x - PV.x) / TS, PV.z + (z - PV.z) / TS];
   const el = id => document.getElementById(id);
   const still = () => reduceMotionQuery.matches;
   const walkable = () => state === S.EXPLORE || state === S.FREE_EXPLORE;
@@ -6840,12 +6855,13 @@ var town = (() => {
   function forget() { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} }
   let st = load();
   let built = false, openId = null, view = null, returnState = S.EXPLORE, guardUntil = 0;
-  const G = new THREE.Group(); G.name = 'Town'; G.visible = false; scene.add(G);
+  const G = new THREE.Group(); G.name = 'Town'; G.visible = false; G.position.set(PV.x * (1 - TS), 0, PV.z * (1 - TS)); G.scale.setScalar(TS); scene.add(G);   // 街全体を、入口を中心に S 倍
   const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _c = new THREE.Color(), _v = new THREE.Vector3();
   let seed = 20261113;
   const rnd = () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   const HIGH = worldV2.quality === 'high';
-  const gy = (x, z) => worldV2.groundAt(x, z);
+  const gyW = (x, z) => worldV2.groundAt(x, z);   // 世界の座標の地面の高さ
+  const gy = (x, z) => { const [wx, wz] = toW(x, z); return worldV2.groundAt(wx, wz) / TS; };   // 形の座標（G の中）の地面の高さ
 
   // ── 形をまとめる：部品を家ごとの座標で作り、家ごとのゆがみ（ふくらみ・傾き）をかけてから世界へ置く。家の番号（aBid）で透かす ──
   const BOX = new THREE.BoxGeometry(1, 1, 1), CYL6 = new THREE.CylinderGeometry(1, 1, 1, 6), CYL = new THREE.CylinderGeometry(1, 1, 1, 10), SPH = new THREE.SphereGeometry(1, 8, 6), CONE = new THREE.ConeGeometry(1, 1, 8);
@@ -7106,8 +7122,8 @@ var town = (() => {
     const step = HIGH ? .5 : .7, x0 = 31, x1 = 81, z0 = -29, z1 = 7, nx = Math.ceil((x1 - x0) / step), nz = Math.ceil((z1 - z0) / step);
     const sdAt = new Float32Array((nx + 1) * (nz + 1));
     for (let j = 0; j <= nz; j++) for (let i = 0; i <= nx; i++) {
-      const x = x0 + i * step, z = z0 + j * step, e = Math.hypot((x - 6) / 30, (z + 7) / 19);
-      sdAt[j * (nx + 1) + i] = T.shapeSd(x, z) + .25 + (e < 1 ? (1 - e) * 30 : 0);   // 草原の中では、道の石は少しずつ消える
+      const x = x0 + i * step, z = z0 + j * step, [wx, wz] = toW(x, z), e = Math.hypot((wx - 6) / 30, (wz + 7) / 19);   // 形の座標 → 世界で、道・広場の内側か
+      sdAt[j * (nx + 1) + i] = T.shapeSd(wx, wz) / TS + .25 + (e < 1 ? (1 - e) * 30 : 0);   // 草原の中では、道の石は少しずつ消える
     }
     const pos = [], sd = [], uv = [];
     const v = (i, j) => { const x = x0 + i * step, z = z0 + j * step; pos.push(x, gy(x, z) + .035, z); sd.push(sdAt[j * (nx + 1) + i]); uv.push(x / 1.5, z / 1.5); };
@@ -7247,7 +7263,7 @@ var town = (() => {
       const sgn = numberSign(k + 1); sgn.position.set(0, -.18, .2); g.add(sgn);
       G.add(g); pots[p.id] = g;
     });
-    carryPot = potMesh('nod'); carryPot.scale.setScalar(.9); carryPot.visible = false; G.add(carryPot);
+    carryPot = potMesh('nod'); carryPot.scale.setScalar(.9 / TS); carryPot.visible = false; G.add(carryPot);
     gardenPot = potMesh('nod'); gardenPot.scale.setScalar(1.3); gardenPot.visible = false; G.add(gardenPot);
   }
   // 庭の3軒の光：日差しの筋（屋根のすきまから斜めにおりる）・大きな布のひさしのかげ・ランタンの明かり
@@ -7434,7 +7450,7 @@ var town = (() => {
     buildFountain(); buildPots(); buildGardens(); buildPeople(); buildSign();
     // 街の中の木（ほかで置いたもの）は、カメラがよける・ふさぐ計算から外す
     const oc = worldV2.occluders();
-    for (let i = oc.length - 1; i >= 0; i--) if (T.shapeSd(oc[i][0], oc[i][1]) < 12.5 && Math.hypot((oc[i][0] - 6) / 30, (oc[i][1] + 7) / 19) > .9) oc.splice(i, 1);
+    for (let i = oc.length - 1; i >= 0; i--) if (T.shapeSd(oc[i][0], oc[i][1]) < 12.5 * TS && Math.hypot((oc[i][0] - 6) / 30, (oc[i][1] + 7) / 19) > .9) oc.splice(i, 1);
     fadeables = houses.concat(stalls);
     baseOff = CAM_OFF.clone();   // 草原での元のカメラの位置（V2 の構図）
     built = true; G.visible = true;
@@ -7480,7 +7496,7 @@ var town = (() => {
     const postGeo = new THREE.CylinderGeometry(.055, .065, 1.95, 6), posts = [-.5, .5].map(px => { const m = new THREE.Mesh(postGeo, wood); m.position.set(px, .97, 0); m.castShadow = true; return m; });   // 柱は板の左右（文字にかからない）
     const board = new THREE.Mesh(new THREE.BoxGeometry(1.15, .5, .07), [wood, wood, wood, wood, face, face]); board.position.y = 1.6;
     board.castShadow = true; g.add(...posts, board);
-    g.position.set(x, gy(x, z), z); g.rotation.y = Math.atan2(-.9, -.45);   // 根の門から草原を歩いてくる側（北西）へ向ける。うらにも同じ文字
+    g.position.set(x, gyW(x, z), z); g.rotation.y = Math.atan2(-.9, -.45);   // 根の門から草原を歩いてくる側（北西）へ向ける。うらにも同じ文字
     scene.add(g);
   }
   // ①の花びらの場所：始まったときのヒロリのそば（2.2m）で、画面に映る側・歩ける場所・ことばの樹の幹にかくれない場所（見つけにくくしない）
@@ -7525,14 +7541,14 @@ var town = (() => {
       if (!cl) { leadPetals.setMatrixAt(k++, _hide); continue; }
       const a = i * 2.4 + (calm ? 0 : t * .7), r = .35 + (i % 3) * .22, h = .25 + i / CLUSTER_N * 1.5 + drop * 3 + (calm ? 0 : .12 * Math.sin(t * 1.3 + i));
       const px = petalAt.x + Math.cos(a) * r, pz = petalAt.z + Math.sin(a) * r;
-      _m.compose(_p.set(px, gy(px, pz) + h, pz), _q.setFromEuler(_e.set(calm ? .4 : Math.sin(t * 2 + i) * .8, a, calm ? .3 : Math.cos(t * 1.7 + i) * .6)), _s.set(.11, .025, .08));
+      _m.compose(_p.set(px, gyW(px, pz) + h, pz), _q.setFromEuler(_e.set(calm ? .4 : Math.sin(t * 2 + i) * .8, a, calm ? .3 : Math.cos(t * 1.7 + i) * .6)), _s.set(.11, .025, .08));
       leadPetals.setMatrixAt(k++, _m);
     }
-    leadGlowPos[0] = petalAt.x; leadGlowPos[1] = cl ? gy(petalAt.x, petalAt.z) + 1.1 : -100; leadGlowPos[2] = petalAt.z;
+    leadGlowPos[0] = petalAt.x; leadGlowPos[1] = cl ? gyW(petalAt.x, petalAt.z) + 1.1 : -100; leadGlowPos[2] = petalAt.z;
     // ②花びらの道：しらべたところから順に、地面へおりる（1秒に14まい）。街に入ったら消える
     const shown = cl ? 0 : calm ? LEAD_PTS.length : Math.floor((leadT - trailT) * 14);
     for (let i = 0; i < LEAD_PTS.length; i++) {
-      const [px, pz, yaw] = LEAD_PTS[i], on = i < shown, y = gy(px, pz);
+      const [px, pz, yaw] = LEAD_PTS[i], on = i < shown, y = gyW(px, pz);
       if (on) { _m.compose(_p.set(px, y + .06 + (calm ? 0 : .03 * Math.sin(t * 2 + i)), pz), _q.setFromEuler(_e.set(0, yaw + i, 0)), _s.set(.13, .03, .09)); leadPetals.setMatrixAt(k++, _m); }
       else leadPetals.setMatrixAt(k++, _hide);
       leadGlowPos[(i + 1) * 3] = px; leadGlowPos[(i + 1) * 3 + 1] = on ? y + .25 : -100; leadGlowPos[(i + 1) * 3 + 2] = pz;
@@ -7554,7 +7570,7 @@ var town = (() => {
     else if (id === 'town:mole') s = front(L.obstacles[2], 2.0);
     else if (id === 'town:bed') s = front(L.obstacles[5], 1.85);
     else { const h = houses.find(q => q.name === id.slice(5)); s = { x: h.x + Math.sin(h.yaw) * (h.d / 2 + .6), z: h.z + Math.cos(h.yaw) * (h.d / 2 + .6) }; const C0 = L.courts[0]; const dx = s.x - C0.x, dz = s.z - C0.z, dl = Math.hypot(dx, dz); if (dl > C0.r - .5) { s.x = C0.x + dx / dl * (C0.r - .5); s.z = C0.z + dz / dl * (C0.r - .5); } }
-    s.r = 2.0; return (spotCache[id] = s);
+    const [wx, wz] = toW(s.x, s.z); return (spotCache[id] = { x: wx, z: wz, r: 2.0 * Math.sqrt(TS) });   // 世界の座標（街が大きくなったぶん、少し遠くから）
   }
   const has = id => typeof id === 'string' && id.startsWith('town:');
   function ids() {
@@ -7589,7 +7605,7 @@ var town = (() => {
     const bid = bidOf(h);
     const b = houses.find(q => q.bid === bid) || stalls.find(q => q.bid === bid || q.bid === bid + 4);
     if (!b) return false;
-    targetPos.set(b.x + Math.sin(b.yaw) * (b.d / 2 + 1.4), 0, b.z + Math.cos(b.yaw) * (b.d / 2 + 1.4)); worldV2.clampToWalkable(targetPos, .97);
+    const [tx, tz] = toW(b.x + Math.sin(b.yaw) * (b.d / 2 + 1.4), b.z + Math.cos(b.yaw) * (b.d / 2 + 1.4)); targetPos.set(tx, 0, tz); worldV2.clampToWalkable(targetPos, .97);
     isMoving = true; playAnim('walk'); el('hint').style.opacity = '0';
     return true;
   }
@@ -7683,8 +7699,9 @@ var town = (() => {
     // 見る先：花屋は鉢の台、タネ屋は台、花壇、庭は庭のまん中（日差しの庭は、ソラばあちゃん）
     const look = id === 'town:petal' ? [petalAt.x, petalAt.z] : id === 'town:sign' ? [LEAD.sign.x, LEAD.sign.z] : id === 'town:florist' ? L.obstacles[1] : id === 'town:mole' ? L.obstacles[2] : id === 'town:bed' ? L.obstacles[5] : id === 'town:sun' ? [NPC.grandma.x, NPC.grandma.z]
       : (() => { const h = houses.find(q => q.name === id.slice(5)); return [h.x + Math.sin(h.yaw) * (h.d / 2 + .3), h.z + Math.cos(h.yaw) * (h.d / 2 + .3)]; })();
-    hiroriMotion.facing = Math.atan2(look[0] - character.position.x, look[1] - character.position.z);
-    focusOn(look[0], look[1]); focusAt = [look[0], look[1]];
+    const lw = has(id) && (id === 'town:petal' || id === 'town:sign') ? look : toW(look[0], look[1]);   // 手がかり（花びら・道しるべ）は、はじめから世界の座標
+    hiroriMotion.facing = Math.atan2(lw[0] - character.position.x, lw[1] - character.position.z);
+    focusOn(lw[0], lw[1]); focusAt = toD(lw[0], lw[1]);
     renderFor(id);
   }
   let focusAt = null;
@@ -7844,6 +7861,8 @@ var town = (() => {
     }
     return Math.min(1, Math.max(0, t0));
   }
+  const _cd = new THREE.Vector3(), _hw = new THREE.Vector3();
+  const toDV = (v, out) => out.set(PV.x + (v.x - PV.x) / TS, v.y / TS, PV.z + (v.z - PV.z) / TS);   // 世界の点 → 形の座標
   const smooth01 = u => { const k = Math.min(1, Math.max(0, u)); return k * k * (3 - 2 * k); };
   const TOWN_VIEW = Math.atan2(-.95, .3);   // 街に入るときのカメラの向き：ヒロリの西（少し南）から、東の通りの先を見る
   let barSaved = null; const mbarText = el('mbar-text');
@@ -7852,6 +7871,7 @@ var town = (() => {
     hiroriSoft.update(dt);   // ヒロリの質感と、止まったときの余韻（HIRORI-SOFT。街の外でも）
     if (!built || !character) return;
     const x = character.position.x, z = character.position.z, calm = still(), w = walkable();
+    const [xd, zd] = toD(x, z), yd = character.position.y / TS;   // 形の座標でのヒロリ（家・住人・噴水との計算に使う）
     // 街の中・街へ向かうときは、道すじをたどる（タップの目的地のときだけ。キーボードはそのまま）
     if (w && isMoving && worldV2.isActive()) {
       if (targetPos.x !== steer.wx || targetPos.z !== steer.wz) { steer.gx = targetPos.x; steer.gz = targetPos.z; steer.at = 0; steer.fresh = true; }
@@ -7865,7 +7885,7 @@ var town = (() => {
     const px0 = lastX, pz0 = lastZ; lastX = x; lastZ = z;
     // カメラ：街へ近づくと、少しずつ回って通りの先（東）を見る（角の向こうの屋台や噴水が見える）。草原へもどると元の向き
     if (baseOff && !worldV2.cameraFramed()) {
-      const sd = T.shapeSd(x, z), vb = z > -20 ? (calm ? (sd < 4 ? 1 : 0) : smooth01((7 - sd) / 6)) : 0;
+      const sd = T.shapeSd(x, z) / TS, vb = zd > -20 ? (calm ? (sd < 4 ? 1 : 0) : smooth01((7 - sd) / 6)) : 0;
       // タップで歩いているあいだは、歩いていく向きのうしろ（少し右）へ、ゆっくり回りこむ（行く先が画面の奥に見える）。止まっているとき・キーで歩くときは、そのまま
       const turn = d => Math.atan2(Math.sin(d), Math.cos(d));
       // 新しくタップした目的地が近くても（うしろへもどるときなど）、その向きへ回りこむ
@@ -7884,18 +7904,18 @@ var town = (() => {
     if (inTown) { if (barSaved === null) barSaved = mbarText.textContent; mbarText.textContent = townGuide(st); if (lead !== 'off' && lead !== 'done') leadDone(); }
     else if (barSaved !== null && w) { mbarText.textContent = barSaved; barSaved = null; }
     leadUpdate(t, dt, calm);   // 町への手がかり（花びら）
-    if (Math.hypot(x - P.x, z - P.z) > 60) { for (const l of LABELS) l.classList.remove('show'); return; }   // 街から遠いときは、ここまで
+    if (Math.hypot(xd - P.x, zd - P.z) > 60) { for (const l of LABELS) l.classList.remove('show'); return; }   // 街から遠いときは、ここまで
     // カメラが家の中に入ったら、ヒロリの側の、家の手前まで寄せる（かべの中から見ない）
-    _hd.set(x, character.position.y + 1.3, z);
+    _hd.set(xd, yd + 1.3 / TS, zd); toDV(camera.position, _cd);
     for (const b of houses) {
-      const t = boxEnter(b, _hd, camera.position, .35);
-      if (t < 1) { camera.position.lerpVectors(_hd, camera.position, Math.max(.3, t - .03)); camera.lookAt(camTgt); camera.updateMatrixWorld(); }
+      const t = boxEnter(b, _hd, _cd, .35 / TS);
+      if (t < 1) { _hw.set(x, character.position.y + 1.3, z); camera.position.lerpVectors(_hw, camera.position, Math.max(.3, t - .03)); camera.lookAt(camTgt); camera.updateMatrixWorld(); toDV(camera.position, _cd); }
     }
     // 家・屋台が、カメラとヒロリ（パネルのときは話す相手・調べる物も）のあいだに入ったら透かす
     let n = 0;
-    seeP[n++].set(x, character.position.y + .9, z); seeP[n++].set(x, character.position.y + 1.6, z);
+    seeP[n++].set(xd, yd + .9 / TS, zd); seeP[n++].set(xd, yd + 1.6 / TS, zd);
     if (state === S.TOWN && focusAt) seeP[n++].set(focusAt[0], gy(focusAt[0], focusAt[1]) + .8, focusAt[1]);
-    const C = camera.position; let dirty = false;
+    const C = _cd; let dirty = false;
     for (const b of fadeables) {
       let hit = false;
       for (let k = 0; k < n && !hit; k++) hit = boxOnLine(b, C, seeP[k]);
@@ -7917,15 +7937,15 @@ var town = (() => {
       }
       spray.geometry.attributes.position.needsUpdate = true;
     }
-    waterSound(Math.hypot(x - P.x, z - P.z));
+    waterSound(Math.hypot(xd - P.x, zd - P.z) * TS);
     // 日差しの筋のほこり：ゆっくり上下
     if (motes && !calm) { const a = motes.geometry.attributes.position.array, b0 = motes.userData.base; for (let i = 0; i < a.length; i += 3) a[i + 1] = b0[i + 1] + .15 * Math.sin(t * .6 + i); motes.geometry.attributes.position.needsUpdate = true; }
     beams.forEach((m, k) => { m.material.opacity = calm ? .5 : .45 + .1 * Math.sin(t * .5 + k) + (performance.now() / 1000 < glowUntil ? .25 : 0); });
     // 住人：近いとヒロリのほうへ顔を向ける。がちょうは広場を回る。はとは近づくと少し飛ぶ
     for (const id of ['florist', 'mole', 'grandma']) {
       const p = NPC[id]; if (!p || !p.head) continue;
-      const d = Math.hypot(x - p.x, z - p.z);
-      let want = d < 6 ? Math.atan2(x - p.x, z - p.z) - p.root.rotation.y : 0;
+      const d = Math.hypot(xd - p.x, zd - p.z);
+      let want = d < 6 ? Math.atan2(xd - p.x, zd - p.z) - p.root.rotation.y : 0;
       want = Math.atan2(Math.sin(want), Math.cos(want)); want = Math.max(-1, Math.min(1, want));
       p.head.rotation.y += (want - p.head.rotation.y) * (calm ? 1 : 1 - Math.exp(-4 * dt));
       if (!calm) p.head.position.y += (Math.sin(t * 2 + p.x) * .006);
@@ -7937,7 +7957,7 @@ var town = (() => {
     }
     if (NPC.dog && !calm) NPC.dog.body.scale.y = 1 + .04 * Math.sin(t * 1.6);
     for (const b of NPC.birds || []) {
-      const d = Math.hypot(x - b.home[0], z - b.home[1]);
+      const d = Math.hypot(xd - b.home[0], zd - b.home[1]);
       if (d < 2.4 && b.fly <= 0) b.fly = 1;
       if (b.fly > 0) b.fly = Math.max(0, b.fly - dt * .45);
       const f = calm ? 0 : Math.sin(Math.PI * Math.min(1, b.fly)) ;
@@ -7948,25 +7968,25 @@ var town = (() => {
     // 運んでいる鉢：ヒロリの胸の前
     if (carryPot.visible) {
       const yaw = character.rotation.y;
-      carryPot.position.set(x + Math.sin(yaw) * .32, character.position.y + .38 + (calm ? 0 : .02 * Math.sin(t * 6)), z + Math.cos(yaw) * .32); carryPot.rotation.y = yaw;
+      carryPot.position.set(xd + Math.sin(yaw) * .32 / TS, yd + (.38 + (calm ? 0 : .02 * Math.sin(t * 6))) / TS, zd + Math.cos(yaw) * .32 / TS); carryPot.rotation.y = yaw;   // 運ぶ鉢は、ヒロリにあわせて、もとの大きさ（G の外の大きさ）
     }
     // 植えた花が育つ（2.4秒。動きを減らす設定ではすぐ）
     for (const id of TOWN_SEED_IDS) if (bed.grow[id] < 1) { bed.grow[id] = calm ? 1 : Math.min(1, bed.grow[id] + dt / 2.4); const g = bed.grow[id]; bed[id].scale.set(1, Math.max(.01, g * g * (3 - 2 * g)), 1); }
     for (let i = coins.length - 1; i >= 0; i--) {
       const c = coins[i]; c.t += dt; const u = Math.min(1, Math.max(0, c.t / .9));
-      c.sp.position.set(c.sx + (x - c.sx) * u, gy(c.sx, c.sz) + 1 + Math.sin(Math.PI * u) * 1.2 + (character.position.y + .6 - gy(c.sx, c.sz) - 1) * u, c.sz + (z - c.sz) * u);
+      c.sp.position.set(c.sx + (xd - c.sx) * u, gy(c.sx, c.sz) + 1 + Math.sin(Math.PI * u) * 1.2 + (yd + .6 / TS - gy(c.sx, c.sz) - 1) * u, c.sz + (zd - c.sz) * u);
       c.sp.visible = c.t >= 0;
       if (u >= 1) { G.remove(c.sp); c.sp.material.dispose(); coins.splice(i, 1); }
     }
     // 名前の札（話したあと・近いとき）
-    project(NPC.florist, el('label-lili'), w && st.met.florist, 1.45, x, z);
-    project(NPC.mole, el('label-mog'), w && st.met.mole, 1.3, x, z);
-    project(NPC.grandma, el('label-sora'), w && st.met.grandma, 1.25, x, z);
-    projectAt(P.x, gy(P.x, P.z) + 2.2, P.z, el('sfx-fountain'), w && Math.hypot(x - P.x, z - P.z) < 9);
+    project(NPC.florist, el('label-lili'), w && st.met.florist, 1.45, xd, zd);
+    project(NPC.mole, el('label-mog'), w && st.met.mole, 1.3, xd, zd);
+    project(NPC.grandma, el('label-sora'), w && st.met.grandma, 1.25, xd, zd);
+    projectAt(P.x, gy(P.x, P.z) + 2.2, P.z, el('sfx-fountain'), w && Math.hypot(xd - P.x, zd - P.z) < 9);
     if (performance.now() > guardUntil) guardUntil = 0;
   }
   function projectAt(x, y, z, lab, on) {
-    if (on) { _v.set(x, y, z).project(camera); on = _v.z < 1 && Math.abs(_v.x) < 1.05 && Math.abs(_v.y) < 1.05; }
+    if (on) { G.localToWorld(_v.set(x, y, z)).project(camera); on = _v.z < 1 && Math.abs(_v.x) < 1.05 && Math.abs(_v.y) < 1.05; }
     lab.classList.toggle('show', !!on);
     if (on) { lab.style.left = ((_v.x + 1) / 2 * innerWidth) + 'px'; lab.style.top = ((1 - _v.y) / 2 * innerHeight) + 'px'; }
   }
@@ -7988,15 +8008,15 @@ var town = (() => {
     for (const id of TOWN_SEED_IDS) if (st.seeds[id] === 'owned') rows.push([TOWN_SEEDS[id].icon, TOWN_SEEDS[id].name, TOWN_SEEDS[id].words + '（広場の花壇に植えられる）']);
     return rows;
   }
-  function blockers() { return built ? houses.map(h => [h.x, h.z, Math.min(h.w, h.d) / 2]) : []; }
+  function blockers() { return built ? houses.map(h => [...toW(h.x, h.z), Math.min(h.w, h.d) / 2 * TS]) : []; }
   const _fp = new THREE.Vector3();
-  function focusPoint(out = _fp) { return state === S.TOWN && focusAt ? out.set(focusAt[0], gy(focusAt[0], focusAt[1]) + .6, focusAt[1]) : null; }
+  function focusPoint(out = _fp) { return state === S.TOWN && focusAt ? G.localToWorld(out.set(focusAt[0], gy(focusAt[0], focusAt[1]) + .6 / TS, focusAt[1])) : null; }
   worldV2.ready.then(ok => { if (ok) loadMeshy().then(M => build(M)); });   // Meshy の家・屋台が読めないとき・6秒たっても届かないときは、仮の形で組み立てる
   // テスト用（読むだけ）
   const scr = (x, y, z) => { _v.set(x, y, z).project(camera); return { x: (_v.x + 1) / 2 * innerWidth, y: (1 - _v.y) / 2 * innerHeight, front: _v.z < 1 }; };
-  window.__tomoriTown = { lead: () => lead, state: () => JSON.parse(JSON.stringify(st)), saveKey: SAVE_KEY, built: () => built, layout: L, spot: id => spot(id), ids, open: () => openId,
-    houses: () => houses.map(h => ({ name: h.name, x: h.x, z: h.z, bid: h.bid })), fade: () => Array.from(fadeCur).map(v => +v.toFixed(2)),
-    screenAt: (x, z, y = 0) => scr(x, gy(x, z) + y, z), path: (x0, z0, x1, z1) => T.path(x0, z0, x1, z1), npc: id => NPC[id] && { x: NPC[id].x, z: NPC[id].z },
+  window.__tomoriTown = { lead: () => lead, state: () => JSON.parse(JSON.stringify(st)), saveKey: SAVE_KEY, built: () => built, layout: LW, spot: id => spot(id), ids, open: () => openId,
+    houses: () => houses.map(h => { const [x, z] = toW(h.x, h.z); return { name: h.name, x, z, bid: h.bid }; }), fade: () => Array.from(fadeCur).map(v => +v.toFixed(2)),
+    screenAt: (x, z, y = 0) => scr(x, gyW(x, z) + y, z), path: (x0, z0, x1, z1) => T.path(x0, z0, x1, z1), npc: id => NPC[id] && (([x, z]) => ({ x, z }))(toW(NPC[id].x, NPC[id].z)), scale: TS,
     hitAt: (sx, sy) => { const rc = new THREE.Raycaster(); rc.setFromCamera(new THREE.Vector2(sx / innerWidth * 2 - 1, -(sy / innerHeight) * 2 + 1), camera); return rc.intersectObjects(scene.children, true).slice(0, 4).map(i => (i.object.name || i.object.type) + (i.object.parent && i.object.parent.name ? '<' + i.object.parent.name : '') + ' ' + i.distance.toFixed(1)); } };
   return { has, ids, spot, call, open, pick, update, memo, items, blockers, focusPoint, reset, started: () => townStarted(st), applyVisuals, tapBlocked: () => performance.now() < guardUntil,
     leadStart, leadGuide, leadSticky, lead: () => lead };   // 町への手がかり（2026-11-14）

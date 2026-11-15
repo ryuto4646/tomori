@@ -7731,9 +7731,16 @@ var town = (() => {
     // 見る先：花屋は鉢の台、タネ屋は台、花壇、庭は庭のまん中（日差しの庭は、ソラばあちゃん）
     const look = id === 'town:petal' ? [petalAt.x, petalAt.z] : id === 'town:sign' ? [LEAD.sign.x, LEAD.sign.z] : id === 'town:florist' ? L.obstacles[1] : id === 'town:mole' ? L.obstacles[2] : id === 'town:bed' ? L.obstacles[5] : id === 'town:sun' ? [NPC.grandma.x, NPC.grandma.z]
       : (() => { const h = houses.find(q => q.name === id.slice(5)); return [h.x + Math.sin(h.yaw) * (h.d / 2 + .3), h.z + Math.cos(h.yaw) * (h.d / 2 + .3)]; })();
-    const lw = has(id) && (id === 'town:petal' || id === 'town:sign') ? look : toW(look[0], look[1]);   // 手がかり（花びら・道しるべ）は、はじめから世界の座標
+    let lw = has(id) && (id === 'town:petal' || id === 'town:sign') ? look : toW(look[0], look[1]);   // 手がかり（花びら・道しるべ）は、はじめから世界の座標
+    let fw = lw;
+    if (id === 'town:florist' || id === 'town:mole') {
+      // 屋台：品物（鉢・タネ袋）が並ぶ台の手前を、画面のまんなかに（パネルの構図は、ヒロリから目標までの 0.45 のところを見るので、目標を少し先に置く）
+      const o = id === 'town:florist' ? L.obstacles[1] : L.obstacles[2], dx = P.x - o[0], dz = P.z - o[1], dl = Math.hypot(dx, dz);
+      const [gx, gz] = toW(o[0] + dx / dl * .5, o[1] + dz / dl * .5), hx = character.position.x, hz = character.position.z, d = Math.hypot(gx - hx, gz - hz) || 1;
+      lw = [gx, gz]; fw = [hx + (gx - hx) / .45, hz + (gz - hz) / .45];
+    }
     hiroriMotion.facing = Math.atan2(lw[0] - character.position.x, lw[1] - character.position.z);
-    focusOn(lw[0], lw[1]); focusAt = toD(lw[0], lw[1]);
+    focusOn(fw[0], fw[1]); focusAt = toD(lw[0], lw[1]);
     renderFor(id);
   }
   let focusAt = null;
@@ -7897,7 +7904,7 @@ var town = (() => {
   const _cd = new THREE.Vector3(), _hw = new THREE.Vector3();
   const toDV = (v, out) => out.set(PV.x + (v.x - PV.x) / TS, v.y / TS, PV.z + (v.z - PV.z) / TS);   // 世界の点 → 形の座標
   const smooth01 = u => { const k = Math.min(1, Math.max(0, u)); return k * k * (3 - 2 * k); };
-  const TOWN_VIEW = Math.atan2(-.95, .3);   // 街に入るときのカメラの向き：ヒロリの西（少し南）から、東の通りの先を見る
+  const TOWN_VIEW = Math.atan2(-.95, .3), TOWN_VIEW_OUT = Math.atan2(.95, .3);   // OUT：草原へ向かうとき（花びらの道）は、町の出口（西）を見る   // 街に入るときのカメラの向き：ヒロリの西（少し南）から、東の通りの先を見る
   let barSaved = null; const mbarText = el('mbar-text');
   let baseOff = null, camTurned = false, viewA = TOWN_VIEW, viewWant = TOWN_VIEW, lastX = 0, lastZ = 0;
   function update(t, dt) {
@@ -7921,11 +7928,11 @@ var town = (() => {
       const sd = T.shapeSd(x, z) / TS, vb = zd > -20 ? (calm ? (sd < 4 ? 1 : 0) : smooth01((7 - sd) / 6)) : 0;
       // タップで歩いているあいだは、歩いていく向きのうしろ（少し右）へ、ゆっくり回りこむ（行く先が画面の奥に見える）。止まっているとき・キーで歩くときは、そのまま
       const turn = d => Math.atan2(Math.sin(d), Math.cos(d));
-      // 新しくタップした目的地が近くても（うしろへもどるときなど）、その向きへ回りこむ
-      if (steer.fresh && Math.hypot(steer.gx - x, steer.gz - z) > .8) viewWant = turn(Math.atan2(steer.gx - x, steer.gz - z) + Math.PI + .3);
-      else if (isMoving && Math.hypot(x - px0, z - pz0) > .01) viewWant = turn(Math.atan2(x - px0, z - pz0) + Math.PI + .3);
+      // 2026-11-15 制作者：「カメラがぐるぐる回って操作しにくい・花屋の花が見られない」。街の中でカメラを自動では回さない
+      // 街へ入るときに一度だけ、通りの奥（東）を見る向きへそろえる（TOWN_VIEW）。あとは、自分で回したとき（2本指・右ドラッグ・Q/E）だけ回る
       steer.fresh = false;
-      viewA = calm ? viewWant : viewA + turn(viewWant - viewA) * (1 - Math.exp(-dt / .8));
+      viewWant = lead === 'out' ? TOWN_VIEW_OUT : TOWN_VIEW;   // 届けたあと草原へ向かうときだけ、出口のほうへ一度だけ回る（歩く向きにはついていかない）
+      if (w) viewA = calm ? viewWant : viewA + turn(viewWant - viewA) * (1 - Math.exp(-dt / .8));
       if (vb > 0 || camTurned) {
         const b0 = Math.atan2(baseOff.x, baseOff.z), a = turn(viewA - b0) * vb, cs = Math.cos(a), sn = Math.sin(a);
         CAM_OFF.set(baseOff.x * cs + baseOff.z * sn, baseOff.y, -baseOff.x * sn + baseOff.z * cs); camTurned = vb > 0;
@@ -8051,7 +8058,7 @@ var town = (() => {
   worldV2.ready.then(ok => { if (ok) { placeStart(); loadMeshy().then(M => build(M)); } });   // Meshy の家・屋台が読めないとき・6秒たっても届かないときは、仮の形で組み立てる
   // テスト用（読むだけ）
   const scr = (x, y, z) => { _v.set(x, y, z).project(camera); return { x: (_v.x + 1) / 2 * innerWidth, y: (1 - _v.y) / 2 * innerHeight, front: _v.z < 1 }; };
-  window.__tomoriTown = { lead: () => lead, meadowOpen: () => meadowOpen(), state: () => JSON.parse(JSON.stringify(st)), saveKey: SAVE_KEY, built: () => built, layout: LW, spot: id => spot(id), ids, open: () => openId,
+  window.__tomoriTown = { camYaw: () => character ? Math.atan2(camera.position.x - character.position.x, camera.position.z - character.position.z) : 0, lead: () => lead, meadowOpen: () => meadowOpen(), state: () => JSON.parse(JSON.stringify(st)), saveKey: SAVE_KEY, built: () => built, layout: LW, spot: id => spot(id), ids, open: () => openId,
     houses: () => houses.map(h => { const [x, z] = toW(h.x, h.z); return { name: h.name, x, z, bid: h.bid }; }), fade: () => Array.from(fadeCur).map(v => +v.toFixed(2)),
     screenAt: (x, z, y = 0) => scr(x, gyW(x, z) + y, z), path: (x0, z0, x1, z1) => T.path(x0, z0, x1, z1), npc: id => NPC[id] && (([x, z]) => ({ x, z }))(toW(NPC[id].x, NPC[id].z)), scale: TS,
     hitAt: (sx, sy) => { const rc = new THREE.Raycaster(); rc.setFromCamera(new THREE.Vector2(sx / innerWidth * 2 - 1, -(sy / innerHeight) * 2 + 1), camera); return rc.intersectObjects(scene.children, true).slice(0, 4).map(i => (i.object.name || i.object.type) + (i.object.parent && i.object.parent.name ? '<' + i.object.parent.name : '') + ' ' + i.distance.toFixed(1)); } };

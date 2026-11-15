@@ -1417,7 +1417,7 @@ function applyUI() {
 
   switch (state) {
     case S.EXPLORE:
-      mbar.textContent = (treasure && treasure.guide()) || '光るポイントを探して歩こう！';   // 宝さがしの途中は、その案内（EXPANSION-01）
+      mbar.textContent = (treasure && treasure.guide()) || (town && town.exploreGuide()) || '光るポイントを探して歩こう！';   // TOWN-01：町から始まるときは、町のお手伝い・草原への案内   // 宝さがしの途中は、その案内（EXPANSION-01）
       hint.style.opacity = '1';
       break;
     case S.MISSION_FOUND:
@@ -5458,7 +5458,7 @@ treasure = (() => {
   // 出ている相手は少し遠く（+0.6m）まで保ち、ほかの相手のほうがはっきり近い（ヒロリの前にある）ときだけ切りかえる（境目でちらつかない）
   // 写真のクエストの光るポイント（mission）と、第2クエストの芽（sprout）も、同じ案内から「はじめる」で始める
   const CALL_KEEP = .6, CALL_SWITCH = .5, TRUNK_R = .4, MISSION_CALL_R = 2.4, SPROUT_CALL_R = 2.0;
-  const missionCallable = () => state === S.EXPLORE && !missionTriggered && !(missionHold && missionHold.held());
+  const missionCallable = () => state === S.EXPLORE && !missionTriggered && !(missionHold && missionHold.held()) && (!town || town.meadowOpen());   // TOWN-01：町から始まるときは、花屋のお手伝いのあとから
   function callSpot(id) {
     if (id === 'mission') return { x: mpGroup.position.x, z: mpGroup.position.z, r: MISSION_CALL_R };
     if (id === 'sprout') { const s = questHub.sproutCall(); return s && { x: s.x, z: s.z, r: SPROUT_CALL_R }; }
@@ -6581,17 +6581,22 @@ const TOWN_LEAD = Object.freeze({
   // 花びらの道：樹のそば → 秘密の小道（worldV2 の SECRET_ROUTE と同じ点）→ 根の門 → 草原 → 道しるべの前
   trail: [[25.4, -57.95], [20.8, -58.0], [17.6, -50.4], [21.6, -44.8], [32.8, -43.8], [35.6, -37.8], [31.2, -31.8], [19.6, -30.8], [14.0, -25.2], [19.4, -19.0], [26.6, -12.6], [33.4, -8.6]],
   gap: 3.2, callR: 2.6,
+  // 町から始まるとき（2026-11-14 制作者の指示）：花屋のお手伝いのあと、町の外の草原へ。大通り（町の中は、町の大きさにあわせて TOWN で作る）→ 草原 → 光るポイントの手前
+  outMeadow: [[24.0, -8.6], [13.0, -11.2], [5.6, -12.6]],
+  outText: 'そうそう、町の外の草原で、ふしぎな光を見たよ。\n白い花びらが、そっちへ飛んでいったね。たどってごらん。',
   guide: Object.freeze({
     petal: '町への手がかりをさがそう。樹の近くで、白い花びらがまっている',
     sign: '花びらが、来た道から東の草原へつづいている。たどってみよう',
     enter: '道しるべの先に、市場町がある。花の門をくぐってみよう',
+    out: '花びらをたどって、町の外の草原へ行ってみよう',
+    popo: '草原のどこかで、ふくろうが待っているみたい',
   }),
   petalText: '白くて小さな花びらが、風にまっている。鈴のような形だ。\nほのかに、あまい香りがする。地面を見ると、来た道のほうへ、花びらが点々とつづいている。',
   signText: '木の道しるべに「この先　市場町」と書いてある。\n花のしるしの門の向こうから、にぎやかな声が聞こえる。',
 });
 // 花びらの道の点 [x, z, 向き]（間を gap ずつあける）
-function townLeadPoints() {
-  const out = [], R = TOWN_LEAD.trail; let s = TOWN_LEAD.gap * .5;
+function townLeadPoints(R = TOWN_LEAD.trail) {
+  const out = []; let s = TOWN_LEAD.gap * .5;
   for (let i = 0; i < R.length - 1; i++) {
     const [ax, az] = R[i], [bx, bz] = R[i + 1], l = Math.hypot(bx - ax, bz - az);
     for (; s < l; s += TOWN_LEAD.gap) out.push([ax + (bx - ax) * s / l, az + (bz - az) * s / l, Math.atan2(bx - ax, bz - az)]);
@@ -7470,11 +7475,15 @@ var town = (() => {
   // ── 町への手がかり（TOWN_LEAD・2026-11-14）：花びら → 道しるべ → 花の門。見た目は花びら（1つの形）・光（点の集まり）・道しるべだけ ──
   let lead = 'off', leadT = 0, trailT = 0, leadPetals = null, leadGlow = null, leadGlowPos = null;
   const LEAD = TOWN_LEAD, LEAD_PTS = townLeadPoints(), CLUSTER_N = 9;
+  // 町から始まる（?start=meadow で、前の始まり方：草原の出発点から。最初の実のあと町への手がかり）
+  const TOWN_FIRST = new URLSearchParams(location.search).get('start') !== 'meadow';
+  const OUT_PTS = townLeadPoints([...LW.road.slice().reverse(), ...LEAD.outMeadow]);   // 町の大通り（入口へ）→ 草原 → 光るポイントの手前
+  const START_D = [51.6, -5.4];   // はじまりの場所（形の座標）：大通りの終わり、噴水の広場の手前。広場と屋台が正面に見える
   function makeLead() {
     if (leadPetals) return;
-    leadPetals = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 6, 4), new THREE.MeshStandardMaterial({ color: 0xfffaf0, emissive: 0xfff1d8, emissiveIntensity: .6, roughness: 1 }), CLUSTER_N + LEAD_PTS.length);
+    leadPetals = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 6, 4), new THREE.MeshStandardMaterial({ color: 0xfffaf0, emissive: 0xfff1d8, emissiveIntensity: .6, roughness: 1 }), CLUSTER_N + Math.max(LEAD_PTS.length, OUT_PTS.length));
     leadPetals.name = 'Town_LeadPetals'; leadPetals.frustumCulled = false; scene.add(leadPetals);
-    leadGlowPos = new Float32Array((1 + LEAD_PTS.length) * 3);
+    leadGlowPos = new Float32Array((1 + Math.max(LEAD_PTS.length, OUT_PTS.length)) * 3);
     leadGlow = new THREE.Points(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(leadGlowPos, 3)),
       new THREE.PointsMaterial({ map: haloTex(), color: 0xfff0c8, size: 1.2, transparent: true, opacity: .75, depthWrite: false, blending: THREE.AdditiveBlending }));
     leadGlow.name = 'Town_LeadGlow'; leadGlow.frustumCulled = false; leadGlow.renderOrder = 3; scene.add(leadGlow);
@@ -7516,10 +7525,29 @@ var town = (() => {
     }
   }
   const leadGuide = () => LEAD.guide[lead] || null;
+  // はじまりの場所へ（読みこんだとき・「デモを最初から」のとき）。噴水の広場のほう（東）を向く
+  function placeStart() {
+    if (!TOWN_FIRST || !character || !worldV2.isActive()) return;
+    const [x, z] = toW(START_D[0], START_D[1]);
+    character.position.set(x, 0, z); character.rotation.set(0, Math.PI / 2, 0); targetPos.set(x, 0, z); isMoving = false;
+    hiroriMotion.facing = Math.PI / 2; worldV2.groundCharacter(character);
+    camera.position.set(x + CAM_OFF.x, character.position.y + CAM_OFF.y, z + CAM_OFF.z); camera.lookAt(x, character.position.y + 1, z);
+  }
+  // 草原の光るポイントは、花屋のお手伝いのあとから（町から始まるとき）
+  const meadowOpen = () => !TOWN_FIRST || !worldV2.isActive() || st.errand === 'done';
+  // 最初のクエストの前の上の知らせ（町から始まるとき）。街の中では、お手伝いの段階・町の外への案内
+  function exploreGuide() {
+    if (!TOWN_FIRST || !built) return null;
+    if (lead === 'out') return LEAD.guide.out;
+    if (st.errand === 'done') return null;
+    const x = character ? character.position.x : 0, z = character ? character.position.z : 0;
+    return T.shapeSd(x, z) < 1 && Math.hypot((x - 6) / 30, (z + 7) / 19) > 1 ? townGuide(st) : '市場町で、花屋さんのお手伝いをしてみよう';
+  }
   const leadSticky = msg => Object.values(LEAD.guide).includes(msg);
   // 「次の冒険へ」「自由に歩く」：手がかりさがしを始める（V2 で街ができているときだけ）。上の知らせの文を返す
   function leadStart() {
     if (!built) return null;
+    if (TOWN_FIRST) { lead = 'popo'; if (leadPetals) leadPetals.visible = leadGlow.visible = false; return LEAD.guide.popo; }   // 町から始まったとき：町はもう知っているので、次は草原のふくろう（宝さがし）へ
     if (lead === 'off') { makeLead(); placePetal(); lead = 'petal'; leadT = 0; trailT = 0; leadPetals.visible = leadGlow.visible = true; }
     return leadGuide();
   }
@@ -7532,8 +7560,9 @@ var town = (() => {
   }
   const _hide = new THREE.Matrix4().makeScale(0, 0, 0);
   function leadUpdate(t, dt, calm) {
-    if (!leadPetals || lead === 'off' || lead === 'done') return;
+    if (!leadPetals || lead === 'off' || lead === 'done' || lead === 'popo') return;
     leadT += dt;
+    const PTS = lead === 'out' ? OUT_PTS : LEAD_PTS;
     let k = 0;
     // ①樹のそばの花びら：上から舞いおりて、ゆっくりうずをまく。上に、やわらかな光
     const cl = lead === 'petal', drop = calm ? 0 : Math.max(0, 1 - leadT / 2.2);
@@ -7546,9 +7575,10 @@ var town = (() => {
     }
     leadGlowPos[0] = petalAt.x; leadGlowPos[1] = cl ? gyW(petalAt.x, petalAt.z) + 1.1 : -100; leadGlowPos[2] = petalAt.z;
     // ②花びらの道：しらべたところから順に、地面へおりる（1秒に14まい）。街に入ったら消える
-    const shown = cl ? 0 : calm ? LEAD_PTS.length : Math.floor((leadT - trailT) * 14);
-    for (let i = 0; i < LEAD_PTS.length; i++) {
-      const [px, pz, yaw] = LEAD_PTS[i], on = i < shown, y = gyW(px, pz);
+    const shown = cl ? 0 : calm ? PTS.length : Math.floor((leadT - trailT) * 14);
+    for (let i = 0; i < leadGlowPos.length / 3 - 1; i++) {
+      if (i >= PTS.length) { leadPetals.setMatrixAt(k++, _hide); leadGlowPos[(i + 1) * 3 + 1] = -100; continue; }
+      const [px, pz, yaw] = PTS[i], on = i < shown, y = gyW(px, pz);
       if (on) { _m.compose(_p.set(px, y + .06 + (calm ? 0 : .03 * Math.sin(t * 2 + i)), pz), _q.setFromEuler(_e.set(0, yaw + i, 0)), _s.set(.13, .03, .09)); leadPetals.setMatrixAt(k++, _m); }
       else leadPetals.setMatrixAt(k++, _hide);
       leadGlowPos[(i + 1) * 3] = px; leadGlowPos[(i + 1) * 3 + 1] = on ? y + .25 : -100; leadGlowPos[(i + 1) * 3 + 2] = pz;
@@ -7605,7 +7635,9 @@ var town = (() => {
     const bid = bidOf(h);
     const b = houses.find(q => q.bid === bid) || stalls.find(q => q.bid === bid || q.bid === bid + 4);
     if (!b) return false;
-    const [tx, tz] = toW(b.x + Math.sin(b.yaw) * (b.d / 2 + 1.4), b.z + Math.cos(b.yaw) * (b.d / 2 + 1.4)); targetPos.set(tx, 0, tz); worldV2.clampToWalkable(targetPos, .97);
+    const [tx, tz] = toW(b.x + Math.sin(b.yaw) * (b.d / 2 + 1.4), b.z + Math.cos(b.yaw) * (b.d / 2 + 1.4));
+    if (Math.hypot(tx - character.position.x, tz - character.position.z) < 1.5) return false;   // もうその前にいる：家・屋台のむこうの道をタップしたものとして歩く（屋台の前で動けなくならない）
+    targetPos.set(tx, 0, tz); worldV2.clampToWalkable(targetPos, .97);
     isMoving = true; playAnim('walk'); el('hint').style.opacity = '0';
     return true;
   }
@@ -7759,7 +7791,8 @@ var town = (() => {
     st.met.grandma = true; save(); applyVisuals();
     if (r.reward) coinBurst(NPC.grandma.root.position, r.reward);
     sfx('coin');
-    show(openId, { icon: '🐢', name: 'ソラばあちゃん', line: TOWN_TEXT.grandmaThanks, items: [], reward: r.reward });
+    const toMeadow = TOWN_FIRST && questHub.state().quests.first === 'active' && !missionTriggered;   // 町から始まったとき：次は草原へ
+    show(openId, { icon: '🐢', name: 'ソラばあちゃん', line: TOWN_TEXT.grandmaThanks + (toMeadow ? '\n' + LEAD.outText : ''), items: [], reward: r.reward, closeLabel: toMeadow ? '草原へ行ってみる' : undefined });
     const box = el('town-cards'); box.replaceChildren(); if (r.reward) box.appendChild(rewardCard(r.reward));
   }
   function rewardCard(n) {
@@ -7901,8 +7934,12 @@ var town = (() => {
     coinEl.classList.toggle('show', w && townStarted(st));
     // 上の知らせ：街の中では、お手伝いのいまの段階（行き先の答えは言わない）。街を出たら、前の知らせへもどす
     const inTown = (w || state === S.TOWN) && T.shapeSd(x, z) < 1 && Math.hypot((x - 6) / 30, (z + 7) / 19) > 1;
-    if (inTown) { if (barSaved === null) barSaved = mbarText.textContent; mbarText.textContent = townGuide(st); if (lead !== 'off' && lead !== 'done') leadDone(); }
+    if (inTown) { if (barSaved === null) barSaved = mbarText.textContent; mbarText.textContent = lead === 'out' ? LEAD.guide.out : townGuide(st); if (lead === 'petal' || lead === 'sign' || lead === 'enter') leadDone(); }
     else if (barSaved !== null && w) { mbarText.textContent = barSaved; barSaved = null; }
+    if (TOWN_FIRST && lead === 'off' && st.errand === 'done' && !missionTriggered && questHub.state().quests.first === 'active') { makeLead(); lead = 'out'; leadT = 0; trailT = 0; leadPetals.visible = leadGlow.visible = true; }
+    if (lead === 'out' && (missionTriggered || Math.hypot(x - MISSION_POS.x, z - MISSION_POS.z) < 3.5)) { lead = 'done'; leadPetals.visible = leadGlow.visible = false; }   // 光るポイントのそばまで来た（「はじめる」が出る）
+    if (lead === 'popo' && treasure && treasure.guide('自由に歩いてみよう。気になる場所があるかも。')) leadDone();   // 宝さがしが始まった
+    mpGroup.visible = meadowOpen() || missionTriggered;   // 光るポイントは、お手伝いのあとから見える
     leadUpdate(t, dt, calm);   // 町への手がかり（花びら）
     if (Math.hypot(xd - P.x, zd - P.z) > 60) { for (const l of LABELS) l.classList.remove('show'); return; }   // 街から遠いときは、ここまで
     // カメラが家の中に入ったら、ヒロリの側の、家の手前まで寄せる（かべの中から見ない）
@@ -8011,15 +8048,15 @@ var town = (() => {
   function blockers() { return built ? houses.map(h => [...toW(h.x, h.z), Math.min(h.w, h.d) / 2 * TS]) : []; }
   const _fp = new THREE.Vector3();
   function focusPoint(out = _fp) { return state === S.TOWN && focusAt ? G.localToWorld(out.set(focusAt[0], gy(focusAt[0], focusAt[1]) + .6 / TS, focusAt[1])) : null; }
-  worldV2.ready.then(ok => { if (ok) loadMeshy().then(M => build(M)); });   // Meshy の家・屋台が読めないとき・6秒たっても届かないときは、仮の形で組み立てる
+  worldV2.ready.then(ok => { if (ok) { placeStart(); loadMeshy().then(M => build(M)); } });   // Meshy の家・屋台が読めないとき・6秒たっても届かないときは、仮の形で組み立てる
   // テスト用（読むだけ）
   const scr = (x, y, z) => { _v.set(x, y, z).project(camera); return { x: (_v.x + 1) / 2 * innerWidth, y: (1 - _v.y) / 2 * innerHeight, front: _v.z < 1 }; };
-  window.__tomoriTown = { lead: () => lead, state: () => JSON.parse(JSON.stringify(st)), saveKey: SAVE_KEY, built: () => built, layout: LW, spot: id => spot(id), ids, open: () => openId,
+  window.__tomoriTown = { lead: () => lead, meadowOpen: () => meadowOpen(), state: () => JSON.parse(JSON.stringify(st)), saveKey: SAVE_KEY, built: () => built, layout: LW, spot: id => spot(id), ids, open: () => openId,
     houses: () => houses.map(h => { const [x, z] = toW(h.x, h.z); return { name: h.name, x, z, bid: h.bid }; }), fade: () => Array.from(fadeCur).map(v => +v.toFixed(2)),
     screenAt: (x, z, y = 0) => scr(x, gyW(x, z) + y, z), path: (x0, z0, x1, z1) => T.path(x0, z0, x1, z1), npc: id => NPC[id] && (([x, z]) => ({ x, z }))(toW(NPC[id].x, NPC[id].z)), scale: TS,
     hitAt: (sx, sy) => { const rc = new THREE.Raycaster(); rc.setFromCamera(new THREE.Vector2(sx / innerWidth * 2 - 1, -(sy / innerHeight) * 2 + 1), camera); return rc.intersectObjects(scene.children, true).slice(0, 4).map(i => (i.object.name || i.object.type) + (i.object.parent && i.object.parent.name ? '<' + i.object.parent.name : '') + ' ' + i.distance.toFixed(1)); } };
   return { has, ids, spot, call, open, pick, update, memo, items, blockers, focusPoint, reset, started: () => townStarted(st), applyVisuals, tapBlocked: () => performance.now() < guardUntil,
-    leadStart, leadGuide, leadSticky, lead: () => lead };   // 町への手がかり（2026-11-14）
+    leadStart, leadGuide, leadSticky, lead: () => lead, placeStart, meadowOpen, exploreGuide, townFirst: TOWN_FIRST };   // 町への手がかり（2026-11-14）
 })();
 // TOWN-END
 
@@ -8054,6 +8091,7 @@ function doReset(){
   resetHiroriMotion(); camUser.reset();   // 視点も最初の構図へ（Step 11P）
   targetPos.set(0,0,0); isMoving=false;
   camera.position.copy(CAM_OFF); camera.lookAt(0,0,0);
+  if (town) town.placeStart();   // TOWN-01：町から始まるときは、噴水の広場の手前へ
 
   mpGroup.position.copy(MISSION_POS); missionTriggered=false; missionNeedsLeave=false;
 
@@ -8359,7 +8397,7 @@ function animate(){
       const md=Math.hypot(character.position.x-mpGroup.position.x, character.position.z-mpGroup.position.z);   // 平面の距離（WORLD-V2：起伏で判定がぶれない）
       const mbar=document.getElementById('mbar-text');
       // FLOW-02：近づいただけでは開かない。近くに出る「光るポイントがある｜はじめる」を押したときに開く（案内は treasure.update がまとめて出す）
-      mbar.textContent = md<CALLOUT_RADIUS&&!missionTriggered&&!missionHold.held() ? 'なにかが呼んでいる…' : (treasure&&treasure.guide()) || '光るポイントを探して歩こう！';   // 祠に近づいたら写真のクエストの案内へ（EXPANSION-01）
+      mbar.textContent = md<CALLOUT_RADIUS&&!missionTriggered&&!missionHold.held()&&(!town||town.meadowOpen()) ? 'なにかが呼んでいる…' : (treasure&&treasure.guide()) || (town&&town.exploreGuide()) || '光るポイントを探して歩こう！';   // TOWN-01：町から始まるときは、お手伝いのあとから   // 祠に近づいたら写真のクエストの案内へ（EXPANSION-01）
     }
   }
 

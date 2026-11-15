@@ -237,7 +237,7 @@ test('15. 上の知らせ（街の中だけ）：いまの段階でやること�
   for (const e of ['none', 'flower', 'deliver', 'done']) { st.errand = e; seen.push(G.townGuide(st)); }
   st.coins = 10; seen.push(G.townGuide(st)); st.seeds.sun = 'owned'; seen.push(G.townGuide(st));
   for (const t of seen) { assert.ok(t.length > 4 && t.length <= 32, t); assert.ok(!/2ばん|光の筋|下を向|ソラばあちゃん/.test(t), t); }
-  assert.match(code(UI), /if \(inTown\) \{ if \(barSaved === null\) barSaved = mbarText\.textContent; mbarText\.textContent = townGuide\(st\);/);
+  assert.match(code(UI), /if \(inTown\) \{ if \(barSaved === null\) barSaved = mbarText\.textContent; mbarText\.textContent = (?:lead === 'out' \? LEAD\.guide\.out : )?townGuide\(st\);/);
 });
 
 test('17. 町への手がかり：最初の実のあと「次の冒険へ」で始まる（2つ目以降の実は、より道）。花びら → 道しるべ → 花の門。どこも歩いて行け、しらべる場所は歩ける場所', () => {
@@ -257,7 +257,7 @@ test('17. 町への手がかり：最初の実のあと「次の冒険へ」で�
   // つなぎ目：「次の冒険へ」は手がかりへ（芽の案内は、手がかりがないときだけ）。案内は消さずに残す。街に入ったらおしまい
   assert.match(HTML, /const lead = town \? town\.leadStart\(\) : null;\n    freeMsg = kind === 'next' \? \(lead \|\| \(q2Usable\(\) \? Q2_GUIDE : FREE_DEFAULT\)\) : FREE_DEFAULT;/);
   assert.match(HTML, /if \(freeMsg === Q2_GUIDE \|\| \(town && town\.leadSticky\(freeMsg\)\)\) return;/);
-  assert.match(code(UI), /mbarText\.textContent = townGuide\(st\); if \(lead !== 'off' && lead !== 'done'\) leadDone\(\);/);
+  assert.match(code(UI), /townGuide\(st\); if \(lead === 'petal' \|\| lead === 'sign' \|\| lead === 'enter'\) leadDone\(\);/);
   assert.match(code(UI), /if \(lead === 'petal'\) out\.push\('town:petal'\);/);
   // 芽（2つ目の実）は、近くを通れば「はじめる」が出るまま（より道として残す）
   assert.match(HTML, /sproutCall: \(\) => state === S\.FREE_EXPLORE && q2Usable\(\) \? Q2\.start : null/);
@@ -292,4 +292,23 @@ test('16. ヒロリ（HIRORI-SOFT）：元の形のファイルは変えない�
     }
     assert.ok(dmin >= .03, 'ear ' + sd + ' gap ' + dmin.toFixed(3));
   }
+});
+
+test('18. 町から始まる（2026-11-14）：はじまりは噴水の広場の手前（歩ける場所）。花屋のお手伝いのあと、花びらの道で草原の光るポイントへ。?start=meadow で前の始まり方', () => {
+  const G = new Function(CORE + '\nreturn { TOWN_LEAD, townLeadPoints };')();
+  const S = L.scale, PV = L.pivot, toW = ([x, z]) => [PV.x + (x - PV.x) * S, PV.z + (z - PV.z) * S];
+  const m = code(UI).match(/const START_D = \[([\d.-]+), ([\d.-]+)\];/); assert.ok(m, 'START_D');
+  const [sx, sz] = toW([+m[1], +m[2]]);
+  assert.ok(W.inWalk(sx, sz, false) && W.townShapeSd(sx, sz) < 0, 'start is on the town road');
+  assert.ok(Math.hypot(sx - L.plaza.x, sz - L.plaza.z) < L.plaza.r + 6, 'start sees the plaza');
+  // 町の大通り → 草原 → 光るポイントの手前：どこも歩ける
+  const pts = G.townLeadPoints([...L.road.slice().reverse(), ...G.TOWN_LEAD.outMeadow]);
+  for (const [x, z] of pts) assert.ok(W.inWalk(x, z, false), 'out trail ' + x.toFixed(1) + ',' + z.toFixed(1));
+  const last = G.TOWN_LEAD.outMeadow.at(-1); assert.ok(Math.hypot(last[0] - 3, last[1] + 13) < 3.5, 'ends near the glowing point');
+  for (const t of [G.TOWN_LEAD.guide.out, G.TOWN_LEAD.guide.popo]) assert.ok(t.length <= 34, t);
+  // つなぎ目：光るポイントは、お手伝いのあとから。「デモを最初から」で、はじまりの場所へ
+  assert.match(HTML, /&& \(!town \|\| town\.meadowOpen\(\)\);/);
+  assert.match(code(UI), /const meadowOpen = \(\) => !TOWN_FIRST \|\| !worldV2\.isActive\(\) \|\| st\.errand === 'done';/);
+  assert.match(code(UI), /const TOWN_FIRST = new URLSearchParams\(location\.search\)\.get\('start'\) !== 'meadow';/);
+  assert.match(HTML, /camera\.lookAt\(0,0,0\);\n  if \(town\) town\.placeStart\(\);/);
 });

@@ -69,7 +69,7 @@ test('3. 近づいただけでは開かない：写真のクエスト・第2ク�
   // 「着いた！」をくり返し出さない
   assert.ok(!/光るポイントに着いた|新しい芽に着いた/.test(HTML));
   // 「あとで・冒険にもどる」と「続ける」はそのまま。あとで閉じたあいだは、同じ場所で「はじめる」を出さない（「続ける」が出る）
-  assert.match(UI, /const missionCallable = \(\) => state === S\.EXPLORE && !missionTriggered && !\(missionHold && missionHold\.held\(\)\);/);
+  assert.match(UI, /const missionCallable = \(\) => state === S\.EXPLORE && !missionTriggered && !\(missionHold && missionHold\.held\(\)\)(?: && \(!town \|\| town\.meadowOpen\(\)\))?;/);
   assert.match(HTML, /b\.textContent = 'あとで・冒険にもどる';/);
   assert.match(HTML, /el\('btn-hold-resume'\)\.addEventListener\('click', resume\);/);
 });

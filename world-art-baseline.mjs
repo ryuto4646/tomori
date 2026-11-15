@@ -1983,6 +1983,17 @@ const TOWN_BLOCKS = [
   /\n\/\/ TOWN-BEGIN[\s\S]*?\/\/ TOWN-END\n/,
 ];
 export const TOWN_EDITS = [
+  [`  camera.position.copy(CAM_OFF); camera.lookAt(0,0,0);
+`,
+   `  camera.position.copy(CAM_OFF); camera.lookAt(0,0,0);
+  if (town) town.placeStart();   // TOWN-01：町から始まるときは、噴水の広場の手前へ
+`],
+  [`  const missionCallable = () => state === S.EXPLORE && !missionTriggered && !(missionHold && missionHold.held());`,
+   `  const missionCallable = () => state === S.EXPLORE && !missionTriggered && !(missionHold && missionHold.held()) && (!town || town.meadowOpen());   // TOWN-01：町から始まるときは、花屋のお手伝いのあとから`],
+  [`md<CALLOUT_RADIUS&&!missionTriggered&&!missionHold.held() ? 'なにかが呼んでいる…' : (treasure&&treasure.guide()) || '光るポイントを探して歩こう！';`,
+   `md<CALLOUT_RADIUS&&!missionTriggered&&!missionHold.held()&&(!town||town.meadowOpen()) ? 'なにかが呼んでいる…' : (treasure&&treasure.guide()) || (town&&town.exploreGuide()) || '光るポイントを探して歩こう！';   // TOWN-01：町から始まるときは、お手伝いのあとから`],
+  [`      mbar.textContent = (treasure && treasure.guide()) || '光るポイントを探して歩こう！';`,
+   `      mbar.textContent = (treasure && treasure.guide()) || (town && town.exploreGuide()) || '光るポイントを探して歩こう！';   // TOWN-01：町から始まるときは、町のお手伝い・草原への案内`],
   [`  return { update, applyUI, freeMessage, showBar, fadeBarLater, toFree,`,
    `  // TOWN-01：上の知らせの文を入れかえる（quiet のときは、次に自由に歩くときから）
   function setFree(msg, quiet) { freeMsg = msg; if (!quiet && state === S.FREE_EXPLORE) { el('mbar-text').textContent = (treasure && treasure.guide(msg)) || msg; showBar(); fadeBarLater(); } }

@@ -274,8 +274,8 @@ test('17. 上の知らせ：宝さがしの途中は、いまの目標がわか�
   assert.match(g, /if \(free !== undefined && free !== FREE_TEXT\) return null;/);
   assert.match(UI, /const FREE_TEXT = '自由に歩いてみよう。気になる場所があるかも。';/);
   // FLOW-02：写真のクエストを始めたあと・「あとで」で閉じているあいだは、「なにかが呼んでいる…」を出さない
-  assert.match(HTML, /mbar\.textContent = md<CALLOUT_RADIUS&&!missionTriggered&&!missionHold\.held\(\) \? 'なにかが呼んでいる…' : \(treasure&&treasure\.guide\(\)\) \|\| '光るポイントを探して歩こう！';/);
-  assert.match(HTML, /mbar\.textContent = \(treasure && treasure\.guide\(\)\) \|\| '光るポイントを探して歩こう！';/);
+  assert.match(HTML, /mbar\.textContent = md<CALLOUT_RADIUS&&!missionTriggered&&!missionHold\.held\(\)(?:&&\(!town\|\|town\.meadowOpen\(\)\))? \? 'なにかが呼んでいる…' : \(treasure&&treasure\.guide\(\)\) \|\| (?:\(town&&town\.exploreGuide\(\)\) \|\| )?'光るポイントを探して歩こう！';/);
+  assert.match(HTML, /mbar\.textContent = \(treasure && treasure\.guide\(\)\) \|\| (?:\(town && town\.exploreGuide\(\)\) \|\| )?'光るポイントを探して歩こう！';/);
 });
 
 test('18. REVIEW：会話中は調べる物もパネルの上に見せる。横向きの小さな画面は右にパネル。閉じた指で「見つけたもの」を押さない。構図はほらあなの岩もよける', () => {

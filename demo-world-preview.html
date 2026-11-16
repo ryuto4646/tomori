@@ -7078,6 +7078,27 @@ var town = (() => {
     const side = meshy ? (geo, hex, p, s, r) => add(acc, geo, hex, bid + 4, p, s, r, null, place) : A;   // 台のわきは地面に置く
     side(BOX, 0xb88a5c, [meshy ? 1.6 : 1.45, .25, .1], [.5, .5, .5], [0, .3, 0]);
     side(CYL, 0xc8a46c, [meshy ? -1.6 : -1.45, .2, .2], [.28, .4, .28]);
+    if (kind === 'florist') {
+      // 2026-11-16 制作者：「花がひさしに隠れて見えない。花は屋台の前に置いて、ほかにも花を置いて」。台の前（ひさしの外）の地面に、低い台と花のバケツ
+      const G0 = (geo, hex, p, s, r) => add(acc, geo, hex, meshy ? bid + 4 : bid, p, s, r, null, place);
+      G0(BOX, 0xb88a5c, [0, .4, FLOR_FRONT], [2.5, .07, .56]);   // えらぶ鉢をのせる低い台
+      G0(BOX, 0x8a5e3e, [0, .19, FLOR_FRONT], [2.3, .38, .44]);
+      const bunch = (cx, cy, cz, n, rad, k0) => { for (let f = 0; f < n; f++) { const a = f * 2.4, rr = rad * Math.sqrt((f + .5) / n); G0(SPH, FLOWERS[(k0 + f) % FLOWERS.length], [cx + Math.cos(a) * rr, cy + (f % 3) * .04, cz + Math.sin(a) * rr], [.1, .085, .1]); }
+        for (let f = 0; f < 4; f++) { const a = f * 1.57 + .4; G0(SPH, 0x7fae5a, [cx + Math.cos(a) * rad * .9, cy - .06, cz + Math.sin(a) * rad * .9], [.12, .05, .08], [0, a, .3]); } };
+      for (const sx of [-1, 1]) {   // 台の両わき：花のバケツ（大・小）
+        G0(CYL, 0x9aa7ad, [sx * 1.62, .22, FLOR_FRONT - .1], [.24, .44, .24]); bunch(sx * 1.62, .5, FLOR_FRONT - .1, 9, .2, sx > 0 ? 0 : 3);
+        G0(CYL, 0xc77a52, [sx * 1.55, .15, FLOR_FRONT + .42], [.17, .3, .17]); bunch(sx * 1.55, .36, FLOR_FRONT + .42, 5, .13, sx > 0 ? 4 : 1);
+      }
+      for (const sx of [-1, 1]) {   // 屋台のうしろの角（町の入口から見える側）にも、花のバケツ
+        G0(CYL, 0x9aa7ad, [sx * 1.35, .2, -.95], [.22, .4, .22]); bunch(sx * 1.35, .46, -.95, 8, .18, sx > 0 ? 2 : 5);
+        G0(CYL, 0xc77a52, [sx * 1.75, .14, -.55], [.15, .28, .15]); bunch(sx * 1.75, .33, -.55, 4, .11, sx > 0 ? 1 : 3);
+      }
+      for (let k = 0; k < 2; k++) {   // 台の前の小さな鉢
+        const lx = (k - .5) * 1.1; G0(CYL, 0xc77a52, [lx, .1, FLOR_FRONT + .45], [.12, .2, .12]); bunch(lx, .25, FLOR_FRONT + .45, 4, .09, k * 2 + 1);
+      }
+      A(BOX, 0x7a5236, [0, 1.0, .38], [1.9, .14, .2]);   // 台の上の前：長いプランター
+      for (let f = 0; f < 11; f++) A(SPH, FLOWERS[f % FLOWERS.length], [(f - 5) * .17, 1.12 + (f % 2) * .05, .38 + (f % 2 - .5) * .06], [.09, .08, .09], undefined, .1);
+    }
     if (!meshy) stalls.push({ x, z, yaw, w: 3.1, d: 2.2, H: 2.6, bid, kind });
   }
 
@@ -7261,8 +7282,8 @@ var town = (() => {
     const fl = L.obstacles[1], yaw = Math.atan2(P.x - fl[0], P.z - fl[1]);
     TOWN_POTS.forEach((p, k) => {
       const g = new THREE.Group(); g.name = 'Town_Pot_' + p.id;
-      const lx = (k - 1) * .72, lz = .5;
-      g.position.set(fl[0] + Math.sin(yaw) * lz + Math.cos(yaw) * lx, gy(fl[0], fl[1]) + .965 + (meshyOn ? STALL_DY : 0), fl[1] + Math.cos(yaw) * lz - Math.sin(yaw) * lx);
+      const lx = (k - 1) * .78, lz = FLOR_FRONT;   // 屋台の前の低い台の上（ひさしに隠れない）
+      g.position.set(fl[0] + Math.sin(yaw) * lz + Math.cos(yaw) * lx, gy(fl[0], fl[1]) + .435, fl[1] + Math.cos(yaw) * lz - Math.sin(yaw) * lx);
       g.rotation.y = yaw; g.scale.setScalar(1.25);
       g.add(potMesh(p.id));
       const sgn = numberSign(k + 1); sgn.position.set(0, -.18, .2); g.add(sgn);
@@ -7381,6 +7402,7 @@ var town = (() => {
 
   // ── Meshy の家・屋台（docs/ASSET_REGISTER.md）。色の絵1枚つきの GLB を、ここで読む（外の読みこみ部品は使わない） ──
   const MESHY_URL = { house: 'assets/town-meshy/town-house-a-game.glb', stall: 'assets/town-meshy/market-stall-a-game.glb', bakery: 'assets/town-meshy/town-bakery-a-game.glb' }, MESHY_WAIT_MS = 6000;
+  const FLOR_FRONT = 1.3;   // 花屋の、えらぶ鉢の台（屋台の中心から広場の側へ。ひさしの外）
   const STALL_S = 1.3, STALL_TOP = (-.358 + .952) * 1.3, STALL_DY = STALL_TOP - .93;   // 屋台の台の高さ（約0.77m）。品物は、その上へ
   async function readTexGlb(buf) {
     const dv = new DataView(buf);
@@ -7736,7 +7758,7 @@ var town = (() => {
     if (id === 'town:florist' || id === 'town:mole') {
       // 屋台：品物（鉢・タネ袋）が並ぶ台の手前を、画面のまんなかに（パネルの構図は、ヒロリから目標までの 0.45 のところを見るので、目標を少し先に置く）
       const o = id === 'town:florist' ? L.obstacles[1] : L.obstacles[2], dx = P.x - o[0], dz = P.z - o[1], dl = Math.hypot(dx, dz);
-      const [gx, gz] = toW(o[0] + dx / dl * .5, o[1] + dz / dl * .5), hx = character.position.x, hz = character.position.z, d = Math.hypot(gx - hx, gz - hz) || 1;
+      const fo = id === 'town:florist' ? FLOR_FRONT : .5, [gx, gz] = toW(o[0] + dx / dl * fo, o[1] + dz / dl * fo), hx = character.position.x, hz = character.position.z, d = Math.hypot(gx - hx, gz - hz) || 1;
       lw = [gx, gz]; fw = [hx + (gx - hx) / .45, hz + (gz - hz) / .45];
     }
     hiroriMotion.facing = Math.atan2(lw[0] - character.position.x, lw[1] - character.position.z);

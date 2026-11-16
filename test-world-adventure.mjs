@@ -283,7 +283,7 @@ test('21. 小さなカメラの動き（生まれる・門・樹）は2秒以内
   assert.match(ADVENTURE_FN, /if \(!still\) \{ const w = Math\.sin\(Math\.PI \* Math\.min\(1, \(t - birthT\) \/ 2\)\);/);
   assert.match(ADVENTURE_FN, /if \(!still\) CAM_LOOK\.set\(defLook\.x \+ \(GATE\.x - cx\) \* \.12/);
   assert.match(ADVENTURE_FN, /treeX = cx; treeZ = cz;\s*if \(!still\) \{/);
-  assert.match(ADVENTURE_FN, /if \(treeFrame && Math\.hypot\(cx - treeX, cz - treeZ\) > 1\.5\) \{ treeFrame = false; CAM_LOOK\.copy\(defLook\); \}/);
+  assert.match(ADVENTURE_FN, /if \(treeFrame && Math\.hypot\(cx - treeX, cz - treeZ\) > 1\.5\) \{ treeFrame = false; CAM_LOOK\.copy\(defLook\); CAM_OFF\.copy\(defOff\); \}/);   // 樹の構図のあとは、ふだんの向きへ（TOWN-01-CAMERA-FIX）
   // 樹の構図：樹から 11m・高さ 2m、見上げる（縦長の画面は少し多め）
   assert.match(ADVENTURE_FN, /treeCam\.set\(WORD_TREE\.x \+ tmpW\.x \* 11, heightAt\(WORD_TREE\.x, WORD_TREE\.z\) \+ 2\.0, WORD_TREE\.z \+ tmpW\.z \* 11\);/);
   assert.match(ADVENTURE_FN, /CAM_OFF\.set\(treeCam\.x - cx, treeCam\.y - cy, treeCam\.z - cz\);/);

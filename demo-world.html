@@ -3073,6 +3073,13 @@ const worldV2 = (() => {
       flowerStem.count = n; flowerHead.count = n;
       flowerStem.instanceMatrix.needsUpdate = true; flowerHead.instanceMatrix.needsUpdate = true; flowerHead.instanceColor.needsUpdate = true;
     }
+    // TOWN-01-CAMERA-FIX（2026-11-16 HQ）：向きを自動で回さないかわりに、ヒロリとカメラのあいだに丘があれば、カメラを上げて越える（向きは変えない。高さだけ）
+    if (character) {
+      const hx = character.position.x, hz = character.position.z, hy = character.position.y + 1.0, cx = camera.position.x, cz = camera.position.z, cy = camera.position.y;
+      let need = cy;
+      for (let k = 1; k <= 6; k++) { const u = k / 7, g = groundHeight(hx + (cx - hx) * u, hz + (cz - hz) * u) + .7; if (g > hy + (cy - hy) * u) need = Math.max(need, hy + (g - hy) / u); }
+      if (need > cy) { camera.position.y = Math.min(need, cy + 6); camera.lookAt(camTgt); }
+    }
     guardCamera();
     const floor = groundHeight(camera.position.x, camera.position.z) + 1.2;   // FLOW-02：描いた地面（網目）がもとの高さより上でも、その下にもぐらない
     if (camera.position.y < floor) camera.position.y = floor;
@@ -3099,10 +3106,7 @@ const worldV2 = (() => {
       targetPos.x = steerX = navOut.x; targetPos.z = steerZ = navOut.z;
     }
     const gdx = cx - GATE.x, gdz = cz - GATE.z, front = gdx * Math.sin(gateYaw) + gdz * Math.cos(gateYaw);
-    if (gateOpen && !treeFrame) {
-      const a = SECRET_YAW - Math.atan2(defOff.x, defOff.z), w = smooth(.5, -2.5, front) * a, cs = Math.cos(w), sn = Math.sin(w);
-      CAM_OFF.set(defOff.x * cs + defOff.z * sn, defOff.y, -defOff.x * sn + defOff.z * cs);
-    }
+    // TOWN-01-CAMERA-FIX（2026-11-16 HQ）：門のそばを歩いても、カメラの向きを自動では回さない（前は、門からの距離に応じて樹のほうへ回っていた）
 
     // タネ：生まれる（ゆっくり大きくなって浮かぶ）→ ヒロリが近づくと受け取る → ヒロリのそばについてくる
     if (progress === P.SEED_BORN) {
@@ -3238,7 +3242,7 @@ const worldV2 = (() => {
       }
       if (finaleAt >= 0 && t >= finaleAt) { finaleAt = -1; showFinale(); }
       // ヒロリが歩き出したら（灯った場所から 1.5m）、ふだんの構図へ戻す
-      if (treeFrame && Math.hypot(cx - treeX, cz - treeZ) > 1.5) { treeFrame = false; CAM_LOOK.copy(defLook); }
+      if (treeFrame && Math.hypot(cx - treeX, cz - treeZ) > 1.5) { treeFrame = false; CAM_LOOK.copy(defLook); CAM_OFF.copy(defOff); }   // TOWN-01-CAMERA-FIX：樹の構図のあとは、ふだんの向き（自分で回した向きは camUser がそのまま持つ）
     }
     // 小さな光の粒：生まれる・受け取る・門・実のとき、少しだけ舞い上がる
     if (sparkT >= 0 && t - sparkT < 1.6 && !still) {
@@ -7926,9 +7930,8 @@ var town = (() => {
   const _cd = new THREE.Vector3(), _hw = new THREE.Vector3();
   const toDV = (v, out) => out.set(PV.x + (v.x - PV.x) / TS, v.y / TS, PV.z + (v.z - PV.z) / TS);   // 世界の点 → 形の座標
   const smooth01 = u => { const k = Math.min(1, Math.max(0, u)); return k * k * (3 - 2 * k); };
-  const TOWN_VIEW = Math.atan2(-.95, .3), TOWN_VIEW_OUT = Math.atan2(.95, .3);   // OUT：草原へ向かうとき（花びらの道）は、町の出口（西）を見る   // 街に入るときのカメラの向き：ヒロリの西（少し南）から、東の通りの先を見る
   let barSaved = null; const mbarText = el('mbar-text');
-  let baseOff = null, camTurned = false, viewA = TOWN_VIEW, viewWant = TOWN_VIEW, lastX = 0, lastZ = 0;
+  let baseOff = null, lastX = 0, lastZ = 0;
   function update(t, dt) {
     hiroriSoft.update(dt);   // ヒロリの質感と、止まったときの余韻（HIRORI-SOFT。街の外でも）
     if (!built || !character) return;
@@ -7945,21 +7948,9 @@ var town = (() => {
     }
     if (!isMoving) steer.active = false;
     const px0 = lastX, pz0 = lastZ; lastX = x; lastZ = z;
-    // カメラ：街へ近づくと、少しずつ回って通りの先（東）を見る（角の向こうの屋台や噴水が見える）。草原へもどると元の向き
-    if (baseOff && !worldV2.cameraFramed()) {
-      const sd = T.shapeSd(x, z) / TS, vb = zd > -20 ? (calm ? (sd < 4 ? 1 : 0) : smooth01((7 - sd) / 6)) : 0;
-      // タップで歩いているあいだは、歩いていく向きのうしろ（少し右）へ、ゆっくり回りこむ（行く先が画面の奥に見える）。止まっているとき・キーで歩くときは、そのまま
-      const turn = d => Math.atan2(Math.sin(d), Math.cos(d));
-      // 2026-11-15 制作者：「カメラがぐるぐる回って操作しにくい・花屋の花が見られない」。街の中でカメラを自動では回さない
-      // 街へ入るときに一度だけ、通りの奥（東）を見る向きへそろえる（TOWN_VIEW）。あとは、自分で回したとき（2本指・右ドラッグ・Q/E）だけ回る
-      steer.fresh = false;
-      viewWant = lead === 'out' ? TOWN_VIEW_OUT : TOWN_VIEW;   // 届けたあと草原へ向かうときだけ、出口のほうへ一度だけ回る（歩く向きにはついていかない）
-      if (w) viewA = calm ? viewWant : viewA + turn(viewWant - viewA) * (1 - Math.exp(-dt / .8));
-      if (vb > 0 || camTurned) {
-        const b0 = Math.atan2(baseOff.x, baseOff.z), a = turn(viewA - b0) * vb, cs = Math.cos(a), sn = Math.sin(a);
-        CAM_OFF.set(baseOff.x * cs + baseOff.z * sn, baseOff.y, -baseOff.x * sn + baseOff.z * cs); camTurned = vb > 0;
-      }
-    }
+    // カメラ：街でも草原でも、歩いているあいだに向きを自動では変えない（2026-11-16 HQ TOMORI-TOWN-01-CAMERA-FIX）
+    // 向きが変わるのは、自分で回したとき（2本指・右ドラッグ・Q/E）と「視点をもどす」だけ。ヒロリへの追いかけ・家や屋台の透かしは、このあとでそのまま
+    steer.fresh = false;
     coinEl.classList.toggle('show', w && townStarted(st));
     // 上の知らせ：街の中では、お手伝いのいまの段階（行き先の答えは言わない）。街を出たら、前の知らせへもどす
     const inTown = (w || state === S.TOWN) && T.shapeSd(x, z) < 1 && Math.hypot((x - 6) / 30, (z + 7) / 19) > 1;
@@ -7975,7 +7966,8 @@ var town = (() => {
     _hd.set(xd, yd + 1.3 / TS, zd); toDV(camera.position, _cd);
     for (const b of houses) {
       const t = boxEnter(b, _hd, _cd, .35 / TS);
-      if (t < 1) { _hw.set(x, character.position.y + 1.3, z); camera.position.lerpVectors(_hw, camera.position, Math.max(.3, t - .03)); camera.lookAt(camTgt); camera.updateMatrixWorld(); toDV(camera.position, _cd); }
+      if (t < 1) { camera.position.lerpVectors(camTgt, camera.position, Math.max(.3, t - .03));   // 見ている点のほうへ寄せる（向きは変えない。TOWN-01-CAMERA-FIX）
+        camera.lookAt(camTgt); camera.updateMatrixWorld(); toDV(camera.position, _cd); }
     }
     // 家・屋台が、カメラとヒロリ（パネルのときは話す相手・調べる物も）のあいだに入ったら透かす
     let n = 0;
@@ -8060,7 +8052,7 @@ var town = (() => {
 
   // 「デモを最初から」：街の記録（お手伝い・コイン・タネ・花壇）を最初へ
   function reset() {
-    forget(); st = createTownState(); openId = null; view = null; steer.active = false; viewA = viewWant = TOWN_VIEW;
+    forget(); st = createTownState(); openId = null; view = null; steer.active = false;
     for (const id of TOWN_SEED_IDS) bed.grow[id] = 1;
     lead = 'off'; if (leadPetals) leadPetals.visible = leadGlow.visible = false;   // 町への手がかり
     applyVisuals();
@@ -8080,7 +8072,7 @@ var town = (() => {
   worldV2.ready.then(ok => { if (ok) { placeStart(); loadMeshy().then(M => build(M)); } });   // Meshy の家・屋台が読めないとき・6秒たっても届かないときは、仮の形で組み立てる
   // テスト用（読むだけ）
   const scr = (x, y, z) => { _v.set(x, y, z).project(camera); return { x: (_v.x + 1) / 2 * innerWidth, y: (1 - _v.y) / 2 * innerHeight, front: _v.z < 1 }; };
-  window.__tomoriTown = { camYaw: () => character ? Math.atan2(camera.position.x - character.position.x, camera.position.z - character.position.z) : 0, lead: () => lead, meadowOpen: () => meadowOpen(), state: () => JSON.parse(JSON.stringify(st)), saveKey: SAVE_KEY, built: () => built, layout: LW, spot: id => spot(id), ids, open: () => openId,
+  window.__tomoriTown = { camYaw: () => character ? Math.atan2(camera.position.x - character.position.x, camera.position.z - character.position.z) : 0, viewYaw: () => { camera.getWorldDirection(_cd); return Math.atan2(_cd.x, _cd.z); }, lead: () => lead, meadowOpen: () => meadowOpen(), state: () => JSON.parse(JSON.stringify(st)), saveKey: SAVE_KEY, built: () => built, layout: LW, spot: id => spot(id), ids, open: () => openId,
     houses: () => houses.map(h => { const [x, z] = toW(h.x, h.z); return { name: h.name, x, z, bid: h.bid }; }), fade: () => Array.from(fadeCur).map(v => +v.toFixed(2)),
     screenAt: (x, z, y = 0) => scr(x, gyW(x, z) + y, z), path: (x0, z0, x1, z1) => T.path(x0, z0, x1, z1), npc: id => NPC[id] && (([x, z]) => ({ x, z }))(toW(NPC[id].x, NPC[id].z)), scale: TS,
     hitAt: (sx, sy) => { const rc = new THREE.Raycaster(); rc.setFromCamera(new THREE.Vector2(sx / innerWidth * 2 - 1, -(sy / innerHeight) * 2 + 1), camera); return rc.intersectObjects(scene.children, true).slice(0, 4).map(i => (i.object.name || i.object.type) + (i.object.parent && i.object.parent.name ? '<' + i.object.parent.name : '') + ' ' + i.distance.toFixed(1)); } };
@@ -8294,7 +8286,7 @@ const camUser=(()=>{
     auto+=(autoT-auto)*(reduceMotionQuery.matches?1:.06);
   }
   function offset(px,pz){
-    if(px!==undefined) autoTurn(px,pz);
+    // TOWN-01-CAMERA-FIX（2026-11-16 HQ）：西の草原で木をよけて自動で回す処理（autoTurn）は使わない。木は透かし、寄せる処理（pull）はそのまま
     const cs=Math.cos(yaw+auto), sn=Math.sin(yaw+auto);
     off.set((CAM_OFF.x*cs+CAM_OFF.z*sn)*zoom, CAM_OFF.y*zoom, (-CAM_OFF.x*sn+CAM_OFF.z*cs)*zoom);
     let want=1;

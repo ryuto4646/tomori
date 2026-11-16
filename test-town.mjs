@@ -222,13 +222,13 @@ test('13. 元へ戻せる：市場町を外すと、前の demo-world.html と�
   assert.ok(!/TOWN-|town\b|市場町/.test(out.replace(/townhall/g, '')), 'nothing of the town remains');
 });
 
-test('14. カメラ：街の中だけ向きを回す（V2 のときだけ組み立てる）。街から出たら元の構図へもどす', () => {
+test('14. カメラ：街でも草原でも、歩いているあいだに向きを自動で回さない（2026-11-16 HQ TOMORI-TOWN-01-CAMERA-FIX）', () => {
   const u = code(UI);
   assert.match(u, /if \(built \|\| !worldV2\.isActive\(\)\) return;/);
-  assert.match(u, /baseOff = CAM_OFF\.clone\(\);/);
-  assert.match(u, /if \(vb > 0 \|\| camTurned\) \{/);
-  assert.match(u, /CAM_OFF\.set\(baseOff\.x \* cs \+ baseOff\.z \* sn, baseOff\.y, -baseOff\.x \* sn \+ baseOff\.z \* cs\); camTurned = vb > 0;/);
-  assert.match(u, /zd > -20 \?/, 'not in the secret valley');   // 形の座標（もとの大きさ）で判定する
+  assert.ok(!/CAM_OFF\.set\(/.test(u), 'the town never rewrites the camera offset');
+  assert.ok(!/TOWN_VIEW|viewA|camTurned/.test(u), 'no town view turning left');
+  assert.ok(!/\n\s*if\(px!==undefined\) autoTurn\(px,pz\);/.test(HTML), 'no automatic turn in the west meadow');
+  assert.ok(!/CAM_OFF\.set\(defOff\.x \* cs/.test(HTML), 'no automatic turn near the root gate');
 });
 
 test('15. 上の知らせ（街の中だけ）：いまの段階でやること。どの鉢・どの家が正解かは言わない', () => {

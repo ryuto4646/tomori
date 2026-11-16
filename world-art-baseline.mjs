@@ -1983,6 +1983,30 @@ const TOWN_BLOCKS = [
   /\n\/\/ TOWN-BEGIN[\s\S]*?\/\/ TOWN-END\n/,
 ];
 export const TOWN_EDITS = [
+  [`    guardCamera();
+    const floor = groundHeight(camera.position.x, camera.position.z) + 1.2;`,
+   `    // TOWN-01-CAMERA-FIX（2026-11-16 HQ）：向きを自動で回さないかわりに、ヒロリとカメラのあいだに丘があれば、カメラを上げて越える（向きは変えない。高さだけ）
+    if (character) {
+      const hx = character.position.x, hz = character.position.z, hy = character.position.y + 1.0, cx = camera.position.x, cz = camera.position.z, cy = camera.position.y;
+      let need = cy;
+      for (let k = 1; k <= 6; k++) { const u = k / 7, g = groundHeight(hx + (cx - hx) * u, hz + (cz - hz) * u) + .7; if (g > hy + (cy - hy) * u) need = Math.max(need, hy + (g - hy) / u); }
+      if (need > cy) { camera.position.y = Math.min(need, cy + 6); camera.lookAt(camTgt); }
+    }
+    guardCamera();
+    const floor = groundHeight(camera.position.x, camera.position.z) + 1.2;`],
+  [`    if(px!==undefined) autoTurn(px,pz);
+`,
+   `    // TOWN-01-CAMERA-FIX（2026-11-16 HQ）：西の草原で木をよけて自動で回す処理（autoTurn）は使わない。木は透かし、寄せる処理（pull）はそのまま
+`],
+  [`      if (treeFrame && Math.hypot(cx - treeX, cz - treeZ) > 1.5) { treeFrame = false; CAM_LOOK.copy(defLook); }`,
+   `      if (treeFrame && Math.hypot(cx - treeX, cz - treeZ) > 1.5) { treeFrame = false; CAM_LOOK.copy(defLook); CAM_OFF.copy(defOff); }   // TOWN-01-CAMERA-FIX：樹の構図のあとは、ふだんの向き（自分で回した向きは camUser がそのまま持つ）`],
+  [`    if (gateOpen && !treeFrame) {
+      const a = SECRET_YAW - Math.atan2(defOff.x, defOff.z), w = smooth(.5, -2.5, front) * a, cs = Math.cos(w), sn = Math.sin(w);
+      CAM_OFF.set(defOff.x * cs + defOff.z * sn, defOff.y, -defOff.x * sn + defOff.z * cs);
+    }
+`,
+   `    // TOWN-01-CAMERA-FIX（2026-11-16 HQ）：門のそばを歩いても、カメラの向きを自動では回さない（前は、門からの距離に応じて樹のほうへ回っていた）
+`],
   [`  camera.position.copy(CAM_OFF); camera.lookAt(0,0,0);
 `,
    `  camera.position.copy(CAM_OFF); camera.lookAt(0,0,0);

@@ -19,10 +19,14 @@ return { WORDS, wordsIn, treasureMeetWords, createTreasureState, restoreTreasure
 const texts = v => { const out = []; const walk = x => { if (typeof x === 'string') out.push(x); else if (x && typeof x === 'object') Object.values(x).forEach(walk); }; walk(v); return out; };
 const ALL = texts([T.TREASURE_HINTS, T.TREASURE_TALK, T.TREASURE_CLUES, T.TREASURE_CHEST, T.TREASURE_DECOYS, T.TREASURE_ITEMS, T.TREASURE_GUIDE, T.GREAT_TEXT, T.GIANT_TALK]);
 const ASPECTS = T.GIANT_TOPICS.flatMap(t => t.aspects);
+// TOWN-01：市場町のお願い・ヒント・タネ・住人の話（TOWN-CORE）
+const TC = new Function(between(HTML, '// TOWN-CORE-BEGIN', '// TOWN-CORE-END') + '\nreturn { TOWN_TEXT, TOWN_HINTS, TOWN_SEEDS, TOWN_POTS, TOWN_GARDENS };')();
+const TOWN_ALL = texts([TC.TOWN_TEXT, TC.TOWN_HINTS, TC.TOWN_SEEDS, TC.TOWN_POTS, TC.TOWN_GARDENS]);
+const ORIGINAL = ['madoromu', 'utsumuku', 'honoka', 'mabayui', 'sashikomu', 'kirameku'];
 
-test('1. 言い回しは6つ。どれも、読み方（必要なら）と短い意味を持ち、子どもが読める長さ', () => {
-  assert.equal(T.WORDS.length, 6);
-  assert.deepEqual(T.WORDS.map(w => w.id), ['madoromu', 'utsumuku', 'honoka', 'mabayui', 'sashikomu', 'kirameku']);
+test('1. 言い回しは8つ（冒険の6つ＋市場町の2つ）。どれも、読み方（必要なら）と短い意味を持ち、子どもが読める長さ', () => {
+  assert.equal(T.WORDS.length, 8);
+  assert.deepEqual(T.WORDS.map(w => w.id), [...ORIGINAL, 'hidamari', 'hokorobu']);
   for (const w of T.WORDS) {
     assert.ok(w.meaning.length >= 6 && w.meaning.length <= 30, w.word);
     assert.ok(w.forms.length && w.forms.every(f => w.word.startsWith(f) || w.word.includes(f)), w.word);
@@ -31,8 +35,19 @@ test('1. 言い回しは6つ。どれも、読み方（必要なら）と短い�
   assert.ok(Object.isFrozen(T.WORDS));
 });
 
+// TOWN-01：市場町の2つは、タネ屋で出会い、花壇で景色として見る（2つ以上の場面）。冒険の「うつむくように」「差し込む」は、市場町のお手伝いで、もう一度役に立つ
+test('2b. 市場町：ひだまり・ほころぶは2つ以上の場面で出会う。うつむくように・差し込むは、お手伝いの手がかりとして再登場する', () => {
+  for (const id of ['hidamari', 'hokorobu']) assert.ok(TOWN_ALL.filter(s => T.wordsIn(s).includes(id)).length >= 2, id);
+  for (const id of ['utsumuku', 'sashikomu']) {
+    assert.ok(TOWN_ALL.filter(s => T.wordsIn(s).includes(id)).length >= 2, id);
+    assert.ok(ALL.some(s => T.wordsIn(s).includes(id)), id + ' was met in the adventure first');
+  }
+  assert.match(TC.TOWN_TEXT.floristHello, /うつむくように咲く花/);
+  assert.match(TC.TOWN_TEXT.floristRight, /日差しが差し込む庭のおうち/);
+});
+
 test('2. どの言い回しも、2つ以上の場面で出会い（はじめて＋もう一度）、オオネに伝える答えでも使える', () => {
-  for (const w of T.WORDS) {
+  for (const w of T.WORDS.filter(w => ORIGINAL.includes(w.id))) {   // TOWN-01：市場町の2つは 2b で調べる
     const scenes = ALL.filter(s => T.wordsIn(s).includes(w.id));
     assert.ok(scenes.length >= 2, `${w.word} appears in ${scenes.length} scenes`);
     assert.ok(ASPECTS.some(a => T.wordsIn(a).includes(w.id)), `${w.word} can be used when telling Oone`);

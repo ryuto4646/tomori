@@ -321,7 +321,7 @@ test('29. 「冒険にもどる」後は、近くの「はじめる」を押す�
   assert.match(back, /missionTriggered = false;\s*missionNeedsLeave = true;/);
   const anim = HTML.match(/function animate\(\)\{([\s\S]*?)\n\}/)[1];
   assert.ok(!/triggerMission\(/.test(anim), 'no auto start while walking');
-  assert.match(HTML, /const missionCallable = \(\) => state === S\.EXPLORE && !missionTriggered && !\(missionHold && missionHold\.held\(\)\);/);
+  assert.match(HTML, /const missionCallable = \(\) => state === S\.EXPLORE && !missionTriggered && !\(missionHold && missionHold\.held\(\)\)(?: && \(!town \|\| town\.meadowOpen\(\)\))?;/);
   assert.match(HTML, /\['btn-treasure-open', \(\) => \{ if \(near === 'mission'\) \{ if \(missionCallable\(\)\) triggerMission\(\); \}/);
   const reset = HTML.match(/function doReset\(\)\{([\s\S]*?)\n\}/)[1];
   assert.match(reset, /missionNeedsLeave=false/);

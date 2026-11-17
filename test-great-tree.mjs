@@ -249,7 +249,7 @@ test('12. 植える・受け取るは1回だけ（保存は演出の前）。演
 test('13. もちもの・上の知らせ・リセットの確認：タネの見た目と使い方、道の案内、巨木への冒険も消えると伝える', () => {
   assert.match(UI, /if \(it\.seed\) rows\.push\(\[TREASURE_ITEMS\.seed\.icon, TREASURE_ITEMS\.seed\.name, TREASURE_ITEMS\.seed\.words\]\);/);
   assert.match(UI, /TREASURE_GUIDE\[g === 'done' && greatGoal\(st\) !== 'locked' \? greatGoal\(st\) : g\]/);
-  assert.match(HTML, /confirm\('デモを最初からやり直しますか？\\n宝さがしと巨木への冒険の記録、もちものも消えます。'\)/);
+  assert.match(HTML, /confirm\('デモを最初からやり直しますか？\\n宝さがしと巨木への冒険の記録、もちもの、市場町のお手伝い・コイン・買ったタネ・花壇も消えます。'\)/);
   // 会話の文は短い行で（子どもが読める）
   for (const v of Object.values(T.GREAT_TEXT)) for (const row of v.split('\n')) assert.ok(Array.from(row).length <= 60, row);
 });

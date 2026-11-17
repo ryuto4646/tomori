@@ -287,12 +287,13 @@ test('21. カメラの構図は V2 だけで変わる（V1 の CAM_OFF・見る�
   assert.match(act, /CAM_OFF\.set\(portrait \? -4\.2 : 0, portrait \? 4\.4 : 3\.4, portrait \? 7\.6 : 8\.2\);/);
   assert.match(act, /CAM_LOOK\.set\(0, portrait \? 2\.3 : 1\.6, 0\);/);
   // V2 の外（V1）では構図を変えない。冒険の途中で一時的に変えた構図は、元の構図（defOff・defLook）へ必ず戻す（Step 11I-C）
-  const outside = HTML.replace(V2, '');
+  // TOWN-01：市場町は V2 のときだけ組み立て、街の中だけ向きを回して、出たら元の構図（baseOff）へ戻す（test-town.mjs）
+  const outside = HTML.replace(V2, '').replace(/\n\/\/ TOWN-BEGIN[\s\S]*?\/\/ TOWN-END\n/, '');
   assert.ok(!/CAM_OFF\.set|CAM_LOOK\.set/.test(outside));
   assert.match(act, /defOff\.copy\(CAM_OFF\); defLook\.copy\(CAM_LOOK\);/);
   assert.ok(count(V2_CODE, /CAM_OFF\.copy\(defOff\)/g) >= 1 && count(V2_CODE, /CAM_LOOK\.copy\(defLook\)/g) >= 3, 'restored');
-  // 秘密の道では、元の構図を水平にまわすだけ（高さ・距離は変えない）
-  assert.match(V2_CODE, /CAM_OFF\.set\(defOff\.x \* cs \+ defOff\.z \* sn, defOff\.y, -defOff\.x \* sn \+ defOff\.z \* cs\);/);
+  // TOWN-01-CAMERA-FIX（2026-11-16 HQ）：秘密の道でも、歩いているあいだにカメラの向きを自動では回さない
+  assert.ok(!/CAM_OFF\.set\(defOff\.x \* cs/.test(V2_CODE), 'no automatic turn on the secret path');
 });
 
 test('22. V1 の小道と光の柱は V2 では描かない。光の粒（V1 と同じ作り方・数）は丸くやわらかい点にして、V2 でも描く（low は数を減らす）', () => {

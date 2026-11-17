@@ -217,11 +217,13 @@ test('12. 保存：localStorage は TREASURE-UI の try の中だけ。キーは
   assert.equal((u.match(/localStorage\./g) || []).length, 3, 'get, set, remove');
   assert.match(between(UI, 'function reset() {', '\n  }\n'), /forget\(\); st = createTreasureState\(\);/);
   assert.match(between(HTML, 'function doReset(){', '\n}\n'), /treasure\.reset\(\);/);
-  assert.match(HTML, /confirm\('デモを最初からやり直しますか？\\n宝さがしと巨木への冒険の記録、もちものも消えます。'\)/);
-  assert.match(HTML, /宝さがしの記録ともちものは、この端末に残ります。「デモを最初から」を押すと消えます。/);
+  assert.match(HTML, /confirm\('デモを最初からやり直しますか？\\n宝さがしと巨木への冒険の記録、もちもの、市場町のお手伝い・コイン・買ったタネ・花壇も消えます。'\)/);
+  assert.match(HTML, /宝さがし・市場町の記録ともちもの（コイン・タネ）は、この端末に残ります。「デモを最初から」を押すと消えます。/);
   // ほかの場所（クエスト・道くさ）は、今までどおり保存しない
   assert.ok(!/localStorage|sessionStorage/.test(between(HTML, '// QUEST-UI-BEGIN', '// QUEST-UI-END')));
-  assert.equal((code(HTML).match(/localStorage/g) || []).length, 3);
+  // TOWN-01：市場町の記録（別のキー。TOWN の中の try だけ）の3つを足して6つ
+  assert.equal((code(HTML).match(/localStorage/g) || []).length, 6);
+  assert.equal((code(between(HTML, '// TOWN-BEGIN', '// TOWN-END')).match(/localStorage/g) || []).length, 3);
 });
 
 test('13. 画面：歩けるときだけ「話す／しらべる」と冒険メモ。会話と冒険メモの間は歩かない。閉じたら歩く操作に戻る', () => {
@@ -258,7 +260,7 @@ test('15. 描画の負荷：新しい描画ループ・タイマー・点光源�
   assert.equal((u.match(/new THREE\.\w*Texture\(/g) || []).length, 3);
   assert.match(u, /new THREE\.CanvasTexture\(cv\)/);
   assert.ok(!/innerHTML|insertAdjacentHTML/.test(u));
-  assert.match(HTML, /  if\(treasure\) treasure\.update\(t,dt\);[^\n]*\n  missionHold\.update\(\);[^\n]*\n  renderer\.render\(scene,camera\);/);
+  assert.match(HTML, /  if\(treasure\) treasure\.update\(t,dt\);[^\n]*\n(  if\(town\) town\.update\(t,dt\);[^\n]*\n)?  missionHold\.update\(\);[^\n]*\n  renderer\.render\(scene,camera\);/);
   // 人・物は、まとめた Mesh（mesh(...)）で作る。数は 25 個まで
   assert.ok((u.match(/\bmesh\(\[/g) || []).length <= 25);
 });
@@ -272,8 +274,8 @@ test('17. 上の知らせ：宝さがしの途中は、いまの目標がわか�
   assert.match(g, /if \(free !== undefined && free !== FREE_TEXT\) return null;/);
   assert.match(UI, /const FREE_TEXT = '自由に歩いてみよう。気になる場所があるかも。';/);
   // FLOW-02：写真のクエストを始めたあと・「あとで」で閉じているあいだは、「なにかが呼んでいる…」を出さない
-  assert.match(HTML, /mbar\.textContent = md<CALLOUT_RADIUS&&!missionTriggered&&!missionHold\.held\(\) \? 'なにかが呼んでいる…' : \(treasure&&treasure\.guide\(\)\) \|\| '光るポイントを探して歩こう！';/);
-  assert.match(HTML, /mbar\.textContent = \(treasure && treasure\.guide\(\)\) \|\| '光るポイントを探して歩こう！';/);
+  assert.match(HTML, /mbar\.textContent = md<CALLOUT_RADIUS&&!missionTriggered&&!missionHold\.held\(\)(?:&&\(!town\|\|town\.meadowOpen\(\)\))? \? 'なにかが呼んでいる…' : \(treasure&&treasure\.guide\(\)\) \|\| (?:\(town&&town\.exploreGuide\(\)\) \|\| )?'光るポイントを探して歩こう！';/);
+  assert.match(HTML, /mbar\.textContent = \(treasure && treasure\.guide\(\)\) \|\| (?:\(town && town\.exploreGuide\(\)\) \|\| )?'光るポイントを探して歩こう！';/);
 });
 
 test('18. REVIEW：会話中は調べる物もパネルの上に見せる。横向きの小さな画面は右にパネル。閉じた指で「見つけたもの」を押さない。構図はほらあなの岩もよける', () => {

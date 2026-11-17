@@ -212,7 +212,7 @@ test('16. ことばの樹のまわりでは、幹の向こう側から草原へ�
 
 test('17. 上の知らせ：自由に歩いているあいだは、実が灯った知らせ・「自由に歩いてみよう」を5秒で消す。芽への案内は残す。状態が変わると出しなおす', () => {
   assert.match(UI, /const BAR_HOLD_MS = 5000;/);
-  assert.match(UI, /function fadeBarLater\(\) \{\s*if \(freeMsg === Q2_GUIDE\) return;/);
+  assert.match(UI, /function fadeBarLater\(\) \{\s*if \(freeMsg === Q2_GUIDE(?: \|\| \(town && town\.leadSticky\(freeMsg\)\))?\) return;/);   // TOWN-01：町への手がかりの案内も、行き先を示すので残す
   // 消す前に、ほかの知らせが出ていたら（状態が変わったら）消さない
   assert.match(UI, /worldTimeout\(\(\) => \{ if \(my === barToken && state === S\.FREE_EXPLORE\) el\('mission-bar'\)\.style\.opacity = '0'; \}, BAR_HOLD_MS\);/);
   assert.match(UI, /function showBar\(\) \{ barToken\+\+;/);

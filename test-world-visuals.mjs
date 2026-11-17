@@ -24,7 +24,7 @@ const BASE = 'b2caa58';
 const NOW = read('demo-world.html');
 const ART = artBlock(NOW);
 // コメントを除いた美術のコード（説明文の言葉に反応しないように）
-const ART_CODE = ART.split('\n').map(l => l.replace(/\/\/.*$/, '')).join('\n');
+const ART_CODE = ART.replace(/  \/\/ TOWN-LAYOUT-BEGIN[\s\S]*?\/\/ TOWN-LAYOUT-END\n/, '').split('\n').map(l => l.replace(/\/\/.*$/, '')).join('\n');
 // ワールドV2（WORLD-V2-BEGIN〜END）は美術の範囲の中にあるが、別のきまり（test-world-v2.mjs）で調べる。ここでは V1 の美術だけを見る
 const V2_BLOCK = (ART.match(/\/\/ WORLD-V2-BEGIN[\s\S]*?\/\/ WORLD-V2-END\n/) || [''])[0];
 const ART_V1 = ART.replace(V2_BLOCK, '');

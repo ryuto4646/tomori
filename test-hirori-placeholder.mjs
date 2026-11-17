@@ -233,7 +233,7 @@ test('15. 移動速度は前の2倍（FLOW-02）。到着判定・タップ判�
   assert.match(HTML, /if\(_lead\.lengthSq\(\)>1\.96\) _lead\.setLength\(1\.4\);/);
   assert.match(HTML, /const hits=raycaster\.intersectObject\(ground\);/);
   // EXPANSION-01：宝さがしの人・物のタップ（TREASURE-UI の中だけ）は test-treasure-hunt.mjs で調べる
-  const noTreasure = HTML.replace(/\n\/\/ TREASURE-CORE-BEGIN[\s\S]*?\/\/ TREASURE-UI-END\n/, '');
+  const noTreasure = HTML.replace(/\n\/\/ TREASURE-CORE-BEGIN[\s\S]*?\/\/ TREASURE-UI-END\n/, '').replace(/\n\/\/ TOWN-BEGIN[\s\S]*?\/\/ TOWN-END\n/, '');   // TOWN-01：家・屋台のタップは test-town.mjs で調べる
   assert.equal((noTreasure.match(/intersectObject/g) || []).length, 1);
 });
 

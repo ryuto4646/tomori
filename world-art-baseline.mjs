@@ -1983,6 +1983,11 @@ const TOWN_BLOCKS = [
   /\n\/\/ TOWN-BEGIN[\s\S]*?\/\/ TOWN-END\n/,
 ];
 export const TOWN_EDITS = [
+  [`  const dt=clock.getDelta(), t=clock.elapsedTime;
+`,
+   `  const dt=clock.getDelta(), t=clock.elapsedTime;
+  if (canMove() && !document.querySelector('.panel.show') && (window.scrollY || document.scrollingElement.scrollTop) && !/^(TEXTAREA|INPUT)$/.test(document.activeElement && document.activeElement.tagName)) resetPageScroll();   // TOWN-01：歩ける画面（パネルなし・入力中でない）でページがずれていたら戻す（小さい画面で、画面の半分が空になって歩けなくなるのを防ぐ）
+`],
   [`    guardCamera();
     const floor = groundHeight(camera.position.x, camera.position.z) + 1.2;`,
    `    // TOWN-01-CAMERA-FIX（2026-11-16 HQ）：向きを自動で回さないかわりに、ヒロリとカメラのあいだに丘があれば、カメラを上げて越える（向きは変えない。高さだけ）
@@ -1990,6 +1995,7 @@ export const TOWN_EDITS = [
       const hx = character.position.x, hz = character.position.z, hy = character.position.y + 1.0, cx = camera.position.x, cz = camera.position.z, cy = camera.position.y;
       let need = cy;
       for (let k = 1; k <= 6; k++) { const u = k / 7, g = groundHeight(hx + (cx - hx) * u, hz + (cz - hz) * u) + .7; if (g > hy + (cy - hy) * u) need = Math.max(need, hy + (g - hy) / u); }
+      for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2; need = Math.max(need, groundHeight(cx + Math.cos(a) * 1.5, cz + Math.sin(a) * 1.5) + 1.6); }   // カメラのまわり（1.5m）の地面からも離す（スマホの粗い網目の斜面にもぐらない）
       if (need > cy) { camera.position.y = Math.min(need, cy + 6); camera.lookAt(camTgt); }
     }
     guardCamera();

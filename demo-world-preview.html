@@ -273,6 +273,35 @@ textarea, input { word-break:normal; }
   #panel-town.show { transform:none; opacity:1; transition:opacity .25s, visibility 0s; }
 }
 #panel-town button { scroll-margin-bottom:72px; }
+/* 話しかけのカードは、ボタンだけ押せる。文字のところをタップしたら、その下の地面へ歩く（小さい画面で、帰り道の地面がカードにかくれないように・2026-11-18） */
+#treasure-call, #hold-call, #detour-call { pointer-events:none; }
+#treasure-call button, #hold-call button, #detour-call button { pointer-events:auto; }
+/* あそびかた（2026-11-18）：はじめの画面の上に出す操作の案内と、いつでも見返せる「あそびかた」ボタン */
+#howto { position:fixed; inset:0; z-index:110; display:none; align-items:center; justify-content:center;
+  padding:max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background:rgba(40,32,20,.38); overscroll-behavior:contain; }
+#howto.first { background:transparent; }
+#howto.show { display:flex; }
+.howto-card { width:min(380px, 100%); max-height:100%; overflow-y:auto; background:#fef9f0; border:2px solid #e8d4a0; border-radius:20px;
+  padding:16px 18px; box-shadow:0 4px 24px rgba(0,0,0,.16); color:#3a3328; }
+#howto-title { margin:0 0 8px; font-size:19px; text-align:center; color:#5a4830; }
+.howto-list { list-style:none; margin:0 0 12px; padding:0; }
+.howto-list li { display:flex; gap:10px; align-items:flex-start; padding:7px 0; border-top:1.5px dashed #e8d4a0; font-size:15px; line-height:1.5; }
+.howto-list li:first-child { border-top:none; }
+.howto-ic { flex:none; width:1.5em; text-align:center; }
+.howto-list b { color:#5a4830; }
+.howto-touch { display:none; }
+#howto.touch .howto-touch { display:block; }
+#howto.touch .howto-pc { display:none; }
+#btn-howto-go { margin:0; }
+#loading.howto-on > * { visibility:hidden; }
+#btn-howto { position:absolute; left:max(12px, env(safe-area-inset-left)); bottom:max(14px, env(safe-area-inset-bottom));
+  min-height:44px; padding:8px 14px; background:rgba(254,249,240,.92); border:1.5px solid #c8b87a; border-radius:22px;
+  color:#5a4830; font-size:13px; font-weight:bold; cursor:pointer; pointer-events:all; display:none; }
+#btn-howto.show { display:block; }
+#btn-howto:focus-visible, #btn-howto-go:focus-visible { outline:3px solid #3a3328; outline-offset:3px; }
+body:has(#btn-howto.show) #btn-view-reset { bottom:calc(max(14px, env(safe-area-inset-bottom)) + 54px); }
+@media (orientation: landscape) and (max-height: 500px) { .howto-list li { padding:4px 0; font-size:14px; } #howto-title { margin-bottom:4px; font-size:17px; } .howto-card { padding:12px 18px; } }
 /* TOWN-CSS-END */
 
 /* ── ボタン ─────────────────────────── */
@@ -490,6 +519,7 @@ textarea, input { word-break:normal; }
   <div class="npc-label" id="label-mog">タネ屋のモグじい</div>
   <div class="npc-label" id="label-sora">ソラばあちゃん</div>
   <div class="sfx-label" id="sfx-fountain" aria-hidden="true">さらさら…</div>
+  <button id="btn-howto" type="button" aria-haspopup="dialog">あそびかた</button>
   <!-- TOWN-UI-HTML-END -->
   <div id="demo-end">
     <div class="end-line1">遠くで、新しい"なにか"が光っている。</div>
@@ -691,6 +721,25 @@ textarea, input { word-break:normal; }
   <div class="talk-actions">
     <button class="btn-secondary" id="btn-town-memo" type="button" style="display:none">冒険メモを見る</button>
     <button class="btn-secondary" id="btn-town-close" type="button">冒険にもどる</button>
+  </div>
+</div>
+<div id="howto" role="dialog" aria-modal="true" aria-labelledby="howto-title" aria-hidden="true">
+  <div class="howto-card">
+    <h2 id="howto-title">あそびかた</h2>
+    <ul class="howto-list howto-touch">
+      <li><span class="howto-ic" aria-hidden="true">👆</span><span><b class="nowrap">地面をタップ</b>：<span class="nowrap">そこまで歩く</span></span></li>
+      <li><span class="howto-ic" aria-hidden="true">✌️</span><span><b class="nowrap">2本指で左右になぞる</b>：<span class="nowrap">視点を回す</span></span></li>
+      <li><span class="howto-ic" aria-hidden="true">🤏</span><span><b class="nowrap">2本指をひらく・とじる</b>：<span class="nowrap">近づく・遠ざかる</span></span></li>
+      <li><span class="howto-ic" aria-hidden="true">💬</span><span><b class="nowrap">「話す」「しらべる」を押す</b>：<span class="nowrap">冒険を進める</span></span></li>
+    </ul>
+    <ul class="howto-list howto-pc">
+      <li><span class="howto-ic" aria-hidden="true">🖱️</span><span><b class="nowrap">地面をクリック</b>：<span class="nowrap">そこまで歩く</span></span></li>
+      <li><span class="howto-ic" aria-hidden="true">⌨️</span><span><b class="nowrap">W A S D・矢印キー</b>：<span class="nowrap">歩く</span></span></li>
+      <li><span class="howto-ic" aria-hidden="true">🔄</span><span><b class="nowrap">右ボタンでドラッグ・Q／Eキー</b>：<span class="nowrap">視点を回す</span></span></li>
+      <li><span class="howto-ic" aria-hidden="true">🖲️</span><span><b class="nowrap">マウスのホイール</b>：<span class="nowrap">近づく・遠ざかる</span></span></li>
+      <li><span class="howto-ic" aria-hidden="true">💬</span><span><b class="nowrap">「話す」「しらべる」をクリック</b>：<span class="nowrap">冒険を進める</span></span></li>
+    </ul>
+    <button class="btn-primary" id="btn-howto-go" type="button">冒険をはじめる</button>
   </div>
 </div>
 <!-- TOWN-PANELS-END -->
@@ -8085,6 +8134,38 @@ var town = (() => {
   return { has, ids, spot, call, open, pick, update, memo, items, blockers, focusPoint, reset, started: () => townStarted(st), applyVisuals, tapBlocked: () => performance.now() < guardUntil,
     leadStart, leadGuide, leadSticky, lead: () => lead, placeStart, meadowOpen, exploreGuide, townFirst: TOWN_FIRST };   // 町への手がかり（2026-11-14）
 })();
+// あそびかた（2026-11-18）：はじめの画面に操作の案内を出し、「冒険をはじめる」で始める。あとは「あそびかた」ボタンで見返すだけ（場所に近づいても自動では出さない）
+// 案内が出ているあいだは、キー・タップ・視点の操作をうしろの世界へ伝えない。カメラの向き・歩く速さ・保存は変えない
+var howto = (() => {
+  const box = document.getElementById('howto'), go = document.getElementById('btn-howto-go'), btn = document.getElementById('btn-howto');
+  const touch = matchMedia('(pointer: coarse)').matches || (navigator.maxTouchPoints > 0 && !matchMedia('(pointer: fine)').matches);
+  box.classList.toggle('touch', touch);
+  let shown = false, onStart = null, back = null;
+  const clearKeys = () => { for (const k in keys) keys[k] = false; };   // 押したままのキーで歩きつづけない
+  function show(first) {
+    shown = true; clearKeys(); back = document.activeElement;
+    box.classList.toggle('first', first); go.textContent = first ? '冒険をはじめる' : '冒険にもどる';
+    box.classList.add('show'); box.setAttribute('aria-hidden', 'false'); go.focus({ preventScroll: true });
+  }
+  function hide() {
+    shown = false; clearKeys(); box.classList.remove('show'); box.setAttribute('aria-hidden', 'true');
+    const f = onStart; onStart = null;
+    if (f) { btn.classList.add('show'); f(); } else if (back && back.focus) back.focus({ preventScroll: true });
+  }
+  go.addEventListener('click', () => hide());
+  btn.addEventListener('click', () => { if (!shown) show(false); });
+  // 案内の上のタップ・ドラッグ・ホイールは、うしろへ伝えない（音を鳴らせるようにする pointerdown・pointerup・touchend だけは通す）
+  ['pointermove', 'mousedown', 'mouseup', 'click', 'dblclick', 'touchstart', 'touchmove'].forEach(t => box.addEventListener(t, e => e.stopPropagation(), { passive: true }));
+  box.addEventListener('wheel', e => { e.stopPropagation(); if (!e.target.closest('.howto-card')) e.preventDefault(); }, { passive: false });
+  box.addEventListener('contextmenu', e => { e.stopPropagation(); e.preventDefault(); });
+  window.addEventListener('keydown', e => {
+    if (!shown) return;
+    if (e.key === 'Escape' && !onStart) { e.preventDefault(); e.stopPropagation(); hide(); return; }
+    if (e.key === 'Tab') { e.preventDefault(); go.focus({ preventScroll: true }); return; }   // 押せるのは1つだけ。うしろのボタンへ移らない
+    if (e.key !== 'Enter' && e.key !== ' ') e.stopPropagation();   // 歩く・回るキーは、うしろへ伝えない
+  }, true);
+  return { start(f) { onStart = f; show(true); }, open: () => { if (!shown) show(false); }, isOpen: () => shown };
+})();
 // TOWN-END
 
 // ── リセット ─────────────────────────────────────────────────────
@@ -8464,8 +8545,9 @@ window.addEventListener('resize',()=>{
 // ワールド（V2、または失敗したときの V1）の準備ができてから、読み込み画面を消す（最短でも 0.8 秒は見せる）
 Promise.all([new Promise(r=>setTimeout(r,800)), worldV2.ready]).then(()=>{
   const ld=document.getElementById('loading');
-  ld.style.opacity='0';
-  setTimeout(()=>ld.style.display='none',800);
+  // あそびかた（2026-11-18）：読みこめたら、はじめの画面の上に操作の案内を出す。「冒険をはじめる」で、読み込み画面ごと消す
+  const begin=()=>{ ld.style.opacity='0'; setTimeout(()=>ld.style.display='none',800); };
+  if (typeof howto!=='undefined' && howto) { ld.classList.add('howto-on'); howto.start(begin); } else begin();
 });
 
 animate();

@@ -1988,6 +1988,15 @@ export const TOWN_EDITS = [
    `  const dt=clock.getDelta(), t=clock.elapsedTime;
   if (canMove() && !document.querySelector('.panel.show') && (window.scrollY || document.scrollingElement.scrollTop) && !/^(TEXTAREA|INPUT)$/.test(document.activeElement && document.activeElement.tagName)) resetPageScroll();   // TOWN-01：歩ける画面（パネルなし・入力中でない）でページがずれていたら戻す（小さい画面で、画面の半分が空になって歩けなくなるのを防ぐ）
 `],
+  [`  const ld=document.getElementById('loading');
+  ld.style.opacity='0';
+  setTimeout(()=>ld.style.display='none',800);
+`,
+   `  const ld=document.getElementById('loading');
+  // あそびかた（2026-11-18）：読みこめたら、はじめの画面の上に操作の案内を出す。「冒険をはじめる」で、読み込み画面ごと消す
+  const begin=()=>{ ld.style.opacity='0'; setTimeout(()=>ld.style.display='none',800); };
+  if (typeof howto!=='undefined' && howto) { ld.classList.add('howto-on'); howto.start(begin); } else begin();
+`],
   [`    guardCamera();
     const floor = groundHeight(camera.position.x, camera.position.z) + 1.2;`,
    `    // TOWN-01-CAMERA-FIX（2026-11-16 HQ）：向きを自動で回さないかわりに、ヒロリとカメラのあいだに丘があれば、カメラを上げて越える（向きは変えない。高さだけ）

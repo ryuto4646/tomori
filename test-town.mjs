@@ -312,3 +312,28 @@ test('18. 町から始まる（2026-11-14）：はじまりは噴水の広場の
   assert.match(code(UI), /const TOWN_FIRST = new URLSearchParams\(location\.search\)\.get\('start'\) !== 'meadow';/);
   assert.match(HTML, /camera\.lookAt\(0,0,0\);\n  if \(town\) town\.placeStart\(\);/);
 });
+
+// あそびかた（2026-11-18）：はじめの画面の操作の案内。文は実際の操作に合わせる。案内のあいだはうしろへ伝えない。保存しない
+test('あそびかた：はじめの画面に出し、文は実際の操作と合う。見返せる。保存しない', () => {
+  const box = between(HTML, '<div id="howto"', '<!-- TOWN-PANELS-END -->');
+  const items = cls => [...between(box, `howto-list ${cls}`, '</ul>').matchAll(/<b class="nowrap">(.*?)<\/b>：<span class="nowrap">(.*?)<\/span>/g)].map(m => m[1] + '：' + m[2]);
+  assert.deepEqual(items('howto-touch'), ['地面をタップ：そこまで歩く', '2本指で左右になぞる：視点を回す', '2本指をひらく・とじる：近づく・遠ざかる', '「話す」「しらべる」を押す：冒険を進める']);
+  assert.deepEqual(items('howto-pc'), ['地面をクリック：そこまで歩く', 'W A S D・矢印キー：歩く', '右ボタンでドラッグ・Q／Eキー：視点を回す', 'マウスのホイール：近づく・遠ざかる', '「話す」「しらべる」をクリック：冒険を進める']);
+  assert.match(box, /id="btn-howto-go" type="button">冒険をはじめる</);
+  // 実際の操作：1本指のタップ・クリックで歩く、2本指は左右の動きで回り、ひらくと寄る、右ドラッグ・Q／E・ホイール、WASD・矢印
+  const CAM = between(HTML, '// CAMERA-USER-BEGIN', 'function offset(');
+  assert.match(CAM, /yawT-=\(g\.mx-g0\.mx\)\/innerWidth\*Math\.PI/);                 // 2本指の左右の動き（mx）だけで回る
+  assert.match(CAM, /zoomT=clampZ\(zoomT\*g0\.d\/Math\.max\(1,g\.d\)\)/);             // ひらく（d が大きくなる）と倍率が小さくなる＝近づく
+  assert.match(CAM, /if\(e\.button===2\) rdrag=e\.clientX/);
+  assert.match(CAM, /keys\['q'\]\|\|keys\['Q'\]/);
+  assert.match(CAM, /canvas\.addEventListener\('wheel'/);
+  assert.match(HTML, /canvas\.addEventListener\('click',onTap\);/);
+  assert.match(HTML, /if\(keys\['w'\]\|\|keys\['W'\]\|\|keys\['ArrowUp'\]\)/);   // W A S D・矢印キーで歩く
+  const J = code(between(UI, 'var howto = ', '})();'));
+  assert.match(J, /go\.textContent = first \? '冒険をはじめる' : '冒険にもどる'/);
+  assert.match(J, /window\.addEventListener\('keydown', e => \{[\s\S]*?\}, true\)/, 'keys are caught before the game (capture)');
+  assert.ok(!/localStorage|sessionStorage/.test(J), 'the guide saves nothing');
+  assert.ok(!/howto\.(open|start)\(/.test(code(UI).replace(J, '')), 'no automatic showing near places');
+  assert.match(HTML, /ld\.classList\.add\('howto-on'\); howto\.start\(begin\);/);
+  assert.match(HTML, /<button id="btn-howto" type="button" aria-haspopup="dialog">あそびかた<\/button>/);
+});

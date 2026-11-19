@@ -336,4 +336,5 @@ test('あそびかた：はじめの画面に出し、文は実際の操作と�
   assert.ok(!/howto\.(open|start)\(/.test(code(UI).replace(J, '')), 'no automatic showing near places');
   assert.match(HTML, /ld\.classList\.add\('howto-on'\); howto\.start\(begin\);/);
   assert.match(HTML, /<button id="btn-howto" type="button" aria-haspopup="dialog">あそびかた<\/button>/);
+  assert.match(HTML, /#hint \{ display:none !important; \}/, 'the old bottom hint is not shown (2026-11-19)');
 });

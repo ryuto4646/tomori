@@ -295,6 +295,8 @@ textarea, input { word-break:normal; }
 #howto.touch .howto-pc { display:none; }
 #btn-howto-go { margin:0; }
 #loading.howto-on > * { visibility:hidden; }
+/* 画面下の小さな操作の案内（「タップした場所へ歩くよ！ パソコン：W A S D…」）は、あそびかたと重なるので出さない（2026-11-19 HQ判断「外します」）。部品は残し、表示だけ消す（ほかの処理がこの部品の濃さを切りかえているため） */
+#hint { display:none !important; }
 #btn-howto { position:absolute; left:max(12px, env(safe-area-inset-left)); bottom:max(14px, env(safe-area-inset-bottom));
   min-height:44px; padding:8px 14px; background:rgba(254,249,240,.92); border:1.5px solid #c8b87a; border-radius:22px;
   color:#5a4830; font-size:13px; font-weight:bold; cursor:pointer; pointer-events:all; display:none; }
